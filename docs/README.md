@@ -21,6 +21,10 @@
 > versionado de 29 dependencias de producción, sus textos completos, generación reproducible,
 > comprobación de CI y copia junto a los artefactos, conforme a 28A–37A.
 >
+> **Cuarta enmienda cerrada el 2026-10-10:** la prueba real del CLA confirmó el flujo completo y
+> reveló los identificadores públicos adicionales del esquema fijo de la acción. El responsable
+> eligió y aprobó 38A; `proyecto-abierto.md` quedó `as-built` con el formato y la evidencia.
+>
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
 > logging en el navegador. Las suites de frontend, build y backend pasaron; producción no se tocó.

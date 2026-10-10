@@ -1,7 +1,12 @@
 # Proyecto abierto, contribuciones y marca
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-10
+>
+> **Cuarta enmienda aprobada e implementada el 2026-10-10.** La prueba real del CLA reveló que el
+> esquema fijo de la acción conserva más identificadores públicos que la descripción aprobada. El
+> responsable eligió 38A: aceptar y documentar el formato real. La sección 13 delimita esos datos
+> y registra la evidencia. El responsable aprobó explícitamente la enmienda.
 >
 > **Segunda enmienda aprobada e implementada el 2026-10-10.** La dependencia directa
 > `github.com/juanky-estevez/go-logs v1.0.0` no publicaba una licencia. El responsable eligió 27A,
@@ -71,10 +76,10 @@ Se exigirá para código, recursos gráficos y documentación sustancial; no par
 para correcciones triviales de erratas.
 
 Cada pull request sujeto al CLA tendrá una comprobación automática. Una GitHub Action fijada a un
-hash de commit, no a una etiqueta mutable, registrará en el propio repositorio sólo el usuario de
-GitHub, la versión del CLA, la fecha y el pull request. El registro será público. La contribución no
-se integrará mientras falte la aceptación. Antes de adoptar una licencia comercial se recomienda
-revisión jurídica independiente del texto definitivo y de la cadena de derechos.
+hash de commit, no a una etiqueta mutable, registrará en el propio repositorio los campos públicos
+descritos en la sección 13. El registro será público. La contribución no se integrará mientras
+falte la aceptación. Antes de adoptar una licencia comercial se recomienda revisión jurídica
+independiente del texto definitivo y de la cadena de derechos.
 
 ## 4. Marca
 
@@ -326,3 +331,29 @@ La CI ejecuta el control en un trabajo propio con Go y Node. `scripts/prod-build
 y los textos a cada artefacto después de comprobar que existe. Esa copia no se ejecutó contra el
 despliegue real: producción continúa aparcada hasta el cierre de 1.0 y `docs/ambientes.md` conserva
 el hallazgo previo que impide presentar hoy el recorrido completo como reproducible desde cero.
+
+## 13. Enmienda implementada: registro y prueba del CLA
+
+La acción mantiene una entrada por aceptación con `name`, el identificador numérico público de la
+cuenta (`id`), el identificador público del comentario (`comment_id`), su fecha (`created_at`), el
+identificador público del repositorio (`repoId`) y el número del pull request (`pullRequestNo`). La
+versión aceptada se expresa mediante la ruta versionada `signatures/version1/cla.json`. No se
+guardan correo, nombre civil, dirección, empresa ni texto libre adicional.
+
+Estos identificadores permiten vincular la aceptación con la cuenta, el comentario, el repositorio
+y el cambio concretos aunque el usuario cambie su nombre visible. El formato pertenece a la acción
+adoptada; Catalina Support lo documenta en vez de mantener un procesador legal propio. El registro
+vive en la rama `cla-signatures`, que debe permanecer escribible para la automatización.
+
+El responsable eligió 38A después de conocer la diferencia frente al registro mínimo descrito
+antes de la prueba. La alternativa descartada fue sustituir o adaptar la acción para reducir el
+esquema. No quedan decisiones abiertas en esta enmienda.
+
+**Evidencia del 2026-10-10.** El PR temporal `#1` ejercitó la solicitud, la aceptación mediante el
+comentario exacto, el commit automático en `cla-signatures` y el check `CLA / cla`; este último y
+los tres trabajos de CI terminaron en verde. Los intentos repetidos durante el diagnóstico dejaron
+tres entradas equivalentes; se conservó la primera aceptación válida y el archivo volvió a quedar
+con una sola entrada. El PR se cerró sin integrar, y su rama y archivo temporal se eliminaron. La
+rama `dev` no recibió el contenido de prueba. El workflow debe existir en la rama predeterminada
+`main` para que GitHub procese los comentarios; el hallazgo se corrigió allí y una sincronización
+posterior del PR confirmó el cuarto check en verde.
