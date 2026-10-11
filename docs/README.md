@@ -30,6 +30,10 @@
 > aislados en PC y móvil pasaron; 39A alinea el menú plegado con su comportamiento real. El entorno
 > desechable quedó limpio.
 >
+> **Configuración de GitHub aprobada el 2026-10-11:** `proyecto-abierto.md` concreta presentación,
+> canales comunitarios, squash y protección de `dev` y `main` conforme a 40A–54A. La visibilidad no
+> forma parte de esta enmienda; la aplicación y verificación de los ajustes sigue pendiente.
+>
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
 > logging en el navegador. Las suites de frontend, build y backend pasaron; producción no se tocó.

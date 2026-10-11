@@ -1,7 +1,11 @@
 # Proyecto abierto, contribuciones y marca
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-10
+> **Estado:** aprobado
+> **Última actualización:** 2026-10-11
+>
+> **Quinta enmienda aprobada el 2026-10-11.** La sección 14 concreta la configuración comunitaria
+> y las reglas de ramas que faltan en GitHub. El responsable cerró 40A–54A. La visibilidad continúa
+> fuera de alcance. El responsable aprobó explícitamente la enmienda.
 >
 > **Cuarta enmienda aprobada e implementada el 2026-10-10.** La prueba real del CLA reveló que el
 > esquema fijo de la acción conserva más identificadores públicos que la descripción aprobada. El
@@ -357,3 +361,62 @@ con una sola entrada. El PR se cerró sin integrar, y su rama y archivo temporal
 rama `dev` no recibió el contenido de prueba. El workflow debe existir en la rama predeterminada
 `main` para que GitHub procese los comentarios; el hallazgo se corrigió allí y una sincronización
 posterior del PR confirmó el cuarto check en verde.
+
+## 14. Configuración comunitaria de GitHub aprobada
+
+### 14.1 Presentación y canales
+
+El repositorio conservará `main` como rama predeterminada y mostrará esta descripción en inglés:
+
+> Self-hosted, AI-powered help desk for Support and Development teams.
+
+Usará los temas `helpdesk`, `ticketing-system`, `self-hosted`, `artificial-intelligence`, `golang`,
+`angular`, `postgresql` y `open-source`. El campo de sitio web quedará vacío mientras el dominio y
+la producción sigan aplazados.
+
+Se habilitarán Issues, Discussions y Private Vulnerability Reporting. Issues recibirá defectos y
+propuestas concretas; Discussions, preguntas e ideas abiertas; los reportes de seguridad seguirán
+el canal privado enlazado desde `SECURITY.md` y la plantilla de incidencias.
+
+### 14.2 Integración y limpieza
+
+El repositorio permitirá únicamente **squash merge**, exigirá historial lineal y eliminará
+automáticamente la rama de origen después de integrar un pull request. No exigirá commits firmados
+hasta que exista una guía y una configuración accesibles para quienes contribuyen. No añadirá
+`CODEOWNERS` mientras sólo exista un mantenedor.
+
+Las aprobaciones se descartarán cuando entren commits nuevos. Antes de integrar, la rama del pull
+request deberá estar actualizada respecto de su base y todas las conversaciones deberán estar
+resueltas.
+
+### 14.3 Protección de `dev` y `main`
+
+Las dos ramas exigirán pull request, una aprobación y estos cuatro checks:
+
+- `CI / backend`;
+- `CI / frontend`;
+- `CI / third-party-notices`;
+- `CLA / cla`.
+
+No admitirán borrado ni force push y bloquearán el push directo durante el trabajo normal. El
+propietario podrá usar el bypass manual de la regla, necesario mientras sea el único mantenedor y
+no pueda aprobar su propio pull request. La excepción no sustituye el flujo habitual: se reserva
+para tareas administrativas, recuperación o un bloqueo que no pueda resolverse mediante PR.
+
+La rama `cla-signatures` permanecerá fuera de estas reglas y escribible por GitHub Actions, porque
+el bot registra allí las aceptaciones. Protegerla impediría el flujo ya verificado en el PR `#1`.
+
+### 14.4 Decisiones, comprobación y alcance
+
+El responsable eligió 40A–44A: descripción inglesa, temas enfocados, sitio vacío, protección de las
+dos ramas y bypass del propietario. En el segundo repaso eligió 45A–49A: `main` predeterminada, sólo
+squash, aprobación renovada tras cambios, rama actualizada y limpieza automática. En el repaso
+final eligió 50A–54A: historial lineal, sin firma obligatoria ni `CODEOWNERS`, cuatro checks en ambas
+ramas y push directo bloqueado salvo bypass manual. No quedan decisiones abiertas.
+
+La implementación se verificará leyendo de nuevo la configuración efectiva, no sólo confiando en
+el formulario. Se comprobarán presentación, funciones comunitarias, método de integración, limpieza
+automática y reglas de ambas ramas. También se confirmará que `cla-signatures` continúa escribible.
+
+Esta enmienda no cambia archivos de producto, visibilidad, producción, dominio, donaciones ni
+etiquetas de versión. Hacer público el repositorio conserva su aprobación final separada.
