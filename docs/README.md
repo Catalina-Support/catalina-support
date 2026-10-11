@@ -1,7 +1,7 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-10
+> **Última actualización:** 2026-10-11
 >
 > **Propuesta coordinada del 2026-10-10:** `proyecto-abierto.md`, `arquitectura.md`,
 > `modules/settings.md` e `interfaz-y-experiencia.md` preparan la publicación bajo AGPL-3.0-only,
@@ -24,6 +24,11 @@
 > **Cuarta enmienda cerrada el 2026-10-10:** la prueba real del CLA confirmó el flujo completo y
 > reveló los identificadores públicos adicionales del esquema fijo de la acción. El responsable
 > eligió y aprobó 38A; `proyecto-abierto.md` quedó `as-built` con el formato y la evidencia.
+>
+> **Metadatos y enlaces cerrados el 2026-10-10:** `arquitectura.md`, `modules/settings.md` e
+> `interfaz-y-experiencia.md` vuelven a `as-built`. Backend, 227 pruebas del frontend y 12 casos
+> aislados en PC y móvil pasaron; 39A alinea el menú plegado con su comportamiento real. El entorno
+> desechable quedó limpio.
 >
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de

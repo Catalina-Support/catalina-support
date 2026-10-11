@@ -1,11 +1,11 @@
 # Arquitectura
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-10
+> **Estado:** as-built
+> **Última actualización:** 2026-10-11
 >
-> **Enmienda propuesta el 2026-10-10: preparación del repositorio público.** La sección 19 coordina
-> la auditoría completa, la reescritura única del historial y los metadatos de fuente. Lo existente
-> continúa as-built; la visibilidad de GitHub queda fuera hasta una aprobación final separada.
+> **Enmienda implementada y verificada el 2026-10-10: preparación del repositorio público.** La
+> sección 19 coordina la auditoría completa, la reescritura única del historial y los metadatos de
+> fuente. La visibilidad de GitHub queda fuera hasta una aprobación final separada.
 >
 > **Bloque 7 implementado y verificado, 2026-10-08.** La sección 18 cierra las dos deudas técnicas
 > declaradas en la sección 12: automatizar las fronteras de los módulos del frontend y decidir que
@@ -1208,7 +1208,7 @@ frontend; `npm run build`, también con la frontera previa; y `go test ./...` pa
 La auditoría final no encontró documentos en `propuesta` o `aprobado`, ni contradicciones vigentes de
 las registradas en 18.1. `git diff --check` terminó limpio. No quedan decisiones abiertas.
 
-## 19. Propuesta: frontera de publicación y trazabilidad de la fuente
+## 19. Implementación: frontera de publicación y trazabilidad de la fuente
 
 La apertura se prepara sobre el repositorio completo, no como un exportado sin historial. Antes de
 cambiar su visibilidad se auditan el árbol actual y cada revisión de Git para detectar secretos,
@@ -1224,7 +1224,10 @@ nuevo detiene el proceso para informar al responsable antes de otra mutación.
 La reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle privado. Las
 ramas `main` y `dev` ya no contienen el correo personal, los dominios reales ni las rutas reales; el
 escaneo de secretos sólo requiere dos huellas históricas exactas para valores declarados de
-desarrollo. Las ramas remotas todavía no se reemplazan y el repositorio continúa privado.
+desarrollo. Las ramas remotas privadas se reemplazaron mediante `--force-with-lease`, se verificaron
+contra sus nuevos identificadores y las referencias locales anteriores se retiraron después de
+confirmar el remoto. El bundle privado recuperable se conserva fuera del repositorio. El
+repositorio continúa privado.
 
 La trazabilidad visible usa la marca pública como fuente única: el backend entrega versión,
 `AGPL-3.0-only` y URL del código correspondiente. Las versiones publicadas enlazan su etiqueta; el
@@ -1235,3 +1238,9 @@ Los archivos comunitarios y la automatización de CLA forman una frontera de man
 raíz y `.github`; no introducen dependencias de ejecución. Las acciones se fijan por hash y se
 revisan sus permisos mínimos. El cambio de visibilidad, producción, el dominio público y cualquier
 etiqueta de versión permanecen fuera de esta implementación.
+
+La verificación coordinada del 2026-10-10 pasó settings en el backend, las fronteras y las 227
+pruebas del frontend y los 12 casos aislados de marca en PC y móvil. La prueba independiente del
+CLA había confirmado antes su cuarto check en verde. El entorno E2E se eliminó con sus volúmenes al
+terminar. La configuración comunitaria restante de GitHub y la instalación limpia desde el README
+siguen siendo pasos previos a presentar la decisión final de visibilidad.

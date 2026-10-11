@@ -1,11 +1,11 @@
 # settings
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-10
+> **Estado:** as-built
+> **Última actualización:** 2026-10-11
 >
-> **Enmienda propuesta el 2026-10-10: metadatos de fuente.** La sección 14 añade licencia y fuente
-> correspondiente a la marca pública. Lo existente continúa as-built y la URL no será un ajuste
-> editable de la instalación.
+> **Enmienda implementada y verificada el 2026-10-10: metadatos de fuente.** La sección 14 añade
+> licencia y fuente correspondiente a la marca pública. La URL pertenece a la compilación y no es
+> un ajuste editable de la instalación.
 >
 > **Hallazgo corregido y verificado el 2026-10-08.** El administrador local devolvía cualquier
 > fallo de activación como “no disponible”, por lo que Configuración no puede explicar la memoria
@@ -940,18 +940,24 @@ El contrato quedó verificado de extremo a extremo: el 7B respondió 422 con cla
 6.442.450.944 bytes requeridos y la disponibilidad medida; `/settings` conservó ambos números hasta
 el toast y el catálogo siguió mostrando el 3B activo y sano.
 
-## 14. Propuesta: licencia y fuente en la marca pública
+## 14. Implementación: licencia y fuente en la marca pública
 
-`GET /api/settings/brand` añadirá dos campos de sólo lectura: `license`, con el identificador SPDX
+`GET /api/settings/brand` entrega dos campos de sólo lectura: `license`, con el identificador SPDX
 `AGPL-3.0-only`, y `sourceUrl`, con una dirección HTTPS validada. No son columnas de la base ni se
 pueden cambiar en `/settings`: pertenecen a la compilación, igual que `version`.
 
-Una versión publicada construirá `sourceUrl` hacia la etiqueta exacta de su versión. Una
-compilación de desarrollo apuntará al repositorio y expondrá de forma inequívoca su condición de
-desarrollo en el dato de versión o de compilación. La misma respuesta pública alimentará la entrada
-y, una vez autenticado, el menú. No contiene secretos ni información propia de una instalación.
+Una versión publicada construirá `sourceUrl` hacia la etiqueta exacta de su versión. La compilación
+de desarrollo apunta al repositorio y expone de forma inequívoca su condición mediante
+`development`. La misma respuesta pública alimenta la entrada y, una vez autenticado, el menú. No
+contiene secretos ni información propia de una instalación.
 
-Las pruebas cubrirán ambos campos, la correspondencia entre versión publicada y etiqueta, y la
-compatibilidad del frontend cuando falte `sourceUrl`. La política y la publicación se definen en
-`docs/proyecto-abierto.md`; la presentación se define en `docs/interfaz-y-experiencia.md`, sección
-21. No cambian persistencia, permisos ni los demás ajustes de marca.
+Las pruebas cubren ambos campos, el indicador de desarrollo, el rechazo de una URL no HTTPS y la
+compatibilidad del frontend cuando falta `sourceUrl`. La correspondencia con una etiqueta exacta
+se verificará al publicar una versión, trabajo aplazado hasta cerrar 1.0.0. La política y la
+publicación se definen en `docs/proyecto-abierto.md`; la presentación se define en
+`docs/interfaz-y-experiencia.md`, sección 21. No cambian persistencia, permisos ni los demás ajustes
+de marca.
+
+La implementación entrega además `development`, que permite presentar `v1.0.0 · dev` sin inferirlo
+de la URL. La verificación del 2026-10-10 pasó todas las pruebas de controladores, DTO y servicios
+de settings. El recorrido aislado de marca comprobó el contrato público y su consumo en PC y móvil.

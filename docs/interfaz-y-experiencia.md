@@ -1,11 +1,17 @@
 # Interfaz y experiencia
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-10
+> **Estado:** as-built
+> **Última actualización:** 2026-10-11
 >
-> **Enmienda propuesta el 2026-10-10: fuente y licencia visibles.** La sección 21 incorpora un
-> enlace discreto en la entrada y el menú, alimentado por la marca pública. Lo existente continúa
-> as-built y no se toca código hasta aprobar esta enmienda coordinada.
+> **Corrección aprobada y verificada el 2026-10-10:** el repaso de la sección 21 encontró que el
+> documento prometía conservar el enlace de fuente en el menú plegado, mientras la implementación
+> y su prueba lo ocultan hasta volver a desplegarlo. El responsable eligió 39A: documentar el
+> comportamiento actual, sin añadir otro icono a la barra plegada. El responsable aprobó
+> explícitamente 39A.
+>
+> **Enmienda implementada y verificada el 2026-10-10: fuente y licencia visibles.** La sección 21
+> incorpora un enlace discreto en la entrada y el menú, alimentado por la marca pública. Pasó las
+> pruebas de componente y el recorrido aislado en PC y móvil.
 >
 > **Enmienda implementada y verificada el 2026-10-08: ocultar la ayuda sin IA configurada.** La
 > sección 20 hace que el botón y su modal dependan de la capacidad recibida con el detalle del
@@ -1676,19 +1682,25 @@ antes de alcanzar esta vista, conforme a la IA obligatoria. No se modifican el m
 tonalidades, los editores, la configuración administrativa ni el bloqueo global. El responsable
 eligió 1A, 2A y 3A y confirmó mantener la obligatoriedad; no quedan decisiones abiertas.
 
-## 21. Propuesta: «Código fuente y licencia»
+## 21. Implementación: «Código fuente y licencia»
 
-La pantalla de entrada mostrará en su pie un enlace **«Código fuente y licencia»**, junto a la
-versión sin competir con el formulario. La zona inferior del menú mostrará el mismo enlace cerca de
-la versión y de salir. En modo plegado conservará un nombre accesible y una presentación que no
-ensanche la barra; en móvil quedará dentro del cajón.
+La pantalla de entrada muestra en su pie un enlace **«Código fuente y licencia»**, junto a la
+versión sin competir con el formulario. La zona inferior del menú muestra el mismo enlace cerca de
+la versión y de salir. En modo plegado se oculta junto con el resto del texto auxiliar y vuelve al
+desplegar el menú; no añade otro icono a la barra. En móvil queda dentro del cajón.
 
-Las dos ubicaciones leerán `license` y `sourceUrl` de la marca pública. El enlace abrirá la fuente
+Las dos ubicaciones leen `license` y `sourceUrl` de la marca pública. El enlace abre la fuente
 correspondiente en otra pestaña con las protecciones habituales. Una compilación de desarrollo lo
 indicará en el texto asociado a la versión. Si un backend anterior no entrega una URL válida, el
 control no aparecerá. No se codifica una URL alternativa en el frontend.
 
-Se comprobarán nombre accesible, foco, contraste, ausencia de desbordamiento y destino en PC y
-móvil. No se añade una pantalla legal, una ventana modal ni un control administrativo. El alcance y
+Se comprobaron nombre accesible, foco, contraste, ausencia de desbordamiento y destino en PC y
+móvil. No añade una pantalla legal, una ventana modal ni un control administrativo. El alcance y
 la política de marca viven en `docs/proyecto-abierto.md`; el contrato, en
 `docs/modules/settings.md`, sección 14.
+
+La verificación del 2026-10-10 pasó las 227 pruebas del frontend, incluidas las 14 de marca. El
+recorrido aislado de `marca.spec.ts` pasó sus 12 casos en PC y móvil: comprobó el destino y la
+licencia en la entrada y el menú, además de versión, tema, logo y color. El menú plegado ocultó el
+enlace conforme a 39A y volvió a ofrecerlo al desplegarse. Los contenedores, la red y los volúmenes
+del entorno desechable se retiraron al terminar.
