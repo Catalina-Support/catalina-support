@@ -3,6 +3,11 @@
 > **Estado:** aprobado
 > **Última actualización:** 2026-10-11
 >
+> **Sexta enmienda aprobada el 2026-10-11.** El repositorio se hizo público antes del cierre
+> previsto y `main`, todavía atrasada, mostró la licencia MIT anterior como licencia principal. Las
+> secciones 7, 8 y 15 registran el hallazgo y la corrección elegida en 56A–65A. La propuesta queda
+> aprobada explícitamente; producción, dominio y versión continúan fuera de alcance.
+>
 > **Quinta enmienda aprobada el 2026-10-11.** La sección 14 concreta la configuración comunitaria
 > y las reglas de ramas que faltan en GitHub. El responsable cerró 40A–54A. La visibilidad continúa
 > fuera de alcance. El responsable aprobó explícitamente la enmienda.
@@ -178,9 +183,10 @@ Antes del cambio de visibilidad se prepararán y verificarán:
 La publicación será de una versión **en desarrollo y previa a 1.0**. No se crea ahora una etiqueta de
 candidata ni `v1.0.0`. El README lo indicará sin presentar estabilidad que aún no existe.
 
-Cambiar la visibilidad de GitHub será el último paso y requerirá una aprobación explícita sobre el
-resultado ya preparado. Este documento no autoriza abrir el repositorio, desplegar producción,
-abrir el dominio, publicar una versión, aceptar donaciones ni ofrecer un plan comercial.
+El cambio de visibilidad estaba previsto como último paso y requería una aprobación explícita sobre
+el resultado preparado. El repositorio se hizo público antes de ese cierre; la sección 15 registra
+la desviación y su corrección. La publicación no autoriza desplegar producción, abrir el dominio,
+publicar una versión, aceptar donaciones ni ofrecer un plan comercial.
 
 ## 8. Verificación y cierre
 
@@ -195,9 +201,10 @@ Para pasar este documento a `as-built` deben quedar registrados:
 - la instalación limpia ejecutada desde el README;
 - `git diff --check` y el estado final de los documentos.
 
-La visibilidad permanecerá privada durante estas verificaciones. Una vez preparado el resultado,
-se presentará al responsable el inventario de cambios, hallazgos y evidencia para que decida si se
-hace público.
+La visibilidad debía permanecer privada durante estas verificaciones. Al haberse abierto antes, la
+prioridad pasa a corregir la rama y la licencia que GitHub presenta, verificar de nuevo las ramas
+públicas y completar la configuración comunitaria. El cierre conservará el inventario de cambios,
+hallazgos y evidencia.
 
 ## 9. Decisiones y repaso
 
@@ -420,3 +427,65 @@ automática y reglas de ambas ramas. También se confirmará que `cla-signatures
 
 Esta enmienda no cambia archivos de producto, visibilidad, producción, dominio, donaciones ni
 etiquetas de versión. Hacer público el repositorio conserva su aprobación final separada.
+
+## 15. Corrección aprobada de la publicación anticipada
+
+### 15.1 Hallazgo público
+
+La API pública de GitHub confirmó `visibility: public` con `main` como rama predeterminada. Esa rama
+está diecisiete commits detrás de `dev` y tiene un commit propio del workflow del CLA. Su raíz aún
+contiene la licencia MIT anterior y el README histórico la declara, por lo que GitHub identifica el
+repositorio público como MIT. La rama `dev` ya contiene AGPL-3.0-only, los archivos comunitarios,
+los avisos de terceros y la aplicación vigente.
+
+La exposición anterior no se presenta como reversible: reescribir las referencias que GitHub sigue
+ofreciendo no retira permisos de una copia que alguien hubiera obtenido bajo MIT. El objetivo de la
+corrección es que el repositorio actual y su historial accesible expresen de forma coherente la
+licencia elegida para Catalina Support.
+
+### 15.2 Portada temporal y alcance de la reescritura
+
+Antes de modificar el historial, `dev` pasará temporalmente a ser la rama predeterminada. Así, la
+portada pública mostrará de inmediato AGPL-3.0-only, el README vigente y los archivos comunitarios.
+
+Se creará y verificará un segundo bundle privado con el estado público actual. Después se
+reescribirán `main`, `dev` y `cla-signatures` en una sola operación. En los commits anteriores al
+cambio aprobado se sustituirán únicamente:
+
+- el `LICENSE` raíz propio de Catalina Support;
+- la declaración MIT del proyecto en el `README.md` raíz histórico.
+
+No se alterarán licencias MIT de dependencias, `go-logs`, avisos ni textos de terceros. La firma
+vigente de `cla-signatures` se conservará con sus datos; sólo cambiarán los identificadores de los
+commits que la contienen y de sus ancestros.
+
+### 15.3 Publicación y verificación
+
+Las tres ramas se publicarán con `--force-with-lease`, comparando antes los identificadores remotos
+esperados. No hay etiquetas de Catalina Support que reescribir. Después se comprobarán todas las
+revisiones alcanzables para confirmar que:
+
+1. ningún `LICENSE` raíz conserva MIT;
+2. ningún README raíz declara MIT como licencia de Catalina Support;
+3. AGPL-3.0-only permanece en las puntas de `dev` y `cla-signatures`;
+4. las licencias y avisos de terceros no cambiaron;
+5. la firma del CLA continúa presente una sola vez;
+6. el escaneo de secretos del árbol y del historial reescrito sigue limpio;
+7. autoría, dominios y rutas continúan saneados.
+
+Con el historial verificado se abrirá un pull request de `dev` hacia `main` y se integrará mediante
+squash. No se hará push directo de contenido a `main`. Cuando ambas ramas publiquen el mismo árbol
+vigente, `main` volverá a ser la rama predeterminada. No se añadirá un aviso específico al README ni
+a `NOTICE`; este documento conserva la trazabilidad técnica elegida por el responsable.
+
+### 15.4 Decisiones y alcance
+
+El responsable eligió 56A: usar temporalmente `dev` como portada y sincronizar después `main` por
+pull request. Eligió 57B, 58A, 59C y 60A: reescribir el historial público, integrar con squash, no
+añadir un aviso separado y corregir primero la licencia. En el repaso eligió 61A–65A: las tres
+ramas y sólo la licencia propia, firma conservada, segundo bundle, trazabilidad en este documento y
+cambio de rama predeterminada antes de reescribir. No quedan decisiones abiertas.
+
+La operación no crea una etiqueta, no declara terminada la versión 1.0.0, no toca producción ni el
+dominio y no cambia licencias de terceros. La configuración comunitaria de la sección 14 se retoma
+después de que `main` y `dev` queden coherentes.

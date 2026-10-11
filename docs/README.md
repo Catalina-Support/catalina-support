@@ -34,6 +34,11 @@
 > canales comunitarios, squash y protección de `dev` y `main` conforme a 40A–54A. La visibilidad no
 > forma parte de esta enmienda; la aplicación y verificación de los ajustes sigue pendiente.
 >
+> **Corrección de publicación aprobada el 2026-10-11:** GitHub ya es público y la rama
+> predeterminada `main`, atrasada, expone la licencia MIT anterior. `proyecto-abierto.md` registra
+> 56A–65A: portada temporal en `dev`, segundo bundle, reescritura acotada de las tres ramas,
+> conservación del CLA y sincronización posterior mediante PR. La implementación sigue pendiente.
+>
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
 > logging en el navegador. Las suites de frontend, build y backend pasaron; producción no se tocó.
