@@ -1,7 +1,12 @@
 # Arquitectura
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-12
+> **Estado:** aprobado
+> **Última actualización:** 2026-10-13
+>
+> **Enmienda propuesta el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
+> idioma como configuración única del despliegue, incorpora el detector dentro de `ai`, actualiza
+> avisos de terceros y preserva las fronteras con `tickets` y `mail`. No se modifica código hasta
+> salir del alcance aprobado. El responsable aprobó explícitamente la propuesta el 2026-10-13.
 >
 > **Enmendado el 2026-10-12: publicación cerrada.** La sección 19 deja de describir como pendientes
 > la visibilidad, la configuración comunitaria y la integración del árbol vigente en `main`. El
@@ -1256,3 +1261,27 @@ CLA había confirmado antes su cuarto check en verde. El entorno E2E se eliminó
 terminar. El 2026-10-12 se verificaron además la descripción, los temas, Issues, Discussions,
 reportes privados de vulnerabilidades, sólo squash, limpieza automática y el ruleset efectivo de
 `main` y `dev`; `cla-signatures` quedó fuera y escribible por la acción.
+
+## 20. Propuesta: frontera del validador de idioma
+
+La detección de idioma pertenece al módulo `ai`, junto a la interpretación del resultado del motor.
+`tickets` y `mail` entregan el idioma global y reciben texto válido o el error estable existente; no
+importan la biblioteca, no conocen su confianza y no duplican reglas. El detector funciona dentro
+del proceso del backend y no abre endpoints, tablas, trabajos ni comunicación externa.
+
+La dependencia elegida debe admitir español e inglés, exponer confianza suficiente para distinguir
+una discrepancia clara y tener licencia compatible con AGPL-3.0-only. Se fija su versión en `go.mod`
+y se añade a `THIRD_PARTY_NOTICES.md` y `third_party_licenses/` mediante el mecanismo vigente. Las
+pruebas sustituyen el detector cuando necesiten controlar cada rama y prueban además un conjunto
+pequeño de frases reales para evitar que el adaptador invierta español e inglés.
+
+El idioma solicitado procede de la configuración global en cada operación. No reaparece en
+identidad, sesión ni preferencias personales. Los reintentos permanecen dentro de `ai`: uno para
+`local` y `remote`, ninguno para `provider`; por ello no cambian las interfaces entre módulos ni el
+contador persistido de intentos de la cola. La traducción de rótulos del contexto se hace antes de
+cruzar la interfaz y el contenido de usuario sigue literal.
+
+La limpieza del `record not found` esperado permanece dentro del repositorio de `tickets` y no
+cambia el logger global de GORM. Producción, observabilidad nueva y cambios en las reglas de
+dependencias del frontend quedan fuera. El responsable cerró 1A–12A con 10B; no quedan decisiones
+abiertas.
