@@ -98,7 +98,7 @@ completo.
 | `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
 | `docs/arquitectura.md` | **as-built**: auditoría, historial reescrito y trazabilidad de la fuente verificados |
 | `docs/prueba-local.md` | **as-built**: recorrido visual reproducible completado sobre datos desechables |
-| `docs/proyecto-abierto.md` | **as-built**: preparación abierta ejecutada hasta la prueba del CLA; la visibilidad continúa pendiente de aprobación final |
+| `docs/proyecto-abierto.md` | **as-built**: repositorio público bajo AGPL, historial saneado, CLA y configuración comunitaria verificados |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en

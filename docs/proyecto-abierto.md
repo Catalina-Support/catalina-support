@@ -1,7 +1,13 @@
 # Proyecto abierto, contribuciones y marca
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-11
+> **Estado:** as-built
+> **Última actualización:** 2026-10-12
+>
+> **Publicación abierta cerrada el 2026-10-12.** El historial accesible de `main`, `dev` y
+> `cla-signatures` expresa AGPL-3.0-only; el PR `#2` publicó el árbol vigente en `main` mediante
+> squash; y la presentación, los canales comunitarios, los reportes privados y las reglas de ramas
+> quedaron aplicados y leídos de nuevo desde GitHub. Producción, dominio y la etiqueta `v1.0.0`
+> continúan aplazados.
 >
 > **Sexta enmienda aprobada el 2026-10-11.** El repositorio se hizo público antes del cierre
 > previsto y `main`, todavía atrasada, mostró la licencia MIT anterior como licencia principal. Las
@@ -429,51 +435,62 @@ squash, aprobación renovada tras cambios, rama actualizada y limpieza automáti
 final eligió 50A–54A: historial lineal, sin firma obligatoria ni `CODEOWNERS`, cuatro checks en ambas
 ramas y push directo bloqueado salvo bypass manual. No quedan decisiones abiertas.
 
-La implementación se verificará leyendo de nuevo la configuración efectiva, no sólo confiando en
-el formulario. Se comprobarán presentación, funciones comunitarias, método de integración, limpieza
-automática y reglas de ambas ramas. También se confirmará que `cla-signatures` continúa escribible.
+La implementación se verificó leyendo de nuevo la configuración efectiva, no sólo confiando en el
+formulario. GitHub conserva `main` como predeterminada, la descripción y los ocho temas acordados,
+el sitio vacío, Issues, Discussions y reportes privados de vulnerabilidades. Sólo permite squash,
+ofrece actualizar la rama, elimina automáticamente ramas de origen y mantiene secret scanning y su
+protección durante el push.
 
-Esta enmienda no cambia archivos de producto, visibilidad, producción, dominio, donaciones ni
-etiquetas de versión. Hacer público el repositorio conserva su aprobación final separada.
+El ruleset activo `Protect main and dev` (identificador `24942297`) alcanza exactamente
+`refs/heads/main` y `refs/heads/dev`: impide borrado y force push, exige historial lineal, PR, una
+aprobación, renovación tras nuevos commits, conversaciones resueltas, rama actualizada y los checks
+`backend`, `frontend`, `third-party-notices` y `cla`. El rol administrador sólo puede omitir la regla
+dentro de un PR. `cla-signatures` queda fuera del ruleset y conserva su única firma.
 
-## 15. Corrección aprobada de la publicación anticipada
+Esta enmienda no cambia archivos de producto, producción, dominio, donaciones ni etiquetas de
+versión. El repositorio está público; esa publicación se verificó al cerrar la sección 15.
+
+## 15. Corrección ejecutada de la publicación anticipada
 
 ### 15.1 Hallazgo público
 
-La API pública de GitHub confirmó `visibility: public` con `main` como rama predeterminada. Esa rama
-está diecisiete commits detrás de `dev` y tiene un commit propio del workflow del CLA. Su raíz aún
-contiene la licencia MIT anterior y el README histórico la declara, por lo que GitHub identifica el
-repositorio público como MIT. La rama `dev` ya contiene AGPL-3.0-only, los archivos comunitarios,
-los avisos de terceros y la aplicación vigente.
+La API pública de GitHub confirmó `visibility: public` con `main` como rama predeterminada. En el
+hallazgo inicial esa rama estaba diecisiete commits detrás de `dev`, tenía un commit propio del
+workflow del CLA y todavía mostraba la licencia MIT anterior en la raíz y en su README. GitHub
+identificaba por ello el repositorio público como MIT mientras `dev` ya contenía AGPL-3.0-only, los
+archivos comunitarios, los avisos de terceros y la aplicación vigente.
 
 La exposición anterior no se presenta como reversible: reescribir las referencias que GitHub sigue
 ofreciendo no retira permisos de una copia que alguien hubiera obtenido bajo MIT. El objetivo de la
-corrección es que el repositorio actual y su historial accesible expresen de forma coherente la
+corrección fue que el repositorio actual y su historial accesible expresaran de forma coherente la
 licencia elegida para Catalina Support.
 
 ### 15.2 Rama principal y alcance de la reescritura
 
-`main` permanecerá como rama predeterminada durante toda la operación; `dev` conservará su papel de
-desarrollo. Para acortar la exposición de MIT se publicará primero el historial corregido de
-`main`. Su árbol seguirá siendo la versión estable anterior hasta integrar el pull request, pero su
-licencia raíz y su historial accesible ya expresarán AGPL-3.0-only.
+`main` permaneció como rama predeterminada durante toda la operación y `dev` conservó su papel de
+desarrollo. Para acortar la exposición de MIT se publicó primero el historial corregido de `main`.
+Su árbol siguió siendo la versión estable anterior hasta integrar el pull request, pero su licencia
+raíz y su historial accesible ya expresaban AGPL-3.0-only.
 
-Se creará y verificará un segundo bundle privado con el estado público actual. Después se
-reescribirán `main`, `dev` y `cla-signatures` en una sola operación. En los commits anteriores al
-cambio aprobado se sustituirán únicamente:
+Se creó y verificó el segundo bundle privado
+`/tmp/catalina-support-before-license-history-rewrite.bundle`, con SHA-256
+`b787e3d6c455e1feeb9c51ff3d3a664a9d1115506bc423ff8f4c12b6c543a100`. Después se
+reescribieron `main`, `dev` y `cla-signatures` en una sola operación. En los commits anteriores al
+cambio aprobado se sustituyeron únicamente:
 
 - el `LICENSE` raíz propio de Catalina Support;
 - la declaración MIT del proyecto en el `README.md` raíz histórico.
 
-No se alterarán licencias MIT de dependencias, `go-logs`, avisos ni textos de terceros. La firma
-vigente de `cla-signatures` se conservará con sus datos; sólo cambiarán los identificadores de los
+No se alteraron licencias MIT de dependencias, `go-logs`, avisos ni textos de terceros. La firma
+vigente de `cla-signatures` se conservó con sus datos; sólo cambiaron los identificadores de los
 commits que la contienen y de sus ancestros.
 
 ### 15.3 Publicación y verificación
 
-Las tres ramas se publicarán con `--force-with-lease`, comparando antes los identificadores remotos
-esperados, en este orden: `main`, `dev` y `cla-signatures`. No hay etiquetas de Catalina Support que
-reescribir. Después se comprobarán todas las revisiones alcanzables para confirmar que:
+Las tres ramas se publicaron con `--force-with-lease`, comparando antes los identificadores remotos
+esperados, en este orden: `main`, `dev` y `cla-signatures`. Sus puntas reescritas fueron
+`6d3946d`, `59dba84` y `2b248f2`; no había etiquetas de Catalina Support que reescribir. Después se
+comprobaron todas las revisiones alcanzables y se confirmó que:
 
 1. ningún `LICENSE` raíz conserva MIT;
 2. ningún README raíz declara MIT como licencia de Catalina Support;
@@ -483,10 +500,13 @@ reescribir. Después se comprobarán todas las revisiones alcanzables para confi
 6. el escaneo de secretos del árbol y del historial reescrito sigue limpio;
 7. autoría, dominios y rutas continúan saneados.
 
-Con el historial verificado se abrirá un pull request de `dev` hacia `main` y se integrará mediante
-squash. No se hará push directo de contenido a `main`. Cuando ambas ramas publiquen el mismo árbol
-vigente, `main` continuará como rama predeterminada. No se añadirá un aviso específico al README ni
-a `NOTICE`; este documento conserva la trazabilidad técnica elegida por el responsable.
+Gitleaks examinó los 32 commits alcanzables y no encontró secretos; los dos valores fijos de
+desarrollo conservaron una excepción exacta con sus nuevas huellas. El PR `#2` pasó backend,
+frontend, avisos de terceros y CLA y se integró mediante squash como
+`afeae10190a87b0df92941f53d356bfc013453f4`. No se hizo push directo de contenido a `main`; al
+terminar, `main` y `dev` publicaban el mismo árbol `47df75a40000e9202b0dc9e20e46593c239e8279`,
+con `main` aún predeterminada. GitHub reconoce AGPL-3.0 y no se añadió un aviso específico al README
+ni a `NOTICE`.
 
 ### 15.4 Decisiones y alcance
 
@@ -498,6 +518,6 @@ cambio de rama predeterminada antes de reescribir. El responsable corrigió desp
 con 66A: `main` permanece como principal y se publica primero su historia corregida. 66A sustituye
 56A y 65A; no quedan decisiones abiertas.
 
-La operación no crea una etiqueta, no declara terminada la versión 1.0.0, no toca producción ni el
-dominio y no cambia licencias de terceros. La configuración comunitaria de la sección 14 se retoma
-después de que `main` y `dev` queden coherentes.
+La operación no creó una etiqueta, no declaró terminada la versión 1.0.0, no tocó producción ni el
+dominio y no cambió licencias de terceros. La configuración comunitaria de la sección 14 quedó
+aplicada después de que `main` y `dev` alcanzaran el mismo árbol.
