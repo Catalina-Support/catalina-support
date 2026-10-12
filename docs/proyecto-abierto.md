@@ -12,6 +12,10 @@
 > `main` y `dev` debe conservar su papel de desarrollo. La decisión 66A sustituye el cambio temporal
 > de rama de 56A y 65A. La sección 15 incorpora la secuencia corregida y aprobada explícitamente.
 >
+> **Hallazgo de implementación del 2026-10-11.** El README vigente ya contenía un aviso sobre las
+> copias recibidas bajo MIT, contrario a 59C. Se retira del README antes de reescribir; la
+> trazabilidad queda únicamente en la sección 15, conforme a 64A.
+>
 > **Quinta enmienda aprobada el 2026-10-11.** La sección 14 concreta la configuración comunitaria
 > y las reglas de ramas que faltan en GitHub. El responsable cerró 40A–54A. La visibilidad continúa
 > fuera de alcance. El responsable aprobó explícitamente la enmienda.
