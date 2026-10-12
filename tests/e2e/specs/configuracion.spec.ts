@@ -175,6 +175,32 @@ test.describe('Configuración', () => {
     await expect(page).toHaveTitle('Catalina Support');
   });
 
+  test('el idioma se aplica sólo después de revisar manualmente las once plantillas', async ({ page }) => {
+    await page.locator('#idioma-instalacion').selectOption('en');
+    await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(11);
+    await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+    // Las cinco opciones del papel son más largas en inglés. En 412 px antes obligaban al documento
+    // a medir 424 px; el conmutador compartido debe partirlas sin crear desplazamiento horizontal.
+    await page.goto('/users');
+    await expect(page.getByRole('group', { name: 'Role' })).toBeVisible();
+    const ancho = await page.evaluate(() => ({
+      contenido: document.documentElement.scrollWidth,
+      ventana: document.documentElement.clientWidth,
+    }));
+    expect(ancho.contenido).toBeLessThanOrEqual(ancho.ventana);
+
+    await page.goto('/settings');
+
+    await page.locator('#idioma-instalacion').selectOption('es');
+    await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(11);
+    await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  });
+
   /**
    * **Cómo se entra**: el método que está puesto y las dos configuraciones, con su botón de probar la
    * conexión (decisión del responsable, 2026-09-25).
@@ -190,29 +216,39 @@ test.describe('Configuración', () => {
     await page.reload();
 
     const metodo = page.getByLabel('Método de entrada');
+    const autenticacion = page.locator('app-tarjeta').filter({
+      has: page.getByRole('heading', { name: 'Método de autenticación' }),
+    });
     await expect(metodo).toHaveValue('local');
 
     // **Con «Cuentas de la aplicación» no se enseña ninguna de las dos configuraciones** (decisión del
     // responsable, 2026-09-27): cada panel sale al elegir su método, porque el que no se usa no es
     // trabajo que toque hacer.
-    await expect(page.getByLabel('Servidor')).toHaveCount(0);
-    await expect(page.getByLabel('Emisor del reino')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Servidor')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveCount(0);
 
-    // Se elige AD y aparece **su** configuración —la deja puesta el seeder—, sin su secreto.
+    // Se elige AD y aparece **su** configuración —la prepara la suite aislada—, sin su secreto.
     await metodo.selectOption('ad');
-    await expect(page.getByLabel('Servidor')).toHaveValue('ldap');
+    await expect(autenticacion.getByLabel('Servidor')).toHaveValue('ldap');
     // **El secreto no llega nunca**: el campo está vacío y lo que se cuenta es que hay uno guardado.
     await expect(page.getByLabel('Contraseña de la cuenta de servicio')).toHaveValue('');
     await expect(page.getByText('Hay una contraseña guardada. Déjalo vacío para no cambiarla.')).toBeVisible();
     // Y la de Keycloak sigue sin verse: cada método enseña la suya y ninguna más.
-    await expect(page.getByLabel('Emisor del reino')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveCount(0);
 
     // Con Keycloak, al revés: sale su panel y se va el del directorio.
     await metodo.selectOption('keycloak');
-    await expect(page.getByLabel('Emisor del reino')).toHaveValue(
-      'https://dev.catalina-support.example.com/sso/realms/catalina-support',
+    const token = await tokenDeFabrica(request);
+    const ajustes = await (
+      await request.get('/api/settings', { headers: { Authorization: `Bearer ${token}` } })
+    ).json();
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveValue(
+      ajustes.keycloak.issuer,
     );
-    await expect(page.getByLabel('Servidor')).toHaveCount(0);
+    await expect(page.getByLabel('Dirección interna del reino (opcional)')).toHaveValue(
+      ajustes.keycloak.internalIssuer,
+    );
+    await expect(autenticacion.getByLabel('Servidor')).toHaveCount(0);
 
     // Y se vuelve a AD para guardar: vale desde la próxima entrada, sin reiniciar nada.
     await metodo.selectOption('ad');
@@ -232,8 +268,9 @@ test.describe('Configuración', () => {
   });
 
   /**
-   * Los dos botones de «Probar la conexión» prueban **lo que hay en pantalla**, antes de guardarlo: es
-   * lo que evita quedarse sin poder entrar por guardar algo que no funciona.
+   * Los dos botones de «Probar la conexión» de los métodos prueban **lo que hay en pantalla**, antes de
+   * guardarlo: es lo que evita quedarse sin poder entrar por guardar algo que no funciona. La tarjeta
+   * del motor de IA tiene el suyo, y esa prueba va aparte.
    *
    * Necesitan los dos servicios de pruebas levantados, así que se saltan si no lo están, en vez de
    * fallar por algo que no es del producto.
@@ -241,23 +278,25 @@ test.describe('Configuración', () => {
   test('las dos conexiones se prueban desde la pantalla', async ({ page, request }) => {
     test.skip(
       !(await respondeAlProbar(request, 'directory')),
-      'El directorio no responde: levántalo con `--profile auth`',
+      'El directorio no responde: levántalo con `docker compose -f active-directory.yml up -d`',
     );
     test.skip(
       !(await respondeAlProbar(request, 'keycloak')),
-      'Keycloak no responde: levántalo con `--profile auth`',
+      'Keycloak no responde: levántalo con `docker compose -f keycloak.yml up -d`',
     );
 
     // **Cada botón sale con su panel**: se elige el método, se prueba, y se cambia. Antes estaban los
     // dos a la vez, y desde el 2026-09-27 cada configuración se enseña sólo con su método.
+    // `first()` porque desde el 2026-09-30 la tarjeta del motor de IA tiene **su** botón de probar, y
+    // el del método elegido es el primero de la pantalla.
     const metodo = page.getByLabel('Método de entrada');
 
     await metodo.selectOption('ad');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(page.getByText('El directorio ha contestado y la cuenta de servicio entra.')).toBeVisible();
 
     await metodo.selectOption('keycloak');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(
       page.getByText('El reino ha contestado y dice dónde está su pantalla de entrada.'),
     ).toBeVisible();
@@ -265,7 +304,7 @@ test.describe('Configuración', () => {
     // Y lo que no funciona se dice: con el servidor cambiado por uno que no existe, la prueba falla.
     await metodo.selectOption('ad');
     await page.getByLabel('Servidor').fill('no-existe-de-verdad');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(page.getByText('No se ha podido conectar con el directorio')).toBeVisible();
 
     // Se deja como estaba, sin guardar nada: la prueba de conexión **no toca la base**. Tras recargar
@@ -304,6 +343,10 @@ test.describe('Configuración', () => {
 
     const guardar = page.getByRole('button', { name: 'Guardar la región y la dirección' });
     const direccion = page.getByLabel('Dirección pública');
+    const zonaSeleccionada = page.getByLabel('Región horaria seleccionada');
+
+    await expect(zonaSeleccionada).toHaveValue(String(antes.timeZone));
+    await expect(zonaSeleccionada).toHaveAttribute('readonly', '');
 
     // **El aviso de que no hay https** (decisión 13): sale con `http://` y **no bloquea nada**, que es
     // lo que permite probar la instalación en local.
@@ -320,6 +363,7 @@ test.describe('Configuración', () => {
     // toda la interfaz para pintar sus fechas (decisión 15).
     await page.getByLabel('Buscar una ciudad o una zona').fill('guayaquil');
     await page.getByRole('option', { name: 'America/Guayaquil', exact: true }).click();
+    await expect(zonaSeleccionada).toHaveValue('America/Guayaquil');
     await guardar.click();
     await expect(page.getByText('La región y la dirección se han guardado.')).toBeVisible();
 
@@ -330,12 +374,109 @@ test.describe('Configuración', () => {
     await expect(page.getByText(/Ahora son las .*GMT-5/)).toBeVisible();
 
     // Se devuelve la dirección que había. Va aquí, y no en un `finally`, porque al final de una prueba
-    // fallida el contexto ya está cerrado y el `PUT` no llega: entonces la deja el seeder.
+    // fallida el contexto ya está cerrado y el `PUT` no llega: una nueva pasada crea una instalación desechable.
     await request.put('/api/settings', {
       headers: { Authorization: `Bearer ${peticion}` },
-      data: { ...antes, publicAppUrl: 'https://dev.catalina-support.example.com' },
+      data: { ...antes, publicAppUrl: antes.publicAppUrl },
     });
   });
+  /**
+   * **El motor de IA**: su dirección y su modelo se configuran desde aquí, con su prueba de la
+   * conexión, en vez de vivir en el entorno (`docs/modules/ai.md`).
+   *
+   * Se prueba lo que hace que sirva de algo: que lo guardado se enseña, que el guardado llega, que la
+   * prueba dice que sí cuando el motor contesta y que dice que no cuando la dirección no existe. El
+   * motor de desarrollo tiene que estar levantado, así que la prueba se salta si no lo está.
+   */
+  test('el motor de IA se configura y se prueba desde la pantalla', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    test.skip(
+      !(await respondeAlProbar(request, 'ai')),
+      'El motor de IA no responde: levántalo con `docker compose -f ai.yml up -d`',
+    );
+
+    // **Se parte de otra dirección distinta** de la que se va a escribir: el botón de guardar está
+    // apagado mientras no haya cambios, y una prueba que dependa de lo que hubiera antes deja de ser
+    // una prueba. Se deja apuntada la de verdad, para devolverla al final.
+    const peticion = await tokenDeFabrica(request);
+    const antes = (await (
+      await request.get('/api/settings', { headers: { Authorization: `Bearer ${peticion}` } })
+    ).json()) as Record<string, unknown>;
+    await request.put('/api/settings', {
+      headers: { Authorization: `Bearer ${peticion}` },
+      data: { ...antes, aiUrl: 'http://antes.example.org', aiModel: 'modelo-de-antes' },
+    });
+
+    await entrarComo(page, FABRICA.email, FABRICA.password);
+    await page.goto('/settings');
+
+    // **La tarjeta nueva**, con la dirección y el modelo tal y como se guardaron.
+    await expect(page.getByRole('heading', { name: 'El motor de IA' })).toBeVisible();
+    const direccion = page.getByLabel('Dirección del motor');
+    const modelo = page.getByLabel('Modelo');
+    await expect(direccion).toHaveValue('http://antes.example.org');
+    await expect(modelo).toHaveValue('modelo-de-antes');
+
+    // Se guarda el motor de desarrollo, que es el que tiene que quedar.
+    await direccion.fill('http://catalina_support_ai:8080');
+    await modelo.fill('qwen2.5-1.5b-instruct');
+    await page.getByRole('button', { name: 'Guardar el motor de IA' }).click();
+    await expect(page.getByText('El motor de IA se ha guardado.')).toBeVisible();
+
+    // **Y se prueba la conexión**: el motor de desarrollo contesta, así que la prueba lo dice.
+    // `last()` porque el botón del motor es el último de la pantalla: los otros dos salen sólo con su
+    // método de entrada.
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText('El motor ha contestado: redacta los dos resúmenes del ticket.')).toBeVisible();
+
+    // Y lo que no funciona se dice: con una dirección que no existe, la prueba falla.
+    await direccion.fill('http://no-existe-de-verdad:8080');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText(/El motor de IA no ha contestado/)).toBeVisible();
+
+    // **Vaciar la dirección no prueba la guardada** (decisión del responsable, 2026-09-30): al abrir
+    // la pantalla el campo viene con lo que hay en la base, así que vaciarlo es borrarlo a propósito y
+    // lo que toca es decir que no hay nada que probar.
+    await direccion.fill('');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText(/no hay ninguna que probar/)).toBeVisible();
+
+    // Se devuelve la dirección que había. Al final, y no en un `finally`, porque en una prueba fallida
+    // el contexto ya está cerrado: entonces lo deja el seeder.
+    await request.put('/api/settings', {
+      headers: { Authorization: `Bearer ${peticion}` },
+      data: {
+        ...antes,
+        aiUrl: 'http://catalina_support_ai:8080',
+        aiModel: 'qwen2.5-1.5b-instruct',
+      },
+    });
+  });
+
+  test('el resultado de una conexión se mantiene visible en un toast', async ({ page }) => {
+    const direccion = page.getByLabel('Dirección del motor');
+    await direccion.fill('http://no-existe-de-verdad:8080');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+
+    const toast = page.locator('app-toast');
+    await expect(toast).toContainText('El motor de IA no ha contestado');
+    expect(await toast.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('fixed');
+
+    const caja = await toast.boundingBox();
+    const ventana = page.viewportSize();
+    expect(caja).not.toBeNull();
+    expect(ventana).not.toBeNull();
+    expect(caja!.x).toBeGreaterThanOrEqual(0);
+    expect(caja!.y).toBeGreaterThanOrEqual(0);
+    expect(caja!.x + caja!.width).toBeLessThanOrEqual(ventana!.width);
+
+    // Es error: cinco segundos no lo retiran. Se conserva hasta que la persona lo cierre.
+    await page.waitForTimeout(5_500);
+    await expect(toast).toBeVisible();
+    await toast.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(toast).toHaveCount(0);
+  });
+
   test('las tarjetas de Configuración están en su orden y cada cosa en la suya', async ({ page }) => {
     // **La pantalla se ordenó el 2026-09-30** (decisión del responsable): cada tarjeta lleva lo que su
     // título dice. Antes, «La numeración y el reparto» tenía dentro el idioma, y el prefijo y el reparto
@@ -345,7 +486,7 @@ test.describe('Configuración', () => {
     await page.goto('/settings');
 
     const tarjetas = page.locator('app-tarjeta');
-    await expect(tarjetas).toHaveCount(6);
+    await expect(tarjetas).toHaveCount(7);
 
     // Los títulos, en orden: de lo que la instalación **es** a cómo se entra, cómo trabaja y cómo avisa.
     for (const [i, titulo] of [
@@ -354,6 +495,7 @@ test.describe('Configuración', () => {
       'Método de autenticación',
       'La numeración y el reparto',
       'Región horaria y dirección pública',
+      'El motor de IA',
       'Los correos',
     ].entries()) {
       await expect(tarjetas.nth(i).getByRole('heading').first()).toHaveText(titulo);
@@ -372,8 +514,14 @@ test.describe('Configuración', () => {
     await expect(tarjetas.nth(3).getByLabel('Reparto').first()).toBeVisible();
 
     // **Y la región y la dirección van juntas**, sin la numeración dentro.
+    await expect(tarjetas.nth(4).getByLabel('Región horaria seleccionada')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Dirección pública')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Prefijo de los números')).toHaveCount(0);
+
+    // **Y el motor de IA tiene la suya**, con su dirección y su modelo, que ya no viven en el entorno.
+    await expect(tarjetas.nth(5).getByLabel('Dirección del motor')).toBeVisible();
+    await expect(tarjetas.nth(5).getByLabel('Modelo')).toBeVisible();
+    await expect(tarjetas.nth(5).getByRole('button', { name: 'Probar la conexión' })).toBeVisible();
   });
 });

@@ -14,8 +14,9 @@ var ErrSettingsNotFound = errors.New("settings.notFound")
 
 // InstallationSettings es la fila única de la configuración propia de la instalación.
 type InstallationSettings struct {
-	ID       int64  `gorm:"primaryKey"`
-	Language string `gorm:"column:language"`
+	ID              int64  `gorm:"primaryKey"`
+	Language        string `gorm:"column:language"`
+	SettingsVersion int64  `gorm:"column:settings_version"`
 	// EntryMethod es **el método de entrada: uno a la vez** (`local`, `ad` o `keycloak`). Los otros
 	// dos quedan apagados, y se puede cambiar cuando haga falta (docs/modules/settings.md, 5.8).
 	EntryMethod  string `gorm:"column:entry_method"`
@@ -31,6 +32,9 @@ type InstallationSettings struct {
 	// y la vuelta de Keycloak. Vacía es «no configurada» y se usa la variable de entorno
 	// (docs/modules/settings.md, decisión 14).
 	PublicAppURL string `gorm:"column:public_app_url"`
+	// **El motor de IA**: su dirección y su modelo. Vacíos es «no integrado».
+	AIURL   string `gorm:"column:ai_url"`
+	AIModel string `gorm:"column:ai_model"`
 	// InstalledAt es **el sello de instalación**: nulo mientras nadie haya terminado el asistente de
 	// primer arranque. Nulo es «sin instalar»: sólo entonces se enseña la vista de instalación y su API
 	// acepta configurar (docs/primer-arranque.md, sección 2).
@@ -97,17 +101,52 @@ func (DirectorySettings) TableName() string { return "directory_settings" }
 // KeycloakSettings es la fila única de la configuración del camino de Keycloak. El secreto del
 // cliente se guarda aquí y no sale nunca por la API.
 type KeycloakSettings struct {
-	ID           int64     `gorm:"primaryKey"`
-	Issuer       string    `gorm:"column:issuer"`
-	ClientID     string    `gorm:"column:client_id"`
-	ClientSecret string    `gorm:"column:client_secret"`
-	RedirectURI  string    `gorm:"column:redirect_uri"`
-	UpdatedAt    time.Time `gorm:"column:updated_at"`
-	UpdatedByID  *int64    `gorm:"column:updated_by_id"`
+	ID             int64     `gorm:"primaryKey"`
+	Issuer         string    `gorm:"column:issuer"`
+	InternalIssuer string    `gorm:"column:internal_issuer"`
+	ClientID       string    `gorm:"column:client_id"`
+	ClientSecret   string    `gorm:"column:client_secret"`
+	RedirectURI    string    `gorm:"column:redirect_uri"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
+	UpdatedByID    *int64    `gorm:"column:updated_by_id"`
 }
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
 func (KeycloakSettings) TableName() string { return "keycloak_settings" }
+
+// AISettings es la configuración activa del motor. La credencial sólo existe cifrada.
+type AISettings struct {
+	ID                      int64      `gorm:"primaryKey"`
+	Mode                    string     `gorm:"column:mode"`
+	Provider                string     `gorm:"column:provider"`
+	BaseURL                 string     `gorm:"column:base_url"`
+	Model                   string     `gorm:"column:model"`
+	AuthType                string     `gorm:"column:auth_type"`
+	AuthHeader              string     `gorm:"column:auth_header"`
+	CredentialVersion       *int16     `gorm:"column:credential_version"`
+	CredentialNonce         []byte     `gorm:"column:credential_nonce"`
+	CredentialCiphertext    []byte     `gorm:"column:credential_ciphertext"`
+	PrivacyConfirmedAt      *time.Time `gorm:"column:privacy_confirmed_at"`
+	PrivacyConfirmedByID    *int64     `gorm:"column:privacy_confirmed_by_id"`
+	PrivacyConfirmedInSetup bool       `gorm:"column:privacy_confirmed_in_setup"`
+	TestedAt                *time.Time `gorm:"column:tested_at"`
+	UpdatedAt               time.Time  `gorm:"column:updated_at"`
+	UpdatedByID             *int64     `gorm:"column:updated_by_id"`
+}
+
+func (AISettings) TableName() string { return "ai_settings" }
+
+type AIModelAcceptance struct {
+	ID              int64     `gorm:"primaryKey"`
+	ModelID         string    `gorm:"column:model_id"`
+	ModelVersion    string    `gorm:"column:model_version"`
+	Checksum        string    `gorm:"column:checksum"`
+	AcceptedAt      time.Time `gorm:"column:accepted_at"`
+	AcceptedByID    *int64    `gorm:"column:accepted_by_id"`
+	AcceptedInSetup bool      `gorm:"column:accepted_in_setup"`
+}
+
+func (AIModelAcceptance) TableName() string { return "ai_model_acceptances" }
 
 // SettingsRepository lee y escribe la configuración.
 type SettingsRepository struct {
@@ -165,6 +204,26 @@ func (r *SettingsRepository) Keycloak() (KeycloakSettings, error) {
 	}
 
 	return ajustes, err
+}
+
+func (r *SettingsRepository) AI() (AISettings, error) {
+	var ajustes AISettings
+	err := r.db.Where("id = 1").First(&ajustes).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return AISettings{}, ErrSettingsNotFound
+	}
+	return ajustes, err
+}
+
+func (r *SettingsRepository) UpdateAI(cambios map[string]any, updatedByID *int64) error {
+	return r.update("ai_settings", cambios, updatedByID)
+}
+
+func (r *SettingsRepository) AcceptAIModel(modelID, version, checksum string, actorID *int64, setup bool) error {
+	acceptance := AIModelAcceptance{ModelID: modelID, ModelVersion: version, Checksum: checksum}
+	return r.db.Where(acceptance).Attrs(AIModelAcceptance{
+		AcceptedAt: time.Now(), AcceptedByID: actorID, AcceptedInSetup: setup,
+	}).FirstOrCreate(&acceptance).Error
 }
 
 // UpdateDirectory cambia las columnas indicadas de la configuración del directorio.

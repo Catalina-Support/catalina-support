@@ -137,13 +137,12 @@ describe('las frases y las fechas', () => {
 
 describe('el texto de un resumen del motor de IA', () => {
   // La pantalla **nunca enseña una clave ni un hueco mudo**: cada estado se dice con palabras
-  // (docs/modules/ai.md, decisiones 2 y 8), y el texto sale en el idioma de quien mira, que es por lo
-  // que los dos idiomas viajan en la misma respuesta.
-  const listo = { state: 'listo', es: 'No puede entrar', en: 'Cannot sign in' };
+  // (docs/modules/ai.md). El texto viaja una sola vez y declara el idioma global con el que se creó.
+  const listo = { state: 'listo', text: 'No puede entrar', language: 'es' };
 
-  it('con el resumen escrito, se lee en el idioma de quien mira', () => {
+  it('con el resumen escrito en el idioma global, se lee; uno anterior no se muestra', () => {
     expect(textoDelResumen(listo, 'es', ES)).toBe('No puede entrar');
-    expect(textoDelResumen(listo, 'en', ES)).toBe('Cannot sign in');
+    expect(textoDelResumen(listo, 'en', ES)).toBe('No puede entrar');
   });
 
   it('mientras el motor escribe, lo dice', () => {
@@ -159,7 +158,7 @@ describe('el texto de un resumen del motor de IA', () => {
 
   it('un ticket que nunca ha pedido resumen, y uno con el texto vacío, dicen «—»', () => {
     expect(textoDelResumen(undefined, 'es', ES)).toBe('—');
-    expect(textoDelResumen({ state: 'listo', es: '   ' }, 'es', ES)).toBe('—');
+    expect(textoDelResumen({ state: 'listo', text: '   ', language: 'es' }, 'es', ES)).toBe('—');
   });
 });
 
@@ -198,7 +197,11 @@ describe('la normalización de una etiqueta', () => {
   it('un texto se parte en sus etiquetas por espacios y comas', () => {
     // En el campo las palabras ya han pasado por `normalizarAlEscribir`, así que llegan unidas; esto es
     // para lo que se pega o se escribe de un tirón.
-    expect(etiquetasDeTexto('Red Wifi, licencia-office')).toEqual(['red', 'wifi', 'licencia-office']);
+    expect(etiquetasDeTexto('Red Wifi, licencia-office')).toEqual([
+      'red',
+      'wifi',
+      'licencia-office',
+    ]);
     expect(etiquetasDeTexto('red-wifi, vpn')).toEqual(['red-wifi', 'vpn']);
     expect(etiquetasDeTexto('  ,  ')).toEqual([]);
   });
@@ -294,8 +297,8 @@ describe('quién puede etiquetar un ticket', () => {
   it('el Administrador mira y un cerrado no se etiqueta', () => {
     expect(puedeEtiquetarElTicket({ ...base, esSoporte: true, soloLectura: true })).toBe(false);
     expect(puedeEtiquetarElTicket({ ...base, esSoporte: true, cerrado: true })).toBe(false);
-    expect(puedeEtiquetarElTicket({ ...base, interno: true, esDesarrollo: true, cerrado: true })).toBe(
-      false,
-    );
+    expect(
+      puedeEtiquetarElTicket({ ...base, interno: true, esDesarrollo: true, cerrado: true }),
+    ).toBe(false);
   });
 });

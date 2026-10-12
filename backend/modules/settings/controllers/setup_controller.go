@@ -37,6 +37,71 @@ func (c *SetupController) Show(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSetupResponse(estado))
 }
 
+func (c *SetupController) AIModels(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	catalog, err := c.service.AIModels()
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, catalog)
+}
+func (c *SetupController) DownloadAIModel(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	var in struct {
+		AcceptLicense bool `json:"acceptLicense"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		httpx.WriteError(w, 400, KeyInternal)
+		return
+	}
+	if err := c.service.DownloadAIModel(r.PathValue("id"), in.AcceptLicense, nil, true); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+func (c *SetupController) ActivateAIModel(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.ActivateAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) DeleteAIModel(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.DeleteAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // SaveInstallation guarda el primer paso: el nombre y el idioma.
 func (c *SetupController) SaveInstallation(w http.ResponseWriter, r *http.Request) {
 	c.save(w, r, 1)
@@ -57,6 +122,11 @@ func (c *SetupController) SaveMail(w http.ResponseWriter, r *http.Request) {
 	c.save(w, r, 4)
 }
 
+// SaveAI prueba una generación real y sólo entonces guarda y activa el quinto paso.
+func (c *SetupController) SaveAI(w http.ResponseWriter, r *http.Request) {
+	c.save(w, r, 5)
+}
+
 // Finish sella la instalación: **es lo que hace que el asistente no vuelva a aparecer**.
 func (c *SetupController) Finish(w http.ResponseWriter, r *http.Request) {
 	estado, err := c.service.TerminarInstalacion()
@@ -68,7 +138,42 @@ func (c *SetupController) Finish(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSetupResponse(estado))
 }
 
-// save lee un paso y lo guarda. Los cuatro pasos comparten el mismo cuerpo porque comparten la misma
+// TestEntry prueba la conexión del paso 2 —el directorio o Keycloak, según el método— **con los datos
+// que llegan**, que son los que hay escritos en pantalla y todavía no están guardados. No toca la
+// base y no guarda nada: contesta lo mismo que las pruebas de Configuración.
+func (c *SetupController) TestEntry(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.SetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	if err := c.service.ProbarPasoDeLaEntrada(dtos.NewSetupStep(entrada)); err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// TestMail prueba la conexión del correo saliente del paso 4 **con los datos que llegan**. Comprueba
+// la conexión y la autenticación y **no manda ningún correo**: en el asistente no hay destinatario.
+func (c *SetupController) TestMail(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.SetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	if err := c.service.ProbarCorreoDeInstalacion(dtos.NewSetupStep(entrada).Mail); err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// save lee un paso y lo guarda. Los cinco pasos comparten el mismo cuerpo porque comparten la misma
 // forma: el paso que llega trae **lo suyo** y lo demás viene vacío a propósito.
 func (c *SetupController) save(w http.ResponseWriter, r *http.Request, paso int) {
 	var entrada dtos.SetupRequest
@@ -89,7 +194,12 @@ func (c *SetupController) save(w http.ResponseWriter, r *http.Request, paso int)
 // fail traduce el error del servicio a la clave y el código que le tocan
 // (docs/primer-arranque.md, sección 6).
 func (c *SetupController) fail(w http.ResponseWriter, err error) {
+	var memory *services.AIInsufficientMemoryError
 	switch {
+	case errors.As(err, &memory):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{
+			"error": memory.Error(), "requiredBytes": memory.RequiredBytes, "availableBytes": memory.AvailableBytes,
+		})
 	case errors.Is(err, services.ErrYaInstalada):
 		// **La instalación ya está sellada**: no se configura dos veces.
 		httpx.WriteError(w, http.StatusConflict, "setup.alreadyInstalled")
@@ -109,10 +219,38 @@ func (c *SetupController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.incomplete")
 	case errors.Is(err, services.ErrKeycloakIncomplete):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.incomplete")
+	// Las dos pruebas de conexión del asistente: el detalle queda en el log y a la pantalla le llega
+	// la misma clave que usa Configuración, para que diga lo mismo en los dos sitios.
+	case errors.Is(err, services.ErrDirectoryUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.unreachable")
+	case errors.Is(err, services.ErrKeycloakUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.unreachable")
+	case errors.Is(err, services.ErrCorreoInalcanzable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.unreachable")
 	case errors.Is(err, services.ErrTimeZoneUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.timeZone.unknown")
 	case errors.Is(err, services.ErrPublicURLInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.publicUrl.invalid")
+	case errors.Is(err, services.ErrAIModeUnknown):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.modeUnknown")
+	case errors.Is(err, services.ErrAIProviderUnknown):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.providerUnknown")
+	case errors.Is(err, services.ErrAIAuthUnknown):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.authUnknown")
+	case errors.Is(err, services.ErrAIModelRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.modelRequired")
+	case errors.Is(err, services.ErrAIPrivacyRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.privacyRequired")
+	case errors.Is(err, services.ErrAICredentialInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.credentialInvalid")
+	case errors.Is(err, services.ErrAIURLInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.urlInvalid")
+	case errors.Is(err, services.ErrAIUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.unreachable")
+	case errors.Is(err, services.ErrAILicenseRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, services.ErrAIManagerUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, err.Error())
 	default:
 		httpx.WriteError(w, http.StatusInternalServerError, KeyInternal)
 	}

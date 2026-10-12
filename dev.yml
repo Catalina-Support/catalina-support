@@ -8,8 +8,10 @@ name: catalina-support-dev
 #   docker compose -f dev.yml logs -f backend
 #   docker compose -f dev.yml exec backend go test ./...
 #
-# Los puertos publicados son 11001-11004 (no los 10001-10004 de Calibyou) para que los
-# dos proyectos puedan estar levantados a la vez, y sólo se publican en 127.0.0.1.
+# Los puertos publicados son 11001-11006 (no los 10001-10004 de Calibyou) para que los
+# dos proyectos puedan estar levantados a la vez; los dos últimos —11005, el directorio de
+# pruebas, y 11006, Keycloak— los publican sus propios archivos (`active-directory.yml` y
+# `keycloak.yml`), que entran en la red de este entorno. Se publican sin dirección de escucha.
 #
 # `mail` es el buzón de pruebas: recoge todo el correo que manda la aplicación y lo
 # enseña en http://127.0.0.1:11004. Sin él no se puede completar el alta de una cuenta
@@ -40,9 +42,18 @@ services:
       dockerfile: config/dockerfiles/backend.Dockerfile
     env_file:
       - ./config/env/dev.env
+    environment:
+      # Sugerencias exclusivas del paso 4 de /setup en una instalación todavía vacía. El usuario
+      # puede cambiarlas y sólo pasan a ser configuración al guardar el paso.
+      SETUP_MAIL_HOST: mail
+      SETUP_MAIL_PORT: "1025"
+      SETUP_MAIL_SECURE: "false"
+      SETUP_MAIL_USER: ""
+      SETUP_MAIL_FROM_NAME: Catalina Support
+      SETUP_MAIL_FROM_EMAIL: no-responder@catalina-support.local
     depends_on:
-      database:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - 11002:11002
     volumes:
@@ -72,106 +83,7 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
-  # Pruebas de interfaz. No se levanta con el resto (`up -d` no lo arranca): se pide a propósito,
-  # porque abre un navegador de verdad contra desarrollo.
-  #
-  #   docker compose -f dev.yml run --rm e2e
-  #
-  # La imagen trae los navegadores instalados: es lo que permite cumplir la regla de que en la
-  # máquina no se instala nada (docs/ambientes.md, sección 8.3).
-  # ---------------------------------------------------------------------------
-  # El directorio de pruebas, para el camino de AD. Va detrás de un perfil para que no estorbe en el
-  # día a día: sólo se levanta cuando se está probando ese camino
-  # (`docker compose -f dev.yml --profile auth up -d`; docs/modules/auth.md, sección 11).
-  # ---------------------------------------------------------------------------
-  ldap:
-    image: osixia/openldap:1.5.0
-    container_name: catalina_support_dev_ldap
-    profiles: ["auth"]
-    # **Sin `restart: always`, y a propósito**: los guiones de arranque de este contenedor no son
-    # idempotentes —al volver a arrancarlo intenta copiar los LDIF a una carpeta que ya no está y
-    # muere—, así que reiniciarlo solo lo dejaría en un bucle de arranques fallidos y el camino de AD
-    # caído. Se levanta a mano y, si hay que reiniciarlo, recreándolo
-    # (docs/modules/auth.md, sección 11).
-    environment:
-      LDAP_ORGANISATION: Catalina Support
-      LDAP_DOMAIN: ejemplo.com
-      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-admin-directorio}
-      # Las personas de prueba viven en el repositorio, no en un volumen que haya que mantener.
-      LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
-      # La configuración de arranque no se queda en el contenedor: es de las pruebas, no del servicio.
-      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
-      LDAP_NOFILE: "1024"
-    volumes:
-      - ./config/ldap:/ldifs:ro
-    ports:
-      - 11005:389
-
-  # ---------------------------------------------------------------------------
-  # Keycloak, para el camino de OIDC. Va detrás del mismo perfil que el directorio: son los dos
-  # caminos de entrada que una instalación puede tener o no, y no estorban en el día a día.
-  #
-  # **El reino vive en el repositorio** (`config/keycloak/`) y se importa al arrancar, igual que las
-  # personas del directorio: no hay nada que configurar a mano ni que se pierda entre reinicios. Con
-  # `--import-realm`, si el reino ya existe no se toca.
-  #
-  # **El navegador llega a Keycloak por el mismo dominio que a la aplicación, y por un camino**
-  # (`/sso/`, que nginx manda a este contenedor). Así el emisor es uno solo —el que ve el
-  # navegador— y no hay dos direcciones que puedan discrepar: el backend usa el mismo
-  # `OIDC_ISSUER`, y por eso la vuelta se firma y se comprueba siempre contra el mismo sitio
-  # (docs/modules/auth.md, sección 5.3).
-  # ---------------------------------------------------------------------------
-  keycloak:
-    # Como el directorio, **sin `restart: always`**: son los dos servicios de pruebas y se levantan a
-    # mano con `--profile auth` (docs/modules/auth.md, sección 11).
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: catalina_support_dev_keycloak
-    profiles: ["auth"]
-    # `start-dev` es el modo de desarrollo: sin TLS propio y sin clúster, que es lo que tiene al lado.
-    command: start-dev --import-realm
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-keycloak}
-      KC_HTTP_ENABLED: "true"
-      KC_HTTP_PORT: "8080"
-      # El camino por el que nginx lo publica, y el nombre con el que firma lo que devuelve.
-      KC_HTTP_RELATIVE_PATH: /sso
-      KC_HOSTNAME: https://dev.catalina-support.example.com/sso
-      # Detrás de nginx: las cabeceras `X-Forwarded-*` que pone el vhost son de fiar.
-      KC_PROXY_HEADERS: xforwarded
-      KC_HEALTH_ENABLED: "true"
-    volumes:
-      - ./config/keycloak:/opt/keycloak/data/import:ro
-    ports:
-      - 11006:8080
-
-  e2e:
-    image: mcr.microsoft.com/playwright:v1.63.0-noble
-    container_name: catalina_support_dev_e2e
-    profiles: ["e2e"]
-    working_dir: /e2e
-    # **El comando va aquí y no se pasa a mano**, y esto es un arreglo del 2026-09-26: sin él,
-    # `docker compose -f dev.yml run --rm e2e` —que es lo que dicen los documentos— **arrancaba el
-    # contenedor, no ejecutaba ni un caso y salía con código 0**. Un verde sin pruebas es lo peor que
-    # puede hacer una capa de pruebas, y estuvo así desde el principio del proyecto.
-    #
-    # Se sigue pudiendo pedir otra cosa: `... run --rm e2e npx playwright test tickets`, o
-    # `... run --rm e2e sh -c "npx playwright test --reporter=line"`.
-    command: ["npx", "playwright", "test"]
-    # El entorno de desarrollo, para poder entrar con la cuenta de fábrica y para leer el buzón.
-    env_file:
-      - ./config/env/dev.env
-    environment:
-      BASE_URL: https://dev.catalina-support.example.com
-      # El buzón, por dentro de la red de los contenedores: es donde acaban los correos que manda
-      # la aplicación, y es lo que permite probar el enlace del correo de verdad.
-      MAILPIT_URL: http://mail:8025
-      # Para volcar lo que hay en pantalla cuando algo no se ve como debería, se ejecuta la
-      # herramienta de diagnóstico: `docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e`.
-
-    volumes:
-      - ./tests/e2e:/e2e
-      - e2e_node_modules:/e2e/node_modules
+  # Las pruebas de navegador viven en tests.yml y no usan esta instalación.
 
   database:
     image: postgres:18-alpine
@@ -189,114 +101,76 @@ services:
       timeout: 5s
       retries: 12
 
-  ai:
-    # Etiqueta concreta: `server-b11206` —llama.cpp, compilación 11206, publicada
-    # el 2026-09-27—. Es la misma imagen a la que apunta hoy la etiqueta móvil
-    # `server` (digest de índice `sha256:00bd6c289c590e576948cb3639b8195e4d3e6dd6ba1d761f0e2b871fcd4df24f`),
-    # pero **se fija la compilación** para que un `docker pull` no cambie el motor
-    # por debajo sin que nadie lo haya decidido. Para subir de compilación se
-    # cambia esta línea a propósito. (`server-b5350`, del 2025-05-12, también
-    # funciona: se probó antes.)
-    image: ghcr.io/ggml-org/llama.cpp:server-b11206
-    container_name: catalina_support_ai
-    restart: always
-
-    # El guion descarga el modelo si falta en el volumen y, cuando termina, se
-    # convierte en el servidor con `exec` (ver `config/ai/01-descargar-modelo.sh`).
-    # Se monta en sólo lectura: el contenedor no tiene por qué escribir en el
-    # repositorio.
-    entrypoint: ["/bin/sh", "/config/ai/01-descargar-modelo.sh"]
+  # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
+  # **Es opcional** —quien quiera probar el proyecto vacío, sólo con el esquema, no lo ejecuta— y
+  # **no se levanta con `up -d`**: tiene perfil propio y se pide a propósito:
+  #
+  #   docker compose -f dev.yml run --rm seed
+  #
+  # Es **un contenedor que se ejecuta y se va**, con la misma imagen que la base —`psql` y `bash` ya
+  # vienen dentro—, y corre **el guion de siempre, `scripts/dev-seed.sh`**: una sola verdad sobre
+  # cómo se siembra, y el mismo comando en Linux, macOS y Windows (docs/ambientes.md, sección 3.3).
+  # El guion aplica el esquema (idempotente), los ejemplos y copia los adjuntos de `config/seed/` a
+  # `_files/`, en la carpeta de su ticket.
+  #
+  # Los montajes son exactamente lo que el guion necesita: el guion, las migraciones y `config/`
+  # (la semilla y el entorno) **de sólo lectura**, y `_files/` **de escritura**, que es lo único que
+  # el guion modifica en la máquina. El `entrypoint` se sustituye para correr el guion, y con él el
+  # contenedor no pasa por el arranque de PostgreSQL (no levanta ninguna base: la siembra es la de
+  # `database`).
+  # Sólo el esquema: no borra, no carga ejemplos y no sella una base nueva.
+  migrate:
+    image: postgres:18-alpine
+    env_file: [./config/env/dev.env]
+    depends_on:
+      database:
+        condition: service_healthy
     volumes:
-      - ./config/ai:/config/ai:ro
-      # El modelo (1,07 GB) **no está en el repositorio**: vive en este volumen con
-      # nombre, así que sobrevive a `down`/`up` y a recrear el contenedor, y sólo
-      # se descarga la primera vez.
-      - ai_modelos:/modelos
-
-    # Los argumentos del servidor. El guion de arranque los recibe y los pasa tal cual.
+      - ./backend/migrations:/migrations:ro
+    entrypoint: ["sh", "-ec"]
     command:
-      - --model
-      - /modelos/qwen2.5-1.5b-instruct-q4_k_m.gguf
-      - --alias
-      - qwen2.5-1.5b-instruct
-      # Escucha en todas las interfaces **de su red interna**: la 8080 no está
-      # publicada en la máquina, así que esto no la abre a nadie de fuera.
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8080"
-      # Contexto moderado: el motor no necesita más para resumir un ticket, y la
-      # caché KV crece con el contexto (unos 28 KB por token en este modelo, así
-      # que 4096 tokens son ~115 MB y 32768 serían ~900 MB, que no caben).
-      # Sin decirlo, esta compilación toma el contexto del propio modelo.
-      - --ctx-size
-      - "4096"
-      # Dos hilos: la máquina tiene cuatro núcleos y hay otros proyectos corriendo.
-      # El segundo ajuste es el de la fase de lectura del mensaje, que es la que
-      # más pesa cuando la entrada es larga.
-      - --threads
-      - "2"
-      - --threads-batch
-      - "2"
-      # Una sola conversación a la vez: el backend ya encola los trabajos de dos en
-      # dos (`docs/modules/ai.md`, sección 6), y más ranuras multiplicarían la caché.
-      - --parallel
-      - "1"
-      # Tope de longitud de la respuesta: se piden dos frases, no literatura. Evita
-      # que una generación desbocada se lleve por delante el tiempo del motor.
-      - --n-predict
-      - "512"
-      # La interfaz web del servidor no la ve nadie (no hay puerto publicado) y
-      # cargarla es memoria que no sobra.
-      - --no-webui
+      - |
+        export PGPASSWORD="$$POSTGRES_PASSWORD"
+        psql -h "$$POSTGRES_HOST" -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
+        echo "Esquema aplicado; los ejemplos siguen siendo opcionales."
 
-    # Sin puertos: es la regla, no un olvido. El motor sólo se habla por la red
-    # interna de docker.
-
-    # Límites: lo que impide que el motor se coma la máquina, que tiene 7,8 GB y
-    # otros proyectos dentro. Con 4096 de contexto el motor ronda los 1,4 GB
-    # (modelo ~1,07 GB + caché KV ~115 MB + buffers y servidor), así que 1500m es
-    # el techo real y no un número decorativo: `docker stats` lo confirma.
-    deploy:
-      resources:
-        limits:
-          memory: 1500m
-          # La mitad de los cuatro núcleos: es lo que piden los dos hilos de arriba,
-          # y los otros dos se quedan para el resto de proyectos.
-          cpus: "2.0"
-
-    # La imagen ya trae una comprobación de salud (`curl -f http://localhost:8080/health`),
-    # pero se reescribe para dar margen a **la primera descarga del modelo**: hasta
-    # que no está bajado (~1,1 GB), el servidor no escucha, y sin `start_period` el
-    # contenedor se declararía «enfermo» mientras sólo está bajando un archivo.
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15m
-
-    networks:
-      # El nombre exacto importa: es la red a la que entran el backend de desarrollo
-      # y el de producción (`docs/modules/ai.md`, decisión 1).
-      - catalina-support-ai
+  seed:
+    image: postgres:18-alpine
+    container_name: catalina_support_dev_seed
+    profiles: ["seed"]
+    working_dir: /app
+    entrypoint: ["bash", "scripts/dev-seed.sh"]
+    environment:
+      # La marca con la que el guion sabe que corre dentro del contenedor: habla con la base por la
+      # red del entorno con el `psql` de la imagen, sin necesitar docker dentro.
+      SEED_EN_CONTENEDOR: "1"
+    env_file:
+      - ./config/env/dev.env
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./backend/migrations:/app/backend/migrations:ro
+      - ./config:/app/config:ro
+      - ./_files:/app/_files
 
 networks:
-  # La red del motor de IA. Es **externa** porque la crea `ai.yml`, que es quien levanta el
-  # contenedor: aquí sólo se entra en ella. Si no está creada, `up -d` lo dice y se arregla
-  # levantando el motor (`docker compose -f ai.yml up -d`).
+  # **La red del entorno de desarrollo, con nombre fijo.** La crea este archivo (sin `external`) y
+  # los elementos que viven aparte —`active-directory.yml` y `keycloak.yml`— la declaran **externa**
+  # y entran en ella, con el nombre de servicio por alias (`ldap`, `keycloak`): así el backend los
+  # alcanza por su nombre **sin que estén en este archivo**, y levantar el entorno en una máquina
+  # nueva sigue siendo un solo comando.
+  default:
+    name: catalina-support-dev
   catalina-support-ai:
     # **No es externa: la crea el primero que arranca.** Con un nombre fijo, los tres archivos
     # apuntan a la misma red, y el primero que se levanta la crea y los demás entran en ella. Así
     # `docker compose -f dev.yml up -d` **funciona en una máquina nueva** sin crear nada a mano, que
     # es lo que fallaba (y sin guiones: esto vale igual en Windows).
-    name: catalina-support-ai
+    name: catalina-support-ai-dev
 
 volumes:
-  # **El modelo**: mismo nombre exacto que el volumen que ya existía, para que el motor no lo
-  # vuelva a descargar (1,1 GB). Vive aquí porque el motor es **parte del sistema**.
-  ai_modelos:
-    name: ai_modelos
   frontend_node_modules:
     name: catalina_support_dev_frontend_node_modules
   backend_go_mod:
@@ -305,5 +179,3 @@ volumes:
     name: catalina_support_dev_backend_go_build
   database:
     name: catalina_support_dev_database
-  e2e_node_modules:
-    name: catalina_support_dev_e2e_node_modules

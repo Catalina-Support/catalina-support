@@ -11,8 +11,11 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -44,13 +47,15 @@ func (d Directory) Configured() bool { return d.Host != "" }
 // OIDC es la configuración del camino de Keycloak.
 //
 // Los cuatro valores van juntos porque sin los cuatro no hay camino: un emisor sin cliente no sirve
-// de nada, y un cliente sin su secreto tampoco. **Sin `OIDC_ISSUER` no hay camino de Keycloak**, y
+// de nada, y un cliente sin su secreto tampoco. **Sin emisor configurado no hay camino de Keycloak**, y
 // como con AD, no hay un interruptor aparte (docs/modules/auth.md, sección 5.3).
 type OIDC struct {
 	// Issuer es la base del reino: de ahí sale el documento de descubrimiento. **El mismo para el
-	// navegador y para el backend**: si se ven por direcciones distintas, la que manda es la que ve
+	// navegador y la identidad del reino**: si se ven por direcciones distintas, manda la que ve
 	// el navegador, que es quien firma la vuelta.
 	Issuer string
+	// InternalIssuer permite conectar al mismo reino desde la red interna. Vacío usa Issuer.
+	InternalIssuer string
 	// ClientID y ClientSecret son del cliente confidencial que se da de alta en el reino. Su
 	// secreto no se escribe en la documentación ni en el código: **vive en la base**, se guarda desde
 	// Configuración y no se devuelve nunca por la API (docs/modules/settings.md, sección 5.8).
@@ -101,6 +106,10 @@ type Config struct {
 	// TokenSecret firma el token de sesión. Obligatorio en producción: sin él no se puede
 	// validar ninguna sesión.
 	TokenSecret string
+	// AICredentialKey cifra de forma autenticada las credenciales de proveedores de IA. Siempre es
+	// obligatoria y distinta del secreto de sesión.
+	AICredentialKey []byte
+	AIManagerToken  string
 
 	// AdminPassword es la contraseña de la cuenta de fábrica `admin`, que no está en la base
 	// (docs/usuarios-y-permisos.md, sección 8).
@@ -119,6 +128,15 @@ type Config struct {
 	AIPalabras int
 	AIEspera   time.Duration
 
+	// SetupMail son sugerencias para el correo del asistente de primer arranque. Sólo desarrollo
+	// las declara; no configuran el envío ni sustituyen valores guardados en la instalación.
+	SetupMailHost      string
+	SetupMailPort      string
+	SetupMailSecure    bool
+	SetupMailUser      string
+	SetupMailFromName  string
+	SetupMailFromEmail string
+
 	PostgresHost     string
 	PostgresPort     string
 	PostgresUser     string
@@ -129,26 +147,38 @@ type Config struct {
 // Load lee el entorno y falla si falta algo obligatorio: es preferible no arrancar a
 // arrancar a medias con una configuración incompleta.
 func Load() (Config, error) {
+	aiCredentialKey, err := credentialKey(os.Getenv("AI_CREDENTIAL_KEY"))
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
-		Environment:   get("ENVIRONMENT", "dev"),
-		AppPort:       get("APP_PORT", "11002"),
-		LogsFolder:    get("LOGS_FOLDER", "/logs"),
-		FilesPath:     get("FILES_PATH", "/files"),
-		TokenSecret:   strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
-		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
-		PublicAppURL:  strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
-		AIURL:         strings.TrimSpace(os.Getenv("AI_URL")),
-		AIModel:       get("AI_MODEL", "qwen2.5-1.5b-instruct"),
-		AIPalabras:    getInt("AI_PALABRAS", 40),
+		Environment:     get("ENVIRONMENT", "dev"),
+		AppPort:         get("APP_PORT", "11002"),
+		LogsFolder:      get("LOGS_FOLDER", "/logs"),
+		FilesPath:       get("FILES_PATH", "/files"),
+		TokenSecret:     strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
+		AICredentialKey: aiCredentialKey,
+		AIManagerToken:  strings.TrimSpace(os.Getenv("AI_MANAGER_TOKEN")),
+		AdminPassword:   os.Getenv("ADMIN_PASSWORD"),
+		PublicAppURL:    strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
+		AIURL:           strings.TrimSpace(os.Getenv("AI_URL")),
+		AIModel:         get("AI_MODEL", "qwen2.5-1.5b-instruct"),
+		AIPalabras:      getInt("AI_PALABRAS", 40),
 		// **Cuatro minutos por defecto**, y no es un número redondo: medido, un ticket de 6 000
 		// caracteres tarda ~82 s sólo en leerse y luego redacta a 5-9 palabras por segundo
 		// (`docs/modules/ai.md`, sección 2). Un tiempo corto haría fallar justo los tickets largos.
-		AIEspera:         time.Duration(getInt("AI_ESPERA_SEGUNDOS", 240)) * time.Second,
-		PostgresHost:     get("POSTGRES_HOST", "database"),
-		PostgresPort:     get("PGPORT", "11003"),
-		PostgresUser:     os.Getenv("POSTGRES_USER"),
-		PostgresPassword: os.Getenv("POSTGRES_PASSWORD"),
-		PostgresName:     os.Getenv("POSTGRES_DB"),
+		AIEspera:           time.Duration(getInt("AI_ESPERA_SEGUNDOS", 240)) * time.Second,
+		SetupMailHost:      strings.TrimSpace(os.Getenv("SETUP_MAIL_HOST")),
+		SetupMailPort:      strings.TrimSpace(os.Getenv("SETUP_MAIL_PORT")),
+		SetupMailSecure:    getBool("SETUP_MAIL_SECURE", false),
+		SetupMailUser:      strings.TrimSpace(os.Getenv("SETUP_MAIL_USER")),
+		SetupMailFromName:  strings.TrimSpace(os.Getenv("SETUP_MAIL_FROM_NAME")),
+		SetupMailFromEmail: strings.TrimSpace(os.Getenv("SETUP_MAIL_FROM_EMAIL")),
+		PostgresHost:       get("POSTGRES_HOST", "database"),
+		PostgresPort:       get("PGPORT", "11003"),
+		PostgresUser:       os.Getenv("POSTGRES_USER"),
+		PostgresPassword:   os.Getenv("POSTGRES_PASSWORD"),
+		PostgresName:       os.Getenv("POSTGRES_DB"),
 	}
 
 	var missing []string
@@ -190,6 +220,18 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
+func credentialKey(value string) ([]byte, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, fmt.Errorf("falta AI_CREDENTIAL_KEY, obligatoria en todos los entornos")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil || len(decoded) != 32 {
+		return nil, fmt.Errorf("AI_CREDENTIAL_KEY debe contener 32 bytes codificados en base64")
+	}
+	return decoded, nil
+}
+
 // DSN es la cadena de conexión de GORM.
 //
 // sslmode=disable va fijo: la base de datos vive en la red interna de Compose y no
@@ -216,9 +258,33 @@ func getInt(key string, fallback int) int {
 	return numero
 }
 
+func getBool(key string, fallback bool) bool {
+	valor := strings.TrimSpace(os.Getenv(key))
+	if valor == "" {
+		return fallback
+	}
+
+	booleano, err := strconv.ParseBool(valor)
+	if err != nil {
+		return fallback
+	}
+
+	return booleano
+}
+
 func get(key, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
 		return value
 	}
 	return fallback
+}
+
+// ValidIssuerURL admite bases de reino HTTP(S), sin credenciales ni componentes ambiguos.
+func ValidIssuerURL(value string) bool {
+	u, err := url.Parse(value)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" || u.RawPath != "" {
+		return false
+	}
+	p := strings.TrimRight(u.Path, "/")
+	return p == "" || path.Clean(p) == p
 }

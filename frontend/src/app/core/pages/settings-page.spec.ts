@@ -38,6 +38,8 @@ const CONFIGURACION = {
   mainNotification: 'al_asignado',
   internalAssignment: 'ninguna',
   internalNotification: 'a_nadie',
+  aiUrl: 'http://catalina_support_ai:8080',
+  aiModel: 'qwen2.5-1.5b-instruct',
   updatedAt: '2026-09-29T00:00:00Z',
   brand: { light: { filled: false }, dark: { filled: false } },
 };
@@ -122,21 +124,59 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
 
   /** El texto del aviso de que la dirección no va cifrada, o vacío si no está. */
   function avisoInseguro(fixture: ComponentFixture<SettingsPage>): string {
-    const avisos = Array.from(
-      fixture.nativeElement.querySelectorAll('app-aviso'),
-    ) as HTMLElement[];
+    const avisos = Array.from(fixture.nativeElement.querySelectorAll('app-aviso')) as HTMLElement[];
     return (
       avisos.find((aviso) => aviso.textContent?.includes('sin cifrar'))?.textContent?.trim() ?? ''
     );
   }
 
   /** Escribe en un campo como lo haría alguien: valor y evento `input`. */
-  function escribir(fixture: ComponentFixture<SettingsPage>, selector: string, valor: string): void {
+  function escribir(
+    fixture: ComponentFixture<SettingsPage>,
+    selector: string,
+    valor: string,
+  ): void {
     const campo = fixture.nativeElement.querySelector(selector) as HTMLInputElement;
     campo.value = valor;
     campo.dispatchEvent(new Event('input'));
     fixture.detectChanges();
   }
+
+  it('permite configurar métodos vacíos y conserva local si el guardado es rechazado', async () => {
+    const fixture = await montar();
+    const selector = fixture.nativeElement.querySelector('#metodo-entrada') as HTMLSelectElement;
+    for (const metodo of ['ad', 'keycloak']) {
+      const opcion = selector.querySelector(`option[value="${metodo}"]`) as HTMLOptionElement;
+      expect(opcion.disabled).toBe(false);
+      selector.value = metodo;
+      selector.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector(metodo === 'ad' ? '#dir-servidor' : '#kc-emisor'),
+      ).not.toBeNull();
+    }
+    http.expectNone((peticion) => peticion.method === 'PUT');
+    const guardar = Array.from(fixture.nativeElement.querySelectorAll('button')).find((boton) =>
+      (boton as HTMLButtonElement).textContent?.includes('Guardar cómo se entra'),
+    ) as HTMLButtonElement;
+    expect(guardar).toBeTruthy();
+    guardar.click();
+    await esperar();
+    const peticion = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/settings');
+    expect(peticion.request.body.entryMethod).toBe('keycloak');
+    peticion.flush(
+      { error: 'settings.keycloak.incomplete' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await esperar();
+    fixture.detectChanges();
+    http.expectNone((r) => r.method === 'PUT');
+    fixture.destroy();
+    const recargada = await montar();
+    expect(
+      (recargada.nativeElement.querySelector('#metodo-entrada') as HTMLSelectElement).value,
+    ).toBe('local');
+  });
 
   it('el buscador filtra la lista de zonas', async () => {
     const fixture = await montar();
@@ -155,6 +195,12 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     escribir(fixture, '#zona-busqueda', 'guayaquil');
     opciones(fixture)[0].click();
     fixture.detectChanges();
+
+    const zonaSeleccionada = fixture.nativeElement.querySelector(
+      '#zona-seleccionada',
+    ) as HTMLInputElement;
+    expect(zonaSeleccionada.value).toBe('America/Guayaquil');
+    expect(zonaSeleccionada.readOnly).toBe(true);
 
     // Elegir una zona distinta de la guardada ya pide guardar.
     const guardar = botonDeGuardar(fixture);
@@ -207,6 +253,12 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     ) as HTMLElement | null;
     expect(elegida?.textContent).toContain('America/Guayaquil');
 
+    const zonaSeleccionada = fixture.nativeElement.querySelector(
+      '#zona-seleccionada',
+    ) as HTMLInputElement;
+    expect(zonaSeleccionada.value).toBe('America/Guayaquil');
+    expect(zonaSeleccionada.readOnly).toBe(true);
+
     const campo = fixture.nativeElement.querySelector('#direccion-publica') as HTMLInputElement;
     expect(campo.value).toBe('http://soporte.local:8080');
 
@@ -214,5 +266,24 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).toContain('Ahora son las');
     expect(texto).toMatch(/GMT[+-]\d/);
+  });
+
+  // **La vista previa del color la sirve la marca**: la pantalla usa `BrandService` para preguntar
+  // cómo quedaría el color, sin guardarlo, y la petición va con el color escapado.
+  it('elegir un color pide la vista previa a la marca', async () => {
+    const fixture = await montar();
+
+    const campo = fixture.nativeElement.querySelector('input[type="color"]') as HTMLInputElement;
+    campo.value = '#123456';
+    campo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const peticion = http.expectOne('/api/settings/brand?color=%23123456');
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush({ ...MARCA, primaryColor: '#123456' });
+    await esperar();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string).toContain('#123456');
   });
 });

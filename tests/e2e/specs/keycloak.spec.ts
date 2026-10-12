@@ -21,12 +21,13 @@ import {
  * AD— y **el navegador no ve el token en ninguna parte salvo en el fragmento**, que es lo que no
  * viaja al servidor.
  *
- * **Estas pruebas necesitan Keycloak levantado**, que en desarrollo vive detrás del perfil `auth`
- * junto con el directorio:
+ * **Estas pruebas necesitan Keycloak levantado**, que en desarrollo vive en su propio archivo
+ * con el perfil `directory` de la instancia aislada (`tests.yml`):
  *
  * ```bash
- * docker compose -f dev.yml --profile auth up -d
- * docker compose -f dev.yml --profile auth run --rm e2e
+ * docker compose -f tests.yml --profile directory down -v
+ * docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
+ * docker compose -f tests.yml run --rm e2e
  * ```
  *
  * Sin él se saltan en vez de fallar: la suite entera tiene que poder correr en una instalación que no
@@ -45,7 +46,7 @@ const PABLO = { email: 'pablo.keycloak@demo.com', password: 'la-de-pablo-larga' 
  * que pregunta una persona: lee el documento del reino y no entra con nadie.
  *
  * Así la pregunta **no depende del método que esté puesto**, que es lo que hace falta para poder
- * saltarse estas pruebas cuando el perfil `auth` no está levantado.
+ * saltarse estas pruebas cuando Keycloak no está levantado.
  */
 async function hayKeycloak(request: APIRequestContext): Promise<boolean> {
   return respondeAlProbar(request, 'keycloak');
@@ -108,7 +109,7 @@ test.describe('El camino de Keycloak', () => {
   test.beforeAll(async ({ request }) => {
     test.skip(
       !(await hayKeycloak(request)),
-      'Keycloak no responde: levántalo con `--profile auth`',
+      'Keycloak no responde: incluye el perfil directory de tests.yml',
     );
 
     await ponerElMetodo(request, 'keycloak');
@@ -237,7 +238,6 @@ test.describe('El camino de Keycloak', () => {
         email: NURIA.email,
         role: 'usuario',
         origin: 'local',
-        language: 'es',
       },
     });
     expect(alta.status(), await alta.text()).toBe(201);

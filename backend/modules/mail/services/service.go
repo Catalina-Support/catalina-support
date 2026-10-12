@@ -148,6 +148,13 @@ func (s *Service) MissingEssential(key, subject, body string) []string {
 // Es síncrono a propósito: lo usan la prueba del editor y quien quiera saber si salió. Para el resto
 // de los avisos está SendAsync.
 func (s *Service) Send(key, language string, to []string, data map[string]string) error {
+	// Los avisos usan siempre el idioma global. El argumento se conserva de forma transitoria para
+	// no acoplar a los módulos que todavía entregan el idioma histórico de la cuenta.
+	if global, ok := s.instalacion.(interface{ Language() (string, error) }); ok {
+		if chosen, err := global.Language(); err == nil && LanguageIsValid(chosen) {
+			language = chosen
+		}
+	}
 	if err := validateTarget(key, language); err != nil {
 		return err
 	}
@@ -177,6 +184,21 @@ func (s *Service) Send(key, language string, to []string, data map[string]string
 	logs.LogSuccess(fmt.Sprintf("correo %s (%s) enviado a %s", key, language, strings.Join(to, ", ")))
 
 	return nil
+}
+
+// Probar comprueba **la conexión y la autenticación** del correo saliente, con los datos que se le
+// mandan, **sin mandar ningún correo**: lo usa el asistente de primer arranque, donde todavía no hay
+// destinatario y sólo se quiere saber si el servidor contesta y si las credenciales valen
+// (docs/primer-arranque.md, sección 3).
+//
+// Es la prueba que el módulo ofrece hacia fuera; el protocolo vive en el remitente, que es quien sabe
+// hablar con un servidor de correo.
+func (s *Service) Probar(correo CorreoSaliente) error {
+	if s.sender == nil {
+		return ErrNotConfigured
+	}
+
+	return s.sender.Probar(correo)
 }
 
 // SendAsync manda un correo en segundo plano y no devuelve nada.

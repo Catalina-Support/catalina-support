@@ -2,6 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+// **Sólo el tipo**: lo que devuelven subir y restablecer el logo es el documento de configuración
+// entero, porque es lo que contesta el backend. No hay dependencia de ejecución con el otro servicio.
+import { type Configuracion } from './settings.service';
+import { TranslationService } from '../i18n/translation.service';
+
 /** La marca de la instalación, tal y como la cuenta el backend (docs/modules/settings.md). */
 export interface Marca {
   /**
@@ -21,6 +26,11 @@ export interface Marca {
    * (`docs/modules/settings.md`, sección 5.9).
    */
   readonly version: string;
+  readonly license?: string;
+  readonly sourceUrl?: string;
+  readonly development?: boolean;
+  readonly language?: string;
+  readonly settingsVersion?: number;
   /**
    * La zona horaria de la instalación, **en nombre IANA** (`America/Guayaquil`).
    *
@@ -71,17 +81,22 @@ export function logoDeFabrica(oscuro: boolean): string {
 export const NOMBRE_DE_FABRICA = 'Catalina Support';
 
 /**
- * La marca: el logo de la institución y su color.
+ * La marca: el nombre, el logo de la institución, su color y la vista previa de ese color.
  *
  * **Es de la instalación, no de ninguna persona**, y hace falta **antes de que nadie entre** —la
  * pantalla de entrada lo enseña—, así que su endpoint es público
  * (`docs/modules/settings.md`, sección 5.4).
+ *
+ * **Aquí vive la marca entera**: leerla, subir y restablecer sus dos logos y previsualizar el color.
+ * Es de quien es el recurso (`/api/settings/brand`), y Configuración lo usa para eso; el resto de la
+ * configuración lo sirve `SettingsService`.
  *
  * Vive en `core` porque es armazón: lo usan la entrada, el menú lateral y Configuración.
  */
 @Injectable({ providedIn: 'root' })
 export class BrandService {
   private readonly http = inject(HttpClient);
+  private readonly textos = inject(TranslationService);
 
   private readonly marcaActual = signal<Marca | null>(null);
 
@@ -114,7 +129,21 @@ export class BrandService {
    */
   readonly versionDelSistema = computed(() => {
     const version = this.marcaActual()?.version?.trim();
-    return version ? `v${version}` : '';
+    if (!version) {
+      return '';
+    }
+    return this.marcaActual()?.development ? `v${version} · dev` : `v${version}`;
+  });
+
+  /** Fuente correspondiente y licencia, únicamente cuando el backend entrega una URL HTTPS válida. */
+  readonly fuente = computed(() => {
+    const marca = this.marcaActual();
+    const url = marca?.sourceUrl?.trim() ?? '';
+    const licencia = marca?.license?.trim() ?? '';
+    if (!licencia || !esURLHTTPS(url)) {
+      return null;
+    }
+    return { url, licencia };
   });
 
   /**
@@ -139,6 +168,9 @@ export class BrandService {
       const marca = await firstValueFrom(this.http.get<Marca>('/api/settings/brand'));
       this.marcaActual.set(marca);
       this.aplicarColor(marca);
+      if (marca.language) {
+        this.textos.adoptarGlobal(marca.language, marca.settingsVersion ?? 0);
+      }
     } catch {
       // Sin marca se sigue con lo de fábrica: ni un aviso al usuario ni un error en pantalla.
     }
@@ -166,6 +198,50 @@ export class BrandService {
   }
 
   /**
+   * Sube el logo elegido a su hueco —claro u oscuro— y devuelve la configuración nueva.
+   *
+   * **El logo es de la marca**, así que vive aquí, con el resto del recurso
+   * (`/api/settings/brand/logo`). El hueco viaja como `variant`, que es como lo llama el backend
+   * (`oscuro` o `claro`).
+   *
+   * Lo que devuelve es el documento de configuración entero —es lo que contesta el backend—, y por
+   * eso el tipo se importa de `settings.service`: es la única pieza que cruza, y sólo como tipo.
+   */
+  async subirLogo(oscuro: boolean, archivo: File): Promise<Configuracion> {
+    const datos = new FormData();
+    datos.append('logo', archivo, archivo.name);
+
+    return firstValueFrom(
+      this.http.post<Configuracion>(
+        `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
+        datos,
+      ),
+    );
+  }
+
+  /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
+  async restablecerLogo(oscuro: boolean): Promise<Configuracion> {
+    return firstValueFrom(
+      this.http.delete<Configuracion>(
+        `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
+      ),
+    );
+  }
+
+  /**
+   * Pide al backend cómo quedaría ese color, **sin guardarlo**.
+   *
+   * La vista previa la resuelve el backend a propósito: la regla de qué se lee y qué no es una sola,
+   * y tener una copia en el frontend es la forma segura de que un día digan cosas distintas. Devuelve
+   * **la marca entera**, que es lo que la pantalla lee para pintar la vista previa.
+   */
+  async previsualizarColor(valor: string): Promise<Marca> {
+    return firstValueFrom(
+      this.http.get<Marca>(`/api/settings/brand?color=${encodeURIComponent(valor)}`),
+    );
+  }
+
+  /**
    * Vuelve a leer la marca: es lo que hace que el nombre y el logo nuevos se vean **sin recargar**,
    * en cuanto el administrador guarda.
    */
@@ -186,5 +262,13 @@ export class BrandService {
     raiz.setProperty('--institucional-oscuro', marca.colors.dark);
     raiz.setProperty('--institucional-texto-claro', marca.colors.onLight);
     raiz.setProperty('--institucional-texto-oscuro', marca.colors.onDark);
+  }
+}
+
+function esURLHTTPS(valor: string): boolean {
+  try {
+    return new URL(valor).protocol === 'https:';
+  } catch {
+    return false;
   }
 }

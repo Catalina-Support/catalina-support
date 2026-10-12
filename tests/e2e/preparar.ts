@@ -1,5 +1,6 @@
 import { request } from '@playwright/test';
 import { FABRICA, ponerElMetodo } from './ayudas';
+import { instalar } from './instalar';
 
 /**
  * Lo que se hace **una vez, antes de la primera prueba**.
@@ -18,18 +19,24 @@ import { FABRICA, ponerElMetodo } from './ayudas';
  * que la necesitan se saltan por su cuenta.
  */
 export default async function preparar(): Promise<void> {
+  // Permite repetir un caso contra la instancia desechable ya instalada después de una pasada
+  // completa. La ejecución normal no define esta variable y conserva la instalación desde cero.
+  if (process.env['ISOLATED_TESTS'] === '1' && process.env['SKIP_ISOLATED_INSTALL'] !== '1') {
+    await instalar();
+  }
   if (!FABRICA.password) {
     return;
   }
 
   const peticion = await request.newContext({
-    baseURL: process.env['BASE_URL'] ?? 'https://dev.catalina-support.example.com',
+    baseURL: process.env['BASE_URL'] ?? 'http://frontend.localhost:11001',
   });
 
   try {
     await ponerElMetodo(peticion, 'local');
     console.log('preparación: la instalación entra por cuentas de la aplicación');
   } catch (error) {
+    if (process.env["ISOLATED_TESTS"] === "1") throw error;
     // **No se tumba la pasada por esto**: puede que se esté probando contra una instalación que no es
     // la de desarrollo, y entonces lo que falla es la preparación, no el producto. Se dice y se sigue.
     console.warn('preparación: no se ha podido dejar el método en local:', error);

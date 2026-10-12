@@ -14,12 +14,13 @@ set -euo pipefail
 # y renombrarlo los dejaría apuntando al inodo viejo.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="/srv/catalina-support"
+OUT_DIR="${CATALINA_PROD_DIR:-/srv/catalina-support}"
 # **Se despliega desde la carpeta de despliegue**, no desde el repositorio: `prod.yml` lleva las rutas
 # de los volúmenes **relativas a sí mismo**, así que el archivo (y lo que necesita: `config/`) tienen
 # que estar al lado de los artefactos. Así el despliegue funciona desde cualquier carpeta y en
 # cualquier sistema, y `./frontend` es `$OUT_DIR/frontend`, que es lo que era con las rutas absolutas.
 COMPOSE=(docker compose -f "$OUT_DIR/prod.yml")
+AI_COMPOSE=(docker compose --env-file "$OUT_DIR/config/env/prod.env" -f "$OUT_DIR/ai.yml")
 
 ONLY=""
 DEPLOY=1
@@ -46,8 +47,11 @@ mkdir -p "$OUT_DIR/frontend" "$OUT_DIR/backend" "$OUT_DIR/_files" "$OUT_DIR/_log
 # construcción escriben en `./frontend` y `./backend`, que son relativas al propio `prod.yml`, así que
 # el archivo tiene que estar ya ahí para que apunten a los artefactos y no al repositorio.
 cp "$REPO_DIR/prod.yml" "$OUT_DIR/prod.yml"
+cp "$REPO_DIR/ai.yml" "$OUT_DIR/ai.yml"
 rm -rf "$OUT_DIR/config"
 cp -a "$REPO_DIR/config" "$OUT_DIR/config"
+rm -rf "$OUT_DIR/ai-manager"
+cp -a "$REPO_DIR/ai-manager" "$OUT_DIR/ai-manager"
 
 
 # ---------------------------------------------------------------------------------------
@@ -102,6 +106,13 @@ verify() {
   esac
 }
 
+publish_notices() {
+  local target="$1"
+  cp "$REPO_DIR/THIRD_PARTY_NOTICES.md" "$OUT_DIR/$target/THIRD_PARTY_NOTICES.md"
+  rm -rf "$OUT_DIR/$target/third_party_licenses"
+  cp -a "$REPO_DIR/third_party_licenses" "$OUT_DIR/$target/third_party_licenses"
+}
+
 if [ -n "$ONLY" ]; then
   TARGETS=("$ONLY")
 else
@@ -111,6 +122,7 @@ fi
 for t in "${TARGETS[@]}"; do
   build "$t"
   verify "$t"
+  publish_notices "$t"
 done
 
 # La respuesta a «¿qué hay desplegado ahora mismo?» sin adivinar.
@@ -127,6 +139,10 @@ cat "$OUT_DIR/BUILD_INFO"
 if [ "$DEPLOY" = "1" ]; then
   echo "== levantando/actualizando los contenedores de producción =="
   "${COMPOSE[@]}" up -d
+  AI_PROJECT_NAME=catalina-support-ai-prod \
+    AI_NETWORK_NAME=catalina-support-ai-prod \
+    AI_MODELS_VOLUME=catalina_support_ai_models_prod \
+    "${AI_COMPOSE[@]}" up -d --build
 
   for t in "${TARGETS[@]}"; do
     case "$t" in

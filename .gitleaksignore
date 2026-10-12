@@ -1,0 +1,3 @@
+# Exact historical findings for the documented development-only values after the one-time rewrite.
+7efccee820714a40d24cb388c9bb0eb775eec0f6:config/env/dev.env:generic-api-key:20
+9087277690379853c59729d6a38fa4197a541f72:config/env/dev.env:generic-api-key:17

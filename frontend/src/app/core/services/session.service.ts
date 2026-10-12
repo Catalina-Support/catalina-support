@@ -12,7 +12,6 @@ export interface Usuario {
   readonly email: string;
   readonly role: string;
   readonly origin: string;
-  readonly language: string;
   readonly factory: boolean;
 }
 
@@ -49,7 +48,7 @@ export interface CaminosDeEntrada {
  */
 export type DatosDeLaCuenta = Pick<
   Usuario,
-  'name' | 'lastName' | 'email' | 'role' | 'origin' | 'language'
+  'name' | 'lastName' | 'email' | 'role' | 'origin'
 >;
 
 /** Dónde vive el token: en `localStorage`, porque la sesión viaja en una cabecera explícita. */
@@ -241,7 +240,9 @@ export class SessionService {
 
   /** Cambia la contraseña propia, con la actual. */
   cambiarContrasena(currentPassword: string, password: string): Promise<unknown> {
-    return firstValueFrom(this.http.post('/api/auth/password/change', { currentPassword, password }));
+    return firstValueFrom(
+      this.http.post('/api/auth/password/change', { currentPassword, password }),
+    );
   }
 
   /**
@@ -265,8 +266,6 @@ export class SessionService {
 
   private recibirUsuario(usuario: Usuario): void {
     this.usuarioActual.set(usuario);
-    // El idioma de la cuenta manda dentro de la aplicación, y es también el de sus correos.
-    this.textos.usarIdiomaDeCuenta(usuario.language);
   }
 }
 

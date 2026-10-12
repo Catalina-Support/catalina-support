@@ -62,14 +62,6 @@
           (valorChange)="papel.set($event)"
         />
 
-        <app-selector
-          identificador="ficha-idioma"
-          [etiqueta]="t().usuarios.idioma"
-          [opciones]="opcionesDeIdioma()"
-          [valor]="idioma()"
-          (valorChange)="idioma.set($event)"
-        />
-
         <div class="flex flex-wrap items-center gap-3">
           <app-boton
             tipo="submit"
@@ -107,14 +99,20 @@
         <div class="flex flex-wrap gap-x-2">
           <dt class="font-medium text-texto">{{ t().usuarios.contrasena }}:</dt>
           <dd class="text-apagado">
-            {{ quien.hasPassword ? t().usuarios.contrasenaPropia : t().usuarios.contrasenaDirectorio }}
+            {{
+              quien.hasPassword ? t().usuarios.contrasenaPropia : t().usuarios.contrasenaDirectorio
+            }}
           </dd>
         </div>
       </dl>
     </app-tarjeta>
 
     <!-- El cambio de origen: una de las dos acciones que pueden dejar a alguien sin poder entrar. -->
-    <app-tarjeta nivel="h2" [titulo]="t().usuarios.cambiarOrigen" [descripcion]="t().usuarios.cambiarOrigenAyuda">
+    <app-tarjeta
+      nivel="h2"
+      [titulo]="t().usuarios.cambiarOrigen"
+      [descripcion]="t().usuarios.cambiarOrigenAyuda"
+    >
       <div class="flex flex-wrap items-end gap-3">
         <app-selector
           identificador="ficha-origen"

@@ -31,14 +31,21 @@ const (
 
 // Las claves de error del módulo (docs/modules/settings.md, sección 7).
 var (
-	ErrLanguageUnknown     = errors.New("settings.language.unknown")
-	ErrPrimaryColorInvalid = errors.New("settings.primaryColor.invalid")
+	ErrLanguageUnknown        = errors.New("settings.language.unknown")
+	ErrLanguageReviewRequired = errors.New("settings.language.reviewRequired")
+	ErrPrimaryColorInvalid    = errors.New("settings.primaryColor.invalid")
 	// ErrTimeZoneUnknown: la zona horaria que se ha escrito no es un nombre que exista. Se guarda el
 	// nombre IANA, no un desfase, y se comprueba con la base de datos de zonas del sistema
 	// (docs/modules/settings.md, decisión 15).
 	ErrTimeZoneUnknown = errors.New("settings.timeZone.unknown")
 	// ErrPublicURLInvalid: la dirección pública no es una dirección http o https con su host.
-	ErrPublicURLInvalid             = errors.New("settings.publicUrl.invalid")
+	ErrPublicURLInvalid = errors.New("settings.publicUrl.invalid")
+	// ErrAIURLInvalid: la dirección del motor de IA no es una dirección http o https con su host.
+	// Vacía sí vale: es «esta instalación no tiene motor» (docs/modules/ai.md).
+	ErrAIURLInvalid = errors.New("settings.aiUrl.invalid")
+	// ErrAIUnreachable: el motor de IA no ha contestado a la prueba de la conexión, o ha contestado
+	// mal. El detalle queda en el log; a la pantalla le llega que esa dirección no sirve.
+	ErrAIUnreachable                = errors.New("settings.ai.unreachable")
 	ErrNumberPrefixInvalid          = errors.New("settings.numberPrefix.invalid")
 	ErrAssignmentUnknown            = errors.New("settings.assignment.unknown")
 	ErrNotificationUnknown          = errors.New("settings.notification.unknown")
@@ -92,20 +99,45 @@ const NombreDeFabrica = "Catalina Support"
 // que ve quien lo escribe: «Ayuntamiento de Ávila» son 20, con acentos y todo.
 const MaxNameLength = 60
 
+// Repositorio es lo que este módulo necesita de la base de datos. Lo declara aquí quien lo usa y lo
+// cumple `repositories.SettingsRepository`: así el módulo se puede probar con un doble, sin base.
+type Repositorio interface {
+	Installation() (repositories.InstallationSettings, error)
+	Tickets() (repositories.TicketSettings, error)
+	Directory() (repositories.DirectorySettings, error)
+	Keycloak() (repositories.KeycloakSettings, error)
+	UpdateInstallation(cambios map[string]any, updatedByID *int64) error
+	UpdateDirectory(cambios map[string]any, updatedByID *int64) error
+	UpdateKeycloak(cambios map[string]any, updatedByID *int64) error
+	UpdateTickets(cambios map[string]any, updatedByID *int64) error
+}
+
 // Service es el módulo.
 type Service struct {
-	repo      *repositories.SettingsRepository
+	repo      Repositorio
 	filesPath string
 	prober    Prober
 	now       func() time.Time
 	// ia dice si el motor de IA responde, para poder contarlo en la instalación.
 	ia ProberDeIA
+	// correo prueba el correo saliente **sin mandar ningún correo**: es lo que hace falta en el
+	// asistente, donde no hay destinatario (docs/primer-arranque.md, sección 3).
+	correo ProberDeCorreo
+	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
+	// envío: el módulo mail sigue leyendo la configuración persistida.
+	correoInicial   MailInput
+	aiCredentialKey []byte
+	aiManagerURL    string
+	aiManagerToken  string
 }
 
 // NewService construye el servicio.
-func NewService(repo *repositories.SettingsRepository, filesPath string) *Service {
+func NewService(repo Repositorio, filesPath string) *Service {
 	return &Service{repo: repo, filesPath: filesPath, now: time.Now}
 }
+
+// SetCorreoInicial fija las sugerencias editables del paso de correo en una instalación vacía.
+func (s *Service) SetCorreoInicial(correo MailInput) { s.correoInicial = correo }
 
 // UpdateInput es lo que llega para guardar la configuración. Va todo: es un `PUT`, y quien guarda
 // manda la configuración entera, no un trozo.
@@ -127,6 +159,11 @@ type UpdateInput struct {
 	// TimeZone es la zona horaria que se elige (nombre IANA) y PublicAppURL la dirección pública.
 	TimeZone     string
 	PublicAppURL string
+	// AIURL y AIModel son **el motor de IA**: su dirección y el modelo con el que redacta. Vacíos
+	// quieren decir «esta instalación no tiene motor», que es lo normal y no es un error
+	// (docs/modules/ai.md, decisión 2).
+	AIURL   string
+	AIModel string
 }
 
 // DirectoryInput es la configuración del directorio tal y como llega de la pantalla.
@@ -151,10 +188,11 @@ type DirectoryInput struct {
 // KeycloakInput es la configuración de Keycloak tal y como llega de la pantalla. El secreto vacío
 // quiere decir «no lo cambies», igual que la contraseña del directorio.
 type KeycloakInput struct {
-	Issuer       string
-	ClientID     string
-	ClientSecret string
-	RedirectURI  string
+	InternalIssuer string
+	Issuer         string
+	ClientID       string
+	ClientSecret   string
+	RedirectURI    string
 }
 
 // DirectoryView es la configuración del directorio **sin su contraseña**, que es lo único que sale
@@ -192,7 +230,12 @@ type Config struct {
 	// TimeZone es la zona horaria de la instalación, y PublicAppURL su dirección pública.
 	TimeZone     string
 	PublicAppURL string
-	Brand        Brand
+	// AIURL y AIModel son **el motor de IA** de la instalación. `AIURL` vacía es «no integrado»
+	// (docs/modules/ai.md).
+	AIURL   string
+	AIModel string
+	AI      AIConfigurationView
+	Brand   Brand
 }
 
 // Brand es el estado de la marca.
@@ -321,6 +364,38 @@ func (s *Service) TestKeycloak(input KeycloakInput) error {
 	return nil
 }
 
+// TestAI prueba el motor de IA **sin guardarlo**.
+//
+// Se prueba **la dirección que llega** —lo que hay en pantalla— y **nunca la guardada**: al abrir la
+// pantalla el campo viene relleno con lo que hay en la base, así que vaciarlo es borrarlo a
+// propósito, y decir que no hay nada que probar es más útil que probar una dirección que la persona
+// acaba de quitar. No toca la base.
+func (s *Service) TestAI(url string) error {
+	direccion := direccionPublicaDe(url)
+
+	// La misma comprobación que la dirección pública, con la clave de este módulo. Vacía tampoco vale
+	// aquí: no hay nada que probar.
+	if direccion == "" {
+		return ErrAIURLInvalid
+	}
+	if err := validarDireccionPublica(direccion); err != nil {
+		return ErrAIURLInvalid
+	}
+
+	if s.ia == nil {
+		return errors.New("no hay quien pruebe el motor de IA")
+	}
+
+	if err := s.ia.Probar(direccion); err != nil {
+		// El motivo —no contesta, o contesta mal— va al log. A la pantalla le llega que esa dirección
+		// no sirve, que es lo que tiene que hacer quien la está configurando.
+		logs.LogWarning("la prueba del motor de IA ha fallado: " + err.Error())
+		return ErrAIUnreachable
+	}
+
+	return nil
+}
+
 // Language es el idioma de la instalación.
 //
 // Lo lee el alta de cuentas para saber en qué idioma escribirle los correos a quien no se le ha
@@ -354,7 +429,7 @@ func (s *Service) Config() (Config, error) {
 		return Config{}, traducir(err)
 	}
 
-	return Config{
+	config := Config{
 		Name:                 nombreDeLaInstalacion(instalacion.InstallationName),
 		EntryMethod:          instalacion.EntryMethod,
 		TimeZone:             zonaHorariaDe(instalacion.TimeZone),
@@ -369,11 +444,20 @@ func (s *Service) Config() (Config, error) {
 		InternalAssignment:   tickets.InternalAssignment,
 		InternalNotification: tickets.InternalNotification,
 		UpdatedAt:            instalacion.UpdatedAt,
+		AIURL:                direccionPublicaDe(instalacion.AIURL),
+		AIModel:              strings.TrimSpace(instalacion.AIModel),
 		Brand: Brand{
 			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
 			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
 		},
-	}, nil
+	}
+	if _, ok := s.repo.(aiRepository); ok {
+		config.AI, err = s.AIConfiguration()
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	return config, nil
 }
 
 // Update valida y guarda la configuración.
@@ -402,6 +486,55 @@ func (s *Service) DireccionPublica() string {
 	}
 
 	return direccionPublicaDe(instalacion.PublicAppURL)
+}
+
+// AIDatos es el motor de IA resuelto: su dirección, su modelo y **si hay alguno puesto**.
+type AIDatos struct {
+	// URL es la dirección del motor, sin la barra del final.
+	URL string
+	// Modelo es el modelo con el que redacta. Puede venir vacío y quien lo use decide su valor de
+	// fábrica.
+	Modelo string
+	// Hay en falso quiere decir «esta instalación no tiene motor»: el módulo de IA usa entonces el
+	// respaldo del entorno (docs/modules/ai.md, decisión 2).
+	Hay                                                        bool
+	Mode, Provider, AuthType, AuthHeader, Credential, Language string
+}
+
+// AI devuelve **el motor de IA ya resuelto**, para el módulo de IA: lo de la configuración y, si no
+// hay nada, el respaldo del entorno, que lo pone el cableado. Tiene la misma forma que `SMTP()`
+// (docs/modules/ai.md).
+//
+// Se lee de la base en cada petición, no se recuerda: cambiar la dirección o el modelo desde
+// Configuración tiene que valer sin reiniciar nada.
+func (s *Service) AI() (AIDatos, error) {
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return AIDatos{}, traducir(err)
+	}
+	repo, ok := s.repo.(aiRepository)
+	if !ok {
+		return AIDatos{}, nil
+	}
+	row, err := repo.AI()
+	if err != nil {
+		return AIDatos{}, traducir(err)
+	}
+	if row.TestedAt == nil || strings.TrimSpace(row.Mode) == "" {
+		return AIDatos{Language: instalacion.Language}, nil
+	}
+	credential := ""
+	if len(row.CredentialCiphertext) > 0 {
+		credential, err = s.decryptAICredential(row)
+		if err != nil {
+			return AIDatos{}, ErrAICredentialInvalid
+		}
+	}
+	return AIDatos{
+		URL: row.BaseURL, Modelo: row.Model, Hay: true, Mode: row.Mode, Provider: row.Provider,
+		AuthType: row.AuthType, AuthHeader: row.AuthHeader, Credential: credential,
+		Language: instalacion.Language,
+	}, nil
 }
 func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error) {
 	language := strings.TrimSpace(input.Language)
@@ -480,14 +613,36 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 		return Config{}, err
 	}
 
-	err = s.repo.UpdateInstallation(map[string]any{
+	// **El motor de IA** (docs/modules/ai.md): la dirección, vacía o http/https con su host. Vacía es
+	// «no integrado» y se acepta; con algo escrito, se le exige lo mismo que a la dirección pública
+	// —se reutiliza su comprobación, que es la misma regla— pero con su propia clave, porque quien la
+	// lee está en la tarjeta del motor.
+	motor := direccionPublicaDe(input.AIURL)
+	if err := validarDireccionPublica(motor); err != nil {
+		return Config{}, ErrAIURLInvalid
+	}
+	actual, err := s.repo.Installation()
+	if err != nil {
+		return Config{}, traducir(err)
+	}
+	if language != actual.Language {
+		return Config{}, ErrLanguageReviewRequired
+	}
+
+	cambiosInstalacion := map[string]any{
 		"installation_name": nombre,
 		"entry_method":      metodo,
 		"language":          language,
 		"primary_color":     color,
 		"time_zone":         zona,
 		"public_app_url":    direccion,
-	}, updatedByID)
+		"ai_url":            motor,
+		"ai_model":          strings.TrimSpace(input.AIModel),
+	}
+	if language != actual.Language {
+		cambiosInstalacion["settings_version"] = actual.SettingsVersion + 1
+	}
+	err = s.repo.UpdateInstallation(cambiosInstalacion, updatedByID)
 	if err != nil {
 		return Config{}, traducir(err)
 	}
@@ -522,8 +677,13 @@ type Public struct {
 	// Version es la versión del software, **sin la `v`**: la pone la interfaz al enseñarla. No es
 	// configuración de la instalación —es un dato del software— y por eso es una constante del código
 	// y no una columna (docs/modules/settings.md, sección 5.9).
-	Version string
-	Colors  Colors
+	Version         string
+	License         string
+	SourceURL       string
+	Development     bool
+	Language        string
+	SettingsVersion int64
+	Colors          Colors
 	// LogoVersion cambia cada vez que se reemplaza un logo; vacío si no hay ninguno propio.
 	LogoVersion string
 	// HasLight y HasDark dicen qué huecos están puestos, para que el frontend sepa si pedir el logo.
@@ -551,13 +711,18 @@ func (s *Service) PublicBrand() (Public, error) {
 	}
 
 	publico := Public{
-		Name:        nombreDeLaInstalacion(instalacion.InstallationName),
-		Version:     version.Version,
-		Colors:      colorsFrom(instalacion.PrimaryColor),
-		HasLight:    instalacion.LogoLight != nil,
-		HasDark:     instalacion.LogoDark != nil,
-		LogoVersion: s.versionDe(instalacion),
-		TimeZone:    zonaHorariaDe(instalacion.TimeZone),
+		Name:            nombreDeLaInstalacion(instalacion.InstallationName),
+		Version:         version.Version,
+		License:         version.License,
+		SourceURL:       version.SourceURL,
+		Development:     version.Development,
+		Language:        instalacion.Language,
+		SettingsVersion: instalacion.SettingsVersion,
+		Colors:          colorsFrom(instalacion.PrimaryColor),
+		HasLight:        instalacion.LogoLight != nil,
+		HasDark:         instalacion.LogoDark != nil,
+		LogoVersion:     s.versionDe(instalacion),
+		TimeZone:        zonaHorariaDe(instalacion.TimeZone),
 	}
 
 	return publico, nil
@@ -1062,10 +1227,11 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 // misma regla para el secreto que el directorio.
 func (s *Service) keycloakDeInput(input KeycloakInput, usarLaGuardada bool) (config.OIDC, error) {
 	keycloak := config.OIDC{
-		Issuer:       strings.TrimRight(strings.TrimSpace(input.Issuer), "/"),
-		ClientID:     strings.TrimSpace(input.ClientID),
-		ClientSecret: input.ClientSecret,
-		RedirectURI:  strings.TrimSpace(input.RedirectURI),
+		Issuer:         strings.TrimRight(strings.TrimSpace(input.Issuer), "/"),
+		InternalIssuer: strings.TrimRight(strings.TrimSpace(input.InternalIssuer), "/"),
+		ClientID:       strings.TrimSpace(input.ClientID),
+		ClientSecret:   input.ClientSecret,
+		RedirectURI:    strings.TrimSpace(input.RedirectURI),
 	}
 
 	if usarLaGuardada && keycloak.ClientSecret == "" {
@@ -1076,6 +1242,14 @@ func (s *Service) keycloakDeInput(input KeycloakInput, usarLaGuardada bool) (con
 		keycloak.ClientSecret = guardada.ClientSecret
 	}
 
+	for _, direccion := range []string{keycloak.Issuer, keycloak.InternalIssuer} {
+		if direccion != "" && !config.ValidIssuerURL(direccion) {
+			return config.OIDC{}, ErrKeycloakIncomplete
+		}
+	}
+	if keycloak.InternalIssuer != "" && keycloak.Issuer == "" {
+		return config.OIDC{}, ErrKeycloakIncomplete
+	}
 	// Un Keycloak configurado a medias tampoco vale: sin vuelta no se puede volver.
 	if keycloak.Issuer != "" && (keycloak.ClientID == "" || keycloak.RedirectURI == "") {
 		return config.OIDC{}, ErrKeycloakIncomplete
@@ -1108,9 +1282,10 @@ func (s *Service) cambiosDeDirectorio(directorio config.Directory) map[string]an
 // cambiosDeKeycloak arma lo que se escribe en la base: el secreto sólo si viene.
 func (s *Service) cambiosDeKeycloak(keycloak config.OIDC) map[string]any {
 	cambios := map[string]any{
-		"issuer":       keycloak.Issuer,
-		"client_id":    keycloak.ClientID,
-		"redirect_uri": keycloak.RedirectURI,
+		"issuer":          keycloak.Issuer,
+		"internal_issuer": keycloak.InternalIssuer,
+		"client_id":       keycloak.ClientID,
+		"redirect_uri":    keycloak.RedirectURI,
 	}
 	if keycloak.ClientSecret != "" {
 		cambios["client_secret"] = keycloak.ClientSecret
@@ -1139,10 +1314,11 @@ func directorioDe(fila repositories.DirectorySettings) config.Directory {
 // keycloakDe traduce la fila a la configuración que usa el camino de Keycloak.
 func keycloakDe(fila repositories.KeycloakSettings) config.OIDC {
 	return config.OIDC{
-		Issuer:       fila.Issuer,
-		ClientID:     fila.ClientID,
-		ClientSecret: fila.ClientSecret,
-		RedirectURI:  fila.RedirectURI,
+		Issuer:         fila.Issuer,
+		InternalIssuer: fila.InternalIssuer,
+		ClientID:       fila.ClientID,
+		ClientSecret:   fila.ClientSecret,
+		RedirectURI:    fila.RedirectURI,
 	}
 }
 
@@ -1169,9 +1345,10 @@ func vistaDeDirectorio(fila repositories.DirectorySettings) DirectoryView {
 func vistaDeKeycloak(fila repositories.KeycloakSettings) KeycloakView {
 	return KeycloakView{
 		KeycloakInput: KeycloakInput{
-			Issuer:      fila.Issuer,
-			ClientID:    fila.ClientID,
-			RedirectURI: fila.RedirectURI,
+			Issuer:         fila.Issuer,
+			InternalIssuer: fila.InternalIssuer,
+			ClientID:       fila.ClientID,
+			RedirectURI:    fila.RedirectURI,
 		},
 		SecretSet: fila.ClientSecret != "",
 	}

@@ -1,0 +1,32 @@
+name: ${AI_PROJECT_NAME:-catalina-support-ai-dev}
+
+services:
+  ai:
+    build:
+      context: .
+      dockerfile: config/dockerfiles/ai.Dockerfile
+    restart: always
+    environment:
+      # El valor de fábrica sólo sirve en desarrollo. Producción ejecuta Compose con
+      # `--env-file config/env/prod.env`, igual que el backend.
+      AI_MANAGER_TOKEN: ${AI_MANAGER_TOKEN:-catalina-support-dev-ai-manager}
+      MODELS_PATH: /models
+    volumes:
+      - ai_models:/models
+    # Techo, no reserva. La activación comprueba el perfil del modelo antes de iniciar llama-server.
+    mem_limit: 8g
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:8081/health]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [catalina-support-ai]
+
+networks:
+  catalina-support-ai:
+    name: ${AI_NETWORK_NAME:-catalina-support-ai-dev}
+    external: true
+
+volumes:
+  ai_models:
+    name: ${AI_MODELS_VOLUME:-catalina_support_ai_models_dev}

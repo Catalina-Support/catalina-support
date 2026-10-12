@@ -53,7 +53,16 @@ export const EN: Textos = {
     colorResueltoOscuro: 'and on dark ones',
     idioma: 'The installation language',
     idiomaAyuda:
-      'The language new accounts are born with when whoever creates them does not choose another, and the language of the emails written to them.',
+      'The language of the whole installation: interface, dates, emails, and AI-generated text.',
+    traduccionTitulo: 'Review language change',
+    traduccionAyuda: 'Review and correct all eleven templates before applying the language to the whole installation.',
+    traduccionCosto: 'The external provider may charge for 22 requests: a conservative estimate of 12,000 input tokens and 8,000 output tokens. You can accept or edit the templates manually.',
+    traducirConfirmando: 'Accept cost and translate',
+    editarManualmente: 'Edit manually',
+    asuntoTraducido: 'Subject',
+    cuerpoTraducido: 'Body',
+    destinoExistente: 'Existing customized version',
+    aplicarIdioma: 'Apply language',
     correos: 'The emails',
     correosAyuda:
       'The ten emails the application sends, in both languages, are edited on their own screen: it belongs to the mail module, and from here you only get to it.',
@@ -61,6 +70,7 @@ export const EN: Textos = {
     region: 'Time zone',
     regionAyuda:
       'The zone every date is read in, here and in the e-mails. They are stored in UTC: changing it moves no ticket.',
+    regionSeleccionada: 'Selected time zone',
     buscarZona: 'Search a city or a zone',
     sinZonas: 'No zone matches what you are looking for.',
     horaDeLaZona: 'It is now {hora} ({desfase}).',
@@ -71,10 +81,52 @@ export const EN: Textos = {
     regionGuardada: 'The time zone and the address have been saved.',
     direccion: 'Public address',
     direccionAyuda:
-      'The address this installation is reached at: it is the base of the links in the e-mails and of Keycloak\'s return. http or https, with a port if needed, and localhost too.',
+      "The address this installation is reached at: it is the base of the links in the e-mails and of Keycloak's return. http or https, with a port if needed, and localhost too.",
     direccionEjemplo: 'https://support.my-institution.org',
     direccionInsegura:
       'This installation is not served over https: the password and the session travel unencrypted over the network. It can be used like this —to try it locally, for instance—, and for real use a certificate is worth having.',
+    motorDeIA: 'The AI engine',
+    motorDeIAAyuda:
+      "The engine that writes each ticket's “Reason” and “Last action”. Its configuration is required; if it stops responding, the help desk continues and recovers summaries when it returns.",
+    iaDireccion: 'Engine address',
+    iaDireccionAyuda:
+      'Where the engine listens. http or https, with a port if needed. If left empty, the installation has no engine and the environment acts as a fallback.',
+    iaDireccionEjemplo: 'http://catalina_support_ai:8080',
+    iaModelo: 'Model',
+    iaModeloAyuda:
+      'The model it writes with, as the engine names it. If left empty, the one from the environment is used.',
+    iaModeloEjemplo: 'qwen2.5-1.5b-instruct',
+    probarIA: 'Test the connection',
+    guardarIA: 'Save the AI engine',
+    iaLocal: 'On this server',
+    iaRemota: 'On another server',
+    iaProveedor: 'External provider',
+    iaCompatible: 'OpenAI compatible',
+    iaAutenticacion: 'Authentication',
+    iaAuth_none: 'No authentication',
+    iaAuth_bearer: 'Bearer token',
+    iaAuth_header: 'Key in a header',
+    iaAuth_basic: 'Username and password',
+    iaCabecera: 'Header name',
+    iaCredencial: 'Credential or token',
+    iaPrivacidad: 'I confirm that ticket text will leave this server.',
+    iaPrivacidadCosto:
+      'I confirm that ticket text will leave this server and that this test may incur provider charges.',
+    iaCatalogo: 'Local models',
+    iaCargarCatalogo: 'View and refresh the catalog',
+    iaAceptarLicencia: 'I accept the license for this version.',
+    iaDescargar: 'Download',
+    iaActivar: 'Activate',
+    iaEliminar: 'Delete',
+    iaInstalado: 'Installed',
+    iaActivo: 'Active',
+    iaSaludable: 'Engine available',
+    iaNoSaludable: 'Engine restarting',
+    iaDescargando: 'Downloading',
+    iaDiscoDisponible: 'Available disk: {cantidad}',
+    iaRecursos: 'Download {disco} · recommended RAM {ram}',
+    motorOk: "The engine answered: it writes the ticket's two summaries.",
+    motorGuardado: 'The AI engine has been saved.',
     entrada: 'How people sign in',
     entradaAyuda:
       'The installation signs people in through one method at a time: the other two stay off even if they are configured. The factory account always gets in, and from it the choice can be changed.',
@@ -87,7 +139,7 @@ export const EN: Textos = {
     metodoKeycloak: 'Keycloak',
     metodoKeycloakAyuda:
       'People sign in from the Keycloak screen, with their account. There is no email and password form here.',
-    metodoSinConfigurar: 'Configure it below before you can choose it.',
+    metodoSinConfigurar: 'Complete the fields below before saving the sign-in method.',
     guardarEntrada: 'Save the sign-in method',
     entradaGuardada: 'Saved. It applies from the next sign-in, with no restart.',
     directorio: 'The organization directory',
@@ -123,6 +175,9 @@ export const EN: Textos = {
     keycloak: 'Keycloak',
     keycloakAyuda:
       'What is needed to sign in through Keycloak. The client secret is stored and never shown again.',
+    kcInterno: 'Internal realm address (optional)',
+    kcInternoAyuda:
+      'The address reachable by the server. Leave empty to use the public issuer. In Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Realm issuer',
     kcEmisorAyuda:
       'The realm address, the one the browser sees. For example: https://sso.company.com/realms/company.',
@@ -162,27 +217,29 @@ export const EN: Textos = {
   instalacion: {
     titulo: 'First start',
     intro:
-      'Four steps to get this installation running. Each step is saved as you move on, so you can close it and pick up where you left off.',
+      'Five steps to get this installation running. Each step is saved as you move on, so you can close it and pick up where you left off.',
     paso1: 'The installation',
     paso2: 'How people sign in',
     paso3: 'Where it is',
     paso4: 'Email',
+    paso5: 'Artificial intelligence',
     pasoDeCuatro: 'Step {paso} of {total}',
     siguiente: 'Next',
     anterior: 'Back',
     terminar: 'Finish the installation',
     resumen: 'Summary',
     motorResponde: 'The AI engine answers: both ticket summaries are available.',
-    motorNoEsta:
-      'The AI engine is not there: the help desk works the same, without the two summaries.',
     // The factory account password **is not asked for here**: it lives in the environment, and
     // saying so is exactly what stops anyone looking for it on the screen (section 4 of the doc).
     cuentaDeFabrica:
       'The factory account is called “admin” and its password is ADMIN_PASSWORD, from the server environment file. It is the door that always opens, whatever method you choose, and it is not asked for here: it does not live in the database.',
-    correoOpcional:
-      'Email is optional: if you leave the server empty, the installation works the same, but no email will go out — no invitation, no password reset, no notice.',
+    correoObligatorio:
+      'Outgoing email is required to complete installation: it is used for invitations, password resets, and notices.',
     correoPuesto: 'An outgoing email server is configured.',
-    correoSinPoner: 'There is no outgoing email server configured: no email will go out.',
+    credencialPuesta: 'Configured',
+    sinCredencial: 'Not required',
+    confirmacionExterna: 'Privacy and possible cost',
+    confirmacionAceptada: 'Accepted',
     terminada: 'This installation is already finished: it is not configured twice.',
     correoHost: 'Email server',
     correoHostAyuda: 'The name or address of the outgoing server. Example: smtp.my-company.org.',
@@ -199,6 +256,9 @@ export const EN: Textos = {
     correoRemitenteNombre: 'Sender name',
     correoRemitenteCorreo: 'Sender address',
     correoRemitenteCorreoAyuda: 'The address whoever receives the email will see.',
+    probarCorreo: 'Test the connection',
+    // What the email test does and **does not** do, said in the message itself.
+    correoOk: 'The email server answered and the authentication worked. No email has been sent.',
   },
 
   menu: {
@@ -214,6 +274,7 @@ export const EN: Textos = {
     cerrar: 'Close the menu',
     plegar: 'Collapse the menu',
     desplegar: 'Expand the menu',
+    codigoFuente: 'Source code and license',
   },
 
   papeles: {
@@ -454,6 +515,22 @@ export const EN: Textos = {
     resumenSinMotor: 'No AI engine',
     resumenError: 'Could not summarize',
     resumenVacio: '—',
+    iaRedaccionAbrir: 'Improve with AI',
+    iaRedaccionTitulo: 'Improve the writing with AI',
+    iaRedaccionAyuda: 'Review the draft and choose how it should sound. The proposal is not saved until you use it and publish or save the main editor.',
+    iaRedaccionPrivacidad: 'The configured engine will process this text. If it is an external server or provider, the text will leave this installation under the configuration accepted by the Administrator.',
+    iaRedaccionBorrador: 'Draft',
+    iaRedaccionTono: 'Tone',
+    iaTonoProfesional: 'Professional',
+    iaTonoCordial: 'Friendly',
+    iaTonoBreve: 'Brief',
+    iaTonoEmpatico: 'Empathetic',
+    iaTonoTecnico: 'Technical',
+    iaRedaccionMejorar: 'Improve',
+    iaRedaccionRegenerar: 'Generate again',
+    iaRedaccionUsar: 'Use this text',
+    iaRedaccionGenerando: 'Improving the writing…',
+    iaRedaccionLista: 'The proposal is ready to review.',
     editarElAsunto: 'Edit the subject',
     editarLaDescripcion: 'Edit the description',
     anadirEtiquetaAlTicket: 'Add a tag',
@@ -763,6 +840,7 @@ export const EN: Textos = {
     // installation would be left with nobody able to change the method back**.
     comoAdministrador: 'Sign in as administrator',
     cuentaDeFabrica: 'The factory account password lives in the installation settings.',
+    codigoFuente: 'Source code and license',
   },
 
   olvido: {
@@ -826,6 +904,7 @@ export const EN: Textos = {
 
   comun: {
     volver: 'Back',
+    cerrar: 'Close',
     cancelar: 'Cancel',
     cargando: 'Loading…',
     obligatorio: 'This field is required.',
@@ -836,6 +915,10 @@ export const EN: Textos = {
 
     'ai.unavailable': 'The summary engine is not available. Tickets work just the same.',
     'ai.invalid': 'The summary engine answered something we cannot read.',
+    'mail.translation.costConfirmationRequired': 'Confirm the possible provider cost or edit the templates manually.',
+    'mail.translation.incomplete': 'Review all eleven templates before applying the language.',
+    'mail.translation.protectedChanged': 'The translation changed HTML or a marker. Correct that template manually.',
+    'settings.language.reviewRequired': 'Review all eleven templates before applying the language.',
     'tickets.mention.notAllowed': 'You cannot mention anyone in this ticket.',
 
     'auth.invalidCredentials': 'The email address or the password is not correct.',
@@ -896,7 +979,6 @@ export const EN: Textos = {
     'users.name.required': 'The first or the last name is missing.',
     'users.role.notAllowed': 'You are not allowed to hand out that role.',
     'users.origin.unknown': 'That account origin does not exist.',
-    'users.language.unknown': 'That language does not exist.',
     'users.directory.notFound':
       'The directory does not know that person: they are no longer there.',
     'users.origin.byDirectory':
@@ -906,15 +988,26 @@ export const EN: Textos = {
     'users.directory.unavailable':
       'The directory could not be reached to check. Try again in a moment.',
     'users.origin.inUse': 'The origin of an active directory account cannot be changed.',
-    'users.password.notLocal': 'That account\'s password is checked by the directory: it is not changed here.',
+    'users.password.notLocal':
+      "That account's password is checked by the directory: it is not changed here.",
     'settings.timeZone.unknown': 'That time zone does not exist. Pick one from the list.',
     'settings.publicUrl.invalid':
       'The address must start with http:// or https:// and carry its server.',
-    // The three keys of the first-start wizard (docs/primer-arranque.md, section 6).
+    'settings.aiUrl.invalid':
+      'The AI engine address is not valid: there is none to test, or it does not start with http:// or https:// and is missing its server.',
+    'settings.ai.unreachable': 'The AI engine did not answer: check the address and that it is up.',
+    'settings.ai.managerUnavailable': 'The local model manager is unavailable.',
+    'settings.ai.insufficientMemory':
+      'The model requires {requerida} of RAM and {disponible} is available. The previous model remains active.',
+    'settings.ai.required': 'Configure and test the AI engine before entering the product.',
+    'settings.unavailable': 'The installation settings could not be read.',
+    'settings.ai.licenseRequired': 'You must accept the license before downloading the model.',
+    // The four keys of the first-start wizard (docs/primer-arranque.md, section 6).
     'setup.alreadyInstalled': 'This installation is already finished: it is not configured twice.',
     'setup.step.incomplete': 'This step is missing something. Check it and try again.',
-    'setup.mail.incomplete':
-      'Email needs the server, the port and the sender address.',
+    'setup.mail.incomplete': 'Email needs the server, the port and the sender address.',
+    'setup.mail.unreachable':
+      'The email server did not answer or did not accept the user and the password.',
     'auth.publicUrl.missing':
       'There is no public address configured: without it the link for the e-mail cannot be built. It is configured in Settings.',
     'users.accountInactive': 'That account is deactivated: activate it before sending it a link.',
@@ -927,6 +1020,11 @@ export const EN: Textos = {
     'tickets.notFound': 'That ticket does not exist.',
     'tickets.subject.required': 'Write a subject.',
     'tickets.description.required': 'Write a description.',
+    'tickets.writing.draft.required': 'Write a draft before asking for an improvement.',
+    'tickets.writing.editor.invalid': 'That editor does not allow writing improvement.',
+    'tickets.writing.tone.invalid': 'Choose a valid tone.',
+    'tickets.writing.unavailable': 'The AI engine is not available. Your draft is preserved.',
+    'tickets.writing.invalid': 'The engine returned a proposal that cannot be used.',
     // The backend sanitiser only accepts the tags and attributes of its whitelist, and whatever is not
     // there **is not saved**: it is said, because a text saved halfway is worse than one that is
     // refused (docs/modules/tickets.md, section 2.3). With the editor pasting without formatting, what
@@ -962,7 +1060,8 @@ export const EN: Textos = {
     'tickets.tag.forbidden': 'Only the Administrator can retire a tag.',
     'tickets.tag.duplicate': 'That tag already exists.',
     'tickets.cierre.sinComentario': 'To close the ticket you have to say why.',
-    'tickets.etiqueta.desconocida': 'That tag is not in the catalogue. Only the Administrator can create new tags.',
+    'tickets.etiqueta.desconocida':
+      'That tag is not in the catalogue. Only the Administrator can create new tags.',
     'tickets.tag.notFound': 'That tag does not exist.',
     'tickets.category.forbidden': 'Only an Administrator can retire or put back a category.',
     'tickets.tag.required': 'Write something for the tag: it cannot be empty.',

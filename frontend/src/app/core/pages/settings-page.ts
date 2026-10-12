@@ -1,17 +1,25 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 
 import { TranslationService } from '../i18n/translation.service';
 import { BrandService, logoDeFabrica, type Marca } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
+import { SetupService } from '../services/setup.service';
+import {
+  SettingsService,
+  type Configuracion,
+  type CatalogoLocalDeIA,
+  type BorradorDeIdioma,
+  type DirectorioEscrito,
+  type KeycloakEscrito,
+} from '../services/settings.service';
 import { Aviso } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
-import { claveDelError } from '../../shared/errores';
+import { Toast } from '../../shared/components/toast';
+import { claveDelError, memoriaDelError } from '../../shared/errores';
 import { interpolar } from '../../shared/textos';
 
 /**
@@ -52,9 +60,8 @@ const ZONAS_DE_RESPALDO: readonly string[] = [
  */
 function zonasDelNavegador(): readonly string[] {
   try {
-    const soportado = (
-      Intl as unknown as { supportedValuesOf?: (clave: string) => string[] }
-    ).supportedValuesOf;
+    const soportado = (Intl as unknown as { supportedValuesOf?: (clave: string) => string[] })
+      .supportedValuesOf;
     const zonas = soportado?.('timeZone');
     if (zonas && zonas.length > 0) {
       // **Los desfases fijos se añaden a mano**: `Intl.supportedValuesOf` sólo trae zonas canónicas y
@@ -77,82 +84,6 @@ function paraBuscar(texto: string): string {
   return texto.toLowerCase().replace(/_/g, ' ').replace(/\//g, ' ').replace(/-/g, ' ');
 }
 
-/** Un hueco del logo, tal y como lo cuenta la configuración. */
-interface HuecoDeLogo {
-  readonly filled: boolean;
-  readonly fileName?: string;
-  readonly size?: number;
-  readonly width?: number;
-  readonly height?: number;
-  readonly updatedAt?: string;
-}
-
-interface Configuracion {
-  /**
-   * El nombre de la instalación: lo que se lee donde antes decía «Catalina Support».
-   *
-   * Va con **la marca** y no con la numeración: es cómo se llama esta instalación, y se enseña junto
-   * al logo en la pantalla de entrada y en el menú (docs/modules/settings.md).
-   */
-  readonly name: string;
-  /**
-   * Cómo se entra en la instalación: el método y las dos configuraciones, **sin sus secretos**.
-   *
-   * Lo que llega de la contraseña de la cuenta de servicio y del secreto del cliente son dos
-   * booleanos —`passwordSet` y `secretSet`—, y nunca el valor: se guardan para hablar con el
-   * directorio y no salen por la API (docs/modules/settings.md, sección 5.8).
-   */
-  readonly entryMethod: string;
-  readonly directory: Directorio;
-  readonly keycloak: Keycloak;
-  readonly language: string;
-  readonly primaryColor: string;
-  /**
-   * La zona horaria de la instalación, en nombre IANA (`America/Guayaquil`).
-   *
-   * Es la que decide cómo se leen todas las fechas, aquí y en los correos: las fechas guardadas siguen
-   * en UTC, así que cambiarla no mueve ningún ticket, sólo cambia la hora a la que se lee.
-   */
-  readonly timeZone: string;
-  /**
-   * La dirección pública de la instalación: la base de los enlaces que salen en los correos y la
-   * vuelta de Keycloak. La aplicación se navega en relativo, así que sirve cualquier dirección con la
-   * que se llegue a ella.
-   */
-  readonly publicAppUrl: string;
-  readonly numberPrefix: string;
-  readonly mainAssignment: string;
-  readonly mainNotification: string;
-  readonly internalAssignment: string;
-  readonly internalNotification: string;
-  readonly updatedAt: string;
-  readonly brand: { readonly light: HuecoDeLogo; readonly dark: HuecoDeLogo };
-}
-
-/** La configuración del directorio, tal y como viaja por la API. */
-interface Directorio {
-  readonly host: string;
-  readonly port: string;
-  readonly useTls: boolean;
-  readonly bindDn: string;
-  readonly searchBase: string;
-  readonly userFilter: string;
-  readonly attrEmail: string;
-  readonly attrName: string;
-  readonly attrLastName: string;
-  readonly attrId: string;
-  /** Si hay contraseña guardada. **El valor no llega nunca.** */
-  readonly passwordSet: boolean;
-}
-
-/** La configuración de Keycloak, con la misma regla para el secreto. */
-interface Keycloak {
-  readonly issuer: string;
-  readonly clientId: string;
-  readonly redirectUri: string;
-  readonly secretSet: boolean;
-}
-
 /**
  * La pantalla de Configuración: la marca de la instalación.
  *
@@ -166,19 +97,23 @@ interface Keycloak {
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink, Aviso, Boton, Campo, Selector, Tarjeta],
+  imports: [RouterLink, Aviso, Boton, Campo, Selector, Tarjeta, Toast],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
-  private readonly http = inject(HttpClient);
+  protected readonly interpolar = interpolar;
+  private readonly ajustes = inject(SettingsService);
   private readonly textos = inject(TranslationService);
   private readonly marca = inject(BrandService);
   private readonly sesion = inject(SessionService);
+  private readonly setup = inject(SetupService);
 
   protected readonly configuracion = signal<Configuracion | null>(null);
   protected readonly cargando = signal(true);
   protected readonly guardando = signal(false);
   protected readonly mensaje = signal<{ forma: 'exito' | 'error'; texto: string } | null>(null);
+  protected readonly borradoresIdioma = signal<readonly BorradorDeIdioma[]>([]);
+  protected readonly confirmacionCosto = signal(false);
 
   /** El nombre que se está escribiendo, antes de guardarlo. */
   protected readonly nombreElegido = signal('');
@@ -208,7 +143,9 @@ export class SettingsPage {
   protected readonly archivoOscuro = signal<File | null>(null);
 
   protected readonly cambioDeColorPendiente = computed(
-    () => this.colorElegido().toLowerCase() !== (this.configuracion()?.primaryColor ?? '').toLowerCase(),
+    () =>
+      this.colorElegido().toLowerCase() !==
+      (this.configuracion()?.primaryColor ?? '').toLowerCase(),
   );
 
   // --- Cómo se entra: el método y las dos configuraciones ---
@@ -225,16 +162,12 @@ export class SettingsPage {
   protected readonly dirApellidos = signal('');
   protected readonly dirId = signal('');
   protected readonly kcEmisor = signal('');
+  protected readonly kcInterno = signal('');
   protected readonly kcCliente = signal('');
   protected readonly kcSecreto = signal('');
   protected readonly kcVuelta = signal('');
 
-  /**
-   * Si el directorio está configurado, para poder ofrecer el método de AD.
-   *
-   * Sale de **lo que se está escribiendo**, no de lo guardado: así, en cuanto se rellenan el servidor
-   * y la base de búsqueda, la opción deja de estar apagada sin tener que guardar antes.
-   */
+  /** Indica si los campos escritos están completos y permite mostrar el aviso antes de guardar. */
   protected readonly directorioConfigurado = computed(
     () => this.dirServidor().trim() !== '' && this.dirBase().trim() !== '',
   );
@@ -242,7 +175,9 @@ export class SettingsPage {
   /** Lo mismo con Keycloak: sin emisor, cliente y vuelta no hay camino. */
   protected readonly keycloakConfigurado = computed(
     () =>
-      this.kcEmisor().trim() !== '' && this.kcCliente().trim() !== '' && this.kcVuelta().trim() !== '',
+      this.kcEmisor().trim() !== '' &&
+      this.kcCliente().trim() !== '' &&
+      this.kcVuelta().trim() !== '',
   );
 
   /** Si hay algo que guardar en cómo se entra. */
@@ -268,6 +203,7 @@ export class SettingsPage {
       this.dirId().trim() !== configuracion.directory.attrId ||
       this.dirContrasena() !== '' ||
       this.kcEmisor().trim() !== configuracion.keycloak.issuer ||
+      this.kcInterno().trim() !== (configuracion.keycloak.internalIssuer ?? '') ||
       this.kcCliente().trim() !== configuracion.keycloak.clientId ||
       this.kcVuelta().trim() !== configuracion.keycloak.redirectUri ||
       this.kcSecreto() !== ''
@@ -293,6 +229,19 @@ export class SettingsPage {
   protected readonly busquedaZona = signal('');
   /** La dirección pública que se está escribiendo, antes de guardarla. */
   protected readonly direccionPublica = signal('');
+
+  // --- El motor de IA: la dirección y el modelo ---
+  protected readonly iaDireccion = signal('http://ai:8080');
+  protected readonly iaModelo = signal('qwen2.5-1.5b-instruct');
+  protected readonly iaModo = signal<'local' | 'remote' | 'provider'>('local');
+  protected readonly iaProveedor = signal('local');
+  protected readonly iaAutenticacion = signal<'none' | 'bearer' | 'header' | 'basic'>('none');
+  protected readonly iaCabecera = signal('');
+  protected readonly iaCredencial = signal('');
+  protected readonly iaPrivacidad = signal(false);
+  protected readonly iaCredencialPuesta = signal(false);
+  protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
 
   /** Las zonas que se ofrecen: las del navegador, o la lista corta si no las sabe dar. */
   protected readonly zonas = signal<readonly string[]>(zonasDelNavegador());
@@ -395,6 +344,19 @@ export class SettingsPage {
     );
   });
 
+  /** **Si hay algo que guardar en el motor de IA**: su tarjeta, con su botón. */
+  protected readonly cambioDeIAPendiente = computed(() => {
+    const configuracion = this.configuracion();
+    if (!configuracion) {
+      return false;
+    }
+
+    return (
+      this.iaDireccion().trim() !== configuracion.aiUrl ||
+      this.iaModelo().trim() !== configuracion.aiModel
+    );
+  });
+
   /** La dirección del logo propio que se está enseñando, con su sello para no ver el viejo. */
   protected readonly versionDeLaMarca = this.marca.version;
 
@@ -461,17 +423,7 @@ export class SettingsPage {
     }
 
     await this.pedir(
-      () => {
-        const datos = new FormData();
-        datos.append('logo', archivo, archivo.name);
-
-        return firstValueFrom(
-          this.http.post<Configuracion>(
-            `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
-            datos,
-          ),
-        );
-      },
+      () => this.marca.subirLogo(oscuro, archivo),
       this.t().configuracion.logoSubido,
       () => {
         if (oscuro) {
@@ -485,15 +437,7 @@ export class SettingsPage {
 
   /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
   protected async volverAlDeFabrica(oscuro: boolean): Promise<void> {
-    await this.pedir(
-      () =>
-        firstValueFrom(
-          this.http.delete<Configuracion>(
-            `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
-          ),
-        ),
-      this.t().configuracion.logoQuitado,
-    );
+    await this.pedir(() => this.marca.restablecerLogo(oscuro), this.t().configuracion.logoQuitado);
   }
 
   /**
@@ -511,9 +455,7 @@ export class SettingsPage {
     }
 
     try {
-      const marca = await firstValueFrom(
-        this.http.get<Marca>(`/api/settings/brand?color=${encodeURIComponent(valor)}`),
-      );
+      const marca = await this.marca.previsualizarColor(valor);
       this.colorResuelto.set(marca.colors);
       this.aplicarVistaPrevia(marca.colors);
     } catch {
@@ -531,12 +473,10 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            primaryColor: this.colorElegido(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          primaryColor: this.colorElegido(),
+        }),
       this.t().configuracion.marcaGuardada,
       () => {
         this.colorResuelto.set(null);
@@ -562,19 +502,56 @@ export class SettingsPage {
       return;
     }
 
+    if (this.idioma() !== configuracion.language) {
+      if (this.nombreElegido().trim() !== configuracion.name) {
+        try {
+          const saved = await this.ajustes.guardar({ ...configuracion, name: this.nombreElegido().trim(), language: configuracion.language });
+          this.configuracion.set(saved);
+        } catch (error) {
+          this.mensaje.set({ forma:'error', texto:this.textoDelError(error) });
+          return;
+        }
+      }
+      await this.prepararIdioma(false, false);
+      return;
+    }
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            name: this.nombreElegido().trim(),
-            // **El idioma va con el nombre** (decisión del responsable, 2026-09-29): los guarda el mismo
-            // botón, y sin esto se mandaría el que estaba cargado y no el que se acaba de elegir.
-            language: this.idioma(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          name: this.nombreElegido().trim(),
+          // El idioma sólo cambia mediante la aplicación atómica de las once plantillas.
+          language: configuracion.language,
+        }),
       this.t().configuracion.instalacionGuardada,
     );
+  }
+
+  protected async prepararIdioma(manual: boolean, confirmarCosto: boolean): Promise<void> {
+    this.guardando.set(true); this.mensaje.set(null); this.confirmacionCosto.set(false);
+    try {
+      this.borradoresIdioma.set(await this.ajustes.borradoresDeIdioma(this.idioma(), { manual, confirmCommercialCost: confirmarCosto }));
+    } catch (error) {
+      if (claveDelError(error) === 'mail.translation.costConfirmationRequired') this.confirmacionCosto.set(true);
+      else this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally { this.guardando.set(false); }
+  }
+
+  protected editarBorrador(index: number, field: 'subject' | 'body', value: string): void {
+    this.borradoresIdioma.update((items) => items.map((item, i) => i === index ? { ...item, [field === 'subject' ? 'draftSubject' : 'draftBody']: value } : item));
+  }
+
+  protected async aplicarCambioDeIdioma(): Promise<void> {
+    this.guardando.set(true); this.mensaje.set(null);
+    try {
+      await this.ajustes.aplicarIdioma(this.idioma(), this.borradoresIdioma().map((d) => ({ key:d.key, subject:d.draftSubject, body:d.draftBody })));
+      const current = this.configuracion();
+      if (current) this.configuracion.set({ ...current, language: this.idioma() });
+      this.borradoresIdioma.set([]);
+      await this.marca.cargar();
+      this.mensaje.set({ forma:'exito', texto: this.t().configuracion.instalacionGuardada });
+    } catch (error) { this.mensaje.set({ forma:'error', texto:this.textoDelError(error) }); }
+    finally { this.guardando.set(false); }
   }
 
   /**
@@ -596,6 +573,24 @@ export class SettingsPage {
     await this.guardarLaConfiguracion(this.t().configuracion.numeracionGuardada);
   }
 
+  /** Guarda el motor de IA: la dirección y el modelo. */
+  protected async guardarIA(): Promise<void> {
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      const ia = await this.ajustes.probarYActivarIA({
+        mode: this.iaModo(), provider: this.iaProveedor(), baseUrl: this.iaDireccion().trim(),
+        model: this.iaModelo().trim(), authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
+        credential: this.iaCredencial(),
+        privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(), language: this.configuracion()?.language ?? this.idioma(),
+      });
+      this.ponerConfiguracionDeIA(ia);
+      this.setup.marcarIAConfigurada();
+      this.mensaje.set({ forma: 'exito', texto: this.t().configuracion.motorGuardado });
+    } catch (error) { this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) }); }
+    finally { this.guardando.set(false); }
+  }
+
   /**
    * Guarda lo que pida la tarjeta que lo pide. El `PUT` manda **la configuración entera** —es un
    * documento, no un parche—, así que sólo cambia **el mensaje con el que se confirma**, que es lo que
@@ -609,20 +604,23 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            primaryColor: this.colorElegido(),
-            language: this.idioma(),
-            timeZone: this.zonaElegida().trim(),
-            publicAppUrl: this.direccionPublica().trim(),
-            numberPrefix: this.prefijo().trim(),
-            mainAssignment: this.asignacionPrincipal(),
-            mainNotification: this.avisoPrincipal(),
-            internalAssignment: this.asignacionInterno(),
-            internalNotification: this.avisoInterno(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          primaryColor: this.colorElegido(),
+          language: configuracion.language,
+          timeZone: this.zonaElegida().trim(),
+          publicAppUrl: this.direccionPublica().trim(),
+          numberPrefix: this.prefijo().trim(),
+          mainAssignment: this.asignacionPrincipal(),
+          mainNotification: this.avisoPrincipal(),
+          internalAssignment: this.asignacionInterno(),
+          internalNotification: this.avisoInterno(),
+          // **El motor de IA también va aquí**: es un `PUT` entero, así que la configuración se
+          // manda completa con lo que hay en pantalla, y guardar la región no borra lo escrito en
+          // la tarjeta del motor.
+          aiUrl: this.iaDireccion().trim(),
+          aiModel: this.iaModelo().trim(),
+        }),
       mensaje,
     );
   }
@@ -697,14 +695,7 @@ export class SettingsPage {
     }
   }
 
-  /**
-   * Los tres métodos de entrada.
-   *
-   * Un método que no está configurado **se enseña pero no se puede elegir**: elegirlo dejaría la
-   * instalación sin puerta para todo el mundo menos la cuenta de fábrica, y el backend lo rechaza de
-   * todos modos (`docs/modules/settings.md`, sección 5.8). Vale tanto lo guardado como lo que se está
-   * escribiendo ahora mismo en la tarjeta.
-   */
+  /** Elegir muestra los campos; el método vigente sólo cambia al guardar datos válidos. */
   protected opcionesDeMetodo(): readonly OpcionSelector[] {
     return [
       {
@@ -716,13 +707,11 @@ export class SettingsPage {
         valor: 'ad',
         etiqueta: this.t().configuracion.metodoAD,
         grupo: this.t().configuracion.metodo,
-        deshabilitado: !this.directorioConfigurado(),
       },
       {
         valor: 'keycloak',
         etiqueta: this.t().configuracion.metodoKeycloak,
         grupo: this.t().configuracion.metodo,
-        deshabilitado: !this.keycloakConfigurado(),
       },
     ];
   }
@@ -754,14 +743,12 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            entryMethod: this.metodo(),
-            directory: { ...configuracion.directory, ...this.directorioEscrito() },
-            keycloak: { ...configuracion.keycloak, ...this.keycloakEscrito() },
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          entryMethod: this.metodo(),
+          directory: { ...configuracion.directory, ...this.directorioEscrito() },
+          keycloak: { ...configuracion.keycloak, ...this.keycloakEscrito() },
+        }),
       this.t().configuracion.entradaGuardada,
     );
   }
@@ -775,8 +762,7 @@ export class SettingsPage {
    */
   protected async probarDirectorio(): Promise<void> {
     await this.probar(
-      '/api/settings/directory/test',
-      this.directorioEscrito(),
+      () => this.ajustes.probarDirectorio(this.directorioEscrito()),
       this.t().configuracion.directorioOk,
     );
   }
@@ -784,14 +770,60 @@ export class SettingsPage {
   /** Lo mismo con Keycloak: se lee el reino y se comprueba que dice dónde está su pantalla. */
   protected async probarKeycloak(): Promise<void> {
     await this.probar(
-      '/api/settings/keycloak/test',
-      this.keycloakEscrito(),
+      () => this.ajustes.probarKeycloak(this.keycloakEscrito()),
       this.t().configuracion.keycloakOk,
     );
   }
 
+  /**
+   * Prueba el motor de IA **con lo que hay en pantalla**: se le pregunta a su comprobación de salud.
+   *
+   * Si el campo está vacío, el backend prueba **la dirección guardada**, que es lo que permite
+   * comprobar el motor ya configurado sin volver a escribirlo.
+   */
+  protected async probarIA(): Promise<void> {
+    await this.guardarIA();
+  }
+
+  protected opcionesDeModoIA(): readonly OpcionSelector[] { return [
+    { valor: 'local', etiqueta: this.t().configuracion.iaLocal, grupo: this.t().configuracion.motorDeIA },
+    { valor: 'remote', etiqueta: this.t().configuracion.iaRemota, grupo: this.t().configuracion.motorDeIA },
+    { valor: 'provider', etiqueta: this.t().configuracion.iaProveedor, grupo: this.t().configuracion.motorDeIA },
+  ]; }
+  protected cambiarModoIA(valor: string): void {
+    const modo = valor as 'local'|'remote'|'provider';
+    this.iaModo.set(modo);
+    this.iaProveedor.set(modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai');
+    if (modo === 'local') {
+      this.iaDireccion.set('http://ai:8080');
+      this.iaModelo.set('qwen2.5-1.5b-instruct');
+      this.iaAutenticacion.set('none');
+      this.iaPrivacidad.set(false);
+    } else {
+      this.iaDireccion.set('');
+      this.iaAutenticacion.set('bearer');
+    }
+  }
+  protected opcionesDeProveedorIA(): readonly OpcionSelector[] { return ['openai','claude','deepseek','openai-compatible'].map(valor => ({valor, etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor, grupo: this.t().configuracion.iaProveedor})); }
+  protected opcionesDeModeloLocal(): readonly OpcionSelector[] { return [
+    {valor:'qwen2.5-1.5b-instruct',etiqueta:'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',grupo:this.t().configuracion.iaLocal},
+    {valor:'qwen2.5-3b-instruct',etiqueta:'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',grupo:this.t().configuracion.iaLocal},
+    {valor:'qwen2.5-7b-instruct',etiqueta:'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB',grupo:this.t().configuracion.iaLocal},
+  ]; }
+  protected opcionesDeAuthIA(): readonly OpcionSelector[] { const t=this.t().configuracion; return [
+    {valor:'none',etiqueta:t.iaAuth_none,grupo:t.iaAutenticacion},{valor:'bearer',etiqueta:t.iaAuth_bearer,grupo:t.iaAutenticacion},
+    {valor:'header',etiqueta:t.iaAuth_header,grupo:t.iaAutenticacion},{valor:'basic',etiqueta:t.iaAuth_basic,grupo:t.iaAutenticacion},
+  ]; }
+  protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
+  protected async cargarCatalogoIA(): Promise<void> { await this.accionIA(async()=>{this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async descargarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.descargarModelo(id,this.licenciasAceptadas().has(id));this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async activarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async eliminarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.eliminarModelo(id);this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  private async accionIA(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
+
   /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
-  private directorioEscrito(): Partial<Directorio> & { bindPassword?: string } {
+  private directorioEscrito(): DirectorioEscrito {
     return {
       host: this.dirServidor().trim(),
       port: this.dirPuerto().trim(),
@@ -808,9 +840,10 @@ export class SettingsPage {
     };
   }
 
-  private keycloakEscrito(): Partial<Keycloak> & { clientSecret?: string } {
+  private keycloakEscrito(): KeycloakEscrito {
     return {
       issuer: this.kcEmisor().trim(),
+      internalIssuer: this.kcInterno().trim(),
       clientId: this.kcCliente().trim(),
       redirectUri: this.kcVuelta().trim(),
       clientSecret: this.kcSecreto(),
@@ -818,12 +851,12 @@ export class SettingsPage {
   }
 
   /** Una prueba de conexión: no guarda nada y cuenta lo que ha pasado en el aviso de arriba. */
-  private async probar(url: string, cuerpo: object, exito: string): Promise<void> {
+  private async probar(peticion: () => Promise<unknown>, exito: string): Promise<void> {
     this.guardando.set(true);
     this.mensaje.set(null);
 
     try {
-      await firstValueFrom(this.http.post(url, cuerpo));
+      await peticion();
       this.mensaje.set({ forma: 'exito', texto: exito });
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
@@ -853,12 +886,16 @@ export class SettingsPage {
   private async cargar(): Promise<void> {
     this.cargando.set(true);
     try {
-      const configuracion = await firstValueFrom(this.http.get<Configuracion>('/api/settings'));
+      const configuracion = await this.ajustes.cargar();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerIA(configuracion);
+      if (configuracion.ai?.mode) {
+        this.ponerConfiguracionDeIA(configuracion.ai);
+      }
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
     } finally {
@@ -882,6 +919,7 @@ export class SettingsPage {
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerIA(configuracion);
       despues?.();
       this.mensaje.set({ forma: 'exito', texto: exito });
       void this.marca.cargar();
@@ -904,6 +942,20 @@ export class SettingsPage {
     this.avisoInterno.set(configuracion.internalNotification);
   }
 
+  /** Deja los campos del motor de IA con lo que hay guardado. */
+  private ponerIA(configuracion: Configuracion): void {
+    this.iaDireccion.set(configuracion.aiUrl ?? '');
+    this.iaModelo.set(configuracion.aiModel ?? '');
+  }
+
+  private ponerConfiguracionDeIA(ia: import('../services/settings.service').ConfiguracionDeIA): void {
+    if (ia.mode) this.iaModo.set(ia.mode);
+    this.iaProveedor.set(ia.provider || (ia.mode === 'provider' ? 'openai' : 'local'));
+    this.iaDireccion.set(ia.baseUrl || this.iaDireccion()); this.iaModelo.set(ia.model || this.iaModelo());
+    this.iaAutenticacion.set(ia.authType); this.iaCabecera.set(ia.authHeader); this.iaCredencial.set('');
+    this.iaCredencialPuesta.set(ia.credentialSet); this.iaPrivacidad.set(ia.privacyConfirmed);
+  }
+
   /**
    * Deja los campos de cómo se entra con lo que hay guardado.
    *
@@ -924,6 +976,7 @@ export class SettingsPage {
     this.dirApellidos.set(configuracion.directory.attrLastName);
     this.dirId.set(configuracion.directory.attrId);
     this.kcEmisor.set(configuracion.keycloak.issuer);
+    this.kcInterno.set(configuracion.keycloak.internalIssuer ?? '');
     this.kcCliente.set(configuracion.keycloak.clientId);
     this.kcSecreto.set('');
     this.kcVuelta.set(configuracion.keycloak.redirectUri);
@@ -939,6 +992,13 @@ export class SettingsPage {
   }
 
   private textoDelError(error: unknown): string {
-    return this.textos.error(claveDelError(error));
+    const key = claveDelError(error);
+    const memory = memoriaDelError(error);
+    if (key === 'settings.ai.insufficientMemory' && memory) {
+      return interpolar(this.textos.error(key), {
+        requerida: this.formatoBytes(memory.requiredBytes), disponible: this.formatoBytes(memory.availableBytes),
+      });
+    }
+    return this.textos.error(key);
   }
 }

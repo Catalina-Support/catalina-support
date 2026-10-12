@@ -1,7 +1,147 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-10-08
+>
+> **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 17 define el entorno y la matriz de
+> verificación del repaso integral de formato. Lo existente continúa as-built y producción permanece
+> aparcada. El responsable aprobó explícitamente esta enmienda el 2026-10-08.
+>
+> **Hallazgo corregido y verificado el 2026-10-08.** La instancia real quedó detenida conservando sólo
+> sus volúmenes aislados después de reproducir el rechazo 1.5B→3B. La sección 16 define las pruebas
+> de la corrección 15A–22A y la reanudación con los GGUF ya verificados. No se toca desarrollo ni
+> producción; la corrección fue aprobada explícitamente el 2026-10-08.
+>
+> **Hallazgo y enmienda propuesta el 2026-10-07 (bloque 5).** Las pruebas aisladas cubren el motor
+> con procesos y GGUF falsos, pero falta validar el catálogo real sin alterar desarrollo. La sección
+> 15 define un proyecto Compose desechable, mediciones reproducibles y limpieza completa. Las
+> decisiones 1A–14A quedaron cerradas por el responsable. La propuesta fue aprobada explícitamente
+> el 2026-10-08; lo existente continúa as-built mientras se ejecuta la validación.
+>
+> **Hallazgo y enmienda propuesta el 2026-10-07.** El bloque 4 necesita completar las pruebas
+> aisladas prometidas para adaptadores, redirecciones, límites del contenedor y supervisión del
+> motor local. Lo existente continúa as-built. La sección 14 recoge la corrección elegida por el
+> responsable (4A). El repaso terminó con 5A, 6A, 7A y 8A, sin decisiones abiertas. El responsable
+> aprobó explícitamente la enmienda, que se implementó y verificó el 2026-10-07.
+>
+> **Implementado y verificado el 2026-10-07.** Los proveedores y el administrador se probaron con
+> servidores, procesos, archivos y límites falsos, sin proveedores comerciales ni GGUF reales. La
+> pasada canónica terminó con 180 casos E2E aprobados y 38 omisiones previstas, en PC y móvil; la
+> instancia se eliminó con sus volúmenes al cerrar.
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. La sección 13 incorpora la
+> IA como requisito de instalación, separa su motor local por entorno y añade las variables de
+> cifrado y administración. El repaso quedó cerrado, la propuesta fue aprobada y la implementación
+> fue verificada.
+>
+> **Enmendado el 2026-10-06**, aprobado explícitamente por el responsable, implementado y verificado:
+> la suite aislada ejecuta su backend con `go run .`, conserva `./backend:/app:ro` y retira el montaje
+> anidado `backend_tmp:/app/tmp`. El recorrido canónico terminó con salida 0 y la limpieza eliminó
+> todos los recursos de la instancia.
+>
+> **Enmendado el 2026-10-04**, conforme a la sección 12 aprobada de `docs/prueba-local.md`:
+> `dev.yml` ejecuta la migración automáticamente y `backend` espera a que termine correctamente.
+> Una instalación local nueva queda lista con un solo `up -d --build`, sin datos de ejemplo; el
+> seeder continúa separado y opcional. El paso de correo recibe las sugerencias editables de Mailpit.
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El recorrido vigente es
+> instalación vacía con `docker compose -f dev.yml up -d --build` y `docker compose -f dev.yml run
+> --rm migrate`, asistente y admin/admin. El seeder es opcional: conserva las cinco tablas de
+> ajustes de una instalación sellada; una instalación sin sellar recibe la demo local y queda
+> sellada. Las pruebas usan exclusivamente `tests.yml`; los comandos anteriores sobre el entorno de
+> desarrollo quedan sustituidos por el procedimiento de abajo.
+>
+> **Enmendado el 2026-10-02**: el README prioriza la instalación vacía, por corrección del
+> responsable, con los ejemplos opcionales. Sólo el esquema no sella una base nueva: primero se
+> completa `/setup` y después se entra con `admin`/`admin` en local; en producción la contraseña es
+> `ADMIN_PASSWORD`. Los ejemplos restauran la dirección pública del dominio de desarrollo, que
+> debe ajustarse para usar los enlaces en localhost. Se reporta el contexto de construcción del
+> script de producción como bloqueo para reproducirlo desde cero; no se cambia código ni se despliega.
+> Comprobado en una copia aislada de Linux: esquema sobre base nueva (0 cuentas y 0 tickets),
+> los cinco pasos del asistente en navegador, prueba SMTP e IA, entrada con `admin`/`admin`,
+> bloqueo 409 tras sellar, alta de cuenta y apertura del enlace del buzón. Después, el seeder dejó
+> 11 cuentas de ejemplo, 25 tickets y 5 adjuntos; las entradas en navegador de fábrica, Usuario,
+> Soporte y Desarrollo funcionaron. No se han ejecutado estas comprobaciones en
+> Windows o macOS. Para el navegador del contenedor se usó la IP interna del frontend: el host
+> `frontend` es rechazado por Angular. La suite predeterminada sigue usando el dominio de desarrollo.
+>
+> **Enmendado el 2026-10-01 (séptima vez)**: **los datos de ejemplo se siembran con un contenedor de
+> un solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows** —es lo
+> que deja fuera el guion de bash, que no se puede ejecutar en Windows, y con él la copia de los
+> adjuntos—. El servicio vive en `dev.yml` **con perfil propio**, así que **`up -d` no lo arranca**:
+> se pide a propósito, y **los ejemplos son opcionales** (el esquema sigue siendo obligatorio). El
+> contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad, y el guion sigue
+> valiendo en Linux y macOS fuera del contenedor—: el guion distingue con la marca `SEED_EN_CONTENEDOR`
+> si habla con la base por la red del entorno con el `psql` de la imagen o entrando al contenedor con
+> `docker compose exec`. Quedan al día las secciones 3.1, 3.3, 5 y 9.3. Comprobado el 2026-10-01 con
+> **dos pasadas seguidas** del comando («Listo: 11 cuentas, 25 tickets y 5 adjuntos» las dos veces),
+> con las once cuentas y los 25 tickets en la base, **los 5 adjuntos en `_files/`** y `up -d` sin
+> arrancar el servicio.
+>
+> **Enmendado el 2026-10-01 (sexta vez)**: **el servidor de desarrollo de Angular reenvía `/api` al
+> backend** (`frontend/proxy.conf.json`, declarado en `serve.options.proxyConfig` de
+> `frontend/angular.json`), con destino **`http://backend:11002`** —el nombre de servicio del backend
+> dentro de la red del entorno— y **sin reescribir la ruta**. Es una opción de `serve`: **el `build` de
+> producción no cambia** y **en producción sigue reenviando nginx**. La sección 3.1 lo dice: **con el
+> entorno levantado y el esquema aplicado se entra en `http://127.0.0.1:11001` con `admin`/`admin`**,
+> sin nginx delante. Comprobado el 2026-10-01 por la 11001 (`GET /api/auth/methods` y `GET /api/health`
+> → **200 JSON**; `POST /api/auth/login` con `admin`/`admin` → **200** con token) y con Playwright
+> contra `http://127.0.0.1:11001`: **el recorrido de entrar y salir, 14 casos en verde**.
+>
+> **Enmendado el 2026-10-01 (quinta vez)**: **el esquema y los ejemplos se pueden aplicar sin `bash`**,
+> con comandos de Docker que funcionan **igual en PowerShell, CMD y bash**: se copia el archivo al
+> contenedor con `docker compose -f dev.yml cp` y se le da a `psql` con `-f` y `-v ON_ERROR_STOP=1`
+> (sección 3.2, que era el único sitio que solo enseñaba la redirección `<`, de intérprete). El guion
+> `./scripts/dev-seed.sh` **queda dicho como lo que es: de Linux y macOS**, y quien no tenga `bash`
+> aplica sus dos archivos con esos dos comandos (secciones 3.1, 3.3 y 5). Los pasos del arranque en
+> local, con el porqué de cada uno, viven en el `README.md`. Comprobado el 2026-10-01: en una base
+> nueva (`catalina_support_prueba`) los dos comandos de la sección 3.2 dejan **18 tablas** y la
+> aplicación responde (`GET /api/auth/methods` y `POST /api/auth/login` con `admin`/`admin`, **200**);
+> el mismo archivo aplicado **dos veces seguidas** da `ERROR lines: 0` y termina en `COMMIT`, y la
+> base de desarrollo, tras reaplicarlo, sigue con `12 usuarios, 25 tickets y 22 plantillas`.
+>
+> **Enmendado el 2026-10-01 (cuarta vez)**: queda dicho **qué aplica el esquema en desarrollo y
+> cuándo**. La sección 3.3 dice ya lo que el guion siempre hizo y la documentación no contaba: **en
+> una base nueva `./scripts/dev-seed.sh` es lo que crea el esquema** —su paso 1, `Aplicando el
+> esquema…`, aplica `v1.0.0.sql`—, **no sólo los datos de ejemplo**, y se pasa **después de levantar
+> el entorno y antes de abrir la aplicación**: la aplicación **no crea tablas al arrancar** y las
+> migraciones no se aplican solas, así que abrirla antes deja `relación "installation_settings" does
+> not exist` y `relación "ai_insights" does not exist`. La 3.1 lo apunta en una línea, la 5 añade el
+> momento en su tabla y nombra el síntoma, y **los pasos del arranque en local no se repiten aquí**:
+> viven en el `README.md`, «Probar en local: instalación vacía». Comprobado en la base de desarrollo: el
+> seeder termina con `Listo: 11 cuentas, 25 tickets y 5 adjuntos` sobre una base que ya tiene el
+> esquema, y `v1.0.0.sql` aplicado **dos veces seguidas** no da ningún error (`ERROR lines: 0` en las
+> dos pasadas).
+>
+> **Enmendado el 2026-10-01 (tercera vez)**: el directorio de pruebas y Keycloak **dejan `dev.yml`** y
+> pasan a **`active-directory.yml`** y **`keycloak.yml`**, cada uno con **su propio comando**, y **el
+> perfil `auth` desaparece**. Los dos entran en la red **`catalina-support-dev`**, que **posee
+> `dev.yml`** (nombre fijo, sin `external`), y por eso **primero se levanta el entorno** y después el
+> servicio. Quedan al día la sección 3.3 (los dos servicios ya no viven en `dev.yml`), la 9.3 (los
+> tres comandos y el comando nuevo de la suite, en dos pasos) y la tabla de casos (necesitan su
+> servicio levantado, no un perfil).
+>
+> **Enmendado el 2026-10-01 (segunda vez)**: la sección 3.3 **deja de enumerar las once cuentas de
+> ejemplo** —y de repetir su contraseña— y **apunta a la tabla del `README.md`**, que es donde se
+> detallan con su **nombre, su correo, su rol y su contraseña** («Probar en local: instalación vacía»):
+> el mismo dato en dos documentos se separa solo con el tiempo, así que vive en uno y el otro lo
+> referencia en vez de copiarlo.
+>
+> **Enmendado el 2026-10-01**: los **tres elementos opcionales** se levantan cada uno con su propio
+> comando y así queda dicho (sección 9.3): el motor de IA (`docker compose -f ai.yml up -d`, sección
+> 3.4), el directorio de pruebas (`docker compose -f dev.yml up -d ldap`) y Keycloak
+> (`docker compose -f dev.yml up -d keycloak`). El directorio y Keycloak **comparten el perfil `auth`**
+> pero **pueden levantarse por separado** nombrando el servicio, **sin activar el perfil** —comprobado
+> levantando sólo uno y viendo en `docker compose -f dev.yml ps` que el otro no aparece—; el comando de
+> siempre `docker compose -f dev.yml --profile auth up -d` **sigue levantando los dos a la vez** y es el
+> que usan la suite con el método en AD o Keycloak y las pruebas de interfaz. Los tres son opcionales.
+>
+> **Enmendado el 2026-09-30 (sexta vez)**: **el despliegue a producción queda aparcado** hasta que el
+> producto esté terminado, así que **este runbook no se reescribe ahora**: la sección 4 lleva una **nota**
+> diciendo que su flujo **cambió el 2026-09-30** —las rutas de `prod.yml` pasan a ser relativas al propio
+> archivo, `scripts/prod-build.sh` publica el compose y `config/` en la carpeta de despliegue y ejecuta el
+> compose desde ahí, y los puertos dejan de ir atados a `127.0.0.1`— y que **se pondrá al día cuando se
+> retome el despliegue**. Lo que hay en la sección describe el despliegue **ya hecho** el 2026-09-25.
 >
 > **Enmendado el 2026-09-30 (quinta vez, y corregida el mismo día)**: **la red compartida con el motor
 > de IA la crea el entorno**, y el motor **entra en ella**. Los contenedores de `dev.yml`, `prod.yml` y
@@ -139,15 +279,35 @@ docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
-Se entra por `https://dev.catalina-support.example.com`. Los puertos 11001 y 11002 siguen publicados
-en `127.0.0.1` para depurar sin pasar por nginx.
+Se entra por `https://dev.catalina-support.example.com`. **Y también, sin nginx, por
+`http://127.0.0.1:11001`**: el servidor de desarrollo reenvía `/api` al backend
+(`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado **se abre la
+11001**. `migrate` espera a PostgreSQL, aplica el esquema y `backend` espera su terminación correcta.
+En una base nueva aparece `/setup`; después de completar el
+asistente se entra con **`admin`/`admin`**. Los ejemplos son opcionales y sellan la instalación
+(`README.md`, «Probar en local: instalación vacía»).
+Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
+
+**Levantar el entorno deja la base lista**: la aplicación no crea tablas por su cuenta; el servicio
+de un solo uso `migrate` las aplica antes de que Compose permita iniciar `backend`. Si el SQL falla,
+el backend queda detenido y el diagnóstico vive en `docker compose -f dev.yml logs migrate`. Los
+datos de ejemplo también aplican el esquema en su primer paso, pero siguen siendo opcionales.
 
 ### 3.2 La base de datos
 
 - El esquema se aplica **repetidas veces** sin miedo: `v1.0.0.sql` es transaccional e idempotente
-  (`docs/arquitectura.md`, sección 7). **El archivo todavía no existe**: nace con el primer módulo,
-  cuando `docs/modules/tickets.md` se implemente.
-- Aplicarlo, dentro del contenedor (comando probado el 2026-09-22):
+  (`docs/arquitectura.md`, sección 7). **El archivo existe, está aplicado y crea 18 tablas.**
+- `docker compose -f dev.yml up -d --build` ejecuta el servicio de un solo uso automáticamente:
+  espera la salud de PostgreSQL, usa su cliente en Docker y termina con error si falla el SQL.
+  `backend` depende de su finalización correcta.
+- También se puede repetir manualmente; no borra datos, no carga ejemplos y no reabre el asistente:
+
+```bash
+docker compose -f dev.yml run --rm migrate
+```
+
+- En Linux y macOS, además, se puede hacer sin copiar, con la redirección del intérprete —que **no
+  existe en PowerShell** y por eso no es la forma de arriba—:
 
 ```bash
 docker compose -f dev.yml exec -T database \
@@ -163,33 +323,71 @@ docker volume rm catalina_support_dev_database
 docker compose -f dev.yml up -d
 ```
 
-Y volver a aplicar la migración. No hay nada que conservar: los datos de desarrollo son de prueba.
+El siguiente `up -d` vuelve a aplicar la migración automáticamente. Esto borra los datos y la
+configuración local: hacerlo sólo si se quiere empezar otra instalación.
 
 ### 3.3 Los datos de ejemplo
 
-El entorno de desarrollo se puede dejar con contenido en un comando:
+**Los datos de ejemplo se aplican a propósito**, después de levantar el entorno. **No son un
+requisito para entrar** —`up` ya deja el esquema listo, se completa el asistente y después se entra
+con `admin`—, pero sí son lo que deja el entorno con contenido. La aplicación no crea las tablas: el
+servicio `migrate` de
+Compose lo hace y termina antes de que arranque el backend (sección 3.2). Los pasos del arranque en
+local están en el `README.md`, «Probar en local: instalación vacía».
+
+**La forma de los tres sistemas —Linux, macOS y Windows— es un comando de Docker**: un contenedor de
+un solo uso que arranca, siembra y se va.
+
+```bash
+docker compose -f dev.yml run --rm seed
+```
+
+**No se levanta con `up -d`**, porque el servicio `seed` de `dev.yml` tiene **perfil propio**: se pide
+a propósito, y **quien quiera el proyecto vacío —sólo con el esquema— no ejecuta este comando**.
+**Los ejemplos son una elección; el esquema es obligatorio.**
+
+El contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad sobre cómo se
+siembra—: aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a
+`_files/`, que es el paso que un seeder SQL no puede hacer. Sus montajes son de **sólo lectura** salvo
+`_files/`, que es lo único que el guion escribe en la máquina.
+
+**En Linux y macOS el mismo guion sigue existiendo fuera del contenedor**, y hace lo mismo:
 
 ```bash
 ./scripts/dev-seed.sh
 ```
 
-Aplica `v1.0.0.sql` (por si la base está recién creada), aplica `v1.0.0_dev.sql` y **copia los
-archivos de los adjuntos** desde `config/seed/` a `_files/`, en la carpeta de su ticket: un seeder
-SQL no puede crear archivos, y un adjunto sin su archivo no se puede abrir.
+El guion habla con la base **entrando al contenedor con `docker compose exec`** cuando corre en la
+máquina, y **con el `psql` de la imagen por la red del entorno** cuando corre dentro del contenedor:
+lo distingue su marca `SEED_EN_CONTENEDOR`, y por eso no hay dos formas de sembrar que puedan
+separarse.
 
-Deja **once cuentas** —`user1@demo.com`…`user5` para quien pide, `support1`…`support3` y `dev1`…
-`dev3`— y **25 tickets** repartidos por todos los estados, con asignaciones, reasignaciones,
-comentarios de los tres papeles, **siete con ticket interno** (uno esperando a Desarrollo, otro
-devuelto a Soporte, otros resueltos o cerrados), adjuntos de verdad y **las fechas repartidas en los
-últimos tres meses**, para que la bandeja no salga toda del mismo día.
+Deja **once cuentas, 25 tickets y 5 adjuntos** —probado el 2026-10-01 con **dos pasadas seguidas** del
+comando de Docker («Listo: 11 cuentas, 25 tickets y 5 adjuntos» las dos veces), comprobando además en
+la base las once cuentas y los 25 tickets y en `_files/` los cinco archivos—. El servicio `migrate` de
+la sección 3.2 aplica el esquema, pero **no copian los adjuntos**: para eso está el
+contenedor, que es el paso 3 del guion.
+
+Su **paso 1** (`Aplicando el esquema…`) aplica `backend/migrations/v1.0.0.sql` —transaccional e
+idempotente, así que sobre una base que ya lo tiene se puede volver a pasar sin daño—, el **paso 2**
+aplica `v1.0.0_dev.sql` y el **paso 3** **copia los archivos de los adjuntos** desde `config/seed/` a
+`_files/`, en la carpeta de su ticket: un seeder SQL no puede crear archivos, y un adjunto sin su
+archivo no se puede abrir.
+
+Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en el
+`README.md`**, en «Probar en local: instalación vacía», y **aquí no se repite**— y **25 tickets**
+repartidos por todos los estados, con asignaciones, reasignaciones, comentarios de los tres papeles,
+**siete con ticket interno** (uno esperando a Desarrollo, otro devuelto a Soporte, otros resueltos o
+cerrados), adjuntos de verdad y **las fechas repartidas en los últimos tres meses**, para que la
+bandeja no salga toda del mismo día.
 
 **Las direcciones son `@demo.com`** (decisión del responsable, 2026-09-26), igual que las de las
 personas del directorio de pruebas y del reino: en desarrollo todo es de mentira, y un dominio solo
 —el mismo en los tres sitios— es lo que hace que no haya que pensar cuál toca.
 
-**Las once entran con `123123123`** (decisión del responsable, 2026-09-25): en desarrollo se entra y se
-sale muchas veces al día, y una contraseña que se escribe con una mano es lo que hace que probar no dé
-pereza.
+**Las once entran con la misma contraseña**, la que dice la tabla del `README.md` (decisión del
+responsable, 2026-09-25): en desarrollo se entra y se sale muchas veces al día, y una contraseña que
+se escribe con una mano es lo que hace que probar no dé pereza.
 
 - **Cumple la política del producto**, que pide **8 caracteres** como mínimo —bajados de 12 el
   2026-09-25—, así que el seeder **no se salta ninguna regla**: escribe el `bcrypt` ya hecho porque un
@@ -202,45 +400,49 @@ pereza.
 probando—, las cuentas `@demo.com` y los adjuntos que no sean la marca. Es un seeder de
 desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
 
-**Y deja configurados los dos caminos de directorio, con el método de entrada en `local`**
-(enmienda del 2026-09-25): escribe la configuración del directorio apuntando al `ldap` del `dev.yml`
-y la de Keycloak apuntando al reino de pruebas, **sin cambiar el método**. Así el entorno arranca
-entrando con las once cuentas de ejemplo y **cambiar de método es un clic en Configuración**, que es
-justo lo que hay que poder probar a mano. Los dos servicios viven detrás del perfil `auth`: con él
-levantado, «Probar la conexión» contesta que sí; sin él, contesta que no, que es la verdad.
+**Sólo cuando la instalación no está sellada**, deja configurados los dos caminos de directorio
+y activa el método `local` (enmienda aprobada del 2026-10-03): escribe la configuración del directorio apuntando al `ldap` que levanta
+`active-directory.yml` y la de Keycloak apuntando al reino de pruebas, **dejando el método local**. Una instalación sellada conserva sus ajustes. Así
+el entorno arranca entrando con las once cuentas de ejemplo y **cambiar de método es un clic en
+Configuración**, que es justo lo que hay que poder probar a mano. Los dos servicios de pruebas viven
+cada uno en su archivo (`active-directory.yml` y `keycloak.yml`): con ellos levantados, «Probar la
+conexión» contesta que sí; sin ellos, contesta que no, que es la verdad.
 
 - **La limpieza de las cuentas va en minúsculas** (`lower(email) LIKE '%@demo.com'`): el correo se
   guarda como lo escribe quien lo escribe, y sin eso una cuenta de ejemplo con mayúsculas sobrevivía
   a la limpieza y el entorno dejaba de estar en el estado conocido que promete este guion.
 
-### 3.4 El motor de IA: su propio compose, compartido por los dos entornos
+### 3.4 El motor local de IA: su propio compose y recursos por entorno
 
 El motor que redacta el **motivo** y la **última acción** de los tickets (`docs/modules/ai.md`) **no
-vive en `dev.yml` ni en `prod.yml`**, sino en **`ai.yml`**, y hay que levantarlo aparte:
+vive en `dev.yml` ni en `prod.yml`**, sino en **`ai.yml`**. Sólo se levanta cuando se elige la
+modalidad local:
 
 ```bash
-docker compose -f ai.yml up -d      # la primera vez descarga el modelo (~1,1 GB) y tarda
+docker compose -f ai.yml up -d --build
 docker compose -f ai.yml ps
 docker compose -f ai.yml logs -f ai
 docker compose -f ai.yml down       # el volumen del modelo se queda
 ```
 
-**Por qué aparte**: es **uno solo para los dos entornos**, porque no caben dos —el modelo ocupa
-~1,1 GB y la máquina tiene 1,8 GB libres, sin GPU—. Los backends de desarrollo y de producción **entran
-en su red** (`catalina-support-ai`, declarada externa en los dos compose) y le hablan por su nombre,
-`http://catalina_support_ai:8080`. **No publica ningún puerto**: el motor no se alcanza desde la máquina
-ni desde fuera.
+**Por qué aparte**: el administrador descarga, activa y supervisa `llama-server` sin acceder al
+socket de Docker. `dev.yml` crea `catalina-support-ai-dev` y `prod.yml` crea
+`catalina-support-ai-prod`; `ai.yml` entra en la red correspondiente mediante `AI_NETWORK_NAME`.
+Sus proyectos y volúmenes también llevan nombre por entorno (`AI_PROJECT_NAME` y
+`AI_MODELS_VOLUME`), por lo que desarrollo y producción no comparten modelos ni secretos. El
+backend lo alcanza por el nombre de servicio y el administrador no publica puertos hacia la
+máquina.
 
-- **El modelo se descarga una vez** a un volumen con nombre (`ai_modelos`), así que sobrevive a `down`
-  y a recrear el contenedor; sólo `down -v` lo borra. A partir de ahí el motor funciona **sin salida a
-  internet**.
-- **Es opcional, y a propósito**: si `AI_URL` está vacía —o el contenedor no está—, los dos campos se
-  quedan sin texto y **todo lo demás funciona igual**. Un motor caído no puede parar la mesa de ayuda
-  (`docs/modules/ai.md`, decisión 2).
-- **Si se levanta el backend sin la red creada**, `docker compose up` lo dice: se arregla levantando el
-  motor.
-- Antes de desplegar a producción, `docker compose -f ai.yml up -d` en el servidor: los dos entornos lo
-  comparten.
+- **El modelo se descarga desde `/setup` o `/settings`** al volumen del entorno; la descarga se puede
+  reanudar y sólo `down -v` borra el volumen. La interfaz ofrece los modelos 1.5B, 3B y 7B con sus
+  estimaciones de disco y RAM.
+- **La IA es obligatoria para instalar**, pero la modalidad local no lo es: también se puede elegir
+  un servidor propio o un proveedor externo. Si el motor configurado cae después, los resúmenes
+  quedan pendientes y la mesa de ayuda continúa funcionando.
+- **La red la crea el entorno**, así que **el motor se puede levantar después, con el entorno en
+  marcha**: `docker compose -f dev.yml up -d` funciona en una máquina nueva sin crear nada a mano.
+- La operación de producción sigue aparcada hasta el cierre de la versión 1.0.0. Cuando se retome,
+  Compose se ejecutará con los nombres y secretos de producción documentados en la sección 13.
 
 ### 3.5 Dónde queda lo que no es código
 
@@ -254,6 +456,13 @@ entrar al contenedor.
 
 ## 4. Producción
 
+> **Nota (2026-09-30):** este flujo **cambió** —las rutas de los volúmenes de `prod.yml` pasaron a ser
+> relativas al propio archivo, `scripts/prod-build.sh` publica el compose y `config/` en la carpeta de
+> despliegue y el despliegue se ejecuta desde ahí, y los puertos ya no van atados a `127.0.0.1`—, pero
+> **la sección no se pone al día todavía**: el despliegue a producción **queda aparcado** hasta que el
+> producto esté terminado. Lo que se lee debajo describe el despliegue **ya hecho** el 2026-09-25, no el
+> estado de hoy. Se pondrá al día cuando se retome el despliegue.
+
 ### 4.1 Cómo está montada
 
 Contenedores «finos»: el runtime vive en imágenes base y **el código son artefactos construidos** en
@@ -261,6 +470,13 @@ Contenedores «finos»: el runtime vive en imágenes base y **el código son art
 existen para construir y publicar, y **no se levantan con `up`**: están bajo el perfil `build`.
 
 ### 4.2 El despliegue, paso a paso
+
+> **Hallazgo del 2026-10-02:** los pasos siguientes conservan el registro del despliegue histórico;
+> no son hoy un recorrido reproducible desde cero. `prod-build.sh` usa el compose publicado en la
+> carpeta de artefactos para construir, pero allí no copia las fuentes que piden los Dockerfiles.
+> La ruta de salida sigue fija en `/srv/catalina-support`. La corrección de comportamiento
+> requiere una propuesta aprobada y producción sigue aparcada.
+
 
 Un script, `scripts/prod-build.sh`, con el mismo guion que el de Calibyou. **Está escrito y probado**
 (el 2026-09-25 se construyeron y publicaron los dos artefactos con él). Lo que hace:
@@ -280,10 +496,13 @@ Un script, `scripts/prod-build.sh`, con el mismo guion que el de Calibyou. **Est
      dominio cerrado (503) fue lo que evitó que se notara en producción.
 4. **Verifica que el artefacto existe** antes de seguir: `frontend/index.html` y
    `backend/catalina-support` ejecutable. Si falta, corta sin desplegar.
-5. **Escribe `BUILD_INFO`** en `/srv/catalina-support` con el commit, la rama, si el árbol
+5. **Copia los avisos de terceros**: `THIRD_PARTY_NOTICES.md` y `third_party_licenses/` quedan
+   dentro de cada artefacto construido. Esta copia está implementada y su comprobación real queda
+   para el repaso final de producción, que continúa aparcado.
+6. **Escribe `BUILD_INFO`** en `/srv/catalina-support` con el commit, la rama, si el árbol
    estaba sucio, la fecha y qué artefactos se construyeron. Es la respuesta a «¿qué hay desplegado
    ahora mismo?» sin adivinar.
-6. **Despliega**: `docker compose -f prod.yml up -d` y **reinicia el backend**. El frontend no se
+7. **Despliega**: `docker compose -f prod.yml up -d` y **reinicia el backend**. El frontend no se
    reinicia: el contenedor de nginx lee los estáticos del disco en cada petición.
 
 ```bash
@@ -366,6 +585,7 @@ nunca en producción**, y por eso lleva el sufijo bien visible.
 
 | Momento | Qué se aplica |
 | --- | --- |
+| **En desarrollo, al empezar** | `docker compose -f dev.yml up -d --build` aplica `v1.0.0.sql` automáticamente antes del backend. `run --rm migrate` permite repetirlo. Los ejemplos son **aparte** (sección 3.3) |
 | **Hasta la 1.0.0** | `backend/migrations/v1.0.0.sql`, todas las veces que haga falta en desarrollo |
 | **Al cerrar la 1.0.0** | El mismo archivo, **una sola vez** en producción |
 | **Después de la 1.0.0** | Un archivo por versión, aplicados **en orden**, sin saltarse ninguno |
@@ -379,7 +599,7 @@ despliegue y llena `migrations/` de retales.
 | Archivo | Qué lleva | Dónde se aplica |
 | --- | --- | --- |
 | `v1.0.0.sql` | Las tablas, los índices y sus restricciones **y lo que la aplicación necesita para funcionar**: las dos filas de configuración —la de la instalación y la de los tickets— y las veinte plantillas de correo. Sin la fila de configuración no se puede leer ni el idioma ni el nombre; sin plantilla no sale ningún correo | **Desarrollo y producción** |
-| `v1.0.0_dev.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `scripts/dev-seed.sh` |
+| `v1.0.0_dev.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed` (`scripts/dev-seed.sh` en Linux y macOS) |
 
 **El guion borra también los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva **por número
 de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una fila vieja se
@@ -424,7 +644,8 @@ la versión publicada**, en orden, y los que ya estaban aplicados no hacen nada.
 
 Y para saber qué versión está publicada no hay que adivinar: lo dicen **la etiqueta de git y el
 `BUILD_INFO`** del despliegue (sección 4.2). Aplicar de más es inofensivo; aplicar de menos se ve
-enseguida, porque la aplicación pedirá una tabla que no existe.
+enseguida, porque la aplicación pedirá una tabla que no existe —`installation_settings`, `ai_insights`…—
+y la base responderá `relación "…" does not exist` (sección 3.3).
 
 Nunca `AutoMigrate`, nunca un `ALTER` a mano, nunca un paso que no esté en un archivo del
 repositorio.
@@ -514,7 +735,6 @@ Cada grupo lo documenta quien lo usa, y aquí sólo se dice dónde vive:
 | Grupo | Quién lo documenta |
 | --- | --- |
 | `ENVIRONMENT`, `PROJECT_NAME`, `LOGS_FOLDER`, `TIMEZONE` (los de `go-logs`) | `docs/arquitectura.md`, sección 8 |
-| `SMTP_*` | `docs/arquitectura.md`, sección 9. En desarrollo apuntan al buzón de pruebas del `dev.yml` (`mail`, web en `127.0.0.1:11004`) |
 | `APP_PORT`, `POSTGRES_HOST`, `PGPORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `docs/arquitectura.md`, sección 10 |
 | `FILES_PATH` | `docs/modules/tickets.md`, sección 2.3 |
 | `ADMIN_PASSWORD` | `docs/usuarios-y-permisos.md`, sección 8 |
@@ -528,6 +748,12 @@ conexión» (`docs/modules/settings.md`, sección 5.8). **No queda ninguna por e
 caminos**: si se ven `LDAP_*` u `OIDC_*` en un archivo de entorno, son restos de una versión anterior
 y no las lee nadie. Y una consecuencia que hay que tener presente: **los secretos de los dos caminos
 van dentro de la copia de la base**, así que esa copia es un secreto más (sección 6).
+
+**Y el correo saliente tampoco es una variable de entorno**: vive en `installation_settings.smtp_*` y
+se configura en la vista de primer arranque o en Configuración; las variables `SMTP_*` se retiraron
+(`docs/arquitectura.md`, sección 9). En desarrollo lo deja puesto
+`backend/migrations/v1.0.0_dev.sql`, apuntando al buzón de pruebas del `dev.yml` (`mail`, web en
+`127.0.0.1:11004`).
 
 Reglas que valen para los dos entornos:
 
@@ -608,183 +834,63 @@ componentes que calculan algo. **No se prueba el aspecto**: para eso están las 
 docker compose -f dev.yml exec frontend npm test -- --watch=false
 ```
 
-### 9.3 Interfaz: Playwright contra desarrollo
+### 9.3 Interfaz: Playwright en una instalación desechable
 
-Como en Calibyou: `tests/e2e/` con Playwright, **contra el entorno de desarrollo**, con un caso por
-flujo crítico. Un recorrido completo vale más que veinte pruebas de detalle.
+Desde la raíz, sin arrancar ni modificar el entorno de desarrollo:
 
-**Se ejecutan en un contenedor**, no en la máquina: la imagen de Playwright ya trae los navegadores
-instalados, y en la máquina no se instala Node ni nada (AGENTS.md). El servicio es `e2e` en
-`dev.yml`, detrás de un perfil, así que **no se levanta con el resto**:
-
-```bash
-docker compose -f dev.yml up -d                  # el entorno tiene que estar arriba
-docker compose -f dev.yml run --rm e2e           # instala lo que falte y ejecuta las pruebas
+```text
+docker compose -f tests.yml --profile directory down -v
+docker compose -f tests.yml up -d --build database backend frontend mail
+docker compose -f tests.yml run --rm e2e
+docker compose -f tests.yml --profile directory down -v
 ```
 
-- **Por defecto corre en PC y en móvil** (`pc` y `movil`, con un Pixel 7): la interfaz tiene que
-  funcionar en los tres anchos, no sólo caber (`docs/interfaz-y-experiencia.md`, sección 7).
-- **Lee la contraseña de fábrica y el buzón de pruebas** del entorno de desarrollo: `BASE_URL`,
-  `ADMIN_PASSWORD` y `MAILPIT_URL`, los tres por variables. Sin ellos, los casos que necesitan entrar
-  o leer un correo se saltan en vez de fallar con un mensaje que no explica nada.
-- **Después de cada pasada se reinicia el entorno** (`./scripts/dev-seed.sh`, decisión del
-  responsable, 2026-09-28): los tickets de prueba que deja la suite **no se borran desde ella** —un
-  ticket no se borra—, así que el entorno se deja como nuevo con el seeder, **avisando antes** porque
-  el seeder borra también lo que haya a mano.
-- **Cada caso monta sus datos y los deja apagados al terminar**: da de alta sus cuentas —lo que prueba
-  el camino de verdad, con su correo y su enlace—, y **al acabar la pasada el cierre
-  (`tests/e2e/limpiar.ts`) las apaga** por la API. No se borran: las cuentas no se borran en este
-  producto. Y **los tickets que crea la pasada tampoco se borran** —un ticket no se borra—: si se
-  quiere el entorno como nuevo, `./scripts/dev-seed.sh` borra los tickets y las cuentas de prueba y
-  vuelve a poner las once de ejemplo.
-- **Los correos se leen del buzón**, no se dan por hechos: el caso del enlace del correo saca el
-  token de la pantalla de Mailpit y lo abre en el navegador, que es lo que haría una persona.
-- Cuando algo no se ve como debería, hay una herramienta que vuelca el HTML pintado, los errores de
-  la consola y una captura:
+Para incluir AD y Keycloak, sustituir el segundo comando por:
 
-```bash
-docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e
+```text
+docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
 ```
 
-**Las cuentas que crean las pruebas se quedan**, porque en este producto **no existe dar de baja
-cuentas** (`docs/modules/users.md`): dar de alta una es para siempre. Se llaman `e2e-…@demo.com`,
-así que se reconocen, y en desarrollo se limpian cuando estorban:
+El runner conserva el código de salida de Playwright. Tras un fallo también se ejecuta la limpieza
+final; las capturas, trazas e informe permanecen en `tests/e2e/resultados/`. Cada pasada comienza
+retirando exclusivamente los volúmenes de este proyecto de pruebas, también tras una interrupción.
+No se cargan seeders: las cuentas y fixtures se crean por las APIs normales de la aplicación.
 
-```bash
-docker compose -f dev.yml exec database psql -U catalina_support -d catalina_support -p 11003 \
-  -c "DELETE FROM ticket_comments; DELETE FROM ticket_attachments; DELETE FROM ticket_history; \
-      DELETE FROM internal_tickets; DELETE FROM tickets; DELETE FROM ticket_number_counters; \
-      DELETE FROM password_tokens WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-%@demo.com' OR email LIKE '%directorio@demo.com' OR email LIKE '%keycloak@demo.com'); \
-      DELETE FROM users WHERE email LIKE 'e2e-%@demo.com' OR email LIKE '%directorio@demo.com' OR email LIKE '%keycloak@demo.com';"
-```
+El origen de Chromium es `http://frontend.localhost:11001`: Docker declara el alias y el navegador
+lo resuelve al servicio `frontend` con `--host-resolver-rules`. El sufijo localhost habilita el
+portapapeles real sin modificar la seguridad de la aplicación. La IA permanece ausente por diseño.
 
-**Los tickets van primero, y no es un detalle de orden**: un ticket apunta a quien lo pidió, y la
-base no deja borrar una cuenta que tiene tickets detrás (`ON DELETE RESTRICT`), que es justo lo que
-hace que la historia de un ticket sobreviva a la baja de una cuenta.
+La suite cubre cuentas locales, correo, configuración, permisos y tickets en PC y móvil.
+Los directorios se prueban una sola vez porque el protocolo no depende del ancho. Los casos de
+IA requieren un motor y se omiten en este entorno sin IA. La preparación verifica además el
+asistente antes de sellar, con capturas de ambos anchos. El historial de los hallazgos anteriores
+queda en las enmiendas de la cabecera; sus comandos contra desarrollo ya no son el procedimiento.
 
-**Y después de limpiar, se vuelve a los datos de ejemplo con un comando**: esa limpieza se lleva por
-delante también los 25 tickets del seeder —borra **todos** los tickets, a propósito—, así que lo
-normal es terminar con `./scripts/dev-seed.sh`, que deja el entorno otra vez conocido (sección 3.3).
+Verificado en Linux el 2026-10-03: suite con directorios, 193 aprobados, 20 omitidos y un
+acceso cancelado durante la recarga del frontend (salida 1, informe conservado). En una base
+nueva, sin directorios y con los archivos estables, ese caso pasó en PC y móvil: 2 aprobados
+y 24 omitidos por servicios ausentes, salida 0. La detección de LDAP ausente se corrigió al
+encontrar que su función de comprobación no se llamaba. Go y vet pasan; frontend: 216 pruebas.
+No se han ejecutado estas comprobaciones en Windows o macOS.
 
-**Las cuentas de las personas del directorio y del reino de Keycloak se borran a propósito**, y no es
-por limpieza: los casos del alta automática de los dos caminos de directorio comprueban que la cuenta
-**no existía** antes de entrar, y con una cuenta de una ejecución anterior lo que probarían es otra
-cosa. Si se dejan, esos casos se saltan solos diciendo qué hay que limpiar
-(`docs/modules/auth.md`, sección 11).
+### 9.4 Arranque del backend aislado sin montaje anidado
 
-**Los casos de los caminos de directorio —AD y Keycloak— necesitan sus servicios levantados**, que en
-desarrollo viven detrás del perfil `auth`:
+La enmienda as-built de `docs/prueba-local.md`, sección 13, conserva los comandos de esta sección.
+Sólo cambia cómo arranca internamente el servicio `backend` de `tests.yml`: `go run .` en lugar del
+comando de Air de la imagen, sin `backend_tmp`. Esto evita escribir dentro del bind de código de sólo
+lectura y no cambia la preparación, los perfiles, los informes ni la limpieza.
 
-```bash
-docker compose -f dev.yml --profile auth up -d          # el directorio y Keycloak, con sus personas
-docker compose -f dev.yml --profile auth run --rm e2e   # la suite entera, con los dos caminos
-```
+La verificación parte siempre de `down -v`, reconstruye los servicios, espera la salud del backend,
+ejecuta al menos los recorridos afectados y termina con otro `down -v`. El compose final debe
+funcionar directamente, sin archivos de sobreescritura temporales.
 
-Sin él, esos casos **se saltan** en vez de fallar: la suite tiene que poder correr en una instalación
-que no tenga AD (`docs/modules/auth.md`, decisión 28).
+El repaso confirmó que no habrá recarga, volúmenes temporales ni cachés adicionales. No quedan
+decisiones abiertas propias del runbook.
 
-**Y cinco de ellos —el alta automática y el vínculo de cada camino, que son los que crean la
-cuenta— corren sólo en PC**: los dos proyectos comparten la misma base de datos, así que el segundo
-vería la cuenta que dejó el primero y ya no probaría lo mismo. Se saltan diciéndolo, no en silencio.
-
-**Keycloak se levanta con su reino ya importado**, y el navegador llega a él por el mismo dominio que
-a la aplicación (`/sso/`, que es un `location` del vhost de desarrollo): por eso, si se cambia algo de
-Keycloak en el repositorio, se recrea el contenedor y **el reino vuelve a como está escrito**.
-
-**Si la suite falla con un `vite-error-overlay` que intercepta el clic**, no es la prueba: es que el
-**servidor de desarrollo está sirviendo un error de compilación** de un cambio anterior. Se ve en sus
-logs (`docker compose -f dev.yml logs --tail 40 frontend`) y se arregla tocando el archivo que dice el
-error —o reiniciando el contenedor—, porque el servidor sólo vuelve a intentar lo que ve cambiar.
-Pasó al añadir un texto que faltaba: la suite siguió corriendo contra una pantalla que no compilaba y
-el fallo que contaba hablaba de otra cosa.
-
-Los casos, con lo que hay hoy:
-
-| Caso | Qué recorre | Estado |
-| --- | --- | --- |
-| La aplicación abre | La raíz lleva a la entrada, los campos tienen nombre accesible, se llega con el tabulador y **ninguna pantalla repite un `id`** | **Hecho** |
-| La marca | Que **el logo de fábrica cambie con el tema** —el claro y el oscuro, cada uno cargando de verdad—, que el logo **cargue de verdad** en la pantalla de entrada, que un logo propio sustituya al de fábrica y que al quitarlo se vuelva, y que el color institucional se aplique a los dos temas de fábrica sin romper el contraste. Y **la versión del sistema**: que se lea en el pie de la entrada y en la fila de salir del menú —comparada con lo que dice la API—, que sea texto y no un enlace, que se lea sobre el fondo del menú, y que plegado no se enseñe | **Hecho** |
-| El armazón | Las tres zonas del menú, el plegado que se recuerda, el cajón del móvil y que las pantallas de la sesión no lo lleven | **Hecho** |
-| Los permisos del menú | Que un papel no vea lo que no le toca **y** que el backend se lo rechace si lo pide a mano | **Hecho** |
-| La pantalla de Configuración | Subir un logo por el formulario, verlo en la vista previa y en el menú, volver al de fábrica, el color con su vista previa antes de guardar, **el nombre de la instalación en los tres sitios donde se lee**, **el método de entrada cambiándolo desde la pantalla** y **las dos pruebas de conexión** —la del directorio y la del reino, con lo que hay en pantalla y sin guardar nada— | **Hecho** |
-| La lista de cuentas | Que un Administrador **entre directamente en ella**, los filtros por papel, origen y estado, la búsqueda por nombre o correo, el estado vacío y el filtro que esconde lo desactivado | **Hecho** |
-| Dar de alta una cuenta | El diálogo, el papel que se elige, el aviso de lo que ha pasado, **el enlace leído del buzón de pruebas** y que la persona nueva entre con él | **Hecho** |
-| Desactivar y reactivar | Que desactivar **pregunte antes**, que la persona deje de poder entrar de verdad y que reactivarla la devuelva | **Hecho** |
-| Soporte edita en la lista | Que Soporte cambie nombre y apellidos **en línea**, que el cambio esté guardado de verdad al recargar, y que **no tenga ficha de nadie** (403 si la escribe a mano) | **Hecho** |
-| El perfil propio | Cambiar el nombre desde tu nombre en el menú, que el menú lo enseñe al momento, que el correo no se pueda tocar, y que el idioma de la cuenta cambie la interfaz (y sus correos) | **Hecho** |
-| Nadie se desactiva a sí mismo | Que tu propia ficha **no ofrezca** el botón, y que la cuenta de fábrica no tenga perfil ni enlace a él | **Hecho** |
-| El idioma de arranque | Español, inglés y **un idioma que no es ninguno de los dos** (inglés), más el conmutador | **Hecho** |
-| El tema | Que siga al sistema, que el selector cambie **de verdad** —se mide el color de fondo—, que se recuerde al recargar, que estén los ocho con sus grupos y **que los ocho se lean**: el contraste se mide en el navegador, sobre lo que se pinta, para el texto, el texto apagado, el acento, el botón, el borde del campo y los tres colores de estado | **Hecho** |
-| Entrar y salir | Sesión, cabecera `Authorization`, `GET /api/auth/me`, salir y que sin sesión no se entra | **Hecho** |
-| La política de contraseñas y el enlace | Que una contraseña de **siete** caracteres se rechace con su clave, que **el enlace siga sirviendo** después de ese intento fallido, que **ocho** caracteres valgan, y que con esa contraseña se entre de verdad. Nació al bajar el mínimo de 12 a 8 y encontró que el enlace se gastaba antes de comprobar la contraseña | **Hecho** |
-| El enlace del correo | Alta, correo en el buzón, enlace en el fragmento, contraseña puesta y entrada con ella, y que **un enlace no vale dos veces** | **Hecho** |
-| Los adjuntos en los comentarios | Que un comentario lleve sus archivos **pegados** (con un evento de pegado de verdad), **elegidos** con el botón y arrastrados; que **un comentario pueda ser sólo un archivo** —con el cuerpo vacío en la base y **sin dejar un párrafo vacío** en la conversación—; que sin texto **ni** archivos no se envíe; y que **si una subida falla** —cortándola en el navegador— el comentario se quede publicado **una sola vez**, se diga qué archivo falta y el botón de reintentar lo suba al mismo comentario. Y el pegado también en el alta | **Hecho** |
-| El recorrido de un ticket | El usuario lo abre con su adjunto, comenta, lo cierra y lo reabre; Soporte pregunta y **escala**; Desarrollo **lo devuelve**; y el principal vuelve a la bandeja de Soporte | **Hecho** |
-| El aspecto del ticket | El estado con **su color y su borde** medidos, las tarjetas con el borde del tema, la ficha **a la derecha en PC y debajo en móvil**, y que en móvil **no se pinte la tabla** | **Hecho** |
-| Los permisos de los tickets | El usuario no ve el interno, Desarrollo no escribe en el principal y al Administrador no se le ofrece ningún botón | **Hecho** |
-| El editor de los correos | Llegar desde Configuración, cambiar el asunto y el cuerpo, **insertar un marcador pulsándolo**, ver la vista previa que renderiza el backend, guardarlo, **mandarse una prueba y leerla en el buzón**, y volver al texto de fábrica. Y que **un marcador inventado se avise antes de guardar** | **Hecho** |
-| El camino de Keycloak | Que el botón **esté sólo si la instalación tiene ese camino** y que lleve a la pantalla de Keycloak, que una persona entre por el reino **sin que nadie le dé de alta nada** y su cuenta aparezca con origen `keycloak`, que quien ya es de Keycloak vuelva a entrar, que una cuenta local con el correo de alguien del reino **se vincule** (y su contraseña local deje de servir), **que el fragmento con el token se borre de la dirección**, y que una vuelta que no vale se cuente en la pantalla de entrada | **Hecho** (necesita el perfil `auth`) |
-| Las tres acciones del directorio en `users` | Que la ficha de una cuenta de **AD** desactivada **sí ofrezca reactivarla** y que la reactivación pregunte al directorio de verdad, y que la de una cuenta de **Keycloak** no ofrezca el botón y **cuente lo que pasa** —que vuelve sola al entrar— en vez de llevar a un error | **Hecho** (necesita el perfil `auth`) |
-| El camino de AD | Que una persona del directorio **entre sin que nadie le dé de alta nada** y que su cuenta aparezca con origen `ad` y sin contraseña local, que quien ya es del directorio vuelva a entrar, que la contraseña equivocada **la rechace el directorio** y que una cuenta local con el correo de alguien del directorio **se vincule** al entrar por su camino (y su contraseña local deje de servir) | **Hecho** (necesita el perfil `auth`) |
-
-**Y desde el 2026-09-25, las dos suites de los caminos de directorio ponen el método y lo devuelven.**
-Como la instalación entra por uno solo, probar el de AD o el de Keycloak exige elegirlo primero: cada
-suite lo pone al empezar y **lo deja en `local` al terminar, pase lo que pase**, con la cuenta de
-fábrica, que entra siempre. Si el servicio no responde, la suite **se salta** en vez de fallar, y lo
-pregunta **por el botón de «Probar la conexión»**, que es lo que pregunta una persona y no depende del
-método puesto.
-
-**El backend se prueba con `curl`, y los correos se leen del buzón.** Mientras una pantalla no
-existe, lo que se comprueba de extremo a extremo es la API: se entra con cuentas de verdad, se
-recorre el caso completo y se miran los avisos en Mailpit. Así se probó el módulo de `tickets` el
-2026-09-24: **78 comprobaciones** que van del alta con su reparto hasta el adjunto que el solicitante
-no puede alcanzar, pasando por las dos reglas de sincronización y el re-escalado. Cuando exista la
-pantalla, esos recorridos pasan a `tests/e2e/` y esto queda como lo que es: la prueba de la API.
-
-**Cuándo se ejecutan**: cuando el cambio toca la interfaz, antes de darlo por terminado. Si el cambio
-afecta a un flujo que todavía no tiene prueba, **se añade el caso en el mismo trabajo**.
-
-**Lo que encontró esta capa el 2026-09-23**, para que se vea para qué sirve: tres fallos que las
-pruebas de unidad no podían ver.
-
-1. Un `id` repetido en el componente de campo dejaba los campos **sin nombre accesible**: la etiqueta
-   apuntaba al elemento anfitrión y no al campo.
-2. Un 401 del enlace de contraseña **echaba de su sesión** a quien ya estaba dentro, en vez de decir
-   que el enlace había caducado.
-3. `hayToken` era un valor calculado que leía el almacenamiento **sin depender de nada**, así que se
-   quedaba con el primer «no» para siempre: después de entrar bien, la guarda devolvía a la pantalla
-   de entrada.
-4. **El CSS llegaba sin estilos**: la hoja se servía con el tema de Tailwind pero **sin ninguna
-   utilidad generada**, así que la pantalla se veía como texto suelto. Lo encontró el responsable al
-   abrir la aplicación, no una prueba: las de estructura daban todo por bueno. Ahora hay un caso que
-   mira el **aspecto** —que la hoja traiga utilidades, que el botón tenga color, que el campo tenga
-   borde y que no falle ninguna petición—, y es el que impide que esto vuelva sin que nadie se
-   entere.
-
-Los cuatro están corregidos y con su prueba. El segundo, el tercero y el cuarto sólo se ven **usando
-la aplicación de verdad**, que es justo lo que aporta esta capa.
-
-**Y el 2026-09-24, con las pantallas de usuarios, otros dos**:
-
-5. **La tarjeta titulaba con `h1`**, así que la pantalla de usuarios tenía tres `h1` y el perfil otros
-   tantos: una página así no se navega con un lector de pantalla. Lo dijo la prueba al encontrar dos
-   encabezados con el mismo nombre donde esperaba uno. La tarjeta ahora **elige su nivel**, y en las
-   pantallas de producto es un `h2`.
-6. **El cajón del menú medía el alto del documento y no el de la zona visible** (`inset-y-0`): en un
-   móvil con barra del navegador lo visible son 839 px de 890, y **el botón de salir quedaba por debajo
-   de lo que se ve**, imposible de pulsar. En PC, con una lista larga, los controles del menú quedaban
-   al final de la página. Ahora mide la zona visible (`h-dvh`), se desplaza por dentro si su contenido
-   no cabe y en PC va pegado arriba, que es lo que el documento de interfaz llama «fijo». La prueba
-   decía que «otro elemento interceptaba el clic»: ese mensaje no cuenta el problema de verdad.
-
-Los seis están corregidos y con su prueba.
-
-**Antes de la primera prueba, la instalación vuelve a entrar por cuentas de la aplicación**
-(`tests/e2e/preparar.ts`, la preparación previa de `playwright.config.ts`). Hace falta porque **la
-instalación entra por un método a la vez**: si una pasada se corta con el método en `ad` o en
-`keycloak`, la siguiente empieza con decenas de casos fallando por «credenciales incorrectas», que no
-dicen nada de lo que pasó de verdad —pasó el 2026-09-27—. Lo hace la **cuenta de fábrica**, que entra
-siempre sea cual sea el método.
+Verificado en Linux el 2026-10-06 con el compose definitivo: desde una limpieza completa, los
+servicios `database`, `migrate`, `backend`, `frontend` y `mail` arrancaron sin el error OCI; la suite
+sin perfiles opcionales terminó con 177 casos aprobados y 39 omitidos, salida 0, y el `down -v` final
+eliminó contenedores, red y volúmenes. `docker compose -f tests.yml ps -a` quedó vacío.
 
 ## 10. Lo que se decidió al repasar este documento
 
@@ -815,3 +921,161 @@ siempre sea cual sea el método.
 Con `ambientes.md` aprobado, **la cadena de documentos está completa** y se puede empezar a
 implementar, en el orden que fija `docs/modules/tickets.md`: `auth`, `users` y `tickets`, con sus pruebas. El
 `scripts/prod-build.sh` y el de copias se escriben entonces, no antes.
+
+## 13. Operación implementada para la IA obligatoria
+
+### 13.1 Variables y secretos
+
+- `AI_CREDENTIAL_KEY`: 32 bytes aleatorios codificados en base64, distintos de `TOKEN_SECRET` y
+  obligatorios al arrancar el backend. Desarrollo tiene un valor local versionado. Cada producción
+  genera el suyo, por ejemplo con `openssl rand -base64 32`, y lo guarda en `config/env/prod.env`.
+- `AI_MANAGER_TOKEN`: secreto compartido entre backend y administrador local. Es obligatorio cuando
+  se usa la modalidad local y no llega al navegador.
+- `AI_URL` y `AI_MODEL` dejan de ser respaldo de una configuración vacía: la base probada es la
+  fuente única. `AI_PALABRAS` y el tiempo máximo pueden conservarse como límites operativos.
+
+La ausencia o formato inválido de `AI_CREDENTIAL_KEY` impide arrancar el backend. Una clave válida
+que no descifra una credencial existente deja la instalación en «IA requiere configuración» para
+que la cuenta de fábrica la reemplace. Las copias de PostgreSQL llevan el cifrado, pero no la clave
+maestra; ambas piezas se respaldan por separado.
+
+### 13.2 Motor local por entorno
+
+`ai.yml` se parametriza con el proyecto y la red del entorno, sin nombres globales compartidos.
+Desarrollo y producción tienen volúmenes de modelos distintos. Levantarlo no descarga nada hasta que
+`/setup` o `/settings` lo solicite; el 1.5B aparece seleccionado por defecto. En una máquina que no
+puede mantener ambos motores, el runbook indica apagar uno antes de levantar el otro.
+
+La operación habitual sigue siendo Compose: levantar, ver logs y bajar sin borrar modelos. La
+interfaz administra archivos dentro del volumen, no contenedores. Una descarga incompleta queda con
+nombre parcial, se reanuda y nunca se activa. Borrar el volumen sigue siendo una acción manual y
+destructiva fuera de la aplicación.
+
+### 13.3 Arranque nuevo y actualización
+
+La aplicación principal puede arrancar antes que el motor local para mostrar `/setup`. Si se elige
+local, el administrador debe estar accesible y completar descarga/activación antes de sellar. Si se
+elige proveedor o servidor propio, `ai.yml` no se levanta.
+
+En una actualización, la migración conserva una configuración existente que supere la generación de
+prueba. Una instalación sin ella queda restringida hasta que Administrador o cuenta de fábrica la
+configure; no se inventa una credencial ni se presupone que el contenedor local existe.
+
+### 13.4 Pruebas
+
+Las pruebas unitarias y de integración usan servidores HTTP falsos para los proveedores y archivos
+GGUF diminutos de prueba para el administrador. Playwright ofrece un servicio falso dentro de
+`tests.yml`, de modo que `/setup` pueda completar obligatoriamente el paso de IA sin internet,
+credenciales comerciales ni descargas de gigabytes. También prueba caída y recuperación.
+
+La verificación manual del catálogo real descarga y mide cada modelo por separado y registra tamaño,
+RAM, tiempo de carga y generación en `docs/modules/ai.md` antes de cerrar como as-built. No se prueba
+contra cuentas comerciales del proyecto.
+
+La operación local recupera trabajos acumulados automáticamente. Un proveedor comercial requiere
+que el Administrador confirme cada lote de recuperación después de ver su volumen estimado; las
+pruebas verifican que ninguna llamada del lote ocurra antes de esa confirmación.
+
+### 13.5 Fuera de alcance
+
+No se automatizan compra de créditos, límites de gasto, GPU, copias del volumen de modelos ni alta
+disponibilidad del motor. Los GGUF pueden volver a descargarse; el backup obligatorio sigue centrado
+en PostgreSQL y los adjuntos. El responsable decidió este alcance el 2026-10-06. El repaso cerró la
+generación y recuperación comercial, la clave obligatoria y la aceptación de licencias; no quedan
+decisiones abiertas; propuesta aprobada explícitamente.
+
+## 14. Verificación aislada implementada para el bloque 4
+
+Las pruebas unitarias levantan servidores `httptest` distintos para OpenAI, DeepSeek, compatible con
+OpenAI y Claude. Verifican ruta, cuerpo, autenticación, idioma, respuesta válida, respuesta demasiado
+grande y rechazo de redirecciones. No usan DNS público, internet, tokens ni cuentas comerciales.
+
+El administrador local admite sustitutos sólo dentro de sus pruebas para ejecutable, reloj/espera,
+memoria y descarga. Así se verifican reinicio con espera creciente, cancelación al cambiar de modelo,
+cgroup v1/v2, disco restante, parcial inválido, reanudación, checksum y límite de redirecciones. Los
+GGUF de prueba son mínimos y temporales.
+
+La prueba del supervisor usa esperas sustituibles y comprueba la serie 1, 2, 4… 60 segundos sin
+esperar tiempo real. La descarga falsa permite hasta cinco redirecciones HTTP/HTTPS, rechaza la sexta
+y cualquier otro esquema. Un archivo con tamaño correcto y checksum incorrecto se elimina antes del
+siguiente intento.
+
+`tests.yml` conserva su servidor compatible falso para `/setup`. Playwright no simula muerte de
+procesos ni descarga modelos reales; esas condiciones quedan en pruebas Go deterministas. El cierre
+ejecuta backend completo, `ai-manager`, las pruebas del frontend y Playwright en PC y móvil, y termina
+con `down -v --remove-orphans`. Los recuentos se anotan con el resultado real. Producción continúa
+aparcada hasta cerrar la versión 1.0.0.
+
+El responsable cerró el repaso el 2026-10-07 con 5A, 6A, 7A y 8A. No quedan decisiones abiertas en
+esta enmienda.
+
+## 15. Entorno desechable usado para modelos reales
+
+La validación usa nombres propios para proyecto, red y volumen, además de una base desechable para
+los recorridos de navegador. No cambia la configuración, el volumen de modelos ni los datos del
+desarrollo habitual. La aplicación y el administrador local se ejecutan con el mismo código e
+imágenes que se están validando.
+
+El recorrido comprueba `/setup` y `/settings` en PC y móvil. En `/setup` descarga, activa y prueba el
+modelo predeterminado antes de sellar. En `/settings` verifica catálogo, estados activo/sano,
+cambio entre 1.5B y 3B, prueba de generación y mensajes de error. El 7B se descarga y valida, pero
+la interfaz debe impedir su activación al no cumplirse la RAM requerida.
+
+La medición separa memoria de `llama-server` y memoria total del contenedor. Los tiempos se toman
+desde la solicitud hasta la salud y alrededor de cada petición de generación. Para probar el
+supervisor se termina sólo el proceso hijo; el administrador debe permanecer vivo y recuperar el
+modelo en no más de cinco minutos.
+
+Al cerrar, se guardan únicamente el informe y los comandos documentados. Se eliminan contenedores,
+red, base, adjuntos, logs y volumen de modelos del proyecto temporal. Un inventario posterior debe
+demostrar que no queda ningún recurso con sus nombres. Desarrollo y producción permanecen intactos;
+producción continúa aparcada hasta cerrar la versión 1.0.0.
+
+## 16. Reanudación completada después del hallazgo de memoria
+
+Las pruebas unitarias sustituyen lecturas de RSS, memoria efectiva, proceso y salud. Verifican que un
+destino imposible no detiene el origen y que cualquier fallo posterior a la parada lo restaura sano.
+Backend y frontend prueban el error estructurado y su toast con requerida/disponible.
+
+Después se reconstruye únicamente la imagen del administrador del proyecto
+`catalina-support-ai-block5` y se reutiliza `catalina_support_ai_models_block5`. Se activa 3B, se
+miden memoria, tiempos, doce generaciones y recuperación. Se comprueba el rechazo de 7B conservando
+3B sano y se repiten `/setup` o `/settings` sólo donde la corrección cambie el resultado, en PC y
+móvil.
+
+Al terminar se ejecuta la limpieza aprobada sobre los nombres explícitos del bloque 5. No se usa
+`down -v` sobre el proyecto habitual de pruebas. Los GGUF no se vuelven a descargar y producción
+permanece aparcada.
+
+La reanudación pasó las suites completas de `ai-manager` y backend, 220 pruebas unitarias del
+frontend y el recorrido afectado de `/settings` en PC y móvil. El entorno aislado se retiró al
+terminar y el inventario final no dejó contenedores, redes ni volúmenes con `block5`.
+
+## 17. Verificación aislada del bloque 6
+
+La revisión usa `tests.yml` y datos desechables. `/setup` se recorre desde una instalación vacía;
+después, una instancia reiniciada con los seeders opcionales aporta listas, estados, adjuntos,
+usuarios y tickets variados para el resto de pantallas. No se leen ni modifican los datos de
+desarrollo y no se usa producción.
+
+La matriz combina español e inglés, claro y oscuro de fábrica, y 1440×900, 768×1024 y 412×915. Los
+seis temas fijos pasan sus comprobaciones comunes de variables y contraste. Chromium es el navegador
+de ejecución; el código sigue usando HTML y CSS compatibles, pero Firefox y WebKit no forman parte
+del criterio de cierre de este bloque.
+
+El inventario se obtiene primero, sin corregir mientras se recorre una pantalla. Después se corrige
+por prioridad y se repite la matriz afectada. Las comprobaciones estables entran en las pruebas de
+componentes o Playwright; la revisión manual registra lo que no pueda expresarse con una aserción
+fiable. El cierre exige frontend unitario, Playwright en la matriz aprobada, `git diff --check` y
+cero hallazgos visuales o de accesibilidad abiertos.
+
+La limpieza final usa los nombres explícitos del proyecto desechable y retira contenedores, red,
+base, adjuntos, logs y cachés. No se ejecuta despliegue, no se abre el dominio y no se corrige el
+hallazgo conocido de `prod-build.sh` en este bloque.
+
+La ejecución real usó el proyecto Compose `catalina-support-block6`. Primero recorrió `/setup` sobre
+una base vacía y después aplicó el seeder oficial: 11 cuentas, 25 tickets y 5 adjuntos. La auditoría
+reproducible encontró y permitió corregir un único desbordamiento en `/users`; la repetición afectada
+y las 220 pruebas unitarias pasaron. La ejecución canónica terminó con **180 casos E2E aprobados y
+38 omisiones previstas**. El proyecto aislado se eliminó con sus volúmenes y producción permaneció
+sin tocar.

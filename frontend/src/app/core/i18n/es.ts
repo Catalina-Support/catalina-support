@@ -54,7 +54,16 @@ export const ES = {
     colorResueltoOscuro: 'y en los oscuros',
     idioma: 'El idioma de la instalación',
     idiomaAyuda:
-      'El idioma con el que nacen las cuentas nuevas cuando quien las da de alta no elige otro, y el de los correos que se les escriben.',
+      'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
+    traduccionTitulo: 'Revisar el cambio de idioma',
+    traduccionAyuda: 'Revisa y corrige las once plantillas antes de aplicar el idioma a toda la instalación.',
+    traduccionCosto: 'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
+    traducirConfirmando: 'Aceptar costo y traducir',
+    editarManualmente: 'Editar manualmente',
+    asuntoTraducido: 'Asunto',
+    cuerpoTraducido: 'Cuerpo',
+    destinoExistente: 'Versión personalizada existente',
+    aplicarIdioma: 'Aplicar idioma',
     correos: 'Los correos',
     correosAyuda:
       'Los diez correos que manda la aplicación, en los dos idiomas, se editan en su propia pantalla: es del módulo de correo, y aquí sólo se llega a ella.',
@@ -62,6 +71,7 @@ export const ES = {
     region: 'Región horaria',
     regionAyuda:
       'La zona en la que se leen todas las fechas, aquí y en los correos. Se guardan en UTC: cambiarla no mueve ningún ticket.',
+    regionSeleccionada: 'Región horaria seleccionada',
     buscarZona: 'Buscar una ciudad o una zona',
     sinZonas: 'Ninguna zona coincide con lo que buscas.',
     horaDeLaZona: 'Ahora son las {hora} ({desfase}).',
@@ -76,6 +86,48 @@ export const ES = {
     direccionEjemplo: 'https://soporte.mi-institucion.org',
     direccionInsegura:
       'Esta instalación no está sirviendo por https: la contraseña y la sesión viajan sin cifrar por la red. Se puede usar así —para probarla en local, por ejemplo—, y para usarla en serio conviene ponerle un certificado.',
+    motorDeIA: 'El motor de IA',
+    motorDeIAAyuda:
+      'El motor que redacta el «Motivo» y la «Última acción» de cada ticket. Su configuración es obligatoria; si deja de responder, la mesa de ayuda continúa y recupera los resúmenes cuando vuelva.',
+    iaDireccion: 'Dirección del motor',
+    iaDireccionAyuda:
+      'Dónde escucha el motor. Sirve http o https, con puerto si hace falta. Si se deja vacío, la instalación no tiene motor y el entorno hace de respaldo.',
+    iaDireccionEjemplo: 'http://catalina_support_ai:8080',
+    iaModelo: 'Modelo',
+    iaModeloAyuda:
+      'El modelo con el que redacta, tal y como lo nombra el motor. Si se deja vacío, se usa el del entorno.',
+    iaModeloEjemplo: 'qwen2.5-1.5b-instruct',
+    probarIA: 'Probar la conexión',
+    guardarIA: 'Guardar el motor de IA',
+    iaLocal: 'En este servidor',
+    iaRemota: 'En otro servidor',
+    iaProveedor: 'Proveedor externo',
+    iaCompatible: 'Compatible con OpenAI',
+    iaAutenticacion: 'Autenticación',
+    iaAuth_none: 'Sin autenticación',
+    iaAuth_bearer: 'Token Bearer',
+    iaAuth_header: 'Clave en cabecera',
+    iaAuth_basic: 'Usuario y contraseña',
+    iaCabecera: 'Nombre de la cabecera',
+    iaCredencial: 'Credencial o token',
+    iaPrivacidad: 'Confirmo que los textos del ticket saldrán de este servidor.',
+    iaPrivacidadCosto:
+      'Confirmo que los textos del ticket saldrán de este servidor y que esta prueba puede generar costos del proveedor.',
+    iaCatalogo: 'Modelos locales',
+    iaCargarCatalogo: 'Ver y actualizar el catálogo',
+    iaAceptarLicencia: 'Acepto la licencia de esta versión.',
+    iaDescargar: 'Descargar',
+    iaActivar: 'Activar',
+    iaEliminar: 'Eliminar',
+    iaInstalado: 'Instalado',
+    iaActivo: 'Activo',
+    iaSaludable: 'Motor disponible',
+    iaNoSaludable: 'Motor reiniciándose',
+    iaDescargando: 'Descargando',
+    iaDiscoDisponible: 'Disco disponible: {cantidad}',
+    iaRecursos: 'Descarga {disco} · RAM recomendada {ram}',
+    motorOk: 'El motor ha contestado: redacta los dos resúmenes del ticket.',
+    motorGuardado: 'El motor de IA se ha guardado.',
     entrada: 'Método de autenticación',
     entradaAyuda:
       'La instalación entra por un método a la vez: los otros dos quedan apagados aunque estén configurados. La cuenta de fábrica entra siempre, y desde ella se puede volver a cambiar si se elige mal.',
@@ -88,7 +140,7 @@ export const ES = {
     metodoKeycloak: 'Keycloak',
     metodoKeycloakAyuda:
       'Se entra desde la pantalla de Keycloak, con su cuenta. Aquí no hay formulario de correo y contraseña.',
-    metodoSinConfigurar: 'Falta configurarlo aquí abajo para poder elegirlo.',
+    metodoSinConfigurar: 'Completa los datos aquí abajo antes de guardar el método.',
     guardarEntrada: 'Guardar cómo se entra',
     entradaGuardada: 'Guardado. Vale desde la próxima entrada, sin reiniciar nada.',
     directorio: 'El directorio de la organización',
@@ -123,6 +175,9 @@ export const ES = {
     keycloak: 'Keycloak',
     keycloakAyuda:
       'Lo que hace falta para entrar por Keycloak. El secreto del cliente se guarda y no se vuelve a enseñar.',
+    kcInterno: 'Dirección interna del reino (opcional)',
+    kcInternoAyuda:
+      'La dirección que alcanza el servidor. Déjala vacía para usar el emisor público. En Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Emisor del reino',
     kcEmisorAyuda:
       'La dirección del reino, la que ve el navegador. Ejemplo: https://sso.empresa.com/realms/empresa.',
@@ -163,26 +218,29 @@ export const ES = {
   instalacion: {
     titulo: 'Primer arranque',
     intro:
-      'Cuatro pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
+      'Cinco pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
     paso1: 'La instalación',
     paso2: 'Cómo se entra',
     paso3: 'Dónde está',
     paso4: 'El correo',
+    paso5: 'La inteligencia artificial',
     pasoDeCuatro: 'Paso {paso} de {total}',
     siguiente: 'Siguiente',
     anterior: 'Anterior',
     terminar: 'Terminar la instalación',
     resumen: 'Resumen',
     motorResponde: 'El motor de IA responde: los dos resúmenes del ticket están disponibles.',
-    motorNoEsta: 'El motor de IA no está: la mesa de ayuda funciona igual, sin los dos resúmenes.',
     // La contraseña de la cuenta de fábrica **no se pide aquí**: vive en el entorno, y contarlo es
     // justo lo que evita que alguien la busque en la pantalla (sección 4 del documento).
     cuentaDeFabrica:
       'La cuenta de fábrica se llama «admin» y su contraseña es ADMIN_PASSWORD, del archivo de entorno del servidor. Es la puerta que entra siempre, sea cual sea el método elegido, y aquí no se pide: no vive en la base de datos.',
-    correoOpcional:
-      'El correo es opcional: si no pones servidor, la instalación funciona igual, pero no saldrá ningún correo —ni un alta, ni un restablecer, ni un aviso—.',
+    correoObligatorio:
+      'El correo saliente es obligatorio para completar la instalación: se usa en altas, restablecimientos y avisos.',
     correoPuesto: 'Hay un correo saliente configurado.',
-    correoSinPoner: 'No hay correo saliente configurado: no saldrá ningún correo.',
+    credencialPuesta: 'Configurada',
+    sinCredencial: 'No requerida',
+    confirmacionExterna: 'Privacidad y posible costo',
+    confirmacionAceptada: 'Aceptados',
     terminada: 'Esta instalación ya está terminada: no se configura dos veces.',
     correoHost: 'Servidor de correo',
     correoHostAyuda:
@@ -200,6 +258,10 @@ export const ES = {
     correoRemitenteNombre: 'Nombre del remitente',
     correoRemitenteCorreo: 'Correo del remitente',
     correoRemitenteCorreoAyuda: 'La dirección que verá quien reciba el correo.',
+    probarCorreo: 'Probar la conexión',
+    // Lo que hace y lo que **no** hace la prueba del correo, dicho en el propio mensaje.
+    correoOk:
+      'El servidor de correo ha contestado y la autenticación ha funcionado. No se ha enviado ningún correo.',
   },
 
   menu: {
@@ -215,6 +277,7 @@ export const ES = {
     cerrar: 'Cerrar el menú',
     plegar: 'Plegar el menú',
     desplegar: 'Desplegar el menú',
+    codigoFuente: 'Código fuente y licencia',
   },
 
   // Los cuatro papeles, como se llaman en la interfaz. Los valores son los del backend.
@@ -471,6 +534,22 @@ export const ES = {
     resumenSinMotor: 'Sin motor de IA',
     resumenError: 'No se pudo resumir',
     resumenVacio: '—',
+    iaRedaccionAbrir: 'Mejorar con IA',
+    iaRedaccionTitulo: 'Mejorar la redacción con IA',
+    iaRedaccionAyuda: 'Revisa el borrador y elige cómo debe sonar. La propuesta no se guardará hasta que la uses y publiques o guardes el editor principal.',
+    iaRedaccionPrivacidad: 'El motor configurado procesará este texto. Si es un servidor o proveedor externo, el texto saldrá de esta instalación conforme a la configuración aceptada por el Administrador.',
+    iaRedaccionBorrador: 'Borrador',
+    iaRedaccionTono: 'Tonalidad',
+    iaTonoProfesional: 'Profesional',
+    iaTonoCordial: 'Cordial',
+    iaTonoBreve: 'Breve',
+    iaTonoEmpatico: 'Empática',
+    iaTonoTecnico: 'Técnica',
+    iaRedaccionMejorar: 'Mejorar',
+    iaRedaccionRegenerar: 'Volver a generar',
+    iaRedaccionUsar: 'Usar este texto',
+    iaRedaccionGenerando: 'Mejorando la redacción…',
+    iaRedaccionLista: 'La propuesta está lista para revisar.',
     // --- editar donde se muestra (decisión 74) ---
     editarElAsunto: 'Editar el asunto',
     editarLaDescripcion: 'Editar la descripción',
@@ -800,6 +879,7 @@ export const ES = {
     comoAdministrador: 'Entrar como administrador',
     cuentaDeFabrica:
       'La contraseña de la cuenta de fábrica vive en la configuración de la instalación.',
+    codigoFuente: 'Código fuente y licencia',
   },
 
   olvido: {
@@ -863,6 +943,7 @@ export const ES = {
 
   comun: {
     volver: 'Volver',
+    cerrar: 'Cerrar',
     cancelar: 'Cancelar',
     cargando: 'Cargando…',
     obligatorio: 'Este campo es obligatorio.',
@@ -878,6 +959,10 @@ export const ES = {
     // El motor de IA (docs/modules/ai.md): o no está, o contestó algo que no vale.
     'ai.unavailable': 'El motor de resúmenes no está disponible. Los tickets funcionan igual.',
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
+    'mail.translation.costConfirmationRequired': 'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
+    'mail.translation.incomplete': 'Revisa las once plantillas antes de aplicar el idioma.',
+    'mail.translation.protectedChanged': 'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
+    'settings.language.reviewRequired': 'Revisa las once plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -938,7 +1023,6 @@ export const ES = {
     'users.name.required': 'Faltan el nombre o los apellidos.',
     'users.role.notAllowed': 'No puedes repartir ese papel.',
     'users.origin.unknown': 'Ese origen de cuenta no existe.',
-    'users.language.unknown': 'Ese idioma no existe.',
     'users.directory.notFound': 'El directorio no conoce a esa persona: ya no está allí.',
     'users.origin.byDirectory':
       'Las cuentas del directorio no se crean ni se cambian de origen a mano: quien está en el directorio entra con su cuenta y la suya se pone al día en ese acceso.',
@@ -947,15 +1031,28 @@ export const ES = {
     'users.directory.unavailable':
       'No se ha podido comprobar con el directorio. Inténtalo en un momento.',
     'users.origin.inUse': 'No se puede cambiar el origen de una cuenta de directorio activa.',
-    'users.password.notLocal': 'La contraseña de esa cuenta la comprueba el directorio: no se cambia desde aquí.',
+    'users.password.notLocal':
+      'La contraseña de esa cuenta la comprueba el directorio: no se cambia desde aquí.',
     'settings.timeZone.unknown': 'Esa zona horaria no existe. Elige una de la lista.',
     'settings.publicUrl.invalid':
       'La dirección tiene que empezar por http:// o https:// y llevar su servidor.',
-    // Las tres claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
+    'settings.aiUrl.invalid':
+      'La dirección del motor de IA no vale: no hay ninguna que probar, o no empieza por http:// o https:// y le falta su servidor.',
+    'settings.ai.unreachable':
+      'El motor de IA no ha contestado: revisa la dirección y que esté levantado.',
+    'settings.ai.managerUnavailable': 'El administrador local de modelos no está disponible.',
+    'settings.ai.insufficientMemory':
+      'El modelo requiere {requerida} de RAM y hay {disponible} disponibles. El modelo anterior continúa activo.',
+    'settings.ai.required': 'Configura y prueba el motor de IA antes de entrar al producto.',
+    'settings.unavailable': 'No se ha podido leer la configuración de la instalación.',
+    'settings.ai.licenseRequired': 'Debes aceptar la licencia antes de descargar el modelo.',
+    // Las cuatro claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
     'setup.alreadyInstalled': 'Esta instalación ya está terminada: no se configura dos veces.',
     'setup.step.incomplete': 'A este paso le falta algún dato. Repásalo y vuelve a intentarlo.',
     'setup.mail.incomplete':
       'Para el correo hacen falta el servidor, el puerto y la dirección del remitente.',
+    'setup.mail.unreachable':
+      'El servidor de correo no ha contestado o no ha aceptado el usuario y la contraseña.',
     'auth.publicUrl.missing':
       'No hay dirección pública configurada: sin ella no se puede armar el enlace que va en el correo. Se configura en Configuración.',
     'users.accountInactive': 'Esa cuenta está desactivada: actívala antes de mandarle un enlace.',
@@ -969,6 +1066,11 @@ export const ES = {
     'tickets.notFound': 'Ese ticket no existe.',
     'tickets.subject.required': 'Escribe un asunto.',
     'tickets.description.required': 'Escribe una descripción.',
+    'tickets.writing.draft.required': 'Escribe un borrador antes de pedir una mejora.',
+    'tickets.writing.editor.invalid': 'Ese editor no admite la mejora de redacción.',
+    'tickets.writing.tone.invalid': 'Elige una tonalidad válida.',
+    'tickets.writing.unavailable': 'El motor de IA no está disponible. El borrador se conserva.',
+    'tickets.writing.invalid': 'El motor devolvió una propuesta que no se puede utilizar.',
     // El saneador del backend sólo admite las etiquetas y los atributos de su lista blanca, y lo que
     // no está **no se guarda**: se dice, porque un texto que se guarda a medias es peor que uno que se
     // rechaza (docs/modules/tickets.md, sección 2.3). Con el pegado sin formato del editor, a lo que
@@ -1004,7 +1106,8 @@ export const ES = {
     'tickets.tag.forbidden': 'Sólo el Administrador puede retirar una etiqueta.',
     'tickets.tag.duplicate': 'Esa etiqueta ya existe.',
     'tickets.cierre.sinComentario': 'Para cerrar el ticket hay que decir por qué.',
-    'tickets.etiqueta.desconocida': 'Esa etiqueta no está en el catálogo. Sólo el Administrador puede crear etiquetas nuevas.',
+    'tickets.etiqueta.desconocida':
+      'Esa etiqueta no está en el catálogo. Sólo el Administrador puede crear etiquetas nuevas.',
     'tickets.tag.notFound': 'Esa etiqueta no existe.',
     'tickets.category.forbidden':
       'Sólo el Administrador puede retirar o volver a poner una categoría.',

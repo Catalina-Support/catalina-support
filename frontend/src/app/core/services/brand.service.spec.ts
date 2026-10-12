@@ -16,6 +16,9 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
   return {
     name,
     version,
+    license: 'AGPL-3.0-only',
+    sourceUrl: 'https://github.com/juanky-estevez/Catalina-Support',
+    development: false,
     timeZone,
     primaryColor: '#1d4ed8',
     colors: {
@@ -29,6 +32,15 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
     logoVersion: '',
   };
 }
+
+/**
+ * Lo que contesta el backend al tocar el logo: **el documento de configuración entero**, no sólo la
+ * marca. El servicio lo devuelve tal cual, porque es lo que la pantalla necesita para refrescarse.
+ */
+const CONFIGURACION_CON_LOGO = {
+  name: 'Ayuntamiento de Ejemplo',
+  brand: { light: { filled: true }, dark: { filled: false } },
+};
 
 describe('BrandService', () => {
   let marca: BrandService;
@@ -112,6 +124,32 @@ describe('BrandService', () => {
     expect(marca.versionDelSistema()).toBe('');
   });
 
+  it('identifica una compilación de desarrollo y expone su fuente HTTPS', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush({
+      ...marcaConNombre('Catalina Support'),
+      development: true,
+    });
+    await carga;
+
+    expect(marca.versionDelSistema()).toBe('v1.0.0 · dev');
+    expect(marca.fuente()).toEqual({
+      url: 'https://github.com/juanky-estevez/Catalina-Support',
+      licencia: 'AGPL-3.0-only',
+    });
+  });
+
+  it('no inventa un enlace si la fuente falta o no usa HTTPS', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush({
+      ...marcaConNombre('Catalina Support'),
+      sourceUrl: 'javascript:alert(1)',
+    });
+    await carga;
+
+    expect(marca.fuente()).toBeNull();
+  });
+
   // **La zona horaria de la instalación viaja en la marca**: es la que decide cómo se leen todas las
   // fechas, y la primera lista de tickets ya la necesita. Sin marca se queda vacía, y quien formatea
   // cae a la del navegador.
@@ -119,7 +157,9 @@ describe('BrandService', () => {
     expect(marca.zonaHoraria()).toBe('');
 
     const carga = marca.cargar();
-    http.expectOne('/api/settings/brand').flush(marcaConNombre('Catalina Support', '1.0.0', 'Europe/Madrid'));
+    http
+      .expectOne('/api/settings/brand')
+      .flush(marcaConNombre('Catalina Support', '1.0.0', 'Europe/Madrid'));
     await carga;
 
     expect(marca.zonaHoraria()).toBe('Europe/Madrid');
@@ -132,6 +172,56 @@ describe('BrandService', () => {
 
     // Vacía: quien formatea decide, y lee con la del navegador (shared/fechas.ts).
     expect(marca.zonaHoraria()).toBe('');
+  });
+
+  // **El logo es de la marca**: se sube a su hueco (`variant`) en un `FormData`, y lo que contesta el
+  // backend es el documento de configuración entero (docs/modules/settings.md).
+  it('subirLogo sube el archivo a su hueco por POST', async () => {
+    const archivo = new File(['logo'], 'marca.png', { type: 'image/png' });
+    const subida = marca.subirLogo(true, archivo);
+
+    const peticion = http.expectOne('/api/settings/brand/logo?variant=oscuro');
+    expect(peticion.request.method).toBe('POST');
+    const datos = peticion.request.body as FormData;
+    expect(datos).toBeInstanceOf(FormData);
+    expect((datos.get('logo') as File).name).toBe('marca.png');
+    peticion.flush(CONFIGURACION_CON_LOGO);
+
+    await expect(subida).resolves.toEqual(CONFIGURACION_CON_LOGO);
+  });
+
+  it('subirLogo distingue el hueco claro del oscuro', async () => {
+    const archivo = new File(['logo'], 'marca.png', { type: 'image/png' });
+    const subida = marca.subirLogo(false, archivo);
+
+    const peticion = http.expectOne('/api/settings/brand/logo?variant=claro');
+    peticion.flush(CONFIGURACION_CON_LOGO);
+
+    await subida;
+  });
+
+  // **Restablecer el logo**: el mismo hueco, pero por `DELETE`.
+  it('restablecerLogo quita el logo propio de su hueco por DELETE', async () => {
+    const restablecido = marca.restablecerLogo(true);
+
+    const peticion = http.expectOne('/api/settings/brand/logo?variant=oscuro');
+    expect(peticion.request.method).toBe('DELETE');
+    peticion.flush(CONFIGURACION_CON_LOGO);
+
+    await expect(restablecido).resolves.toEqual(CONFIGURACION_CON_LOGO);
+  });
+
+  // **La vista previa del color**: se pregunta al backend sin guardarlo, el color viaja escapado y
+  // vuelve **la marca entera**, que es lo que la pantalla lee.
+  it('previsualizarColor pide la marca con el color y devuelve lo que recibe', async () => {
+    const vista = marca.previsualizarColor('#1d4ed8');
+
+    const peticion = http.expectOne('/api/settings/brand?color=%231d4ed8');
+    expect(peticion.request.method).toBe('GET');
+    const esperada = marcaConNombre('Catalina Support');
+    peticion.flush(esperada);
+
+    await expect(vista).resolves.toEqual(esperada);
   });
 });
 

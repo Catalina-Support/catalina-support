@@ -1,7 +1,81 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-10-11
+>
+> **Corrección aprobada y verificada el 2026-10-10:** el repaso de la sección 21 encontró que el
+> documento prometía conservar el enlace de fuente en el menú plegado, mientras la implementación
+> y su prueba lo ocultan hasta volver a desplegarlo. El responsable eligió 39A: documentar el
+> comportamiento actual, sin añadir otro icono a la barra plegada. El responsable aprobó
+> explícitamente 39A.
+>
+> **Enmienda implementada y verificada el 2026-10-10: fuente y licencia visibles.** La sección 21
+> incorpora un enlace discreto en la entrada y el menú, alimentado por la marca pública. Pasó las
+> pruebas de componente y el recorrido aislado en PC y móvil.
+>
+> **Enmienda implementada y verificada el 2026-10-08: ocultar la ayuda sin IA configurada.** La
+> sección 20 hace que el botón y su modal dependan de la capacidad recibida con el detalle del
+> ticket. El responsable aprobó 1A–3A y confirmó mantener la IA obligatoria.
+>
+> **Corrección aprobada e implementada el 2026-10-08.** No existe un recorrido real de ticket sin IA configurada:
+> la obligatoriedad vigente lleva antes a Configuración. El responsable decidió conservarla. El
+> estado falso se probará en el componente y el recorrido de navegador verificará el estado
+> configurado. Las pruebas finales respetan esta frontera.
+>
+> **Enmienda implementada y verificada el 2026-10-08: modal «Mejorar con IA».** La sección 19
+> describe el botón con icono, el editor sencillo, las cinco tonalidades, la revisión y sus estados.
+> Pasó pruebas unitarias y el recorrido real en PC y móvil, en el entorno desechable.
+>
+> **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** El único fleco visual registrado en
+> `docs/arquitectura.md` era un repaso de formato sin alcance ni criterio de cierre. La sección 18
+> define la revisión completa elegida por el responsable en 1A–14C. Lo existente continúa
+> as-built; el responsable aprobó explícitamente esta enmienda el 2026-10-08.
+>
+> **Hallazgo corregido y verificado el 2026-10-08.** El bloque 5 encontró cifras de RAM distintas entre
+> los selectores y el administrador, y un error genérico cuando un modelo no cabe. La sección 17
+> alinea las cifras y define el toast elegido en 17A y 22A. La corrección fue aprobada explícitamente
+> el 2026-10-08.
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. La sección 16 define el
+> idioma global como primer control y la experiencia para configurar, descargar y activar la IA
+> obligatoria. El repaso quedó cerrado, la propuesta fue aprobada y la implementación fue verificada.
+>
+> **Enmendado el 2026-10-06**, con aprobación explícita del responsable. Los resultados de guardar y
+> probar conexiones en `/settings` y `/setup` se mostraban en un aviso al principio del documento. En una pantalla
+> larga, el resultado queda fuera de la parte visible y parece que la acción no respondió. El
+> responsable confirmó un toast compartido, fijo en la ventana, para esos resultados. Los avisos que
+> explican una condición de la pantalla permanecen dentro de su sección. Se implementó y verificó en
+> PC y móvil.
+>
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Configuración tenía el mismo
+> problema visual que tuvo el paso 3 de `/setup`: una lista larga puede ocultar la opción resaltada.
+> El responsable confirmó aplicar en `/settings` el mismo campo de sólo lectura antes del buscador,
+> con el identificador IANA exacto, actualización inmediata y la hora y el desfase debajo. Se
+> implementó y se verificó en PC y móvil.
+>
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Al revisar todas las vistas se
+> encontró que los controles de navegación de cabecera ya están a la izquierda en el alta y el
+> detalle de tickets y en la ficha de usuario, pero `/mail` coloca a la derecha su vuelta a
+> Configuración aunque este mismo documento dice desde el 2026-09-29 que debe ir a la izquierda.
+> El responsable confirmó que se unifiquen los controles de cabecera como icono antes del título y
+> que los enlaces de flujo dentro del contenido conserven su presentación. Se corrigió `/mail` y se
+> verificó la posición y el regreso a Configuración en PC y móvil.
+>
+> **Enmendado el 2026-10-05**, conforme a `docs/primer-arranque.md` aprobado: el paso 3 de `/setup`
+> muestra antes del buscador un campo de sólo lectura con la zona seleccionada. Enseña el
+> identificador IANA exacto, se actualiza en el acto al elegir en la lista y permite seleccionar y
+> copiar el texto; la hora y el desfase continúan debajo. Se verificó en PC y móvil.
+>
+> **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: `/setup` es la excepción
+> inicial al idioma del navegador. Una instalación nueva se presenta entera en inglés; su selector
+> cambia todos los textos, `html[lang]` y el valor recordado al instante. Al reanudar manda el idioma
+> ya guardado en la instalación.
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Los formularios de
+> Keycloak en Configuración y primer arranque incorporan la dirección interna opcional, separada del
+> emisor público, con ayuda ES/EN. El selector de Configuración permite elegir métodos todavía
+> vacíos para mostrar sus campos; la selección es un borrador hasta guardar con éxito (enmienda
+> §5.1.b aprobada).
 >
 > **Enmendado el 2026-09-30 (novena vez)**: **las tarjetas de Configuración se ordenaron y cada una
 > lleva lo que su título dice**. Estaban descolocadas desde el cambio anterior: «La numeración y el
@@ -300,10 +374,9 @@ El orden importa: cuando dos choquen, gana el de más arriba.
    ticket interno, ni un desarrollo necesita ver la administración de usuarios.
 4. **El estado se lee de un vistazo.** Mirar la lista y saber qué está esperando a quién.
 5. **Nada importante se hace por accidente.** Cerrar, escalar o borrar se confirman; lo demás, no.
-6. **El idioma de arranque sale del navegador.** Si pide español o inglés se entra en ese idioma, y
-   si pide cualquier otro se entra **en inglés**; el conmutador está siempre a la vista y lo que
-   alguien elija se recuerda. Dentro de la aplicación manda el idioma de su cuenta
-   (`docs/modules/auth.md`, decisión 25).
+6. **El idioma es global.** Una instalación nueva abre `/setup` en inglés y su primer control puede
+   cambiar toda la pantalla. Después manda siempre el idioma guardado por la instalación, también
+   antes de entrar y en sesiones abiertas; no hay selector ni preferencia por cuenta.
 7. **Lo que falla, se explica.** Un error dice qué pasó y qué hacer, en el idioma de quien lo lee.
 
 ## 3. La forma de la aplicación
@@ -645,7 +718,7 @@ modularidad (sección 4.4).
 | --- | --- | --- |
 | El editor de los correos | `/mail` | Administrador |
 
-- **A la izquierda, los diez correos**; a la derecha, el que se está editando: su **asunto**, su
+- **A la izquierda, los once correos**; a la derecha, el que se está editando: su **asunto**, su
   **cuerpo** y sus **marcadores**, con los imprescindibles marcados.
 - **Los dos idiomas van al lado** —el mismo correo en español y en inglés, para ver que dicen lo
   mismo— **y en móvil se apilan**: en un teléfono no caben dos columnas.
@@ -734,7 +807,7 @@ Su trabajo es de una vez al principio, no de todos los días.
 - **Configuración tiene ya todo lo suyo** (2026-09-24 y 2026-09-25): **el nombre de la instalación**
   —el campo, con su ayuda y su botón de guardar; se ve en toda la aplicación en cuanto se guarda—,
   **la marca** —los dos huecos del logo, con su vista previa, subir y volver al de fábrica—, **el color institucional** con **vista previa de cómo
-  queda** antes de guardar, el **idioma de la instalación** —con el que nacen las cuentas nuevas— y el
+  queda** antes de guardar, el **idioma global de la instalación** —primer control de la pantalla— y el
   **prefijo de numeración** con el aviso de que **no cambia los números ya emitidos**, más el
   **reparto y los avisos** de cada tipo de ticket. Todo lo de esta pantalla viene de un solo endpoint,
   el del módulo `settings`, más los del logo.
@@ -878,6 +951,7 @@ enseñan juntos y siempre igual:
 | Dónde | El logo | El nombre |
 | --- | --- | --- |
 | **Pantalla de entrada** | Arriba del formulario, centrado, **hasta 128 px en móvil y 160 px de tablet para arriba**: es lo primero que se ve | Debajo del título de la tarjeta, donde está el formulario: es lo primero que se lee |
+| **Primer arranque** | Junto a la cabecera, **80 px de alto**: ocupa el mismo bloque visual que el título y su explicación sin competir con el contenido del paso | El nombre todavía no se enseña aquí: se está configurando |
 | **Menú lateral** | Arriba, junto al nombre, **hasta 32 px de alto** | Arriba, junto al logo |
 | **Pestaña del navegador** | — | Es el título de la pestaña, en todas las pantallas |
 | **Configuración** | Los dos huecos con su vista previa y los botones de subir y volver al de fábrica | El campo, con su ayuda: si se deja vacío vuelve el nombre de fábrica |
@@ -933,20 +1007,21 @@ biblioteca—) · `campo de texto` · `área de texto` · `selector` · `casilla
 `tabla` (con orden y paginación) · `tarjeta` (la lista en móvil) · `diálogo` · `menú` ·
 `conmutador segmentado` (la vista doble y los filtros) · **`editor de texto con formato`, con los
 adjuntos dentro** · `adjunto` (con vista previa) · `comentario` (con marcas de editado y eliminado) ·
-`aviso` (éxito, error, información) · `estado vacío` · `indicador de carga` · `menú lateral` (con sus
-tres zonas) · `barra de móvil`.
+`aviso` (éxito, error, información) · **`toast`** (resultado fijo en la ventana) · `estado vacío` ·
+`indicador de carga` · `menú lateral` (con sus tres zonas) · `barra de móvil`.
 
-Diecinueve piezas, y eran veinte: **`subida de archivos con arrastrar y soltar` se retira**
-(2026-09-26). Adjuntar dejó de ser un recuadro aparte —ahora **se adjunta dentro del texto**, con el
-editor— y tener dos sitios donde se hace lo mismo era el ruido que este producto evita. Lo que hacía
-—arrastrar, elegir y filtrar por extensión con su aviso— **lo hace el editor**, con las tres puertas
-de la sección 6.5.
+Veinte piezas. Eran veinte antes de que **`subida de archivos con arrastrar y soltar` se retirara**
+(2026-09-26); al integrarla en el editor quedaron diecinueve, y el toast aprobado el 2026-10-06 lleva
+el inventario de nuevo a veinte. Adjuntar dejó de ser un recuadro aparte —ahora **se adjunta dentro
+del texto**, con el editor— y tener dos sitios donde se hace lo mismo era el ruido que este producto
+evita. Lo que hacía —arrastrar, elegir y filtrar por extensión con su aviso— **lo hace el editor**,
+con las tres puertas de la sección 6.5.
 
 Cada una se construye **una vez**, con sus estados (normal, hover, foco, deshabilitado, cargando) y su
 comportamiento de teclado.
 
 **Hechas hoy**: el botón, el campo de texto, el **área de texto**, el selector, el conmutador
-segmentado, la tarjeta, el **aviso**, el **diálogo**, la **etiqueta de estado**, el **adjunto con su
+segmentado, la tarjeta, el **aviso**, el **toast**, el **diálogo**, la **etiqueta de estado**, el **adjunto con su
 vista previa**, el **editor con formato —con los adjuntos dentro, sección 6.5—**, el menú lateral con
 sus tres zonas y la barra de móvil. Lo que falta —el comentario como pieza suelta y el indicador de
 carga— llega con las pantallas que lo usan.
@@ -1136,3 +1211,496 @@ Casi nadie diseña esto y es lo que más se sufre:
 Con `docs/interfaz-y-experiencia.md` aprobado, la documentación cubre **qué se construye, cómo se
 comporta y cómo se ve**. El código puede empezar por `auth` (`docs/modules/tickets.md`), y sus pantallas
 —entrar, recuperar contraseña— se diseñan ya con estas reglas, en lugar de retocarlas después.
+
+## 13. Navegación de regreso a la izquierda
+
+### 13.1 Hallazgo e inventario
+
+La regla aprobada el 2026-09-29 ya dice que los botones de volver van a la izquierda y son una
+flecha de sólo icono con nombre accesible. El inventario de las vistas con ese control de cabecera
+encontró:
+
+| Vista | Destino | Posición encontrada | Cumplía la regla |
+| --- | --- | --- | --- |
+| `/mail` | Configuración | A la derecha del título | No |
+| `/tickets/new` | Lista de tickets | A la izquierda del título | Sí |
+| `/tickets/:número` | Lista de tickets | A la izquierda del número | Sí |
+| `/users/:id` | Lista de usuarios | A la izquierda del nombre | Sí |
+
+El comentario del propio `correos-page.html` también afirmaba que la flecha estaba a la izquierda
+del título, pero la estructura `justify-between` la colocaba después del título y al extremo
+derecho. Era una incoherencia entre el documento, el comentario y lo que se pintaba.
+
+### 13.2 Regla
+
+Todo control que **regresa desde una vista secundaria y vive en su cabecera** aparece como primer
+elemento de esa cabecera, inmediatamente antes del título o identificador principal. Es una flecha
+de sólo icono, conserva un nombre accesible y mantiene su destino actual.
+
+Esta regla se aplica a los cuatro controles inventariados. Tres ya cumplían; la implementación
+reordena la cabecera de `/mail` para colocar su enlace a Configuración antes del bloque de título y
+descripción. No cambia el destino, el texto accesible, el icono ni el tamaño del control.
+
+Quedan fuera:
+
+- los enlaces que forman parte del flujo de una pantalla, como **Volver a iniciar sesión**;
+- el botón **Volver a mi trabajo** de la vista sin permiso;
+- acciones con otra finalidad que usan la palabra «volver», como restaurar un logo o un correo;
+- añadir botones nuevos a vistas que hoy no tienen navegación de regreso;
+- el backend, las rutas y los permisos.
+
+### 13.3 Documentos y código
+
+- Este documento define la regla general y registra el hallazgo.
+- `docs/README.md` y `AGENTS.md` reflejan el estado final de la enmienda.
+- `frontend/src/app/modules/mail/correos-page.html` coloca la flecha antes del bloque de título y
+  descripción.
+- La prueba E2E del editor de correos comprueba que la flecha es el primer elemento de la cabecera,
+  antes del título, y que sigue regresando a Configuración. La suite la ejecuta en PC y móvil.
+
+`docs/modules/mail.md` no cambia: describe las funciones del editor y no fija la composición de su
+cabecera. Además, su comportamiento funcional no cambia.
+
+### 13.4 Criterios de aceptación
+
+1. En `/mail`, la flecha aparece inmediatamente a la izquierda del título **Los correos**.
+2. En anchos de PC y móvil, el control permanece antes del título cuando la cabecera se reparte en
+   más de una línea.
+3. Su nombre accesible sigue siendo **Volver / Back** y su destino sigue siendo `/settings`.
+4. Los tres controles que ya cumplen conservan su posición y su destino.
+5. Los enlaces y acciones excluidos no cambian.
+
+### 13.5 Decisión registrada
+
+El responsable confirmó el 2026-10-05 la recomendación: unificar sólo los controles de navegación
+de cabecera como icono a la izquierda del título. Los enlaces de flujo dentro del contenido quedan
+fuera.
+
+### 13.6 Registro del repaso
+
+El responsable confirmó el 2026-10-05 que:
+
+1. la flecha quedaría como primer elemento de la cabecera;
+2. el título y su descripción permanecerían juntos, en un bloque a la derecha de la flecha;
+3. no se añade ninguna excepción adicional a la regla ni se amplía el alcance.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
+con «Sí». La implementación respeta el alcance aprobado y el documento vuelve a `as-built`.
+
+### 13.7 Verificación
+
+- Las 216 pruebas unitarias del frontend pasan.
+- Los cuatro casos E2E del editor de correos pasan: dos en PC y dos en móvil.
+- La prueba comprueba que la flecha es el primer elemento de la cabecera, que su posición horizontal
+  queda antes del título y que al pulsarla se regresa a `/settings`.
+
+## 14. Región seleccionada visible en Configuración
+
+### 14.1 Hallazgo
+
+La tarjeta **Región horaria y dirección pública** de `/settings` ofrece el mismo buscador y la misma
+lista desplazable que `/setup`. La opción elegida sólo se reconoce por el fondo y el peso de texto
+dentro de esa lista; si queda fuera de la parte visible, la pantalla no nombra de forma estable la
+zona que se guardará. La hora y el desfase permiten comprobarla, pero no dicen cuál es.
+
+### 14.2 Comportamiento
+
+Se reutiliza exactamente el patrón aprobado para `/setup`:
+
+- campo de sólo lectura antes del buscador;
+- etiqueta **Selected time zone / Región horaria seleccionada** según el idioma de la interfaz;
+- identificador IANA exacto como valor;
+- zona guardada al cargar la pantalla y actualización inmediata al elegir otra;
+- texto seleccionable y copiable, sin edición directa;
+- hora y desfase conservados debajo de la lista.
+
+El valor del campo es el borrador actual del formulario. Elegir una zona lo cambia y habilita el
+guardado existente; guardar, recibir un error o volver a cargar siguen las reglas actuales de
+Configuración. El buscador, la lista, el resaltado, la dirección pública y el botón de guardar no
+cambian.
+
+### 14.3 Alcance
+
+- `docs/modules/settings.md` define el comportamiento dentro de la tarjeta de región.
+- Este documento define su presentación coherente con `/setup`.
+- `docs/README.md` y `AGENTS.md` reflejan el estado final de la enmienda.
+- `frontend/src/app/core/pages/settings-page.html` muestra el campo y las pruebas existentes de
+  Configuración comprueban su comportamiento.
+- Se reutilizan los textos ES/EN actuales; no se añaden claves de traducción.
+
+Quedan fuera la API, la base de datos, la validación de zonas, `/setup`, la dirección pública y las
+demás tarjetas de Configuración.
+
+### 14.4 Criterios de aceptación
+
+1. Al cargar `/settings`, el campo muestra la zona guardada.
+2. Elegir `America/Guayaquil` actualiza el campo inmediatamente antes de guardar.
+3. El campo es de sólo lectura y permite seleccionar y copiar el identificador.
+4. La búsqueda, la lista, el resaltado, la hora y el desfase conservan su comportamiento.
+5. Las pruebas unitarias comprueban el valor cargado, el cambio inmediato y el atributo de sólo
+   lectura; Playwright comprueba la presencia del campo en PC y móvil.
+
+### 14.5 Decisión registrada
+
+El responsable confirmó el 2026-10-05 reutilizar exactamente el patrón de `/setup`, sin cambios en
+el guardado, la API ni la base de datos.
+
+### 14.6 Registro del repaso
+
+El responsable confirmó el 2026-10-05 que `/settings` usará el mismo identificador técnico, la
+misma apariencia y el mismo comportamiento de `/setup`, sin diferencias adicionales.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente las dos
+propuestas con «Sí». La implementación respeta el alcance aprobado y ambos documentos vuelven a
+`as-built`.
+
+### 14.7 Verificación
+
+- Las 216 pruebas unitarias del frontend pasan; las de Configuración comprueban el valor inicial,
+  el cambio inmediato y el atributo de sólo lectura.
+- Los cuatro recorridos E2E afectados pasan: dos en PC y dos en móvil.
+- Playwright comprueba el valor guardado, `America/Guayaquil` después de elegir, el atributo de sólo
+  lectura y que el campo pertenece a la tarjeta de región y dirección.
+
+## 15. Resultados de acciones en mensajes toast
+
+### 15.1 Hallazgo
+
+`/settings` y `/setup` tienen un único mensaje de pantalla colocado antes de su contenido. Guardar
+una tarjeta o probar una conexión desde una sección inferior actualiza ese mensaje, pero la ventana
+no vuelve al principio. La acción sí responde y el texto sí existe; queda fuera de la parte visible.
+Esto explica por qué una prueba de conexión fallida parecía no mostrar ningún resultado.
+
+### 15.2 Componente y comportamiento
+
+Se añade un componente compartido de **toast** para los resultados transitorios de una acción:
+
+- queda fijo en la ventana, arriba a la derecha en PC y con el ancho disponible, dejando margen, en
+  móvil;
+- sólo se muestra uno a la vez y el resultado más reciente sustituye al anterior;
+- éxito e información desaparecen a los **5 segundos**;
+- error y atención permanecen hasta que la persona los cierre o una acción posterior los sustituya;
+- todos incluyen un botón de cierre con nombre accesible traducido;
+- éxito e información se anuncian como estado; error y atención se anuncian como alerta, sin mover
+  el foco ni desplazar el contenido;
+- mantiene las cuatro formas visuales del aviso existente —éxito, error, información y atención— y
+  usa los colores, iconos y contraste del tema activo.
+
+El temporizador empieza de nuevo cuando llega un resultado distinto. Destruir la pantalla cancela
+el temporizador pendiente, para que un mensaje antiguo no actúe después de navegar.
+
+### 15.3 Qué es toast y qué sigue dentro de la página
+
+Usan toast los resultados de acciones asíncronas que hoy alimentan el mensaje general de
+`/settings` o `/setup`: guardar, subir o restaurar, avanzar en el asistente y probar una conexión.
+También lo usan sus fallos de carga o de validación devueltos por la API cuando no pertenecen a un
+campo concreto.
+
+Permanecen dentro de su sección los avisos que describen un estado o una consecuencia mientras esa
+condición exista, entre ellos la dirección pública sin HTTPS, la explicación de la cuenta de fábrica
+y los avisos informativos propios de un paso. Los errores asociados a un campo conservan su lugar
+junto al campo si una pantalla los presenta así.
+
+### 15.4 Alcance
+
+- Este documento define el componente compartido y su accesibilidad.
+- `docs/modules/settings.md` define su uso en `/settings`.
+- `docs/primer-arranque.md` define su uso en `/setup`.
+- `docs/README.md` y `AGENTS.md` reflejan el estado de la enmienda.
+- La implementación vive en `frontend/src/app/shared/components/**` y en las dos páginas afectadas.
+
+Quedan fuera el backend, sus respuestas y códigos, la persistencia, las reglas de validación, los
+mensajes de las demás pantallas y un servicio global de notificaciones para toda la aplicación.
+
+### 15.5 Criterios de aceptación
+
+1. Probar una conexión desde una tarjeta o paso inferior muestra su éxito o error dentro de la parte
+   visible de la ventana, sin desplazarla al principio.
+2. Guardar, subir, restaurar y avanzar muestran sus resultados por el mismo componente.
+3. Éxito e información desaparecen después de 5 segundos; error y atención continúan hasta cerrarse
+   o ser sustituidos.
+4. Un segundo resultado sustituye al primero y reinicia el temporizador que corresponda.
+5. El botón de cierre funciona con teclado, tiene nombre accesible en español e inglés y el mensaje
+   conserva el anuncio semántico adecuado.
+6. Los avisos persistentes de contexto siguen dentro de su sección.
+7. Las pruebas unitarias cubren sustitución, cierre y duración; Playwright comprueba la posición
+   visible de los resultados de conexión en `/settings` y `/setup`, en PC y móvil.
+
+### 15.6 Decisión registrada
+
+El responsable confirmó el 2026-10-06 proponer el componente compartido para `/settings` y
+`/setup`: fijo arriba a la derecha en PC y adaptado al ancho móvil, un mensaje a la vez, éxito con
+cierre automático a los 5 segundos, errores persistentes, cierre manual y avisos de contexto todavía
+integrados en la página.
+
+### 15.7 Registro del repaso
+
+El responsable confirmó el 2026-10-06 que:
+
+1. todos los resultados transitorios descritos de `/settings` y `/setup` usan el toast;
+2. no hay cola: el resultado nuevo sustituye al anterior;
+3. sólo éxito e información desaparecen automáticamente después de 5 segundos; error y atención
+   permanecen hasta cerrarse o ser sustituidos.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente los tres
+documentos con «Apruebo» el 2026-10-06. La implementación respeta el alcance aprobado.
+
+### 15.8 Implementación y verificación
+
+- `app-toast` envuelve el aviso compartido, permanece fijo en la ventana y emite el cierre manual o
+  automático; al destruirse cancela su temporizador.
+- `app-aviso` admite un botón de cierre opcional. Los avisos integrados no lo reciben y conservan su
+  presentación; error y atención usan `alert`, éxito e información usan `status`.
+- Las 220 pruebas unitarias del frontend pasan; cuatro casos nuevos comprueban cierre, semántica,
+  duración, persistencia y reinicio del temporizador.
+- La compilación de producción termina correctamente.
+- Los 20 casos Playwright seleccionados pasan en PC y móvil; 4 se omiten porque los servicios
+  opcionales de directorio e IA no estaban levantados. La preparación de la instalación vacía
+  comprobó también el toast de `/setup` en ambos anchos.
+
+## 16. Implementación: idioma global y configuración guiada de IA
+
+### 16.1 El idioma es el primer control
+
+En `/setup` y `/settings`, Español/English aparece antes que cualquier otro dato. En el asistente
+cambia todos los textos al elegirlo. En Configuración previsualiza la pantalla, pero una banda
+explica que el cambio global todavía no se ha aplicado mientras se traducen y revisan correos.
+
+Desaparecen todos los selectores personales de idioma: entrada, controles del armazón, perfil, alta
+y ficha de usuario. El espacio liberado en el menú no se rellena con otro control. El tema continúa
+siendo personal.
+
+### 16.2 Selector de modalidad de IA
+
+La tarjeta y el paso usan tres opciones grandes con nombre y explicación: **En este servidor**,
+**En otro servidor** y **Proveedor externo**. Sólo se muestran los campos de la opción elegida. La
+modalidad externa incluye un aviso persistente con los datos que saldrán y una casilla de aceptación
+antes del botón **Probar y activar**.
+
+Para proveedor se muestran OpenAI, Claude, DeepSeek y Compatible con OpenAI. El modelo es un
+desplegable de sugerencias con **Otro modelo…**; al elegirlo aparece el identificador libre. Los
+secretos usan campo de contraseña, indican si existe uno guardado y nunca muestran puntos que puedan
+confundirse con su valor real.
+
+### 16.3 Catálogo local y progreso
+
+Cada modelo muestra nombre, tamaño de descarga, RAM recomendada y estado: no instalado, descargando,
+instalado, activo o error. El actual 1.5B aparece primero y marcado como recomendado. Antes de una
+descarga se muestran disco y RAM disponibles y se bloquea con una explicación si no alcanzan.
+
+La ficha enlaza la fuente oficial y muestra licencia y checksum. Antes de la primera descarga de una
+versión se abre la licencia y se pide una aceptación explícita; la pantalla dice quién la aceptó y
+cuándo. Un cambio de versión, licencia o checksum vuelve a pedirla.
+
+La descarga tiene barra de progreso, bytes descargados/total y acción de cancelar. Recargar conserva
+el avance real que devuelve el servidor. Activar enseña las etapas «cargando», «probando» y «activo».
+Los modelos inactivos tienen **Eliminar** con confirmación; el activo nunca ofrece esa acción.
+
+En móvil las fichas se apilan, la barra ocupa el ancho y las acciones quedan debajo. Ningún estado
+depende sólo del color; progreso y resultado se anuncian de forma accesible. Los resultados breves
+usan el toast existente, mientras descarga, requisitos y estado activo permanecen dentro de la
+tarjeta.
+
+### 16.4 Revisión del cambio de idioma
+
+La revisión presenta las once plantillas como lista de pendientes. Al abrir una se ven origen y
+borrador lado a lado en PC y apilados en móvil, con asunto, cuerpo y marcadores. Si ya existe un
+destino personalizado, aparece como tercera versión y el Administrador elige conservarlo, usar el
+borrador o combinarlos en el editor. No se reemplaza en silencio. **Aplicar idioma** sólo se habilita
+cuando las once están válidas; cancelar descarta los borradores y vuelve al idioma persistido.
+
+Tras confirmar, la interfaz completa adopta el nuevo idioma. Los resúmenes anteriores se conservan y
+siguen visibles en el idioma en que fueron redactados. Los nuevos y los que se vuelvan a pedir se
+generan en el nuevo idioma global; no existe regeneración masiva al cambiarlo.
+
+La advertencia económica aparece únicamente antes de traducir las plantillas con un proveedor
+externo y muestra solicitudes, tokens y costo estimados. Rechazarla abre la misma revisión con los
+destinos editables manualmente. La edición manual permanece disponible siempre desde Configuración.
+
+Las sesiones que ya estaban abiertas reciben idioma y versión de configuración en la siguiente
+respuesta autenticada. El interceptor actualiza la señal global y repinta textos y fechas sin
+cerrar sesión ni consultar periódicamente. Hasta que esa pestaña haga otra petición conserva la
+vista que ya tenía.
+
+### 16.5 Criterios de aceptación propuestos
+
+Playwright cubrirá los tres modos, secreto oculto, aviso de privacidad, prueba fallida que conserva
+la configuración anterior, descarga/progreso/reanudación, licencia, recursos insuficientes,
+activación y borrado, revisión con destino personalizado, confirmación comercial, cambio global,
+actualización de una sesión abierta y ausencia de selectores personales, en PC y móvil.
+
+### 16.6 Registro del repaso
+
+El responsable cerró el repaso el 2026-10-06. Eligió una clave de cifrado obligatoria por entorno,
+comparación de tres versiones para no pisar plantillas personalizadas, recuperación comercial bajo
+decisión del Administrador, licencia e integridad visibles y actualización del idioma en sesiones
+abiertas sin salir ni hacer sondeo. No quedan decisiones abiertas; propuesta aprobada.
+
+## 17. Memoria coherente al activar modelos
+
+Los selectores y fichas muestran mínimos de **2 GiB, 4 GiB y 6 GiB** para 1.5B, 3B y 7B. No mezclan
+GB decimales con GiB ni presentan una estimación inferior a la puerta que aplica el administrador.
+
+Cuando no cabe un modelo, el toast permanece hasta cerrarse y dice cuál se intentó activar, cuánta
+RAM requiere y cuánta estaba disponible, con valores formateados en GiB. El modelo anterior continúa
+marcado «Activo · Motor disponible». El mensaje funciona igual en `/setup` y `/settings`, en PC y
+móvil, y no recomienda forzar swap.
+
+La comprobación real en PC y Pixel 7 mostró 2,00/4,00/6,00 GiB. Al intentar el 7B, el toast permaneció
+visible con 6,00 GiB requeridos y entre 5,06 y 5,08 GiB disponibles, mientras el 3B continuó marcado
+«Activo · Motor disponible».
+
+## 18. Repaso integral de formato
+
+### 18.1 Alcance
+
+El bloque 6 revisa todas las pantallas existentes: sesión, `/setup`, armazón, configuración, correo,
+usuarios y tickets. Incluye estados vacíos, listas con contenido, formularios, diálogos, toasts,
+adjuntos, vistas dobles y errores visibles. Se comprueban español e inglés en Chromium a
+**1440×900**, **768×1024** y **412×915**.
+
+La revisión cubre espaciado, alineación, jerarquía, legibilidad, cortes, desbordamientos, adaptación
+responsive, foco visible, navegación por teclado, nombres accesibles, semántica, contraste y áreas
+táctiles conforme a los criterios aplicables de **WCAG 2.2 AA**. Los ocho temas mantienen su prueba
+automatizada de contraste; los temas claro y oscuro de fábrica reciben además el recorrido visual
+detallado. Los seis temas fijos se comprueban mediante sus variables y pruebas comunes.
+
+### 18.2 Inventario y prioridad
+
+Cada hallazgo se registra antes de corregirse con pantalla, idioma, tema, resolución, forma de
+reproducirlo y evidencia medible. La prioridad significa:
+
+- **crítico**: bloquea una tarea;
+- **alto**: impide usarla en un dispositivo o sin ratón;
+- **medio**: dificulta lectura, comprensión o consistencia;
+- **menor**: defecto cosmético perceptible.
+
+El criterio de cierre elegido es **cero hallazgos abiertos de cualquier nivel**. Si aparece un cambio
+que afecta comportamiento, alcance, datos, permisos o flujo, se detiene esa corrección y se abre otro
+ciclo documental; no se reclasifica como formato para introducirlo en este bloque.
+
+### 18.3 Regla de corrección y evidencia
+
+Cuando el defecto se repite, se corrige el componente o estilo compartido y se verifican todos sus
+usos. Un ajuste local se reserva para una composición propia de una sola pantalla. Se prefieren
+mediciones y aserciones reproducibles sobre capturas de referencia: ancho, posición, desbordamiento,
+orden de foco, nombre accesible, contraste y tamaño de objetivo se automatizan cuando aportan una
+señal estable. El recorrido manual queda documentado con su resultado.
+
+No se introduce una biblioteca de capturas visuales, no se añaden Firefox o WebKit, no se rediseñan
+recorridos y no cambian backend, API, persistencia, permisos ni reglas del producto. Producción sigue
+aparcada hasta el cierre de la versión 1.0.0.
+
+### 18.4 Decisiones y repaso
+
+El responsable eligió 1A–4A: todas las pantallas; formato, accesibilidad y responsive; PC, tableta y
+móvil; inventario completo y corrección por prioridad. Eligió 5A–9A: ocho temas con recorrido
+detallado en los dos de fábrica; ambos idiomas; Chromium; evidencia medible; y corrección común para
+defectos repetidos. Cerró el repaso con 10A–13A y 14C: WCAG 2.2 AA aplicable, cuatro prioridades,
+datos desechables con seeders, sin cambios funcionales y cero hallazgos abiertos. No quedan
+decisiones abiertas.
+
+### 18.5 Resultado as-built
+
+El inventario recorrió las pantallas autenticadas de los cuatro papeles y las pantallas públicas en
+español e inglés, con los temas claro y oscuro de fábrica y las tres resoluciones aprobadas. `/setup`
+se comprobó además vacío en sus cuatro estados navegables: fueron **48 combinaciones** del asistente,
+**150 vistas autenticadas y 18 públicas por idioma**. Las excepciones legítimas de WCAG para enlaces
+en texto, controles con separación suficiente y contenido del correo no se registraron como defectos.
+
+Se encontró un hallazgo medio: el conmutador de papel de `/users` medía 424 px en una ventana de
+412 px cuando estaba en inglés. El componente compartido `Conmutador` ahora limita su ancho y parte
+sus opciones en varias líneas; la corrección se verificó en los tres tamaños, ambos temas y con los
+papeles Administrador y Soporte. No cambió ningún flujo ni contrato.
+
+El cierre dejó **cero hallazgos abiertos**. Pasaron las 220 pruebas unitarias del frontend, 18 casos
+afectados de Configuración con 4 omisiones previstas y la suite completa de Playwright con 180 casos
+aprobados y 38 omisiones previstas. Los ocho temas conservaron su contraste medido.
+
+## 19. Implementación: modal «Mejorar con IA»
+
+### 19.1 Entrada y contenido
+
+Los editores de descripción y comentarios permitidos a Soporte y Desarrollo incorporan, junto a sus
+controles, un botón con icono y texto **«Mejorar con IA»**. En móvil puede ocupar su propia fila para
+no comprimir el editor. No aparece para Usuario ni Administrador.
+
+El botón exige un borrador no vacío y abre un modal con una copia en un `textarea` sencillo: sin
+negrita, cursiva, menciones ni adjuntos. Editar esa copia no toca el editor principal. Debajo se elige
+una de cinco tonalidades: profesional, cordial, breve, empática o técnica. Una nota indica que el
+motor configurado procesará el texto y, cuando no sea local, que saldrá de la instalación conforme a
+la aceptación administrativa existente.
+
+### 19.2 Generación y revisión
+
+«Mejorar» inicia una sola solicitud y queda deshabilitado mientras responde. El resultado sustituye
+la copia dentro del modal para poder revisarlo y editarlo. Desde allí se puede **«Usar este texto»**,
+**«Volver a generar»** o **«Cancelar»**. Regenerar usa el contenido visible y permite cambiar la
+tonalidad. Usar el texto reemplaza el borrador del editor principal como texto plano con saltos de
+línea; todavía no guarda ni publica nada.
+
+Cancelar o cerrar conserva intacto el editor principal. Si se cierra durante una solicitud, una
+respuesta tardía se descarta. Un fallo permanece dentro del modal, conserva su contenido y ofrece
+reintentar o cancelar; no se muestra lejos del contexto mediante un toast.
+
+### 19.3 Accesibilidad, adaptación y pruebas
+
+El modal usa las piezas compartidas existentes, tiene título y descripción accesibles, atrapa y
+restaura el foco, se cierra con Escape cuando no existe otra confirmación pendiente y anuncia carga,
+error y resultado. En 412 px no crea desplazamiento horizontal y sus acciones pueden partirse en
+varias filas.
+
+Las pruebas unitarias cubren el contrato de la ruta, permisos por papel, texto vacío, tonalidad y
+editor inválidos, contexto mínimo del prompt, respuesta, error conservando el borrador y aplicación
+sin guardado automático. El recorrido Playwright comprueba en PC y móvil el modal, la tonalidad, la
+revisión, la aplicación local y la ausencia del control para el Usuario. El cierre general previo de
+la interfaz mantiene cubiertos ambos idiomas y los temas claro y oscuro de fábrica.
+
+### 19.4 Decisiones y alcance
+
+El responsable eligió 1A–19A y añadió que la IA reciba el nombre de la persona que requiere soporte
+en el principal o de la persona de Soporte en el interno, para usarlo únicamente cuando la redacción
+lo requiera. No quedan decisiones abiertas. La propuesta no introduce nuevos componentes de diseño,
+formatos, adjuntos, persistencia, cuotas ni configuración administrativa.
+
+## 20. Implementación: visibilidad de «Mejorar con IA»
+
+La ficha sólo monta los botones «Mejorar con IA» y el modal compartido cuando el detalle devuelve
+`capabilities.aiWriting: true`. Con `false` o con el campo ausente, no deja un control deshabilitado ni
+un aviso ocupando espacio: la ayuda sencillamente no aparece. Esta regla se suma al borrador no vacío,
+que continúa deshabilitando el botón una vez que la capacidad existe.
+
+La pantalla no consulta configuración, salud ni proveedores por su cuenta. Al recargar el ticket
+recibe otra vez la capacidad y refleja cualquier cambio administrativo. Una IA configurada pero
+temporalmente caída mantiene el botón; el error sólo aparece si la persona intenta generar, dentro
+del modal y conservando el texto.
+
+Las pruebas de componente cubren capacidad verdadera, falsa y ausente. Playwright verifica en PC y
+móvil que una instalación configurada muestre el botón y mantenga el recorrido de revisión. El caso
+sin configuración queda en backend y componente: un navegador real sería dirigido a Configuración
+antes de alcanzar esta vista, conforme a la IA obligatoria. No se modifican el modal, sus
+tonalidades, los editores, la configuración administrativa ni el bloqueo global. El responsable
+eligió 1A, 2A y 3A y confirmó mantener la obligatoriedad; no quedan decisiones abiertas.
+
+## 21. Implementación: «Código fuente y licencia»
+
+La pantalla de entrada muestra en su pie un enlace **«Código fuente y licencia»**, junto a la
+versión sin competir con el formulario. La zona inferior del menú muestra el mismo enlace cerca de
+la versión y de salir. En modo plegado se oculta junto con el resto del texto auxiliar y vuelve al
+desplegar el menú; no añade otro icono a la barra. En móvil queda dentro del cajón.
+
+Las dos ubicaciones leen `license` y `sourceUrl` de la marca pública. El enlace abre la fuente
+correspondiente en otra pestaña con las protecciones habituales. Una compilación de desarrollo lo
+indicará en el texto asociado a la versión. Si un backend anterior no entrega una URL válida, el
+control no aparecerá. No se codifica una URL alternativa en el frontend.
+
+Se comprobaron nombre accesible, foco, contraste, ausencia de desbordamiento y destino en PC y
+móvil. No añade una pantalla legal, una ventana modal ni un control administrativo. El alcance y
+la política de marca viven en `docs/proyecto-abierto.md`; el contrato, en
+`docs/modules/settings.md`, sección 14.
+
+La verificación del 2026-10-10 pasó las 227 pruebas del frontend, incluidas las 14 de marca. El
+recorrido aislado de `marca.spec.ts` pasó sus 12 casos en PC y móvil: comprobó el destino y la
+licencia en la entrada y el menú, además de versión, tema, logo y color. El menú plegado ocultó el
+enlace conforme a 39A y volvió a ofrecerlo al desplegarse. Los contenedores, la red y los volúmenes
+del entorno desechable se retiraron al terminar.

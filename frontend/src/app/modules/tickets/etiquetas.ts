@@ -31,7 +31,13 @@ export const ESTADOS_DEL_PRINCIPAL = [
 ] as const;
 
 /** Los cinco del interno: el interno **es** la escalación, así que no tiene ese estado. */
-export const ESTADOS_DEL_INTERNO = ['nuevo', 'en progreso', 'en espera', 'resuelto', 'cerrado'] as const;
+export const ESTADOS_DEL_INTERNO = [
+  'nuevo',
+  'en progreso',
+  'en espera',
+  'resuelto',
+  'cerrado',
+] as const;
 
 /** Los tipos de adjunto que se pueden ver dentro del ticket. Lo demás se descarga siempre. */
 const PREVISUALIZABLES = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'];
@@ -142,13 +148,18 @@ export function nombreDe(persona: { name: string; lastName: string } | undefined
  * aquí sólo se sustituyen los huecos.
  */
 /**
- * El texto de uno de los dos resúmenes del motor de IA, en el idioma de quien mira.
+ * El texto de uno de los dos resúmenes del motor de IA. Conserva el idioma con el que fue escrito:
+ * cambiar el idioma global no borra ni oculta información ya generada.
  *
  * **La pantalla nunca enseña una clave ni un hueco mudo**: si el motor está escribiendo, si no está o
  * si falló, se dice con palabras (`docs/modules/ai.md`, decisiones 2 y 8). Un resumen vacío dice
  * «—», que es lo que se enseña cuando todavía no hay nada que contar.
  */
-export function textoDelResumen(resumen: Resumen | undefined, idioma: Idioma, textos: Textos): string {
+export function textoDelResumen(
+  resumen: Resumen | undefined,
+  _idioma: Idioma,
+  textos: Textos,
+): string {
   if (!resumen) {
     return textos.tickets.resumenVacio;
   }
@@ -160,11 +171,8 @@ export function textoDelResumen(resumen: Resumen | undefined, idioma: Idioma, te
       return textos.tickets.resumenSinMotor;
     case 'error':
       return textos.tickets.resumenError;
-    case 'listo': {
-      const texto = (idioma === 'en' ? resumen.en : resumen.es) ?? '';
-
-      return texto.trim() || textos.tickets.resumenVacio;
-    }
+    case 'listo':
+      return (resumen.text ?? '').trim() || textos.tickets.resumenVacio;
     default:
       return textos.tickets.resumenVacio;
   }
@@ -255,7 +263,9 @@ export const TOPE_DE_ETIQUETA = 32;
  * misma etiqueta, y dejar dos formas de escribirla es justo lo que la normalización evita.
  */
 export function normalizarEtiqueta(texto: string): string {
-  return limpiarEtiqueta(texto).replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return limpiarEtiqueta(texto)
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -272,13 +282,15 @@ export function normalizarAlEscribir(texto: string): string {
 
 /** La limpieza común: sin acentos, en minúsculas, espacios a guiones y fuera lo que no vale. */
 function limpiarEtiqueta(texto: string): string {
-  return texto
-    .normalize('NFD')
-    // Los acentos llegan como marcas sueltas después de descomponer: se quitan, no se sustituyen.
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+  return (
+    texto
+      .normalize('NFD')
+      // Los acentos llegan como marcas sueltas después de descomponer: se quitan, no se sustituyen.
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+  );
 }
 
 /**

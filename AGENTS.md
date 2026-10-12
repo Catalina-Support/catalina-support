@@ -85,18 +85,20 @@ completo.
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
 | `docs/propósito-y-alcance.md` | **as-built**: define el producto (los dos equipos, el modelo de tickets, la numeración y los estados), que es lo que hace hoy `backend/modules/tickets/**` |
-| `docs/usuarios-y-permisos.md` | **as-built**: permisos, acceso, **un método de entrada a la vez**, ciclo de vida de las cuentas y la cuenta de fábrica. Lo implementan `auth`, `users`, `shared/authz` y `shared/middleware` |
-| `docs/modules/tickets.md` | Cubre `backend/modules/tickets/**`, las diez tablas de `tickets` en `backend/migrations/v1.0.0.sql`, **las pantallas de `frontend/src/app/modules/tickets/**`** y los aumentos que necesitaron `users` (la lista de técnicos activos y la lectura de cuentas en bloque) y `settings` (la configuración del reparto). **Está entero**, backend y pantallas |
-| `docs/flujos.md` | **as-built**: los recorridos paso a paso de los tickets y sus correos, que es lo que hacen `backend/modules/tickets/**` y sus pantallas |
-| `docs/ambientes.md` | El runbook: **el despliegue a producción** —`scripts/prod-build.sh`, hecho y usado en el primer despliegue—, las migraciones, **las copias de seguridad** —`scripts/backup-db.sh`, con las dos bases en el `cron`— y las tres capas de pruebas (`tests/e2e/`) |
-| `docs/interfaz-y-experiencia.md` | Cubre `frontend/src/app/core/**` (el armazón, los controles, las pantallas de la sesión y Configuración), `frontend/src/app/shared/components/**` y **la forma de las pantallas de producto**: las de usuarios (3.6), las de tickets (3.7) y el editor de los correos (3.8), todas hechas |
-| `docs/modules/settings.md` | Cubre `backend/modules/settings/**`, `backend/shared/version/**`, **las cuatro tablas de configuración de una fila** (`installation_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`) y `frontend/src/app/core/pages/settings-page.*` (el nombre de la instalación, **cómo se entra y las dos configuraciones de directorio con sus pruebas de conexión**, la marca, el color, el idioma, el prefijo y el reparto). **Está entero** |
-| `docs/primer-arranque.md` | **as-built**: la vista de primer arranque, que pide lo necesario para dejar la instalación en marcha en cuatro pasos. Es el **sello** de `installation_settings`, `backend/modules/settings/**` (la API `/api/setup/**`), `frontend/src/app/core/pages/setup-page.*` y el correo saliente del módulo `mail` |
-| `docs/modules/ai.md` | **aprobado**: los dos resúmenes del ticket —**motivo** y **última acción**— que redacta el **motor de IA de un contenedor aparte**, en español y en inglés. Cubre `backend/modules/ai/**`, la tabla `ai_insights` y el `ai.yml` del motor. Lo consume `tickets` a través de una interfaz que él mismo declara |
-| `docs/modules/mail.md` | Cubre `backend/modules/mail/**`, las plantillas de `backend/migrations/v1.0.0.sql` y **el editor de `frontend/src/app/modules/mail/**`**. **Está entero**, backend y editor |
-| `docs/modules/auth.md` | Cubre `backend/modules/auth/**`, el token de sesión y el `state` de OIDC de `shared/auth`, `shared/auth/methods.go`, el middleware y `frontend/src/app/core/**` (sesión, interceptor, guarda y las seis pantallas). **Está entero**: los tres caminos de entrada —local, AD y Keycloak— hechos y verificados, **con la instalación entrando por uno a la vez y la cuenta de fábrica siempre dentro** |
-| `docs/modules/users.md` | Cubre `backend/modules/users/**` y la tabla `users` de `backend/migrations/v1.0.0.sql`. **Está entero**, backend y pantallas —las tres pantallas viven en `frontend/src/app/modules/users/**` y su forma la fija `docs/interfaz-y-experiencia.md`, sección 3.6—, incluidas las tres acciones que preguntan al directorio |
-| `docs/arquitectura.md` | La forma del repositorio entero: `backend/**`, `frontend/**`, contenedores (`dev.yml`, `prod.yml`, `config/**`), esquema y migraciones, convenciones de módulo y logs. |
+| `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
+| `docs/modules/tickets.md` | **as-built**: capacidad de redacción calculada dentro del detalle del ticket |
+| `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
+| `docs/ambientes.md` | **as-built**: matriz, evidencia y limpieza del repaso visual verificadas |
+| `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
+| `docs/modules/settings.md` | **as-built**: licencia, fuente y condición de desarrollo en la marca pública |
+| `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
+| `docs/modules/ai.md` | **as-built**: condición interna de configuración, distinta de la salud del motor |
+| `docs/modules/mail.md` | **as-built**: traduce con IA borradores revisables o permite edición manual al cambiar el idioma global |
+| `docs/modules/auth.md` | **as-built**: identidad y sesión no llevan idioma; los correos usan el idioma global sin cambiar los tres caminos |
+| `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
+| `docs/arquitectura.md` | **as-built**: auditoría, historial reescrito y trazabilidad de la fuente verificados |
+| `docs/prueba-local.md` | **as-built**: recorrido visual reproducible completado sobre datos desechables |
+| `docs/proyecto-abierto.md` | **as-built**: preparación abierta ejecutada hasta la prueba del CLA; la visibilidad continúa pendiente de aprobación final |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
@@ -122,24 +124,26 @@ grande lo tiene.
 ## Estado del proyecto
 
 Esqueleto en pie y verificado (2026-09-22), y **cuatro módulos en marcha** (2026-09-24): los cuatro
-contenedores de desarrollo levantan (incluido el buzón de pruebas, y **el directorio de pruebas y
-Keycloak** detrás del perfil `auth`), nginx publica el proyecto en `https://dev.catalina-support.example.com` con
+contenedores de desarrollo levantan (incluido el buzón de pruebas), y **el directorio de pruebas y
+Keycloak** viven cada uno en su archivo (`active-directory.yml`, `keycloak.yml`) y se levantan aparte
+con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `https://dev.catalina-support.example.com` con
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
 La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintidós plantillas, `users`,
-`password_tokens`, **las cuatro tablas de configuración de una fila** (la instalación con **el nombre
-y el método de entrada**, el directorio, Keycloak y los tickets) y **las diez tablas de los
-tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, con su guion
-(`./scripts/dev-seed.sh`). Hay **cuatro módulos en marcha**:
+`password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
+y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
+IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
+su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
+Windows). Hay **cuatro módulos en marcha**:
 
 - **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los once correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
   enlace y cambiarla desde dentro, con sus tres correos de cuenta y **las seis pantallas del
-  armazón**; el de **AD**, contra un directorio de verdad (OpenLDAP, en `dev.yml` detrás del perfil
-  `auth`); y el de **Keycloak**, contra un reino que vive en el repositorio, con el token de vuelta en
+  armazón**; el de **AD**, contra un directorio de verdad (OpenLDAP, en `active-directory.yml`); y el
+  de **Keycloak**, contra un reino que vive en el repositorio (en `keycloak.yml`), con el token de vuelta en
   el fragmento de la dirección. En los dos caminos de directorio **nadie da de alta a nadie**: la
   cuenta se crea, se vincula o se pone al día en el primer acceso. **La cuenta de fábrica entra
   siempre**, sea cual sea el método: es la puerta que permite volver a cambiarlo.
@@ -199,16 +203,56 @@ que queda como respaldo. **Si la dirección no es https, Configuración lo avisa
 contraseña viajan sin cifrar— sin bloquear nada, que es lo que permite probar la instalación en local
 y usarla en serio (`docs/modules/settings.md`, decisiones 13 a 15). Va **en la propia migración `v1.0.0.sql`**: la versión sigue abierta.
 
+**La zona seleccionada se ve explícitamente también en Configuración** (2026-10-05): `/settings`
+reutiliza el campo de sólo lectura de `/setup`, antes del buscador, con el identificador IANA exacto
+y actualización inmediata. La hora y el desfase permanecen debajo; se verificó en PC y móvil.
+
+**Los resultados de Configuración se ven desde la tarjeta actual** (2026-10-06): guardar, subir,
+restaurar y probar conexiones muestra un toast fijo en la ventana. Éxito e información desaparecen
+en cinco segundos; error y atención permanecen hasta cerrarse. Los avisos propios de cada tarjeta
+siguen dentro de ella.
+
 **La instalación tiene vista de primer arranque** (2026-09-30): en una instalación **sin sellar** la
-aplicación lleva a **`/setup`**, que pide en cuatro pasos **la instalación** (nombre e idioma), **cómo
+aplicación lleva a **`/setup`**, que pide en cinco pasos **la instalación** (idioma y nombre), **cómo
 se entra** (con su prueba), **dónde está** (región y dirección) y **el correo saliente** (que vive en la base:
 las variables `SMTP_*` del entorno se retiraron), y al terminar **sella** la instalación: la vista no vuelve y su API
-contesta **409** (`docs/primer-arranque.md`). El sello vive en `installation_settings.installed_at`, y
+contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30): el paso 2
+y el paso 4 traen su botón de «Probar la conexión» —`POST /api/setup/entry/test` y
+`POST /api/setup/mail/test`, públicos y con el sello como único candado—, reutilizando las pruebas de
+`auth` (directorio y Keycloak) y de `mail` (correo), y la del correo **comprueba la conexión y la
+autenticación sin mandar ningún correo**. El sello vive en `installation_settings.installed_at`, y
 **una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
 asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
-(`ADMIN_PASSWORD`): el asistente no la pide.
+(`ADMIN_PASSWORD`): el asistente no la pide. El quinto paso configura y prueba obligatoriamente la
+**IA**, como motor local, servidor propio o proveedor externo.
 
-**El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (MIT)**,
+**La región seleccionada se ve explícitamente en el paso 3** (2026-10-05): antes del buscador,
+`/setup` muestra un campo de sólo lectura con el identificador IANA exacto. Cambia inmediatamente al
+elegir otra zona y conserva debajo la hora y el desfase; se verificó en PC y móvil.
+
+**El asistente comparte los mismos mensajes toast** (2026-10-06): las pruebas de conexión y los
+errores generales se ven desde el paso actual, mientras sus explicaciones permanentes siguen dentro
+del contenido. Se verificó durante una instalación vacía en PC y móvil.
+
+**La IA es obligatoria y configurable** (corrección del responsable, 2026-10-06): `/setup` exige
+probar y activar un motor local, un servidor propio o un proveedor externo. El motor local vive en
+**`ai.yml`**, con administrador, red y volumen aislados por entorno; ofrece modelos 1.5B, 3B y 7B.
+Las credenciales externas se cifran y nunca vuelven por la API. Una caída posterior deja los
+resúmenes pendientes sin impedir el trabajo normal (`docs/modules/settings.md` y
+`docs/modules/ai.md`).
+
+**Soporte y Desarrollo mejoran borradores con IA** (2026-10-08): junto a los editores de descripción
+y comentario aparece «Mejorar con IA», con cinco tonos y un modal de revisión. El backend deriva el
+destinatario del ticket, aplica los permisos del editor y entrega sólo el contexto mínimo al motor.
+Aceptar reemplaza el borrador local; guardar o publicar sigue siendo una acción separada. El Usuario
+y el Administrador no reciben esta función. Se verificó en PC y móvil sin tocar producción.
+
+**El botón de redacción sólo aparece con IA configurada** (2026-10-08): el detalle del ticket lleva
+`capabilities.aiWriting`, calculada con papel, editor disponible y configuración efectiva. No se
+consulta la salud para pintar el botón: una caída temporal conserva la acción y el intento muestra
+su error en el modal. La IA continúa obligatoria y el cambio se refleja al recargar el ticket.
+
+**El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (AGPL-3.0-only)**,
 cómo **participar**, y **cómo levantarlo** —en local con `dev.yml` y en serio con `prod-build.sh`, la
 migración, nginx y lo que se configura desde la propia interfaz—. Queda **un hueco marcado** para las
 donaciones y la invitación a participar: el responsable lo rellenará con los datos que quiera publicar.
@@ -243,13 +287,10 @@ lápiz, que los convierte en el sitio en un campo con «Guardar» y «Cancelar»
 aparte**: eran los que hacían que no se encontrara. Y en el editor se **etiqueta escribiendo `@`**, con
 la lista filtrada por **nombre o correo** mientras se escribe (`docs/modules/tickets.md`, decisión 74).
 
-**Los resúmenes del ticket los redacta un motor de IA propio** (2026-09-27): **«Motivo»** —de qué va el
-ticket— y **«Última acción»** —qué fue lo último que pasó—, los dos **en español y en inglés**, en la
-lista y en la ficha. El motor vive **en su propio contenedor** (`ai.yml`, llama.cpp con un modelo de
-1,5B, compartido por los dos entornos por la red `catalina-support-ai`), **nada del ticket sale del
-servidor** y **es opcional a propósito**: si no está, los campos se quedan sin texto y la mesa de ayuda
-funciona entera. Se piden **en segundo plano**, con reintentos, y se recalculan con cada movimiento del
-ticket (`docs/modules/ai.md`).
+**Los resúmenes del ticket los redacta la IA**: **«Motivo»** y **«Última acción»**, ambos en el idioma
+global, en la lista y en la ficha. Se piden **en segundo plano**, con reintentos, y se recalculan con
+cada movimiento. El contenido permanece en el servidor con un motor local; un servidor propio o
+proveedor exige aceptar explícitamente qué texto saldrá (`docs/modules/ai.md`).
 
 **Se puede llamar a otro técnico o desarrollador y quedarse siguiendo el ticket** (2026-09-27): en un
 comentario, el botón **«Etiquetar»** (o escribir `@`) mete el nombre **dentro del texto, resaltado**, y
@@ -294,8 +335,8 @@ previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
 elige otro.
 
 **Los dos caminos de directorio están hechos y verificados**: el de AD contra el directorio de pruebas
-(OpenLDAP) y el de Keycloak contra un reino que vive en el repositorio, los dos detrás del perfil
-`auth` de `dev.yml`. Una persona con cuenta allí **entra directamente, sin que nadie le dé de alta
+(OpenLDAP, en `active-directory.yml`) y el de Keycloak contra un reino que vive en el repositorio
+(`keycloak.yml`), cada uno en su archivo y levantado con su comando —ya no hay perfil `auth`—. Una persona con cuenta allí **entra directamente, sin que nadie le dé de alta
 nada** —es la corrección del responsable del 2026-09-25—, y su cuenta se crea, se vincula o se pone al
 día sola con lo que dice el directorio. **Con el método en AD la pantalla de entrada sigue siendo el
 mismo formulario** —lo que cambia es quién contesta, y se dice— y **con el de Keycloak no hay
@@ -316,37 +357,64 @@ de soporte manual (decisión del responsable, 2026-09-25).
 
 **El despliegue a producción está hecho y verificado por dentro** (2026-09-25): `scripts/prod-build.sh` construye y publica los artefactos en `/srv/catalina-support` y levanta los tres contenedores de `prod.yml`, con el esquema de `v1.0.0.sql` aplicado **una sola vez** en la base de producción y **la cuenta de fábrica entrando** con la contraseña de `config/env/prod.env` —que no se versiona y **no aparece en la documentación**—. La base de producción **se copia a diario** desde el mismo día, con su línea en el `cron`.
 
-**Lo que falta**: **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión.
+**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
 
-**Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f dev.yml
-run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra el entorno de
-desarrollo, en PC y en móvil, con **212 casos** (194 en verde y 18 que se saltan: los de un
-dispositivo o de las herramientas y siete de los caminos de directorio, que se prueban una sola vez
-porque no dependen del ancho). Leen los correos del buzón de pruebas, así que prueban el enlace de
+**Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f tests.yml
+run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra una instalación
+desechable aislada, en PC y en móvil, con **218 casos** (180 ejecutables y 38 que se omiten según el
+servicio, el dispositivo o el perfil). **Los dos caminos de directorio se incluyen con el perfil `directory` de `tests.yml`**,
+que levanta servicios propios, separados de los opcionales del entorno local. Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no
 veían** —los dos últimos, que la cabecera del detalle le enseñaba al usuario el estado interno
 («Nuevo» donde su pantalla dice «Recibido») y que **la imagen con tope de 480 px se salía de la
 pantalla en un móvil de 412**, porque `max-w-[480px]` limita pero no encoge—, y los nueve están
 corregidos con su prueba.
 
+**El bloque 6 cerró el repaso integral del frontend** (2026-10-08): recorrió `/setup` vacío y todas
+las pantallas con datos en español e inglés, PC, tableta y móvil. Los ocho temas conservaron el
+contraste; el único hallazgo real fue el desbordamiento del filtro de papeles de `/users` en inglés
+y móvil, corregido en `Conmutador`. La suite completa terminó con 180 casos aprobados y 38 omisiones
+previstas, y no quedaron hallazgos abiertos ni recursos del entorno aislado.
+
+**El bloque 7 cerró la coherencia arquitectónica** (2026-10-08): un comprobador propio y sin
+dependencias impide importaciones entre módulos, dependencias invertidas entre `app`, `core` y
+`shared`, y llamadas de un módulo a un prefijo API ajeno. Se ejecuta antes de `npm test` y
+`npm run build`; sus pruebas, las 225 del frontend, la compilación y todo el backend pasaron. El
+frontend no incorpora un sistema de logging: sólo conserva el error fatal de arranque. La auditoría
+de todos los documentos `as-built` corrigió las afirmaciones vigentes que habían quedado atrás.
+
 El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 `docs/arquitectura.md`, sección 13. En resumen:
 
-- `docs/arquitectura.md` (as-built): stack, contenedores, dominios y regla de modularidad.
+- **Propuesta coordinada del 2026-10-06, aprobada e implementada:** IA obligatoria configurable
+  como motor local, servidor propio o proveedor, e idioma global para interfaz, correos e IA. Los
+  cuatro bloques quedaron verificados el 2026-10-07 y no hay decisiones abiertas.
+- **Bloque 5 aprobado, implementado y verificado el 2026-10-08:** catálogo local real, cambio
+  transaccional, memoria coherente en la interfaz y limpieza completa del entorno aislado.
+- **Bloque 6 aprobado, implementado y verificado el 2026-10-08:** repaso integral de formato,
+  accesibilidad y responsive cerrado con cero hallazgos abiertos.
+- **Bloque 7 aprobado, implementado y verificado el 2026-10-08:** documentación coherente,
+  fronteras automáticas del frontend y logging decidido sin incorporar dependencias.
+- `docs/arquitectura.md` (**as-built**): modelos locales transaccionales, repaso integral y
+  fronteras automáticas del frontend.
 - `docs/propósito-y-alcance.md` (**as-built**, **3 enmiendas**): producto, los dos equipos y el modelo de tickets.
-- `docs/usuarios-y-permisos.md` (**as-built**, **5 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
-- `docs/modules/tickets.md` (**as-built**, **6 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
-- `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
-- `docs/ambientes.md` (**as-built**, **3 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; falta el correo de producción y abrir el dominio.
-- `docs/interfaz-y-experiencia.md` (**as-built**, **14 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
-- `docs/modules/mail.md` (**as-built**, **3 enmiendas**): el módulo de correo. **Terminado**, backend y editor.
-- `docs/modules/settings.md` (**as-built**, **4 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con la versión del sistema.
-- `docs/modules/auth.md` (**as-built**, **6 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**.
-- `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
+- `docs/usuarios-y-permisos.md` (**as-built**): el idioma global no cambia permisos ni acceso y ya no pertenece a la cuenta.
+- `docs/modules/tickets.md` (**as-built**, **13 enmiendas**): resúmenes y avisos en el idioma global.
+- `docs/flujos.md` (**as-built**): todos los correos de sus recorridos usan el idioma global vigente.
+- `docs/ambientes.md` (**as-built**): validaciones reales de los bloques 5 y 6 completadas y limpias.
+- `docs/interfaz-y-experiencia.md` (**as-built**): alinea 2/4/6 GiB, el toast de memoria y cierra la
+  revisión WCAG 2.2 AA en las pantallas existentes.
+- `docs/modules/mail.md` (**as-built**, **7 enmiendas**): traduce con IA borradores revisables al cambiar el idioma.
+- `docs/modules/settings.md` (**as-built**): conserva requerida/disponible en el error de memoria.
+- `docs/modules/auth.md` (**as-built**): sesión e identidad no llevan idioma y los correos usan el global sin cambiar los tres caminos de entrada.
+- `docs/modules/users.md` (**as-built**): `users.language` fue eliminado de datos, API y pantallas.
 - `docs/README.md`: índice de documentación.
 
-- `docs/primer-arranque.md` (**as-built**): la vista de primer arranque y su sello.
-- `docs/modules/ai.md` (**aprobado**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia.
+- `docs/prueba-local.md` (**as-built**): recorridos desechables del catálogo real y de todas las
+  pantallas completados sin alterar desarrollo ni producción.
+
+- `docs/primer-arranque.md` (**as-built**; **6 enmiendas**): cinco pasos obligatorios, con idioma primero, Correo cuarto e IA quinta.
+- `docs/modules/ai.md` (**as-built**): catálogo real, contrato, recursos y recuperación medidos.
 
 La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo
 antes de implementarlo. El orden es **`mail` → `auth` → `users` → `tickets`**, porque `auth` no
@@ -356,11 +424,14 @@ puede mandar el correo de alta sin el módulo de correo.
 
 ```text
 .
-├── dev.yml                 # compose de desarrollo (frontend, backend, database, mail; y el
-│                           # directorio de pruebas y las de interfaz detrás de un perfil)
-├── prod.yml                # compose de producción (sin verificar todavía)
-├── ai.yml                  # el motor de IA: un contenedor, compartido por los dos entornos
+├── dev.yml                 # compose de desarrollo (frontend, backend, database y mail; la red del
+│                           # entorno es suya y las de interfaz van detrás de un perfil)
+├── prod.yml                # compose de producción (usado y verificado por dentro el 2026-09-25;
+│                           # hoy aparcado hasta que el producto esté terminado)
+├── ai.yml                  # motor local de IA: recursos aislados por entorno
 │                           # (el modelo vive en un volumen, no en el repositorio)
+├── active-directory.yml    # el directorio de pruebas (OpenLDAP): opcional, con su propio comando
+├── keycloak.yml            # Keycloak de pruebas: opcional, con su propio comando
 ├── backend                 # Go: main.go, .air.toml, shared/, modules/ y migrations/
 ├── frontend                # Angular 22 + Tailwind v4: src/app/{core,shared,modules}, y public/ con el logo
 ├── config
@@ -392,13 +463,16 @@ debe tenerlos). `docs/arquitectura.md`, sección 10.
 
 ```bash
 # Los servicios de desarrollo (frontend, backend, database y el buzón de pruebas).
-# **Un solo comando de Docker, igual en Linux, macOS y Windows**: la red compartida con el motor de IA
-# (`catalina-support-ai`) la crea el primero que arranca, así que no hay que crear nada a mano. Para el
-# motor, que es opcional: `docker compose -f ai.yml up -d`
+# **Un solo comando de Docker, igual en Linux, macOS y Windows**: la red del entorno
+# (`catalina-support-dev`) la crea este archivo, como la del motor de IA (`catalina-support-ai`), así
+# que no hay que crear nada a mano. Para el motor, que es opcional: `docker compose -f ai.yml up -d`
 docker compose -f dev.yml up -d
 docker compose -f dev.yml ps
 docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down
+
+# Repetición manual opcional del esquema idempotente; `up -d` ya lo aplica antes del backend
+docker compose -f dev.yml run --rm migrate
 
 # Backend (Go 1.27 dentro del contenedor, con air recargando al guardar)
 docker compose -f dev.yml exec backend go test ./...
@@ -415,28 +489,35 @@ docker compose -f dev.yml exec database psql -U catalina_support -d catalina_sup
 # El buzón de pruebas: todo el correo de desarrollo, con su HTML y su versión de texto
 open http://127.0.0.1:11004
 
-# Interfaz (Playwright, en un contenedor y contra desarrollo: PC y móvil).
-# **Después de cada pasada, reiniciar el entorno**: la suite apaga sus cuentas al terminar, pero los
-# tickets que crea no se borran —un ticket no se borra—, y el seeder es lo que deja desarrollo con las
-# once cuentas y los 25 tickets de ejemplo (decisión del responsable, 2026-09-28). **Se avisa antes**:
-# el seeder borra también lo que haya a mano en desarrollo
-docker compose -f dev.yml run --rm e2e
-./scripts/dev-seed.sh
-docker compose -f dev.yml --profile auth run --rm e2e      # con los dos caminos de directorio
-docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e    # volcado de lo que hay en pantalla
+# Interfaz: instancia desechable exclusiva, sin modificar la instalación de desarrollo.
+docker compose -f tests.yml --profile directory down -v
+docker compose -f tests.yml up -d --build database backend frontend mail
+docker compose -f tests.yml run --rm e2e
+docker compose -f tests.yml --profile directory down -v
+# Para incluir AD y Keycloak, sustituir el comando up por:
+# docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
+# Los informes se conservan en tests/e2e/resultados/. No usar seed para limpiar pruebas.
 
-# El motor de IA: su propio compose, compartido por desarrollo y producción (docs/modules/ai.md).
-# La primera vez descarga el modelo (~1,1 GB) al volumen; sin él, la aplicación funciona igual y los
-# dos campos que redacta se quedan sin texto
+# El motor local de IA: su propio compose y recursos aislados por entorno (docs/modules/ai.md).
+# Sólo se levanta si se eligió la modalidad local; la descarga se pide desde /setup o /settings.
 docker compose -f ai.yml up -d
 docker compose -f ai.yml ps
 docker compose -f ai.yml logs -f ai
 
-# Los dos servicios de pruebas de los caminos de directorio (OpenLDAP y Keycloak), con sus personas
-docker compose -f dev.yml --profile auth up -d
+# Tres servicios que se levantan por separado, cada uno con su archivo y comando. **Primero el
+# entorno**: AD y Keycloak entran en la red que posee `dev.yml`; el motor local usa su red de IA.
+docker compose -f active-directory.yml up -d            # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d                    # Keycloak
+docker compose -f ai.yml up -d                          # motor requerido si se eligió IA local
 
 # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
-# Borra los tickets que hubiera y deja el entorno en un estado conocido (docs/ambientes.md, sección 3.3)
+# **Son opcionales** y **no se levantan con `up -d`** (perfil propio): se piden a propósito. Es un
+# contenedor de un solo uso que corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad—
+# y vale igual en Linux, macOS y Windows. Borra los tickets que hubiera y deja el entorno en un estado
+# conocido (docs/ambientes.md, sección 3.3). **Los ejemplos son para tener contenido, no para poder
+# entrar**: con el esquema ya se entra con `admin`/`admin`.
+docker compose -f dev.yml run --rm seed
+# En Linux y macOS, el mismo guion también se puede correr fuera del contenedor
 ./scripts/dev-seed.sh
 
 # El despliegue a producción: construye y publica los artefactos en /srv/catalina-support y
@@ -454,8 +535,11 @@ docker compose -f dev.yml --profile auth up -d
 ```
 
 En desarrollo se entra por **https://dev.catalina-support.example.com**, que es nginx (en la
-máquina) delante de los contenedores. Los puertos 11001 y 11002 siguen publicados en
-`127.0.0.1` para depurar sin pasar por nginx.
+máquina) delante de los contenedores, **y también por `http://127.0.0.1:11001` sin nginx**: el
+servidor de desarrollo reenvía `/api` al backend con su proxy (`frontend/proxy.conf.json`, declarado
+en `serve.options.proxyConfig` de `frontend/angular.json`), así que con el entorno levantado y el
+esquema aplicado **se entra en la 11001 con `admin`/`admin`** —es el recorrido de quien se descarga el
+proyecto—. Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
 
 Los dos vhosts son **copias** de `config/nginx/` en `/etc/nginx/conf.d/` (no enlaces), igual que
 en Calibyou. Si se cambia un vhost en el repositorio, hay que volver a copiarlo y recargar:
@@ -489,7 +573,7 @@ parecería una web rota.
   `run --rm` para lo que se pide a propósito, como las pruebas de interfaz). No instalar Go ni Node
   en la máquina ni añadir pasos que los necesiten.
 - **Un cambio que toca la interfaz se prueba en un navegador antes de darlo por terminado**
-  (`docker compose -f dev.yml run --rm e2e`), y **mirando el aspecto, no sólo el texto**: que la hoja
+  (`docker compose -f tests.yml run --rm e2e`), y **mirando el aspecto, no sólo el texto**: que la hoja
   de estilos llegue con sus utilidades y que los colores y bordes se apliquen. Una pantalla sin
   estilos pasa todas las pruebas de estructura. Si el cambio afecta a un recorrido que no tiene caso,
   **se añade el caso en el mismo trabajo** (`docs/ambientes.md`, sección 9.3).

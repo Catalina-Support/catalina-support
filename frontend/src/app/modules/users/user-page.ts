@@ -16,11 +16,9 @@ import { claveDelError } from '../../shared/errores';
 import {
   PAPELES,
   fechaCorta,
-  opcionesDeIdioma,
   opcionesDeOrigen,
   opcionesDePapel,
   seReactivaSola,
-  etiquetaDeIdioma,
   etiquetaDeOrigen,
   etiquetaDePapel,
 } from './etiquetas';
@@ -65,7 +63,6 @@ export class UserPage implements OnInit {
   protected readonly apellidos = signal('');
   protected readonly correo = signal('');
   protected readonly papel = signal('usuario');
-  protected readonly idioma = signal('es');
 
   /** El origen elegido, que se guarda con su propia acción: no es un campo del formulario. */
   protected readonly origenElegido = signal('local');
@@ -88,7 +85,6 @@ export class UserPage implements OnInit {
       lastName?: string;
       email?: string;
       role?: string;
-      language?: string;
     } = {};
 
     if (this.nombre().trim() !== cuenta.name) {
@@ -103,9 +99,6 @@ export class UserPage implements OnInit {
     if (this.papel() !== cuenta.role) {
       cambios.role = this.papel();
     }
-    if (this.idioma() !== cuenta.language) {
-      cambios.language = this.idioma();
-    }
 
     return cambios;
   });
@@ -114,7 +107,9 @@ export class UserPage implements OnInit {
   protected readonly hayCambios = computed(() => Object.keys(this.cambios()).length > 0);
 
   /** Si el origen elegido es distinto del que tiene: es lo que enciende su botón. */
-  protected readonly cambiaElOrigen = computed(() => this.origenElegido() !== this.cuenta()?.origin);
+  protected readonly cambiaElOrigen = computed(
+    () => this.origenElegido() !== this.cuenta()?.origin,
+  );
 
   /**
    * Si esa cuenta es la de quien mira.
@@ -144,10 +139,6 @@ export class UserPage implements OnInit {
     return etiquetaDeOrigen(this.t(), origen);
   }
 
-  protected etiquetaDeIdioma(idioma: string): string {
-    return etiquetaDeIdioma(idioma);
-  }
-
   protected ultimaEntrada(cuenta: Cuenta): string {
     return (
       fechaCorta(cuenta.lastLoginAt, this.textos.idioma(), this.marca.zonaHoraria()) ||
@@ -161,10 +152,6 @@ export class UserPage implements OnInit {
 
   protected opcionesDeOrigen() {
     return opcionesDeOrigen(this.t());
-  }
-
-  protected opcionesDeIdioma() {
-    return opcionesDeIdioma(this.t());
   }
 
   /** Guarda los datos de la cuenta. El estado y el origen **no** van por aquí. */
@@ -237,7 +224,9 @@ export class UserPage implements OnInit {
       return '';
     }
 
-    const clave = cuenta.hasPassword ? this.t().usuarios.mandarEnlaceRecuperacion : this.t().usuarios.mandarEnlaceAlta;
+    const clave = cuenta.hasPassword
+      ? this.t().usuarios.mandarEnlaceRecuperacion
+      : this.t().usuarios.mandarEnlaceAlta;
 
     return `${interpolar(this.t().usuarios.mandarEnlacePregunta, {
       nombre: `${cuenta.name} ${cuenta.lastName}`.trim() || cuenta.email,
@@ -312,7 +301,6 @@ export class UserPage implements OnInit {
     this.apellidos.set(cuenta.lastName);
     this.correo.set(cuenta.email);
     this.papel.set(cuenta.role);
-    this.idioma.set(cuenta.language);
     this.origenElegido.set(cuenta.origin);
   }
 

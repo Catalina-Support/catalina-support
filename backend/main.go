@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -77,6 +78,26 @@ func (a ajustesDeTickets) TicketSettings() (ticketservices.TicketSettings, error
 	}, nil
 }
 
+// proberDeCorreo traduce la prueba del correo saliente que pide el módulo de configuración a lo que
+// ofrece el módulo de correo. Vive aquí, en el único sitio donde los dos módulos se conocen, y así
+// **ninguno de los dos importa al otro** (docs/arquitectura.md, sección 4).
+type proberDeCorreo struct {
+	mail *services.Service
+}
+
+// ProbarCorreo prueba la conexión y la autenticación **sin mandar ningún correo**.
+func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente) error {
+	return p.mail.Probar(services.CorreoSaliente{
+		Host:      correo.Host,
+		Port:      correo.Port,
+		Secure:    correo.Secure,
+		User:      correo.User,
+		Password:  correo.Password,
+		FromName:  correo.FromName,
+		FromEmail: correo.FromEmail,
+	})
+}
+
 // resumidorDeIA traduce lo que `tickets` pide a lo que el módulo `ai` ofrece.
 //
 // Vive aquí, en el único sitio donde los dos módulos se conocen, y así **ninguno de los dos importa al
@@ -84,6 +105,19 @@ func (a ajustesDeTickets) TicketSettings() (ticketservices.TicketSettings, error
 // docs/modules/ai.md, sección 5).
 type resumidorDeIA struct {
 	ai *aiservices.Service
+}
+
+func (r resumidorDeIA) Configured() bool { return r.ai.Configurado() }
+
+func (r resumidorDeIA) ImproveDraft(draft, tone, recipient, ticketType, language string) (string, error) {
+	text, err := r.ai.MejorarRedaccion(draft, tone, recipient, ticketType, language)
+	if errors.Is(err, aiservices.ErrSinMotor) {
+		return "", ticketservices.ErrWritingUnavailable
+	}
+	if errors.Is(err, aiservices.ErrRespuestaInvalida) {
+		return "", ticketservices.ErrWritingInvalid
+	}
+	return text, err
 }
 
 // Pedir encola un resumen. **No espera al motor**: quien crea un ticket no puede quedarse mirando un
@@ -131,8 +165,8 @@ func (t textosDeTickets) TextoParaElMotor(numero string) (string, error) {
 func resumenDelMotor(resumen aiservices.Resumen) ticketservices.Resumen {
 	return ticketservices.Resumen{
 		Estado:   string(resumen.Estado),
-		Es:       resumen.Es,
-		En:       resumen.En,
+		Text:     resumen.Text,
+		Language: resumen.Language,
 		ErrorKey: resumen.ErrorKey,
 	}
 }
@@ -188,6 +222,16 @@ func run() error {
 	mailService := services.NewService(repositories.NewTemplateRepository(db), services.NewSender(), cfg.PublicAppURL)
 
 	settingsService := settingsservices.NewService(settingsrepositories.NewSettingsRepository(db), cfg.FilesPath)
+	settingsService.SetAICredentialKey(cfg.AICredentialKey)
+	settingsService.SetAIManager("http://ai:8081", cfg.AIManagerToken)
+	settingsService.SetCorreoInicial(settingsservices.MailInput{
+		Host:      cfg.SetupMailHost,
+		Port:      cfg.SetupMailPort,
+		Secure:    cfg.SetupMailSecure,
+		User:      cfg.SetupMailUser,
+		FromName:  cfg.SetupMailFromName,
+		FromEmail: cfg.SetupMailFromEmail,
+	})
 
 	usersService := userservices.NewService(userrepositories.NewUserRepository(db))
 	authService := authservices.NewService(
@@ -206,6 +250,7 @@ func run() error {
 	// y 15), con la variable de entorno como respaldo: cambiarlos en Configuración vale sin reiniciar nada.
 	mailService.SetInstalacion(instalacionesDeLaConfiguracion{settings: settingsService})
 	authService.SetEnlaces(instalacionesDeLaConfiguracion{settings: settingsService})
+	authService.SetIdiomaGlobal(instalacionesDeLaConfiguracion{settings: settingsService})
 
 	// **Cómo se entra en esta instalación sale de la base, no del entorno**: el método, el directorio y
 	// el reino se guardan desde Configuración y se leen en cada intento, así que cambiarlos vale sin
@@ -217,13 +262,17 @@ func run() error {
 	// directorio y con un reino: probar una conexión es hablar el protocolo, y eso no se duplica.
 	settingsService.SetProber(authService)
 
+	// Y la prueba del correo saliente la contesta `mail`, con la misma conexión y autenticación que
+	// usa para enviar: **sin mandar ningún correo**, que es lo que hace falta en el asistente
+	// (docs/primer-arranque.md, sección 3).
+	settingsService.SetProberDeCorreo(proberDeCorreo{mail: mailService})
+
 	// Reactivar una cuenta de AD pregunta al directorio si esa persona sigue allí, y la pregunta la
 	// contesta `auth` **con la configuración guardada**: la misma búsqueda y la misma cuenta de servicio
 	// con las que se entra (docs/modules/users.md, sección 5, punto 4).
 	usersService.SetDirectory(authService)
 
 	// El idioma de la instalación es el que se le pone a una cuenta cuando nadie le elige uno.
-	usersService.SetInstallation(settingsService)
 
 	// Los tickets: el turno y los nombres salen de `users`, la configuración de `settings` y los avisos
 	// de `mail`. Los tres se conectan aquí, que es el único sitio donde los módulos se conocen
@@ -237,10 +286,10 @@ func run() error {
 	ticketsService.SetAccounts(usersService)
 	ticketsService.SetMailer(mailService)
 	ticketsService.SetConfiguration(ajustesDeTickets{settings: settingsService})
+	ticketsService.SetGlobalLanguage(instalacionesDeLaConfiguracion{settings: settingsService})
 
-	// El motor de IA: redacta el motivo y la última acción de cada ticket (docs/modules/ai.md). **Es
-	// opcional a propósito**: sin `AI_URL` no se engancha nada y la mesa de ayuda funciona entera, con
-	// los dos campos sin texto. Un contenedor caído no puede parar el producto.
+	// El motor de IA redacta el motivo y la última acción de cada ticket. La instalación exige una
+	// configuración probada; una caída posterior no impide consultar ni trabajar con los tickets.
 	aiService := aiservices.NewService(
 		airepositories.NewAIRepository(db),
 		aiservices.Ajustes{
@@ -252,6 +301,13 @@ func run() error {
 		},
 	)
 	ticketsService.SetInsights(resumidorDeIA{ai: aiService})
+	ticketsService.SetWritingAssistant(resumidorDeIA{ai: aiService})
+
+	// **El motor sale de la configuración, no del entorno**: su dirección y su modelo se guardan
+	// desde Configuración y se leen en cada petición, así que cambiarlos vale sin reiniciar nada. Lo
+	// del entorno queda como respaldo para una instalación que ya lo tuviera puesto así
+	// (docs/modules/ai.md).
+	aiService.SetConfiguracion(instalacionesDeLaConfiguracion{settings: settingsService})
 
 	// El motor también necesita poder **volver a armar el texto** de un ticket: es lo que hace la
 	// puesta al día del arranque, cuando la cola se ha perdido y hay resúmenes a medias
@@ -264,6 +320,15 @@ func run() error {
 
 	// Quién llama, en cada petición: el cargador lee la cuenta de la base.
 	whoIsCalling := loadIdentity(usersService)
+	globalSettingsHeaders := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if global, err := settingsService.PublicBrand(); err == nil {
+				w.Header().Set("X-Catalina-Language", global.Language)
+				w.Header().Set("X-Catalina-Settings-Version", strconv.FormatInt(global.SettingsVersion, 10))
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 
 	// Los cuatro permisos que existen hoy: administrador, personal (Soporte o Administrador), y
 	// cualquiera que haya entrado.
@@ -271,16 +336,32 @@ func run() error {
 		return middleware.Chain(handler,
 			middleware.Auth(tokens, whoIsCalling),
 			authz.RequireRole(auth.RoleAdministrador),
+			globalSettingsHeaders,
 		)
 	}
 	staff := func(handler http.Handler) http.Handler {
 		return middleware.Chain(handler,
 			middleware.Auth(tokens, whoIsCalling),
 			authz.RequireRole(auth.RoleAdministrador, auth.RoleSoporte),
+			globalSettingsHeaders,
 		)
 	}
 	authenticated := func(handler http.Handler) http.Handler {
-		return middleware.Chain(handler, middleware.Auth(tokens, whoIsCalling))
+		return middleware.Chain(handler, middleware.Auth(tokens, whoIsCalling), globalSettingsHeaders)
+	}
+	aiConfigured := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			required, err := settingsService.AIConfigurationRequired()
+			if err != nil {
+				httpx.WriteError(w, http.StatusServiceUnavailable, "settings.unavailable")
+				return
+			}
+			if required && !aiConfigurationRoute(r.URL.Path) {
+				httpx.WriteError(w, http.StatusServiceUnavailable, "settings.ai.required")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 
 	mux := http.NewServeMux()
@@ -289,6 +370,7 @@ func run() error {
 	// El editor de plantillas de correo: los cuatro endpoints son de administrador
 	// (docs/modules/mail.md, sección 7).
 	mailController := controllers.NewTemplateController(mailService)
+	mailController.SetTranslator(aiService)
 
 	mux.Handle("GET /api/mail/templates", admin(http.HandlerFunc(mailController.List)))
 	mux.Handle("PUT /api/mail/templates/{key}/{language}", admin(http.HandlerFunc(mailController.Update)))
@@ -297,11 +379,13 @@ func run() error {
 	// La vista previa la renderiza el backend, con los mismos datos de ejemplo que la prueba
 	// (docs/modules/mail.md, decisión 17).
 	mux.Handle("POST /api/mail/templates/{key}/{language}/preview", admin(http.HandlerFunc(mailController.Preview)))
+	mux.Handle("POST /api/mail/language/drafts", admin(http.HandlerFunc(mailController.LanguageDrafts)))
+	mux.Handle("POST /api/mail/language/apply", admin(http.HandlerFunc(mailController.ApplyLanguage)))
 
 	usersController := usercontrollers.NewUserController(usersService)
 	authController := authcontrollers.NewAuthController(authService)
-	// **El motor de IA es opcional**, y el asistente lo dice en su resumen: el cableado le da al módulo
-	// de configuración con qué preguntarlo (docs/primer-arranque.md, sección 4).
+	// El asistente exige probar y activar el motor; este cableado le da al módulo de configuración
+	// la generación artificial con la que valida la opción elegida.
 	settingsService.SetProberDeIA(aiService)
 	setupController := settingscontrollers.NewSetupController(settingsService)
 	settingsController := settingscontrollers.NewSettingsController(settingsService)
@@ -330,6 +414,17 @@ func run() error {
 	mux.HandleFunc("POST /api/setup/entry", setupController.SaveEntry)
 	mux.HandleFunc("POST /api/setup/location", setupController.SaveLocation)
 	mux.HandleFunc("POST /api/setup/mail", setupController.SaveMail)
+	mux.HandleFunc("POST /api/setup/ai", setupController.SaveAI)
+	mux.HandleFunc("GET /api/setup/ai/models", setupController.AIModels)
+	mux.HandleFunc("POST /api/setup/ai/models/{id}/download", setupController.DownloadAIModel)
+	mux.HandleFunc("POST /api/setup/ai/models/{id}/activate", setupController.ActivateAIModel)
+	mux.HandleFunc("DELETE /api/setup/ai/models/{id}", setupController.DeleteAIModel)
+	// Las dos pruebas de conexión del asistente: se prueba **lo que hay en pantalla**, antes de
+	// guardarlo, y por eso van por `POST` con los datos en el cuerpo y no tocan la base. El candado es
+	// el mismo que el del resto del asistente: sellada la instalación, contestan **409**
+	// (docs/primer-arranque.md, sección 6).
+	mux.HandleFunc("POST /api/setup/entry/test", setupController.TestEntry)
+	mux.HandleFunc("POST /api/setup/mail/test", setupController.TestMail)
 	mux.HandleFunc("POST /api/setup/finish", setupController.Finish)
 
 	// El resto de la sesión exige haber entrado, sin mirar el papel.
@@ -373,6 +468,7 @@ func run() error {
 	// «Regenerar» los dos campos que redacta el motor de IA: es de `tickets` y no de `ai`, porque la
 	// pantalla de tickets sólo habla con su propia API (docs/modules/ai.md, sección 5).
 	mux.Handle("POST /api/tickets/{number}/insights", authenticated(http.HandlerFunc(ticketsController.Insights)))
+	mux.Handle("POST /api/tickets/{number}/writing/improve", authenticated(http.HandlerFunc(ticketsController.ImproveWriting)))
 	// El catálogo de categorías y las etiquetas (docs/modules/tickets.md, decisiones 64 a 68). Los
 	// caminos literales `categories` y `tags` **no chocan con `{number}`**: el enrutador de Go 1.22
 	// elige el patrón más específico, y un segmento literal gana a un comodín.
@@ -411,6 +507,15 @@ func run() error {
 	// (docs/modules/settings.md, sección 5.8).
 	mux.Handle("POST /api/settings/directory/test", admin(http.HandlerFunc(settingsController.TestDirectory)))
 	mux.Handle("POST /api/settings/keycloak/test", admin(http.HandlerFunc(settingsController.TestKeycloak)))
+	// La prueba del motor de IA: pregunta a su comprobación de salud la dirección que se le manda, o
+	// la que hay guardada si no llega ninguna (docs/modules/ai.md).
+	mux.Handle("POST /api/settings/ai/test", admin(http.HandlerFunc(settingsController.TestAI)))
+	mux.Handle("GET /api/settings/ai", admin(http.HandlerFunc(settingsController.AIConfiguration)))
+	mux.Handle("POST /api/settings/ai/activate", admin(http.HandlerFunc(settingsController.ActivateAI)))
+	mux.Handle("GET /api/settings/ai/models", admin(http.HandlerFunc(settingsController.AIModels)))
+	mux.Handle("POST /api/settings/ai/models/{id}/download", admin(http.HandlerFunc(settingsController.DownloadAIModel)))
+	mux.Handle("POST /api/settings/ai/models/{id}/activate", admin(http.HandlerFunc(settingsController.ActivateAIModel)))
+	mux.Handle("DELETE /api/settings/ai/models/{id}", admin(http.HandlerFunc(settingsController.DeleteAIModel)))
 	mux.Handle("DELETE /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.DeleteLogo)))
 
 	// Y la marca que necesita la aplicación **antes de que nadie entre**: el color institucional y el
@@ -421,7 +526,7 @@ func run() error {
 
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           middleware.Chain(mux, middleware.Recover),
+		Handler:           middleware.Chain(mux, aiConfigured, middleware.Recover),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -467,6 +572,13 @@ func run() error {
 
 	logs.LogSuccess("backend detenido")
 	return nil
+}
+
+// aiConfigurationRoute is the minimal surface that remains available while a sealed installation
+// is being upgraded to the mandatory AI configuration.
+func aiConfigurationRoute(path string) bool {
+	return path == "/api/health" || path == "/api/setup" ||
+		strings.HasPrefix(path, "/api/auth/") || strings.HasPrefix(path, "/api/settings")
 }
 
 // loadIdentity resuelve el `sub` de un token en la cuenta que hay detrás.
@@ -542,6 +654,24 @@ func (i instalacionesDeLaConfiguracion) DireccionPublica() string {
 }
 
 func (i instalacionesDeLaConfiguracion) ZonaHoraria() string { return i.settings.ZonaHoraria() }
+
+func (i instalacionesDeLaConfiguracion) Language() (string, error) { return i.settings.Language() }
+
+// AI traduce el motor de la configuración al tipo que declara el módulo de IA, y **dice si hay uno
+// puesto**: en falso, el módulo de IA usa el respaldo del entorno, que es como funcionaba antes
+// (docs/modules/ai.md).
+func (i instalacionesDeLaConfiguracion) AI() (aiservices.AIDatos, error) {
+	motor, err := i.settings.AI()
+	if err != nil {
+		return aiservices.AIDatos{}, err
+	}
+
+	return aiservices.AIDatos{
+		URL: motor.URL, Modelo: motor.Modelo, Hay: motor.Hay, Mode: motor.Mode, Provider: motor.Provider,
+		AuthType: motor.AuthType, AuthHeader: motor.AuthHeader, Credential: motor.Credential,
+		Language: motor.Language,
+	}, nil
+}
 
 // SMTP traduce el correo saliente de la configuración al tipo que declara el módulo de correo, y
 // **dice si hay alguno puesto**: en falso, el remitente usa el del entorno.

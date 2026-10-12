@@ -24,9 +24,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.css"
-            ]
+            "styles": ["src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -56,8 +54,11 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "allowedHosts": [
-              "dev.catalina-support.example.com"
-            ]
+              "dev.catalina-support.example.com",
+              "frontend",
+              "frontend.localhost"
+            ],
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {

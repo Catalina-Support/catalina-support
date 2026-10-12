@@ -64,18 +64,18 @@ DELETE FROM users WHERE lower(email) LIKE '%@demo.com';
 -- 2. Las cuentas: cinco que piden, tres de Soporte y tres de Desarrollo
 -- ============================================================================
 
-INSERT INTO users (name, last_name, email, password_hash, role, origin, language, is_active, created_at, updated_at) VALUES
-    ('Usuario', 'Uno', 'user1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Usuario', 'Dos', 'user2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Usuario', 'Tres', 'user3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Usuario', 'Cuatro', 'user4@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Usuario', 'Cinco', 'user5@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Soporte', 'Uno', 'support1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Soporte', 'Dos', 'support2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Soporte', 'Tres', 'support3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Desarrollador', '1', 'dev1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Desarrollador', '2', 'dev2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
-    ('Desarrollador', '3', 'dev3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', 'es', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'));
+INSERT INTO users (name, last_name, email, password_hash, role, origin, is_active, created_at, updated_at) VALUES
+    ('Usuario', 'Uno', 'user1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Usuario', 'Dos', 'user2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Usuario', 'Tres', 'user3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Usuario', 'Cuatro', 'user4@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Usuario', 'Cinco', 'user5@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'usuario', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Soporte', 'Uno', 'support1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Soporte', 'Dos', 'support2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Soporte', 'Tres', 'support3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'soporte', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Desarrollador', '1', 'dev1@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Desarrollador', '2', 'dev2@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes')),
+    ('Desarrollador', '3', 'dev3@demo.com', '$2a$12$VD3neJ0zGzwWD2PmyPe55O6GRHbLfCd4fspMzk9U7WRRilLiZvFe.', 'desarrollo', 'local', true, (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'), (date_trunc('day', now()) - interval '90 days' + interval '8 hours 0 minutes'));
 
 -- ============================================================================
 -- 3. El catálogo de categorías
@@ -814,12 +814,17 @@ ON CONFLICT (ticket_id, tag_id) DO NOTHING;
 -- entrando con las once cuentas de ejemplo, y cambiar de método se hace desde Configuración, que es
 -- justo lo que hay que poder probar a mano (docs/ambientes.md, sección 3.3).
 --
--- Los dos servicios viven en `dev.yml` detrás del perfil `auth`. Con el perfil levantado, «Probar la
--- conexión» contesta que sí y se puede cambiar el método; sin él, contesta que no, que es la verdad.
+-- Los dos servicios viven **cada uno en su archivo** (`active-directory.yml` y `keycloak.yml`) y se
+-- levantan con su propio comando. Con ellos levantados, «Probar la conexión» contesta que sí y se
+-- puede cambiar el método; sin ellos, contesta que no, que es la verdad.
 --
 -- La contraseña de la cuenta de servicio es la del LDIF de pruebas (`config/ldap/`): es un directorio
 -- de mentira en un contenedor de desarrollo, no un secreto.
 
+-- Los ajustes de una instalación sellada pertenecen al usuario: no se reescriben.
+DO $$
+BEGIN
+IF EXISTS (SELECT 1 FROM installation_settings WHERE id = 1 AND installed_at IS NULL) THEN
 UPDATE directory_settings SET
     host = 'ldap',
     port = '389',
@@ -836,17 +841,21 @@ UPDATE directory_settings SET
 WHERE id = 1;
 
 UPDATE keycloak_settings SET
-    issuer = 'https://dev.catalina-support.example.com/sso/realms/catalina-support',
+    issuer = 'http://127.0.0.1:11006/sso/realms/catalina-support',
+    internal_issuer = 'http://keycloak:8080/sso/realms/catalina-support',
     client_id = 'catalina-support',
     client_secret = 'el-secreto-de-desarrollo',
-    redirect_uri = 'https://dev.catalina-support.example.com/api/auth/keycloak/callback',
+    redirect_uri = 'http://127.0.0.1:11001/api/auth/keycloak/callback',
     updated_at = now()
 WHERE id = 1;
 
 UPDATE installation_settings
    SET installation_name = 'Catalina Support',
+       entry_method = 'local',
        -- **El correo saliente de desarrollo vive aquí**, no en el entorno (decisión del responsable,
        -- 2026-09-30): es el buzón de pruebas, y sin él no saldría ningún correo en el entorno.
+       ai_url          = 'http://catalina_support_ai:8080',
+       ai_model        = 'qwen2.5-1.5b-instruct',
        smtp_host       = 'mail',
        smtp_port       = '1025',
        smtp_secure     = false,
@@ -855,11 +864,13 @@ UPDATE installation_settings
        smtp_from_name  = 'Catalina Support',
        smtp_from_email = 'no-responder@catalina-support.local',
        time_zone      = 'America/Guayaquil',
-       public_app_url = 'https://dev.catalina-support.example.com',
-       -- **Desarrollo queda instalado**: el asistente de primer arranque se prueba a mano, quitándole
-       -- el sello, y no puede salir en cada arranque del entorno ni en las pruebas.
+       public_app_url = 'http://127.0.0.1:11001',
+       -- La demo incompleta queda instalada; las pruebas recorren su propia instalación vacía.
        installed_at   = COALESCE(installed_at, now()),
        updated_at     = now()
  WHERE id = 1;
+
+END IF;
+END $$;
 
 COMMIT;

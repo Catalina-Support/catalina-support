@@ -1,7 +1,25 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-25
+> **Última actualización:** 2026-10-07
+>
+> **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: identidad, sesión y
+> respuestas de cuenta ya no llevan idioma personal. Los tres correos de cuenta consultan el idioma
+> global al enviarse, sin cambiar ninguno de los tres caminos de entrada.
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Keycloak distingue emisor
+> público e `internalIssuer` opcional. Descubrimiento, token y UserInfo usan la dirección interna;
+> autorización sigue siendo pública. Se exige issuer anunciado igual al configurado y endpoints del
+> mismo origen y reino, y se rechazan redirecciones HTTP. La configuración se lee en cada intento.
+> El compose local anuncia `http://127.0.0.1:11006/sso` por defecto; nginx no es necesario.
+>
+> **Enmendado el 2026-10-01**: **los dos servicios de pruebas dejan `dev.yml`**. OpenLDAP y Keycloak
+> viven ahora cada uno en **su propio archivo** —`active-directory.yml` y `keycloak.yml`—, con **su
+> propio comando**, y **el perfil `auth` desaparece**. Los dos entran en la red
+> **`catalina-support-dev`**, que **posee `dev.yml`** (nombre fijo, sin `external`), así que **primero
+> se levanta el entorno** y después el servicio; el backend los alcanza por su nombre de servicio
+> (`ldap`, `keycloak`). Se ponen al día la sección 11 y la decisión 1. Los puertos, los nombres de
+> contenedor y las credenciales de pruebas no cambian.
 >
 > **Enmendado el 2026-09-25**, al pedir el responsable que **el directorio y Keycloak se
 > configuren desde la pantalla** y que **la instalación entre por un método a la vez**: los datos de
@@ -423,12 +441,11 @@ Tres, y ninguno más. Son **cosa distinta de los siete avisos de ticket**
 | **Recuperación** | Al pedirla la persona, o al lanzarla Soporte o un administrador | 1 hora |
 | **Aviso de cambio** | Cuando una contraseña cambia: al completar el alta, al usar un enlace, al cambiarla desde dentro | No lleva enlace |
 
-- **En el idioma de la cuenta** (`language` de `users`), no en el de quien lo provoca: `mail` elige
-  la plantilla de ese idioma.
+- **En el idioma global de la instalación**: `mail` elige la plantilla de ese idioma.
 - **HTML, con una versión de texto automática**, y las plantillas de `mail` con sus marcadores.
 - **El texto de la caducidad lo pone `auth`**, no `mail`: las plantillas llevan el marcador
   `{{caducidad}}` («este enlace caduca en …») y quien sabe si son 24 horas o 1 es este módulo, que es
-  el que emite el enlace. Por eso `auth` pasa `24 horas` o `1 hora`… en el idioma de la cuenta, que es
+  el que emite el enlace. Por eso `auth` pasa `24 horas` o `1 hora`… en el idioma global, que es
   el mismo en el que va la plantilla: `24 hours`, `1 hour`.
 - **La dirección desde la que se cambió sale de `X-Real-IP`**, que es la cabecera con la que nginx
   pasa la dirección real de quien llama: dentro del contenedor, `RemoteAddr` es la del proxy.
@@ -517,8 +534,8 @@ Todo esto vive en `frontend/src/app/core`, que es la excepción ya prevista para
   variantes, como `es-MX`— se entra en ese idioma; **si pide cualquier otro, se entra en inglés**,
   que es el segundo de la instalación y el que más gente puede leer. El conmutador está a la vista en
   la pantalla de entrada, y lo que alguien elija se recuerda en su navegador. Dentro de la
-  aplicación manda el idioma de la cuenta, que es lo que decide en qué idioma se le escriben los
-  correos (sección 7).
+  aplicación manda el idioma global de la instalación, que también decide el idioma de los correos
+  (sección 7).
 - **Los textos viven en `core/i18n/es.ts` y `core/i18n/en.ts`**, con el mismo tipo compartido: **una
   clave que falte en un idioma no compila**. Es la única forma de que la regla «cada clave necesita
   su texto en los dos idiomas» no dependa de que alguien se acuerde, y por eso los textos de error
@@ -605,11 +622,14 @@ llevar a la pantalla de entrada—, y separarlos sólo añadiría claves que no 
 
 ## 11. Con qué se prueba
 
-Con **dos servicios de pruebas** en `dev.yml`, detrás de un perfil para que no estorben en el día a
-día:
+Con **dos servicios de pruebas**, cada uno en **su propio archivo** y **opcional** —el entorno no los
+levanta—: `active-directory.yml` (OpenLDAP) y `keycloak.yml` (Keycloak). **Primero se levanta el
+entorno**, que es quien crea la red del desarrollo, y después el servicio que se quiera:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d
+docker compose -f dev.yml up -d                  # el entorno (crea la red `catalina-support-dev`)
+docker compose -f active-directory.yml up -d     # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d             # Keycloak
 ```
 
 | Servicio | Qué es | Qué se prueba con él |
@@ -634,7 +654,7 @@ y se anota lo que salga.
 como el directorio no guarda nada en un volumen, **vuelve al contenido del LDIF del repositorio**:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d --force-recreate ldap
+docker compose -f active-directory.yml up -d --force-recreate ldap
 ```
 
 Eso es cómodo para probar (el directorio siempre está como dice el repositorio) y hay que tenerlo
@@ -655,14 +675,17 @@ con el que entra la aplicación: confidencial —con secreto, porque el canje lo
 el flujo de código encendido, **el de contraseña directa apagado** y la única dirección de vuelta que
 se admite.
 
-**Cómo llega el navegador a Keycloak, que es lo que decide el emisor.** Keycloak no se publica en su
-propio dominio en desarrollo: **nginx lo sirve en un camino del mismo dominio que la aplicación**
-(`/sso/`), que es un `location` más del vhost de desarrollo (en producción, Keycloak será su propio
-servicio con su certificado, y el emisor, su dirección de siempre). Así **el emisor es uno solo** —el
-que ve el navegador— y el backend usa el mismo: no hay dos direcciones que puedan discrepar, ni un
-`iss` que no cuadre, ni una vuelta que se firme contra un sitio y se compruebe contra otro. El
-contenedor escucha en `127.0.0.1:11006` y no está expuesto a la red, y su reino vive en el
-repositorio: **recrearlo lo deja como está escrito**, igual que el directorio.
+**Cómo llega el navegador a Keycloak.** En local se publica sólo en `127.0.0.1:11006`,
+con emisor `http://127.0.0.1:11006/sso/realms/catalina-support`. El backend conecta mediante
+`internalIssuer = http://keycloak:8080/sso/realms/catalina-support`; el emisor anunciado conserva
+la identidad pública. La autorización es pública y sólo el tráfico del backend utiliza la dirección
+interna. El cliente permite vueltas exactas a `http://127.0.0.1:11001/api/auth/keycloak/callback`
+y `http://frontend.localhost:11001/api/auth/keycloak/callback` para la suite aislada, sin comodines.
+No se necesita nginx. `KEYCLOAK_PUBLIC_URL` permite configurar el origen anunciado.
+
+El perfil `directory` de `tests.yml` levanta sus propios LDAP y Keycloak, sin publicar puertos
+ni usar los servicios del usuario. Allí navegador y backend alcanzan `http://keycloak:8080/sso`,
+por lo que la dirección interna puede permanecer vacía. Los tres usuarios del reino se conservan.
 
 **Una consulta más, que no es entrar pero vive aquí**: «¿sigues conociendo a esta persona?». La
 declara `users`, que es quien la usa —para no devolverle el acceso a una cuenta de AD que ya no está
@@ -676,7 +699,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 
 | # | Decisión | Quedó así |
 | --- | --- | --- |
-| 1 | **Los directorios de prueba** | OpenLDAP y Keycloak, como servicios de `dev.yml` detrás del perfil `auth` |
+| 1 | **Los directorios de prueba** | OpenLDAP y Keycloak, cada uno en su archivo (`active-directory.yml` y `keycloak.yml`), opcionales y con su propio comando. **Cambiado el 2026-10-01**: antes eran servicios de `dev.yml` detrás del perfil `auth`, que desaparece |
 | 2 | **La vuelta de Keycloak** | La recibe **el backend**, que entrega nuestro token al frontend |
 | 3 | **Los datos de la cuenta** | El directorio **actualiza nombre, apellidos y correo** en cada entrada |
 | 4 | **Intentos fallidos** | **Sin bloqueo de cuenta**: nginx limita y cada fallo va al log |
@@ -698,7 +721,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 20 | **Lo que devuelve la entrada** | `token`, `expiresAt` y un objeto `user`; `me` devuelve el mismo objeto `user`, para no tener dos formas de describir a alguien |
 | 21 | **La ruta del enlace** | `/set-password`. **Corrección del responsable**: propuse la ruta en español y decidió que **las rutas del frontend van siempre en inglés**, aunque el idioma del producto sea español |
 | 22 | **El token del enlace** | Viaja en el **fragmento** (`#token=…`), que el navegador no manda al servidor, y la pantalla lo borra de la dirección al usarlo |
-| 23 | **Una sola pantalla para los dos enlaces** | Alta y recuperación llegan a `/set-password`, y la caducidad la escribe `auth` en el idioma de la cuenta |
+| 23 | **Una sola pantalla para los dos enlaces** | Alta y recuperación llegan a `/set-password`, y la caducidad la escribe `auth` en el idioma global |
 | 24 | **Las seis pantallas** | Las cuatro de rutas más **sin permiso** (`/forbidden`) y **servidor caído** (un aviso encima, sin ruta) |
 | 25 | **El idioma de arranque** | **Corrección del responsable**: propuse español por defecto y decidió que se toma **el del navegador** y, si no es `es` ni `en`, se entra **en inglés**, con conmutador a la vista |
 | 26 | **Dónde viven los textos** | `core/i18n/es.ts` y `core/i18n/en.ts` con un tipo compartido: **una clave que falte no compila**, y los textos de error van en el mismo diccionario |
@@ -710,7 +733,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 32 | **Cuándo se dispara el vínculo** | Cuando la contraseña local de una cuenta **no vale** y el directorio conoce ese correo: se vincula en esa misma entrada y la contraseña local deja de servir. Es lo que hace que la fila «existe una cuenta local con ese correo» se cumpla sin que nadie avise a Soporte |
 | 33 | **La pantalla de entrada cambia poco por AD** | **Enmendada el 2026-09-25**: el formulario **es el mismo** y no hay botón propio, pero ahora sí lleva un aviso —«esta instalación entra con las cuentas de la organización»— y **se quita el enlace de «he olvidado mi contraseña»**, porque con el método en AD esa contraseña no es de aquí y el enlace mandaría un correo que no sirve para entrar. **Con Keycloak la pantalla sí cambia del todo**: no hay formulario |
 | 34 | **`methods` no sondea el directorio** | **Enmendada el 2026-09-25**: dice el método que está puesto, no la salud de nadie. Sondear el directorio en cada carga de la pantalla costaría una conexión por visita y un directorio lento retrasaría la entrada; el aviso honesto llega al entrar, que es cuando importa, y **la prueba de la conexión está en Configuración**, que es donde se configura |
-| 36 | **El emisor es el que ve el navegador** | En desarrollo, Keycloak se publica en un camino del mismo dominio que la aplicación (`/sso/`) y el backend usa ese mismo emisor. Se gana que haya **una sola dirección** y que el `iss` cuadre siempre; se pierde una ida y vuelta de red del backend a su propio dominio en cada canje, que es irrelevante al lado de tener dos direcciones que puedan discrepar |
+| 36 | **El emisor es el que ve el navegador** | En desarrollo, Decisión histórica, sustituida por la enmienda local del 2026-10-03: Keycloak se publicaba en un camino del mismo dominio que la aplicación (`/sso/`) y el backend usa ese mismo emisor. Se gana que haya **una sola dirección** y que el `iss` cuadre siempre; se pierde una ida y vuelta de red del backend a su propio dominio en cada canje, que es irrelevante al lado de tener dos direcciones que puedan discrepar |
 | 37 | **El `state` no se guarda en ningún sitio** | Es un valor aleatorio con su fecha, firmado con `TOKEN_SECRET`: lo que impide que una vuelta vieja sirva es su caducidad de cinco minutos, y la fecha va dentro de lo firmado. Sin cookies y sin tabla de estados pendientes, que es la misma decisión que con la sesión |
 | 38 | **La vuelta deja a la persona en la pantalla de entrada, también cuando falla** | Con el token (`#token=…`) o con la clave del fallo (`#error=…`). Es una navegación de un navegador: hasta lo que sale mal tiene que acabar en un sitio donde se pueda contar qué ha pasado. La pantalla lee el fragmento y **lo borra con `replaceState`** |
 | 39 | **Cuatro claves de error nuevas** | `auth.oidc.notConfigured` (404: esta instalación no tiene ese camino), `auth.oidc.rejected` (la vuelta no vale: código caducado, usado, de otra instalación, o alguien que canceló), `auth.oidc.unavailable` (503: Keycloak no responde) y `auth.oidc.noEmail` (la cuenta del directorio no trae correo, y sin correo no hay cuenta aquí). `auth.oidc.state`, que ya estaba, es la quinta |
@@ -718,7 +741,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 44 | **Con el método en AD no se ofrece recuperar la contraseña** | **Confirmado por el responsable el 2026-09-25**: con el método en AD el enlace desaparece, porque esa contraseña no es de aquí y un correo con un enlace para establecerla sería mentira —entrar con ella no serviría—. Con el método local se queda como estaba, y con el de Keycloak tampoco se ofrece |
 | 45 | **La puerta de la cuenta de fábrica es discreta** | **Confirmado por el responsable el 2026-09-25**: un enlace de texto al pie de la pantalla de entrada, que saca el formulario cuando el método no lo tiene. No se le ofrece a quien entra todos los días, pero está donde hay que buscarla, y es lo que impide que elegir mal el método cierre la instalación |
 | 41 | **Un método de entrada a la vez** | **Decisión del responsable, 2026-09-25**: los tres caminos **no conviven**; el que está puesto es el único que se atiende, y se puede cambiar cuando se quiera. **La cuenta de fábrica entra siempre**, por su cuenta y con su puerta discreta en la pantalla de entrada cuando el método no tiene formulario. Consecuencia dicha y aceptada: con el método en `ad` o en `keycloak` **las cuentas locales no entran**, y eso enmienda la sección 5 de `docs/usuarios-y-permisos.md`, que describía los tres caminos conviviendo |
-| 42 | **El directorio y el reino se leen en cada intento** | **Consecuencia de la decisión anterior, y su precio**: cambiar el método o el directorio vale en el intento siguiente, sin reiniciar nada, a cambio de tres lecturas por clave primaria en cada entrada. Un cliente de Keycloak **sí se recuerda**, porque lleva dentro el documento de descubrimiento del reino: se vuelve a construir sólo si su configuración cambia |
+| 42 | **El directorio y el reino se leen en cada intento** | **Consecuencia de la decisión anterior, y su precio**: cambiar el método o el directorio vale en el intento siguiente, sin reiniciar nada, a cambio de tres lecturas por clave primaria en cada entrada. El cliente de Keycloak se construye por intento con la configuración vigente; el documento se recuerda únicamente durante ese intento |
 | 43 | **Una cuenta es de un camino, y no de dos** | Una cuenta de Keycloak **no entra por el directorio** aunque el método puesto sea el de AD, y una cuenta de AD no entra con una contraseña local con el método en `local`. Lo que cambia el método es **por dónde se entra**, no la naturaleza de cada cuenta |
 | 35 | **Una cuenta desactivada aquí vuelve por el directorio** | Vale también para el vínculo: si la cuenta local estaba desactivada, al vincularse se reactiva. Es la regla 6, y es lo que hace cierto el aviso `users.directoryMayReturn`. Con esto **queda cerrada la duda que quedaba abierta** en `docs/modules/users.md` sobre si ese aviso se podía ejercitar: se ejercita, y hay prueba de interfaz |
 
@@ -737,3 +760,20 @@ propongo es el que hace que cada paso se pueda probar solo:
 5. Los contenedores de pruebas y el camino de AD. **Hecho y verificado** (2026-09-25).
 6. El camino de Keycloak. **Hecho y verificado** (2026-09-25). **Con esto, este documento no tiene
    nada pendiente.**
+
+## 14. Autenticación sin idioma personal
+
+La identidad compartida, las respuestas de entrada y `me`, y el estado de sesión dejan de incluir
+`language`. El frontend obtiene el idioma de la marca pública y no vuelve a cambiarlo al recibir una
+cuenta. La pantalla de entrada retira su selector; se pinta directamente en el idioma global.
+
+Las respuestas autenticadas incluyen las cabeceras `X-Catalina-Language` y
+`X-Catalina-Settings-Version`. El interceptor ya existente las observa y, cuando la versión cambia,
+actualiza la señal global de idioma. Esto no cambia el token, no cierra la sesión y no añade sondeo:
+una pestaña abierta adopta el cambio en su siguiente petición.
+
+Los correos de alta, olvido y cambio de contraseña consultan el idioma global al enviarse. El texto
+de caducidad se forma con ese mismo idioma. No cambian token, duración, contraseñas, cuenta de
+fábrica, AD, Keycloak, permisos ni rutas. La propuesta fue confirmada por el responsable el
+2026-10-06 y en el repaso eligió actualizar las sesiones abiertas con las cabeceras de idioma y
+versión, sin cerrar sesión. Se implementó y verificó el 2026-10-07.

@@ -230,7 +230,7 @@ test.describe('Los usuarios, por papel', () => {
     await expect(page).toHaveURL(/\/forbidden$/);
   });
 
-  test('el perfil propio cambia el nombre y el idioma, y no deja tocar el correo', async ({
+  test('el perfil propio cambia el nombre y no deja tocar el correo', async ({
     page,
     request,
   }) => {
@@ -257,13 +257,8 @@ test.describe('Los usuarios, por papel', () => {
     // El menú enseña el nombre nuevo sin volver a entrar.
     await expect(page.locator('aside').getByText('Ana María')).toBeVisible();
 
-    // Y el idioma de la cuenta es el que manda: al cambiarlo, la interfaz cambia con él, porque es
-    // también el idioma de sus correos (docs/modules/users.md, sección 8).
-    await page.getByLabel('Idioma de los correos').selectOption('en');
-    await page.getByRole('button', { name: 'Guardar' }).click();
-
-    await expect(page.getByRole('heading', { name: 'My profile' })).toBeVisible();
-    await expect(page.locator('aside').getByText('My profile')).toBeVisible();
+    // El perfil ya no ofrece un idioma personal: interfaz, IA y correos usan el global.
+    await expect(page.getByLabel('Idioma de los correos')).toHaveCount(0);
   });
 
   test('nadie se desactiva a sí mismo, y la cuenta de fábrica no tiene perfil', async ({
@@ -305,13 +300,7 @@ test.describe('Los usuarios, por papel', () => {
     //
     // La ficha de otra cuenta la ve **el Administrador** (el reparto de la sección 8 de
     // `docs/usuarios-y-permisos.md`), así que aquí se entra con la cuenta de fábrica.
-    const deFabrica = await tokenDeFabrica(request);
-
-    const listado = (await request
-      .get('/api/users?q=user1@demo.com&active=true', { headers: { Authorization: `Bearer ${deFabrica}` } })
-      .then((r) => r.json())) as { users: { id: number; hasPassword: boolean }[] };
-    const cuenta = listado.users[0]!;
-    expect(cuenta.hasPassword, 'la cuenta de ejemplo tiene contraseña').toBe(true);
+    const cuenta = await crearCuentaLista(request, { name: 'Usuario', lastName: 'Uno' });
 
     await entrar(page, FABRICA.email, FABRICA.password);
     await page.goto(`/users/${cuenta.id}`);

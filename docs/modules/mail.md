@@ -1,7 +1,19 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-10-07
+>
+> **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
+> idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las
+> once plantillas, protegiendo HTML y marcadores. El responsable retiró la regeneración masiva de
+> resúmenes del cambio de idioma y confirmó que siempre habrá edición manual.
+>
+> **Enmendado el 2026-09-30**: el módulo estrena **`Probar`**, que **conecta y autentica contra el
+> servidor de correo sin mandar ningún correo**: abre la conexión con lo que se le pasa —host, puerto,
+> TLS, usuario y contraseña—, valida las credenciales y cierra. **No hay `MAIL FROM`, ni `RCPT TO`, ni
+> `DATA`.** Usa **la misma conexión que el envío** —la que resuelve el cifrado directo y STARTTLS—, así
+> que lo que se prueba es lo que se va a usar al mandar. Lo consume el asistente de primer arranque
+> para el paso 4, donde todavía no hay destinatario (`docs/primer-arranque.md`, sección 3.1).
 >
 > **Enmendado el 2026-09-30**: **el correo saliente se lee de la configuración de la instalación**
 > —la vista de primer arranque lo pide— y **las variables `SMTP_*` del entorno se retiraron**: un dato que vive en la base no se configura en dos sitios (corrección del responsable, 2026-09-30). El
@@ -52,7 +64,7 @@
 
 ## 1. Alcance de este documento
 
-Cuenta **cómo se construye el módulo `mail`**: la tabla de plantillas, los marcadores, los diez
+Cuenta **cómo se construye el módulo `mail`**: la tabla de plantillas, los marcadores, los once
 correos por defecto con sus textos, el envío, los endpoints y el editor de la pantalla de
 Configuración.
 
@@ -66,7 +78,9 @@ recoge lo que he propuesto yo.
 ## 2. Qué hace y qué no hace el módulo
 
 **Hace**: guardar los textos, validarlos, rellenarlos con datos, enviarlos por SMTP y dejar que un
-administrador los edite, los previsualice y se mande una prueba.
+administrador los edite, los previsualice y se mande una prueba. Y **`Probar`**: comprobar que el
+servidor de correo contesta y que las credenciales valen, **sin mandar ningún correo** (§6), que es lo
+que necesita quien configura el correo antes de tener un destinatario.
 
 **No hace**: decidir **a quién** se avisa. Quien pide el envío —`auth` o `tickets`— resuelve los
 destinatarios y se los pasa. Es lo que mantiene a `mail` sin saber nada de papeles, de repartos ni de
@@ -121,7 +135,8 @@ Se escriben con llaves dobles y en minúsculas: `{{numero}}`, `{{enlace}}`, `{{n
 - **Los datos se escapan siempre** antes de entrar en el HTML, porque el asunto de un ticket lo
   escribe una persona y puede llevar `<`, `>` o `&`. El escapado es del código, no del texto: no hay
   forma de escribir una plantilla que se salte esto.
-- **Los enlaces se construyen con `PUBLIC_APP_URL`**, nunca con un host escrito en el texto: el mismo
+- **Los enlaces se construyen con la dirección pública de la instalación** —Configuración— y
+  `PUBLIC_APP_URL` queda **como respaldo**, nunca con un host escrito en el texto: el mismo
   texto tiene que servir en desarrollo y en producción.
 
 ## 5. Los once correos por defecto
@@ -233,8 +248,9 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
 
 ## 6. El envío
 
-- **`net/smtp` de la biblioteca estándar**, sin dependencias (igual que Calibyou), con las variables
-  `SMTP_*` de `docs/arquitectura.md`, sección 9.
+- **`net/smtp` de la biblioteca estándar**, sin dependencias (igual que Calibyou), con la
+  configuración de correo saliente que vive en `installation_settings.smtp_*`
+  (`docs/arquitectura.md`, sección 9).
 - **HTML con una versión de texto automática**: se manda un correo de dos partes, y la de texto se
   saca del HTML quitando las etiquetas. Un cliente que no pinte HTML enseña algo legible en vez de
   nada.
@@ -251,12 +267,18 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
   (`AGENTS.md`, reglas para agentes). Nunca el contenido del correo ni el enlace que lleva: igual que los intentos de acceso (`docs/modules/auth.md`, sección 12).
 - **El idioma lo decide el destinatario**, no quien provoca el correo: si a un equipo se le avisa a
   tres personas y una lee en inglés, esa recibe el texto en inglés. Son tres envíos, no uno.
+- **`Probar` comprueba la conexión y la autenticación, y no manda nada**: es la única puerta del
+  módulo que no entrega un mensaje. Abre la conexión —TLS directo en el 465 o STARTTLS en el 587, la
+  misma que usa el envío—, autentica si hay usuario y cierra con `QUIT`, **sin `MAIL FROM`, ni
+  `RCPT TO`, ni `DATA`**. Es lo que permite probar el correo saliente donde todavía no hay
+  destinatario, como el paso 4 del asistente de primer arranque (`docs/primer-arranque.md`, §3.1). La
+  contraseña **no se registra** en el log ni viaja en claro por el protocolo.
 
 ## 7. Los endpoints
 
 | Método y ruta | Qué hace | Quién |
 | --- | --- | --- |
-| `GET /api/mail/templates` | Las veinte plantillas: clave, idioma, asunto y cuerpo | Administrador |
+| `GET /api/mail/templates` | Las veintidós plantillas: clave, idioma, asunto y cuerpo | Administrador |
 | `POST /api/mail/templates/{key}/{language}/preview` | El asunto y el cuerpo **ya renderizados**, con datos de ejemplo. Acepta el **borrador** que se está escribiendo | Administrador |
 | `PUT /api/mail/templates/{key}/{language}` | Guarda una plantilla. Valida los marcadores | Administrador |
 | `POST /api/mail/templates/{key}/{language}/reset` | Restaura el texto de fábrica | Administrador |
@@ -280,7 +302,7 @@ contexto que su propia clave:
 | Clave | Cuándo | Código |
 | --- | --- | --- |
 | `mail.template.notFound` | La plantilla (clave + idioma) no está en la tabla | **404** |
-| `mail.template.unknownKey` | Esa clave no es ninguno de los diez correos | **404** |
+| `mail.template.unknownKey` | Esa clave no es ninguno de los once correos | **404** |
 | `mail.language.unknown` | El idioma no es `es` ni `en` | **404** |
 | `mail.subject.required` | El asunto viene vacío | **422** |
 | `mail.body.required` | El cuerpo viene vacío | **422** |
@@ -299,7 +321,7 @@ el editor no tenga que volver a pedirla ni duplicar reglas:
 
 | Endpoint | Devuelve |
 | --- | --- |
-| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veinte |
+| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veintidós |
 | `PUT /api/mail/templates/{key}/{language}` | `{"template": { … }}` y, si falta algún marcador imprescindible, `"missing": ["enlace"]` junto a ella |
 | `POST /api/mail/templates/{key}/{language}/reset` | `{"template": { … }}` con el texto de fábrica ya puesto |
 | `POST /api/mail/templates/{key}/{language}/test` | `{"sentTo": "quien@demo.com"}` |
@@ -350,8 +372,49 @@ Y **qué lleva cada plantilla**, que es lo que el editor necesita para pintarse 
 Con `docs/modules/mail.md` aprobado, **`mail` es el primer módulo que se implementa**, porque `auth`
 lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 
-1. La tabla `mail_templates` y los veinte textos sembrados, en `migrations/v1.0.0.sql`.
+1. La tabla `mail_templates` y los veintidós textos sembrados, en `migrations/v1.0.0.sql`.
 2. El rellenado de marcadores y el escapado, con sus pruebas: es la parte que más se rompe.
 3. El envío por SMTP con las dos versiones, y el registro en el log.
 4. Los cuatro endpoints.
 5. El editor en la pantalla de Configuración.
+
+## 11. Implementación: plantillas traducidas al cambiar el idioma global
+
+Se conservan las veintidós plantillas —once por idioma— como memoria editable de ambos idiomas, pero
+los envíos eligen siempre la versión del idioma global. `Send` y `SendAsync` dejan de recibir el
+idioma del destinatario y lo resuelven desde la instalación en cada envío.
+
+Al solicitar un cambio global, `mail` toma como fuente las once plantillas personalizadas del idioma
+activo. Antes de enviarlas a `ai`, sustituye etiquetas HTML y marcadores `{{…}}` por elementos
+protegidos. La IA traduce sólo el texto; `mail` recompone el HTML y rechaza un borrador si pierde,
+añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guarda todavía.
+
+Si el destino conserva el texto de fábrica, el Administrador revisa fuente y borrador. Si el destino
+ya fue personalizado, revisa tres versiones: fuente activa, borrador de IA y destino existente, y
+puede elegir una o combinarlas en el editor. Nunca se reemplaza una personalización sin mostrarla.
+Al confirmar, una transacción guarda las once plantillas destino y el nuevo idioma global. Si una fila o
+validación falla, no cambia ninguna plantilla ni el idioma. El historial de traducciones no crea una
+tabla adicional: permanecen las dos versiones actuales y `updated_at`/`updated_by_id` dicen quién
+confirmó la última.
+
+La traducción usa la IA activa y por ello no puede iniciar si la instalación está en estado de IA
+requerida. No se mandan destinatarios, direcciones ni datos reales de tickets: sólo asuntos, cuerpos
+y marcadores de las plantillas. Restaurar y editar manualmente continúan disponibles.
+
+Con un proveedor externo, antes de traducir se muestran las veintidós solicitudes —asunto y cuerpo
+de cada plantilla— y una estimación de tokens y costo. Si el Administrador no la acepta, no se hace
+ninguna llamada: los once destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
+se habilita cuando las once plantillas destino pasan su validación, procedan de la IA, del destino
+existente o de la edición manual.
+
+El responsable eligió traducción por IA con borrador revisable y aplicación atómica el 2026-10-06.
+En el repaso decidió conservar y comparar cualquier destino personalizado, con elección o mezcla
+explícita. El 2026-10-07 corrigió que la confirmación comercial se limita a estas plantillas y que
+rechazarla conserva el camino manual. No quedan decisiones abiertas; corrección aprobada explícitamente.
+
+### 11.1 Implementación verificada
+
+`POST /api/mail/language/drafts` devuelve las once comparaciones sin persistir; protege etiquetas y
+marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El modo manual devuelve el
+destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
+transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.

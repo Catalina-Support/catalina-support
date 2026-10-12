@@ -1,11 +1,9 @@
 import { ES } from '../../core/i18n/es';
 import {
   ORIGENES_DE_DIRECTORIO,
-  etiquetaDeIdioma,
   etiquetaDeOrigen,
   etiquetaDePapel,
   fechaCorta,
-  opcionesDeIdioma,
   opcionesDeOrigen,
   opcionesDePapel,
   seReactivaSola,
@@ -23,11 +21,6 @@ describe('las etiquetas del módulo users', () => {
     // el valor, aunque no esté traducido, y se ve que hay algo que no cuadra.
     expect(etiquetaDePapel(ES, 'superusuario')).toBe('superusuario');
     expect(etiquetaDeOrigen(ES, 'otro')).toBe('otro');
-  });
-
-  it('los idiomas se leen en su propio idioma: no se traducen', () => {
-    expect(etiquetaDeIdioma('es')).toBe('Español');
-    expect(etiquetaDeIdioma('en')).toBe('English');
   });
 
   it('los orígenes de directorio salen desactivados, con su nota en la pantalla', () => {
@@ -52,9 +45,6 @@ describe('las etiquetas del módulo users', () => {
     );
   });
 
-  it('los dos idiomas se ofrecen, cada uno en el suyo', () => {
-    expect(opcionesDeIdioma(ES).map((opcion) => opcion.etiqueta)).toEqual(['Español', 'English']);
-  });
 });
 
 describe('fechaCorta', () => {
@@ -88,7 +78,9 @@ describe('fechaCorta', () => {
     // La misma marca leída en dos zonas de la instalación: el navegador sólo puede estar en una, así
     // que al menos una de las dos lecturas demuestra que se usa la zona que se le pasa y no la suya.
     expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe('30/09/2026, 16:00');
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe(
+      '30/09/2026, 16:00',
+    );
   });
 
   // La marca es pública: si la zona no llega —o llega un nombre que `Intl` no conoce— se lee con la
@@ -122,7 +114,6 @@ describe('fechaCorta', () => {
         email: 'ana@ejemplo.com',
         role: 'usuario',
         origin,
-        language: 'es',
         isActive,
         hasPassword: false,
       }) as Cuenta;
