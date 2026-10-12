@@ -1,7 +1,14 @@
 # ai
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Estado:** propuesta
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo y enmienda propuesta el 2026-10-13: cumplimiento del idioma global.** El recorrido
+> público del bloque 8 obtuvo un «Motivo» en español con una instalación inglesa, aunque la fila
+> quedó marcada como `en`. La sección 15 define validación local, tratamiento distinto para motores
+> sin costo controlado y proveedores externos, prompts en el idioma del despliegue y la reanudación
+> de la auditoría. El responsable cerró 1A–12A, con 10B. No se modifica código hasta aprobar esta
+> propuesta.
 >
 > **Enmienda implementada y verificada el 2026-10-08: visibilidad por configuración.** La sección 14
 > distingue un motor configurado de uno disponible y permite que `tickets` consulte únicamente esa
@@ -717,3 +724,66 @@ La IA continúa siendo obligatoria: una instalación sellada que requiera config
 los tickets y permanece dirigida a Configuración. `false` es una garantía del contrato ante ausencia
 del adaptador, configuración efectiva inválida, respuestas antiguas o pruebas aisladas; no abre un
 modo operativo sin IA.
+
+## 15. Propuesta: hacer cumplir el idioma global en las respuestas de IA
+
+### 15.1 Hallazgo reproducido
+
+El 2026-10-12, desde un clon limpio del `main` público, una instalación configurada globalmente en
+inglés creó `CS-2026-0001` y generó sus dos campos con Qwen2.5 1.5B local. «Última acción» salió en
+inglés; «Motivo» salió en español mientras API y base lo declaraban `language: "en"`. El esquema,
+la salud, el JSON y la longitud eran válidos, por lo que el control vigente guardó una afirmación de
+idioma que no había comprobado. El texto del ticket estaba en inglés, pero parte del andamiaje que
+se entrega al modelo —rótulos e instrucciones— seguía en español.
+
+### 15.2 Contrato de validación
+
+El idioma es único y global por despliegue. Cada resumen, mejora de redacción y traducción de
+plantilla se valida contra el idioma global solicitado antes de aceptar su texto. La validación es
+local al backend: no envía contenido a otro servicio ni consume otra generación. Examina la
+respuesta completa y sólo declara una discrepancia cuando tiene confianza suficiente; nombres,
+productos, código, direcciones, números y términos técnicos aislados no convierten una respuesta en
+otro idioma. Un texto corto o ambiguo sin evidencia suficiente continúa siendo válido.
+
+La implementación incorpora un detector mantenido y limitado a los dos idiomas admitidos por el
+producto, español e inglés. Su licencia y versión entran en los avisos de terceros. El detector no
+elige el idioma ni lo toma de una cuenta, sesión o ticket: compara exclusivamente con el idioma
+global vigente que ya acompaña cada encargo.
+
+### 15.3 Prompts y contenido
+
+Las instrucciones, los rótulos del contexto y los nombres de eventos que Catalina Support añade al
+encargo se construyen en el idioma global solicitado. El asunto, la descripción, los comentarios,
+el borrador, los marcadores y cualquier otro contenido escrito por personas se conservan
+literalmente. No se introduce una traducción previa, no se hacen llamadas adicionales para preparar
+la entrada y no se alteran nombres ni datos técnicos.
+
+### 15.4 Reintentos, costo y errores
+
+Una discrepancia clara de idioma se trata como respuesta inválida. Con el motor local o un servidor
+propio se hace un único reintento inmediato, reforzando la instrucción con el incumplimiento
+detectado. Las dos llamadas pertenecen al mismo intento de trabajo de la cola: el reintento interno
+no agota por separado los intentos persistidos ni crea dos filas.
+
+Con la modalidad `provider` no hay reintento automático: una segunda solicitud podría tener costo y
+el responsable eligió no autorizarla implícitamente. El primer texto incorrecto se descarta y se
+devuelve el error estable correspondiente. No se añade aviso de «hasta dos solicitudes» a `/setup`
+ni `/settings`, porque el proveedor pagado nunca recibe la segunda llamada automática.
+
+Si el reintento permitido también incumple, el texto no se guarda ni sustituye nada. Un resumen pasa
+a `error` con `ai.invalid`; «Mejorar con IA» conserva el borrador y muestra su error en el modal; y
+la traducción de una plantilla conserva el borrador anterior para revisión o edición manual. Los
+resúmenes incorrectos ya almacenados no se recorren en lote: Soporte o Desarrollo puede solicitar
+«Volver a resumir», y todos los movimientos futuros usan el contrato nuevo.
+
+### 15.5 Verificación y alcance
+
+Las pruebas unitarias cubren español, inglés, términos técnicos, textos ambiguos, discrepancia clara,
+reintento exitoso, segundo incumplimiento y ausencia de reintento en `provider`. También cubren los
+tres consumidores: resúmenes, redacción y plantillas. La comprobación integral repite después el
+bloque 8 completo desde un clon limpio del `main` público, con el modelo 1.5B real; no basta un motor
+falso ni una frase exacta.
+
+Quedan fuera idiomas distintos de español e inglés, traducción del contenido original, regeneración
+masiva, cuotas, métricas de costo, cambios de catálogo y producción. El responsable eligió 1A–9A,
+10B, 11A y 12A. No quedan decisiones abiertas.

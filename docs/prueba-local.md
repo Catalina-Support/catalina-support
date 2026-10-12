@@ -1,7 +1,12 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-12
+> **Estado:** propuesta
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo del bloque 8 y reanudación propuesta, 2026-10-13.** La primera ejecución se detuvo al
+> obtener un «Motivo» en español en un despliegue inglés. La sección 17 conserva la evidencia,
+> remite la corrección a los documentos de IA y tickets y exige repetir el recorrido completo desde
+> `main`. El responsable eligió 1A–12A, con 10B. Esta enmienda requiere aprobación explícita.
 >
 > **Propuesta del bloque 8, 2026-10-12: recorrido público desde cero.** La sección 16 valida la
 > experiencia de una persona externa desde un clon de `main`, usando exclusivamente el README, una
@@ -723,3 +728,29 @@ abiertas.
 
 Quedan fuera producción, nginx, TLS, dominio, etiqueta `v1.0.0`, proveedores externos, costos,
 GPU, rendimiento comparativo, Windows, macOS y cambios funcionales no aprobados.
+
+## 17. Propuesta de reanudación después del hallazgo de idioma
+
+La primera ejecución pública probó el commit
+`afeae10190a87b0df92941f53d356bfc013453f4` sobre Docker 29.5.2 y Compose 5.1.4. El clon tardó
+0,95 s, el entorno se construyó en 40,14 s y el administrador de IA en 4,14 s. `/setup` comenzó en
+inglés, Mailpit apareció como `mail:1025` y su prueba respondió 200. El modelo predeterminado mostró
+licencia, checksum y requisitos; descargó 1,04 GiB en 55,98 s, ocupó 1,1 GB, quedó sano y completó
+la generación del asistente en 3,91 s.
+
+El recorrido selló la instalación, entró con la cuenta de fábrica, creó por correos reales de
+Mailpit una cuenta de Usuario y otra de Soporte y abrió `CS-2026-0001` desde la interfaz. Los dos
+resúmenes quedaron listos en 16,37 s. «Última acción» salió en inglés; «Motivo» salió en español aun
+cuando el contrato de API decía `language: "en"`. La consulta repetida del detalle también produjo
+logs GORM `record not found` para el interno inexistente. Conforme a 16.6 se detuvo antes de seeders,
+AD y Keycloak y no se modificó código.
+
+El entorno se limpió por completo: contenedores, redes, volúmenes, modelo, imágenes construidas,
+clon y herramientas temporales. El inventario final conservó únicamente recursos previos, incluidas
+las imágenes y contenedores detenidos de producción, que no se tocaron.
+
+Tras implementar y verificar `docs/modules/ai.md`, sección 15, y `docs/modules/tickets.md`, sección
+14, no se continúa desde un punto intermedio. Se publica primero la corrección en `main` y se repite
+todo el bloque 8 desde una clonación y recursos nuevos: instalación vacía, IA local real, alta por
+Mailpit, resúmenes y redacción, seeders, AD, Keycloak, retorno a local, tiempos y limpieza. El cierre
+sigue exigiendo cero hallazgos abiertos.

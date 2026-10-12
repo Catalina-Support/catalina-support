@@ -1,7 +1,11 @@
 # Ambientes: despliegue y pruebas
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-10-12
+> **Estado:** propuesta
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo limpiado y reanudación propuesta, 2026-10-13.** El bloque 8 se detuvo por una respuesta
+> de IA en otro idioma y retiró todos sus recursos temporales. La sección 19 exige una nueva pasada
+> completa desde `main` después de aprobar e integrar la corrección. Producción quedó intacta.
 >
 > **Propuesta del bloque 8, 2026-10-12: entorno público limpio.** La sección 18 delimita la
 > eliminación aprobada de los datos de desarrollo, el clon temporal de `main`, la evidencia y la
@@ -1113,3 +1117,16 @@ El entorno sólo valida Linux, Docker Compose, el acceso por `127.0.0.1:11001`, 
 local. Producción, nginx, certificados, dominio, proveedores externos, Windows y macOS permanecen
 fuera. Un hallazgo que requiera cambiar comportamiento se documenta y se detiene antes de escribir
 código.
+
+## 19. Propuesta de entorno para repetir el bloque 8
+
+La pasada detenida retiró el proyecto `catalina-support-dev`, el proyecto de IA, sus redes y
+volúmenes, los 1,1 GB del modelo, las imágenes construidas y las carpetas temporales. El inventario
+posterior mostró sólo recursos anteriores a la auditoría; los tres contenedores detenidos, el volumen
+y las imágenes de producción permanecieron intactos.
+
+La repetición vuelve a ejecutar la sección 18 completa después de que la corrección llegue a
+`main`. No reutiliza modelo, base, cachés propias de Catalina Support ni clon. Conserva las mismas
+fronteras: nombres explícitos, sin poda global, sin respaldo de los datos desechables y sin tocar
+producción. Un nuevo hallazgo funcional vuelve a detener y limpiar la pasada antes de cualquier
+cambio de código.
