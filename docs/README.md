@@ -304,15 +304,15 @@ escribe código sin un documento aprobado antes.
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Repositorio público bajo AGPL, contribuciones, CLA, avisos de terceros y configuración comunitaria de GitHub |
 | `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
-| `arquitectura.md` | **aprobado** | Prepara auditoría, reescritura controlada y trazabilidad de la fuente; lo anterior sigue as-built |
+| `arquitectura.md` | **as-built** | Arquitectura vigente, fronteras automáticas y publicación pública bajo AGPL verificadas |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
 | `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
-| `modules/settings.md` | **aprobado** | Añade licencia y fuente correspondiente a la marca pública; lo anterior sigue as-built |
+| `modules/settings.md` | **as-built** | Configuración completa y metadatos públicos de licencia, versión y fuente correspondiente |
 | `modules/mail.md` | **as-built** | Usa el idioma global y genera borradores revisables o manuales de las once plantillas al cambiarlo |
 | `modules/auth.md` | **as-built** | Identidad y sesión no llevan idioma personal; los correos de cuenta usan el idioma global |
 | `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
-| `interfaz-y-experiencia.md` | **aprobado** | Añade el enlace accesible de código fuente y licencia; lo anterior sigue as-built |
+| `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
 | `ambientes.md` | **as-built** | Matriz visual aislada verificada y limpiada; producción no se tocó |
 | `modules/ai.md` | **as-built** | Expone internamente sólo si existe una configuración activa, sin comprobar salud |

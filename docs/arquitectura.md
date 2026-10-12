@@ -1,7 +1,12 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-11
+> **Última actualización:** 2026-10-12
+>
+> **Enmendado el 2026-10-12: publicación cerrada.** La sección 19 deja de describir como pendientes
+> la visibilidad, la configuración comunitaria y la integración del árbol vigente en `main`. El
+> repositorio público, su historial AGPL y sus reglas efectivas quedaron verificados; producción,
+> dominio y la etiqueta `v1.0.0` permanecen aplazados.
 >
 > **Enmienda implementada y verificada el 2026-10-10: preparación del repositorio público.** La
 > sección 19 coordina la auditoría completa, la reescritura única del historial y los metadatos de
@@ -1221,13 +1226,18 @@ identificadores, se termina primero el contenido, se conserva una referencia pri
 se verifica el historial nuevo y sólo después se decide retirar la referencia. Un hallazgo sensible
 nuevo detiene el proceso para informar al responsable antes de otra mutación.
 
-La reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle privado. Las
-ramas `main` y `dev` ya no contienen el correo personal, los dominios reales ni las rutas reales; el
-escaneo de secretos sólo requiere dos huellas históricas exactas para valores declarados de
-desarrollo. Las ramas remotas privadas se reemplazaron mediante `--force-with-lease`, se verificaron
-contra sus nuevos identificadores y las referencias locales anteriores se retiraron después de
-confirmar el remoto. El bundle privado recuperable se conserva fuera del repositorio. El
-repositorio continúa privado.
+La primera reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle
+privado. Las ramas `main` y `dev` dejaron de contener el correo personal, los dominios reales y las
+rutas reales; el escaneo de secretos sólo requirió dos huellas históricas exactas para valores
+declarados de desarrollo. Las referencias remotas se reemplazaron mediante `--force-with-lease`, se
+verificaron contra sus nuevos identificadores y las referencias locales anteriores se retiraron
+después de confirmar el remoto.
+
+Al descubrir que el repositorio ya era público con la licencia MIT histórica en `main`, se creó un
+segundo bundle privado y se reescribieron `main`, `dev` y `cla-signatures` para que la licencia raíz
+propia y sus declaraciones históricas expresaran AGPL-3.0-only. La operación conservó licencias de
+terceros y la firma del CLA, pasó Gitleaks y publicó primero `main`. El PR `#2` integró después el
+árbol vigente mediante squash. Los dos bundles recuperables se conservan fuera del repositorio.
 
 La trazabilidad visible usa la marca pública como fuente única: el backend entrega versión,
 `AGPL-3.0-only` y URL del código correspondiente. Las versiones publicadas enlazan su etiqueta; el
@@ -1236,11 +1246,13 @@ compilación, no a la base ni a la configuración administrativa.
 
 Los archivos comunitarios y la automatización de CLA forman una frontera de mantenimiento en la
 raíz y `.github`; no introducen dependencias de ejecución. Las acciones se fijan por hash y se
-revisan sus permisos mínimos. El cambio de visibilidad, producción, el dominio público y cualquier
-etiqueta de versión permanecen fuera de esta implementación.
+revisan sus permisos mínimos. El repositorio es público y GitHub reconoce AGPL-3.0. Producción, el
+dominio público de la aplicación y cualquier etiqueta de versión permanecen fuera de esta
+implementación.
 
 La verificación coordinada del 2026-10-10 pasó settings en el backend, las fronteras y las 227
 pruebas del frontend y los 12 casos aislados de marca en PC y móvil. La prueba independiente del
 CLA había confirmado antes su cuarto check en verde. El entorno E2E se eliminó con sus volúmenes al
-terminar. La configuración comunitaria restante de GitHub y la instalación limpia desde el README
-siguen siendo pasos previos a presentar la decisión final de visibilidad.
+terminar. El 2026-10-12 se verificaron además la descripción, los temas, Issues, Discussions,
+reportes privados de vulnerabilidades, sólo squash, limpieza automática y el ruleset efectivo de
+`main` y `dev`; `cla-signatures` quedó fuera y escribible por la acción.
