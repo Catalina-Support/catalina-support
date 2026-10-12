@@ -39,6 +39,10 @@
 > 56A–65A: portada temporal en `dev`, segundo bundle, reescritura acotada de las tres ramas,
 > conservación del CLA y sincronización posterior mediante PR. La implementación sigue pendiente.
 >
+> **Secuencia corregida y aprobada el 2026-10-11:** 66A mantiene `main` como rama principal
+> y `dev` como desarrollo. La reescritura publicará primero `main` para corregir MIT y después las
+> otras ramas y el PR. La implementación sigue pendiente.
+>
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
 > logging en el navegador. Las suites de frontend, build y backend pasaron; producción no se tocó.
