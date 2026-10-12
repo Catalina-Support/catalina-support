@@ -106,9 +106,15 @@ func collect(root string) ([]component, error) {
 func collectGo(backend string) ([]component, error) {
 	cmd := exec.Command("go", "list", "-deps", "-json", "./...")
 	cmd.Dir = backend
-	out, err := cmd.CombinedOutput()
+	// `go list -json` writes the machine-readable stream to stdout. Module download progress belongs
+	// to stderr and must not be mixed into that stream on a clean CI runner.
+	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("go list: %w: %s", err, bytes.TrimSpace(out))
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("go list: %w: %s", err, bytes.TrimSpace(exitErr.Stderr))
+		}
+		return nil, fmt.Errorf("go list: %w", err)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(out))
 	modules := map[string]*goModule{}
