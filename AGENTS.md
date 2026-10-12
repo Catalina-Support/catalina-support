@@ -88,7 +88,7 @@ completo.
 | `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
 | `docs/modules/tickets.md` | **as-built**: capacidad de redacción calculada dentro del detalle del ticket |
 | `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **as-built**: matriz, evidencia y limpieza del repaso visual verificadas |
+| `docs/ambientes.md` | **propuesta**: bloque 8 con entorno limpio, clon público temporal y limpieza final |
 | `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
 | `docs/modules/settings.md` | **as-built**: licencia, fuente y condición de desarrollo en la marca pública |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
@@ -97,7 +97,7 @@ completo.
 | `docs/modules/auth.md` | **as-built**: identidad y sesión no llevan idioma; los correos usan el idioma global sin cambiar los tres caminos |
 | `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
 | `docs/arquitectura.md` | **as-built**: auditoría, historial reescrito y trazabilidad de la fuente verificados |
-| `docs/prueba-local.md` | **as-built**: recorrido visual reproducible completado sobre datos desechables |
+| `docs/prueba-local.md` | **propuesta**: bloque 8 para validar desde `main` el README, IA real, seeders y autenticación |
 | `docs/proyecto-abierto.md` | **as-built**: repositorio público bajo AGPL, historial saneado, CLA y configuración comunitaria verificados |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 

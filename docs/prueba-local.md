@@ -1,7 +1,13 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Estado:** propuesta
+> **Última actualización:** 2026-10-12
+>
+> **Propuesta del bloque 8, 2026-10-12: recorrido público desde cero.** La sección 16 valida la
+> experiencia de una persona externa desde un clon de `main`, usando exclusivamente el README, una
+> instalación vacía, el modelo local real, los seeders opcionales y los tres métodos de entrada. El
+> responsable cerró 1A–15B. No se ejecutan contenedores ni se cambia código hasta la aprobación
+> explícita de esta propuesta; producción, dominio y la etiqueta `v1.0.0` siguen fuera.
 >
 > **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 15 añade el recorrido reproducible del
 > repaso visual completo. Lo existente continúa as-built y la propuesta requiere aprobación antes
@@ -608,3 +614,112 @@ Pasaron 220 pruebas unitarias, 18 casos afectados con 4 omisiones previstas y la
 180 casos aprobados y 38 omisiones previstas. No quedó ningún hallazgo abierto. La instancia
 `catalina-support-block6` se eliminó con sus contenedores, red y volúmenes; desarrollo y producción
 no participaron en el recorrido.
+
+## 16. Propuesta del bloque 8: incorporación desde el repositorio público
+
+### 16.1 Objetivo y fuente de verdad
+
+El recorrido representa a una persona que llega por primera vez al repositorio público. Parte de un
+clon nuevo de la rama predeterminada `main` y usa únicamente los comandos, direcciones, cuentas y
+explicaciones del README que contiene ese clon. No usa este documento, conocimiento interno, el
+árbol de `dev` ni comandos improvisados para completar un paso.
+
+Una instrucción ausente, incorrecta o que exija conocimiento no publicado es un hallazgo, aunque el
+equipo sepa cómo continuar. Se puede investigar después de registrar el punto exacto, pero no se
+cuenta el recorrido como aprobado mediante ese atajo.
+
+La ejecución real se hace en Linux con Docker y Docker Compose. Windows y macOS no se simulan y no
+se presentan como verificados. La dirección principal es `http://127.0.0.1:11001`; nginx, TLS y el
+dominio local no forman parte del camino de primera prueba.
+
+### 16.2 Preparación limpia y datos desechables
+
+Los datos de desarrollo actuales fueron declarados desechables por el responsable (15B). Antes del
+clon se detienen los compose de desarrollo, IA, directorio y Keycloak y se eliminan sus contenedores,
+redes y volúmenes, incluido el volumen de modelos. También se limpian `_files` y `_logs` de
+desarrollo. No se crea una copia de respaldo de esos recursos.
+
+Se eliminan las imágenes construidas específicamente para Catalina Support, para que `--build`
+demuestre una construcción nueva. No se purgan imágenes base compartidas, cachés globales de Docker
+ni recursos ajenos al proyecto. El repositorio de trabajo y su historial no se borran ni se usan
+como fuente del clon público.
+
+El clon vive en una carpeta temporal fuera del repositorio de trabajo. Al terminar se eliminan sus
+contenedores, redes, volúmenes, modelo, adjuntos, logs, imágenes propias y la carpeta temporal. Un
+inventario final debe demostrar que no quedan recursos de Catalina Support creados por el recorrido.
+Producción no se detiene, modifica ni consulta.
+
+### 16.3 Recorrido vacío con correo e IA reales
+
+Se sigue el README desde el clon: comprobación de requisitos, construcción y arranque. Una base
+nueva debe llevar a `/setup` sin seeders. Se completan sus cinco pasos con entrada local, región y
+dirección local, Mailpit y el modelo local predeterminado.
+
+El modelo se descarga desde la interfaz, se activa y se prueba de verdad. El criterio no compara una
+frase exacta: exige que el motor quede sano, que Catalina Support obtenga un resumen válido y que
+«Mejorar con IA» devuelva un borrador revisable. Una respuesta vacía, un error oculto o una conexión
+que sólo pasa salud no cumplen.
+
+Tras sellar la instalación se entra con `admin` / `admin`, se crea una cuenta local usando el flujo
+documentado, se abre su correo real en Mailpit y se establece su contraseña. Con esa cuenta se crea
+un ticket; Soporte o Desarrollo ejercita el resumen y la mejora de redacción según sus permisos.
+El recorrido comprueba que `/setup` ya no se puede reabrir.
+
+### 16.4 Seeders y métodos de entrada opcionales
+
+Después del recorrido vacío se ejecuta exactamente el comando opcional del README. Debe terminar
+correctamente, conservar sello, correo, IA y los demás ajustes de la instalación, y dejar once
+cuentas de ejemplo, veinticinco tickets y cinco adjuntos utilizables. Se comprueba una entrada de
+Usuario, Soporte y Desarrollo con las credenciales publicadas.
+
+AD y Keycloak se levantan después, uno por uno, con sus comandos documentados. Desde Configuración
+se prueba y activa AD, entra una persona del directorio y se confirma la creación o actualización de
+su cuenta al primer acceso. Después se prueba y activa Keycloak y entra una persona del reino. La
+cuenta de fábrica debe poder entrar durante ambos métodos. Al terminar se restaura el método local y
+se comprueba de nuevo una cuenta local.
+
+### 16.5 Tiempos y evidencia
+
+El informe separa:
+
+- **tiempo activo**, dedicado a leer, escribir, elegir opciones y corregir datos;
+- **esperas automáticas**, construcción de imágenes, arranque, descarga del modelo y generación.
+
+Se anotan sistema, arquitectura, versiones de Docker y Compose, commit público probado, comandos
+copiados del README, resultado de cada hito y consumo final de disco del modelo. No se registran
+tokens, contraseñas nuevas, cuerpos privados, cabeceras ni contenido completo de tickets. Las
+capturas o logs temporales se conservan sólo mientras sirvan para diagnosticar un hallazgo y se
+eliminan con el entorno.
+
+No hay un límite de minutos que convierta por sí solo el recorrido en fallo: los tiempos sirven para
+detectar esperas mal explicadas y comparar mejoras futuras. Un proceso detenido sin progreso o sin
+mensaje sí es un hallazgo.
+
+### 16.6 Criterios de cierre y tratamiento de hallazgos
+
+El bloque se cierra sólo si:
+
+1. un clon de `main` completa el camino sin instrucciones externas al README;
+2. la instalación comienza vacía y `/setup` termina y queda sellado;
+3. Mailpit completa el alta local y el modelo real ejecuta resumen y mejora de redacción;
+4. el seeder conserva la configuración y deja 11 cuentas, 25 tickets y 5 adjuntos;
+5. local, AD y Keycloak permiten sus entradas y al final vuelve a funcionar local;
+6. los tiempos quedan separados y la limpieza final no deja recursos del recorrido;
+7. no queda ningún hallazgo abierto.
+
+Una errata o instrucción documental se corrige en el documento que la contiene y se repite desde el
+punto anterior estable. Un hallazgo de comportamiento, interfaz, API, datos, permisos o flujo se
+reporta y vuelve al ciclo de propuesta y aprobación antes de cambiar código. No se agrupan arreglos
+no aprobados dentro de esta auditoría.
+
+### 16.7 Decisiones y exclusiones
+
+El responsable eligió 1A–5A: instalación pública, recursos nuevos, vacío antes de ejemplos, modelo
+local real y métodos opcionales después de local. Eligió 6A–10A: `main`, sólo README, recorrido
+funcional completo, tiempos separados y tratamiento documental estricto de hallazgos. En el repaso
+eligió 11A–14A y 15B: puerto 11001, generación real sin texto fijo, conteos y conservación tras el
+seeder, AD seguido de Keycloak y datos actuales desechables sin respaldo. No quedan decisiones
+abiertas.
+
+Quedan fuera producción, nginx, TLS, dominio, etiqueta `v1.0.0`, proveedores externos, costos,
+GPU, rendimiento comparativo, Windows, macOS y cambios funcionales no aprobados.

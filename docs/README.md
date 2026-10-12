@@ -303,7 +303,7 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Repositorio público bajo AGPL, contribuciones, CLA, avisos de terceros y configuración comunitaria de GitHub |
-| `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
+| `prueba-local.md` | **propuesta** | Bloque 8: recorrido público desde un clon limpio de `main`, siguiendo sólo el README |
 | `arquitectura.md` | **as-built** | Arquitectura vigente, fronteras automáticas y publicación pública bajo AGPL verificadas |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
@@ -314,7 +314,7 @@ escribe código sin un documento aprobado antes.
 | `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
 | `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Matriz visual aislada verificada y limpiada; producción no se tocó |
+| `ambientes.md` | **propuesta** | Bloque 8: limpieza del desarrollo desechable, clon público temporal y retirada total de recursos |
 | `modules/ai.md` | **as-built** | Expone internamente sólo si existe una configuración activa, sin comprobar salud |
 | `modules/tickets.md` | **as-built** | Lleva `capabilities.aiWriting` en el detalle y la recalcula en cada lectura |
 
