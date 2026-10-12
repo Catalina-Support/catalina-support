@@ -1,13 +1,13 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-12
 >
 > **Propuesta del bloque 8, 2026-10-12: recorrido público desde cero.** La sección 16 valida la
 > experiencia de una persona externa desde un clon de `main`, usando exclusivamente el README, una
 > instalación vacía, el modelo local real, los seeders opcionales y los tres métodos de entrada. El
-> responsable cerró 1A–15B. No se ejecutan contenedores ni se cambia código hasta la aprobación
-> explícita de esta propuesta; producción, dominio y la etiqueta `v1.0.0` siguen fuera.
+> responsable cerró 1A–15B y aprobó explícitamente la propuesta el 2026-10-12. Producción, dominio
+> y la etiqueta `v1.0.0` siguen fuera.
 >
 > **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 15 añade el recorrido reproducible del
 > repaso visual completo. Lo existente continúa as-built y la propuesta requiere aprobación antes

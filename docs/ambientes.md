@@ -1,12 +1,12 @@
 # Ambientes: despliegue y pruebas
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-12
 >
 > **Propuesta del bloque 8, 2026-10-12: entorno público limpio.** La sección 18 delimita la
 > eliminación aprobada de los datos de desarrollo, el clon temporal de `main`, la evidencia y la
 > limpieza final del recorrido definido en `docs/prueba-local.md`, sección 16. El responsable cerró
-> 1A–15B. No se toca Docker ni código hasta la aprobación explícita; producción queda fuera.
+> 1A–15B y aprobó explícitamente la propuesta el 2026-10-12; producción queda fuera.
 >
 > **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 17 define el entorno y la matriz de
 > verificación del repaso integral de formato. Lo existente continúa as-built y producción permanece
