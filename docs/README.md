@@ -302,7 +302,7 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `proyecto-abierto.md` | **aprobado** | Publicación abierta en ejecución; dependencias y avisos de terceros ya están regularizados |
+| `proyecto-abierto.md` | **as-built** | Repositorio público bajo AGPL, contribuciones, CLA, avisos de terceros y configuración comunitaria de GitHub |
 | `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
 | `arquitectura.md` | **aprobado** | Prepara auditoría, reescritura controlada y trazabilidad de la fuente; lo anterior sigue as-built |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
