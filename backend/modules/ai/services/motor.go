@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/abadojack/whatlanggo"
 )
 
 // motor es el cliente del motor de inteligencia artificial: se le habla **por HTTP y en el formato de
@@ -144,74 +146,43 @@ func (m *motor) probarConfiguracion(ctx context.Context, baseURL, model, provide
 // contesta —que se reintenta— y `ErrRespuestaInvalida` cuando contesta algo que no vale —que se
 // reintenta una sola vez— (docs/modules/ai.md, decisión 8).
 func (m *motor) pedir(ctx context.Context, ajustes Ajustes, encargo encargo) (string, string, error) {
-	if ajustes.Provider != "" {
-		return m.pedirGlobal(ctx, ajustes, encargo)
-	}
-	cuerpo, err := json.Marshal(peticion{
-		Model: ajustes.Modelo,
-		Messages: []mensaje{
-			{Role: "system", Content: encargo.sistema},
-			{Role: "user", Content: encargo.usuario},
-		},
-		Temperature:    temperatura,
-		MaxTokens:      topeDePiezas(ajustes),
-		ResponseFormat: formatoDeRespuesta{Type: "json_object"},
-	})
-	if err != nil {
-		return "", "", &respuestaInvalida{forma: "no se pudo armar la petición"}
-	}
-
-	peticionHTTP, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, direccionDe(ajustes.URL, "/v1/chat/completions"), bytes.NewReader(cuerpo),
-	)
-	if err != nil {
-		return "", "", ErrSinMotor
-	}
-	peticionHTTP.Header.Set("Content-Type", "application/json")
-
-	respuestaHTTP, err := m.cliente.Do(peticionHTTP)
-	if err != nil {
-		// **Aquí no se registra nada**: el error puede llevar la dirección, y del texto del ticket no
-		// se registra ni una letra (docs/modules/ai.md, sección 3).
-		return "", "", ErrSinMotor
-	}
-	defer respuestaHTTP.Body.Close()
-
-	if respuestaHTTP.StatusCode < 200 || respuestaHTTP.StatusCode > 299 {
-		// El motor está, pero no atiende. Para el módulo es lo mismo que no contestar: se reintenta y,
-		// si sigue, el campo queda en `sin_motor`. El cuerpo se drena —sin leerlo— para que la conexión
-		// se pueda reutilizar.
-		vaciar(respuestaHTTP.Body)
-		return "", "", ErrSinMotor
-	}
-
-	var salida respuesta
-	if err := json.NewDecoder(io.LimitReader(respuestaHTTP.Body, maxRespuestaBytes)).Decode(&salida); err != nil {
-		return "", "", &respuestaInvalida{forma: "el motor devolvió algo que no es JSON"}
-	}
-	if len(salida.Choices) == 0 {
-		return "", "", &respuestaInvalida{forma: "el motor no devolvió ninguna respuesta"}
-	}
-
-	es, en, hay := dosIdiomas(salida.Choices[0].Message.Content)
-	if !hay {
-		// Se devuelve **con la forma**, para que el aviso del log diga qué faltó.
-		return "", "", formaDeRespuesta(salida.Choices[0].Message.Content)
-	}
-
-	return recortarPalabras(es, ajustes.Palabras), recortarPalabras(en, ajustes.Palabras), nil
+	return m.pedirGlobal(ctx, ajustes, encargo)
 }
 
 // pedirGlobal genera una sola redacción en el idioma de la instalación y habla tanto con APIs
 // compatibles con OpenAI como con Claude. Se devuelve en los dos huecos transitorios para conservar
 // el contrato interno mientras la migración 1.0.0 retira las columnas bilingües.
 func (m *motor) pedirGlobal(ctx context.Context, ajustes Ajustes, encargo encargo) (string, string, error) {
+	text, err := m.pedirGlobalUnaVez(ctx, ajustes, encargo, false)
+	if err != nil {
+		return "", "", err
+	}
+	if idiomaCompatible(text, ajustes.Language) {
+		return text, text, nil
+	}
+	if ajustes.Mode == "provider" {
+		return "", "", errIdiomaInvalido
+	}
+	text, err = m.pedirGlobalUnaVez(ctx, ajustes, encargo, true)
+	if err != nil {
+		return "", "", err
+	}
+	if !idiomaCompatible(text, ajustes.Language) {
+		return "", "", errIdiomaInvalido
+	}
+	return text, text, nil
+}
+
+func (m *motor) pedirGlobalUnaVez(ctx context.Context, ajustes Ajustes, encargo encargo, reforzado bool) (string, error) {
 	idioma := "English"
 	if ajustes.Language == "es" {
 		idioma = "Spanish"
 	}
 	prompt := encargo.texto + "\n\nWrite only in " + idioma +
 		`. Return exactly {"text":"..."} and no other keys or surrounding text.`
+	if reforzado {
+		prompt += " Your previous answer used the wrong language. Every natural-language sentence must be in " + idioma + "."
+	}
 	endpoint := direccionDe(ajustes.URL, "/v1/chat/completions")
 	body := map[string]any{
 		"model": ajustes.Modelo, "messages": []map[string]string{
@@ -227,39 +198,50 @@ func (m *motor) pedirGlobal(ctx context.Context, ajustes Ajustes, encargo encarg
 	}
 	encoded, err := json.Marshal(body)
 	if err != nil {
-		return "", "", ErrRespuestaInvalida
+		return "", ErrRespuestaInvalida
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(encoded))
 	if err != nil {
-		return "", "", ErrSinMotor
+		return "", ErrSinMotor
 	}
 	req.Header.Set("Content-Type", "application/json")
 	aplicarCredencial(req, ajustes.Provider, ajustes.AuthType, ajustes.AuthHeader, ajustes.Credential)
 	resp, err := m.cliente.Do(req)
 	if err != nil {
-		return "", "", ErrSinMotor
+		return "", ErrSinMotor
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		vaciar(resp.Body)
-		return "", "", ErrSinMotor
+		return "", ErrSinMotor
 	}
 	content, err := contenidoDeRespuesta(resp.Body, ajustes.Provider)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	obj, ok := primerObjetoJSON(content)
 	if !ok {
-		return "", "", ErrRespuestaInvalida
+		return "", ErrRespuestaInvalida
 	}
 	var parsed struct {
 		Text string `json:"text"`
 	}
 	if json.Unmarshal([]byte(obj), &parsed) != nil || strings.TrimSpace(parsed.Text) == "" {
-		return "", "", ErrRespuestaInvalida
+		return "", ErrRespuestaInvalida
 	}
 	text := recortarPalabras(strings.TrimSpace(parsed.Text), ajustes.Palabras)
-	return text, text, nil
+	return text, nil
+}
+
+func idiomaCompatible(texto, esperado string) bool {
+	info := whatlanggo.Detect(texto)
+	if !info.IsReliable() {
+		return true
+	}
+	if esperado == "es" {
+		return info.Lang == whatlanggo.Spa
+	}
+	return info.Lang == whatlanggo.Eng
 }
 
 func aplicarCredencial(req *http.Request, provider, authType, authHeader, credential string) {

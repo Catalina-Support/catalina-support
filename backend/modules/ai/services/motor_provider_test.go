@@ -78,6 +78,47 @@ func TestUnaRespuestaMayorAlLimiteSeRechaza(t *testing.T) {
 	}
 }
 
+func TestElIdiomaSeValidaConUnSoloReintentoLocal(t *testing.T) {
+	var llamadas atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if llamadas.Add(1) == 1 {
+			fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"The requester cannot access the application and needs help resetting the password.\"}"}}]}`)
+			return
+		}
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"La persona solicitante no puede entrar en la aplicación y necesita restablecer su contraseña.\"}"}}]}`)
+	}))
+	defer server.Close()
+
+	m := nuevoMotor(time.Second)
+	texto, _, err := m.pedirGlobal(context.Background(), Ajustes{URL: server.URL, Modelo: "modelo", Mode: "local", Language: "es", Palabras: 60, Contexto: 4096}, encargo{sistema: "resume", texto: "ticket"})
+	if err != nil || !strings.HasPrefix(texto, "La persona") || llamadas.Load() != 2 {
+		t.Fatalf("el reintento local no corrigió el idioma: texto=%q llamadas=%d err=%v", texto, llamadas.Load(), err)
+	}
+}
+
+func TestElProveedorDePagoNoSeReintentaPorIdioma(t *testing.T) {
+	var llamadas atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		llamadas.Add(1)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"The requester cannot access the application and needs help resetting the password.\"}"}}]}`)
+	}))
+	defer server.Close()
+
+	m := nuevoMotor(time.Second)
+	_, _, err := m.pedirGlobal(context.Background(), Ajustes{URL: server.URL, Modelo: "modelo", Mode: "provider", Provider: "openai", Language: "es", Palabras: 60, Contexto: 4096}, encargo{sistema: "resume", texto: "ticket"})
+	if !errors.Is(err, errIdiomaInvalido) || llamadas.Load() != 1 {
+		t.Fatalf("el proveedor debía fallar sin reintento: llamadas=%d err=%v", llamadas.Load(), err)
+	}
+}
+
+func TestElDetectorAceptaTextoBreveOTecnicoAmbiguo(t *testing.T) {
+	for _, texto := range []string{"OK", "HTTP 500 SQL", "Qwen2.5 API"} {
+		if !idiomaCompatible(texto, "es") || !idiomaCompatible(texto, "en") {
+			t.Fatalf("el texto ambiguo %q no debe rechazarse", texto)
+		}
+	}
+}
+
 func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	var recibido string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +140,7 @@ func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	if err != nil || texto != "Hola, Ana. Ya puedes ingresar." {
 		t.Fatalf("resultado inesperado: texto=%q err=%v", texto, err)
 	}
-	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "friendly and approachable", "main support ticket"} {
+	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "amable y cercano", "ticket principal de soporte"} {
 		if !strings.Contains(recibido, esperado) {
 			t.Fatalf("la petición no contiene %q: %s", esperado, recibido)
 		}

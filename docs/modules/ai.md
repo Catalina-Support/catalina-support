@@ -1,14 +1,13 @@
 # ai
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
-> **Hallazgo y enmienda propuesta el 2026-10-13: cumplimiento del idioma global.** El recorrido
+> **Hallazgo corregido e implementación verificada el 2026-10-13: cumplimiento del idioma global.** El recorrido
 > público del bloque 8 obtuvo un «Motivo» en español con una instalación inglesa, aunque la fila
 > quedó marcada como `en`. La sección 15 define validación local, tratamiento distinto para motores
 > sin costo controlado y proveedores externos, prompts en el idioma del despliegue y la reanudación
-> de la auditoría. El responsable cerró 1A–12A, con 10B. No se modifica código hasta aprobar esta
-> propuesta, aprobada explícitamente el 2026-10-13.
+> de la auditoría. El responsable cerró 1A–12A, con 10B. La propuesta fue aprobada explícitamente e implementada el 2026-10-13.
 >
 > **Enmienda implementada y verificada el 2026-10-08: visibilidad por configuración.** La sección 14
 > distingue un motor configurado de uno disponible y permite que `tickets` consulte únicamente esa
@@ -725,7 +724,7 @@ los tickets y permanece dirigida a Configuración. `false` es una garantía del 
 del adaptador, configuración efectiva inválida, respuestas antiguas o pruebas aisladas; no abre un
 modo operativo sin IA.
 
-## 15. Propuesta: hacer cumplir el idioma global en las respuestas de IA
+## 15. Implementación: cumplimiento del idioma global en las respuestas de IA
 
 ### 15.1 Hallazgo reproducido
 
@@ -787,3 +786,6 @@ falso ni una frase exacta.
 Quedan fuera idiomas distintos de español e inglés, traducción del contenido original, regeneración
 masiva, cuotas, métricas de costo, cambios de catálogo y producción. El responsable eligió 1A–9A,
 10B, 11A y 12A. No quedan decisiones abiertas.
+### 15.6 Implementación y verificación
+
+El backend usa `whatlanggo` 1.0.1 dentro de `ai` y acepta una respuesta ambigua cuando el detector no la considera fiable. Una discrepancia fiable activa una segunda generación únicamente en `local` y `remote`; `provider` devuelve `ai.invalid` tras la primera. Los resúmenes locales abandonaron el contrato bilingüe antiguo y usan el mismo contrato global que los demás adaptadores. Las pruebas focalizadas y la suite completa del backend, incluido `go vet`, pasaron el 2026-10-13.

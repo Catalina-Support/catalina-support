@@ -89,7 +89,7 @@ func (s *Service) atender(t trabajo) {
 	ajustes := s.ajustesDeAhora()
 
 	for intento := 1; ; intento++ {
-		es, en, err := s.motor.pedir(s.ctx, ajustes, encargoDe(t.tipo, t.texto, ajustes.Palabras))
+		es, en, err := s.motor.pedir(s.ctx, ajustes, encargoDe(t.tipo, t.texto, ajustes.Palabras, ajustes.Language))
 
 		if err == nil {
 			s.contarIntento(t)
@@ -104,6 +104,12 @@ func (s *Service) atender(t trabajo) {
 		}
 
 		s.contarIntento(t)
+
+		if errors.Is(err, errIdiomaInvalido) {
+			s.apuntarFallo(t.numero, t.tipo, EstadoError, ClaveInvalida)
+			logs.LogWarning("el motor de IA contestó en otro idioma para el ticket " + t.numero + " (" + string(t.tipo) + ")")
+			return
+		}
 
 		if errors.Is(err, ErrRespuestaInvalida) {
 			if intento >= intentosRespuesta {

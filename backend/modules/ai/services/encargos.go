@@ -29,16 +29,24 @@ type encargo struct {
 //     mitad de lo que hace que el JSON salga limpio.
 //
 // El texto del ticket va recortado por el principio (decisión 6).
-func encargoDe(tipo Tipo, texto string, palabras int) encargo {
+func encargoDe(tipo Tipo, texto string, palabras int, idioma string) encargo {
 	return encargo{
-		sistema: oficioDe(tipo),
-		usuario: recortar(texto) + "\n\n" + exigenciaDelFormato(palabras),
+		sistema: oficioDe(tipo, idioma),
+		usuario: recortar(texto) + "\n\n" + exigenciaDelFormato(palabras, idioma),
 		texto:   recortar(texto),
 	}
 }
 
 // oficioDe es lo que se le pide a cada campo, que es lo único que cambia entre los dos encargos.
-func oficioDe(tipo Tipo) string {
+func oficioDe(tipo Tipo, idioma string) string {
+	if idioma == "en" {
+		switch tipo {
+		case Motivo:
+			return "You summarize help desk tickets. State WHAT THE TICKET IS ABOUT in one direct present-tense sentence: what is happening to the requester and what they need. Focus on the subject, description and request, not later actions."
+		case UltimaAccion:
+			return "You summarize help desk tickets. State WHAT HAPPENED LAST in one direct past-tense sentence. The newest information is at the end of the conversation. Say whether the ticket is waiting for the requester, Support or Development."
+		}
+	}
 	switch tipo {
 	case Motivo:
 		return "Eres quien resume tickets en una mesa de ayuda. Escribe DE QUÉ VA EL TICKET en una sola " +
@@ -62,7 +70,10 @@ func oficioDe(tipo Tipo) string {
 // La plantilla se le enseña tal cual —`{"es": "…", "en": "…"}`— porque es lo que hace que el modelo
 // conteste ese objeto y no el suyo: se midió que sin ella se inventa las claves, y con ella sale bien
 // incluso con un ticket de 6 000 caracteres.
-func exigenciaDelFormato(palabras int) string {
+func exigenciaDelFormato(palabras int, idioma string) string {
+	if idioma == "en" {
+		return "Do not invent anything absent from the ticket. Use at most " + strconv.Itoa(palabras) + " words. Return only the requested JSON object."
+	}
 	return "Devuelve EXACTAMENTE este objeto JSON, con esas dos claves y ningún campo más: el español " +
 		"en \"es\" y el inglés en \"en\". El inglés no es una traducción del español, es el mismo " +
 		"resumen escrito en inglés.\n" +
