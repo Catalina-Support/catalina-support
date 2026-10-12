@@ -1,7 +1,12 @@
 # Ambientes: despliegue y pruebas
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Estado:** aprobado
+> **Última actualización:** 2026-10-12
+>
+> **Propuesta del bloque 8, 2026-10-12: entorno público limpio.** La sección 18 delimita la
+> eliminación aprobada de los datos de desarrollo, el clon temporal de `main`, la evidencia y la
+> limpieza final del recorrido definido en `docs/prueba-local.md`, sección 16. El responsable cerró
+> 1A–15B y aprobó explícitamente la propuesta el 2026-10-12; producción queda fuera.
 >
 > **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 17 define el entorno y la matriz de
 > verificación del repaso integral de formato. Lo existente continúa as-built y producción permanece
@@ -1079,3 +1084,32 @@ reproducible encontró y permitió corregir un único desbordamiento en `/users`
 y las 220 pruebas unitarias pasaron. La ejecución canónica terminó con **180 casos E2E aprobados y
 38 omisiones previstas**. El proyecto aislado se eliminó con sus volúmenes y producción permaneció
 sin tocar.
+
+## 18. Propuesta del bloque 8: entorno para el recorrido público
+
+La prueba usa los nombres que traen `dev.yml`, `ai.yml`, `active-directory.yml` y `keycloak.yml`,
+porque cambiar nombres o montar un compose alternativo dejaría de validar el README. Por ello no se
+ejecuta en paralelo con el desarrollo habitual.
+
+Antes de comenzar se registra el inventario de contenedores, redes, volúmenes e imágenes de
+Catalina Support.
+Los compose conocidos se bajan con sus opciones de eliminación de volúmenes; el volumen local de
+modelos también se elimina. `_files` y `_logs` del desarrollo son desechables en este bloque y se
+vacían. La limpieza se limita a nombres y rutas explícitos del proyecto: nunca usa prefijos amplios
+ni toca recursos de otras aplicaciones.
+
+El clon temporal procede de la URL pública y se fija al commit que `main` publique al comenzar. Los
+únicos cambios admitidos dentro de esa carpeta son efectos esperados de los comandos documentados:
+directorios de logs, adjuntos y artefactos ignorados. Cualquier edición manual del clon invalida la
+pasada y obliga a repetirla.
+
+La evidencia registra versiones, commit, comandos, tiempos activos y automáticos, estados de salud,
+conteos y el inventario anterior y posterior. No conserva secretos ni el modelo. Al cerrar se bajan
+los cuatro compose, se eliminan volúmenes, imágenes propias y la carpeta temporal, y se verifica que
+no quede ningún recurso creado por el recorrido. No se restaura el desarrollo anterior: sus datos
+fueron declarados desechables por el responsable.
+
+El entorno sólo valida Linux, Docker Compose, el acceso por `127.0.0.1:11001`, Mailpit y el motor
+local. Producción, nginx, certificados, dominio, proveedores externos, Windows y macOS permanecen
+fuera. Un hallazgo que requiera cambiar comportamiento se documenta y se detiene antes de escribir
+código.
