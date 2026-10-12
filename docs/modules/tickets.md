@@ -1,12 +1,13 @@
 # Tickets: modelo de datos, transiciones y módulos
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Hallazgo y enmienda propuesta el 2026-10-13: idioma y consulta esperada.** El bloque 8 encontró
 > un resumen en otro idioma y que leer un principal no escalado imprime `record not found` como si
 > fuera un error. La sección 14 coordina el contrato de IA con `docs/modules/ai.md` y silencia sólo
-> esa ausencia normal. El responsable eligió 1A–12A, con 10B. No se cambia código antes de aprobar.
+> esa ausencia normal. El responsable eligió 1A–12A, con 10B, y aprobó explícitamente la propuesta
+> el 2026-10-13.
 >
 > **Enmienda implementada y verificada el 2026-10-08: capacidad de redacción en el detalle.** La
 > sección 13 hace que el detalle decida si la ayuda se ofrece según papel, permiso y una IA

@@ -1,12 +1,12 @@
 # mail
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Enmienda propuesta el 2026-10-13: validar el idioma de los borradores.** La sección 12 adopta
 > el control central de `ai`: una traducción claramente incorrecta no sustituye el borrador y un
 > proveedor externo no recibe un reintento automático. El responsable cerró 1A–12A con 10B. No se
-> cambia código antes de aprobar.
+> cambia código fuera de lo aprobado; el responsable la aprobó explícitamente el 2026-10-13.
 >
 > **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
 > idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las

@@ -1,6 +1,6 @@
 # ai
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Hallazgo y enmienda propuesta el 2026-10-13: cumplimiento del idioma global.** El recorrido
@@ -8,7 +8,7 @@
 > quedó marcada como `en`. La sección 15 define validación local, tratamiento distinto para motores
 > sin costo controlado y proveedores externos, prompts en el idioma del despliegue y la reanudación
 > de la auditoría. El responsable cerró 1A–12A, con 10B. No se modifica código hasta aprobar esta
-> propuesta.
+> propuesta, aprobada explícitamente el 2026-10-13.
 >
 > **Enmienda implementada y verificada el 2026-10-08: visibilidad por configuración.** La sección 14
 > distingue un motor configurado de uno disponible y permite que `tickets` consulte únicamente esa

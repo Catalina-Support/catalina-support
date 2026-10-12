@@ -1,11 +1,12 @@
 # Ambientes: despliegue y pruebas
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Hallazgo limpiado y reanudación propuesta, 2026-10-13.** El bloque 8 se detuvo por una respuesta
 > de IA en otro idioma y retiró todos sus recursos temporales. La sección 19 exige una nueva pasada
-> completa desde `main` después de aprobar e integrar la corrección. Producción quedó intacta.
+> completa desde `main` después de integrar la corrección aprobada explícitamente el 2026-10-13.
+> Producción quedó intacta.
 >
 > **Propuesta del bloque 8, 2026-10-12: entorno público limpio.** La sección 18 delimita la
 > eliminación aprobada de los datos de desarrollo, el clon temporal de `main`, la evidencia y la

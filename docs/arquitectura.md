@@ -1,12 +1,12 @@
 # Arquitectura
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Enmienda propuesta el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
 > idioma como configuración única del despliegue, incorpora el detector dentro de `ai`, actualiza
 > avisos de terceros y preserva las fronteras con `tickets` y `mail`. No se modifica código hasta
-> recibir aprobación explícita.
+> salir del alcance aprobado. El responsable aprobó explícitamente la propuesta el 2026-10-13.
 >
 > **Enmendado el 2026-10-12: publicación cerrada.** La sección 19 deja de describir como pendientes
 > la visibilidad, la configuración comunitaria y la integración del árbol vigente en `main`. El

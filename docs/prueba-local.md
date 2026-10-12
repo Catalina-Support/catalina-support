@@ -1,12 +1,12 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
-> **Estado:** propuesta
+> **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
 > **Hallazgo del bloque 8 y reanudación propuesta, 2026-10-13.** La primera ejecución se detuvo al
 > obtener un «Motivo» en español en un despliegue inglés. La sección 17 conserva la evidencia,
 > remite la corrección a los documentos de IA y tickets y exige repetir el recorrido completo desde
-> `main`. El responsable eligió 1A–12A, con 10B. Esta enmienda requiere aprobación explícita.
+> `main`. El responsable eligió 1A–12A, con 10B, y aprobó explícitamente esta enmienda el 2026-10-13.
 >
 > **Propuesta del bloque 8, 2026-10-12: recorrido público desde cero.** La sección 16 valida la
 > experiencia de una persona externa desde un clon de `main`, usando exclusivamente el README, una
