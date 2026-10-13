@@ -1,9 +1,9 @@
 # Proyecto abierto, contribuciones y marca
 
-> **Estado:** propuesta
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
-> **Séptima enmienda propuesta el 2026-10-13: reglas para un único mantenedor.** El ruleset vigente exige una aprobación que el autor no puede emitir sobre su propio PR y bloquea todo cambio aunque los checks pasen. La sección 16 separa `main` y `dev`, conserva PR y las protecciones técnicas, y fija temporalmente cero aprobaciones mientras sólo exista un mantenedor. El responsable eligió 1A, 2A y 3A; falta el repaso y la aprobación explícita del documento.
+> **Séptima enmienda implementada y verificada el 2026-10-13: reglas para un único mantenedor.** La sección 16 separa `main` y `dev`, conserva PR y las protecciones técnicas, y fija cero aprobaciones mientras sólo exista un mantenedor. El responsable eligió 1A, 2A y 3A, cerró el repaso con 1A–4A y aprobó explícitamente el documento. Los rulesets se leyeron de nuevo y el PR `#7` se integró normalmente, sin bypass administrativo.
 >
 > **Publicación abierta cerrada el 2026-10-12.** El historial accesible de `main`, `dev` y
 > `cla-signatures` expresa AGPL-3.0-only; el PR `#2` publicó el árbol vigente en `main` mediante
@@ -524,15 +524,16 @@ La operación no creó una etiqueta, no declaró terminada la versión 1.0.0, no
 dominio y no cambió licencias de terceros. La configuración comunitaria de la sección 14 quedó
 aplicada después de que `main` y `dev` alcanzaran el mismo árbol.
 
-## 16. Propuesta: reglas de ramas para un único mantenedor
+## 16. Implementación: reglas de ramas para un único mantenedor
 
 ### 16.1 Hallazgo
 
 El ruleset único `Protect main and dev` exige una aprobación para `main` y `dev`. El único mantenedor es también autor de sus pull requests, y GitHub impide que apruebe su propio cambio. Por ello el PR `#7`, con `backend`, `frontend`, `third-party-notices` y `cla` aprobados, quedó bloqueado. Un comentario de revisión no satisface la regla y el bypass administrativo elude precisamente la protección que se quería conservar.
 
-### 16.2 Configuración propuesta
+### 16.2 Configuración aplicada
 
-Se sustituirá el ruleset compartido por dos rulesets activos, uno para `refs/heads/main` y otro para `refs/heads/dev`. Ambos exigirán:
+Se sustituyó el ruleset compartido por dos rulesets activos, uno para `refs/heads/main` y otro para
+`refs/heads/dev`. Ambos exigen:
 
 - integración mediante pull request y únicamente por squash;
 - cero aprobaciones obligatorias mientras el repositorio tenga un solo mantenedor con escritura;
@@ -549,13 +550,11 @@ también cuando haya más colaboradores, salvo que otra propuesta futura justifi
 
 El bypass del rol administrador permanece limitado a pull requests para recuperación o tareas administrativas. No habilita push directo y no forma parte del flujo habitual. `cla-signatures` permanece fuera de ambos rulesets para que el workflow del CLA pueda registrar firmas.
 
-### 16.3 Aplicación y verificación
+### 16.3 Verificación
 
-La modificación se hará por la API de GitHub, conservando primero una copia de la configuración efectiva leída. Después se volverán a leer ambos rulesets y se comprobará que sólo alcanzan su rama, que mantienen exactamente los cuatro checks y que piden cero aprobaciones. También se verificará la configuración general: `main` continúa como rama predeterminada, sólo squash sigue habilitado y la rama origen se elimina tras integrar.
+La configuración anterior se leyó y conservó temporalmente antes de modificar GitHub. Los rulesets activos son `Protect main` (`24942297`), que alcanza únicamente `refs/heads/main`, y `Protect dev` (`24963846`), que alcanza únicamente `refs/heads/dev`. Ambos conservan exactamente los cuatro checks, cero aprobaciones, actualización estricta, conversaciones resueltas, squash, historial lineal y protección contra borrado y force push. El bypass administrador continúa limitado a pull requests.
 
-Con las reglas verificadas se integrará inmediatamente el PR `#7` en `dev` por squash, sin
-`--admin`. No se promoverá todavía a `main`: esa promoción pertenece al recorrido ya aprobado del
-bloque 8. Cuando se añada un segundo mantenedor con escritura, se abrirá una nueva enmienda para
+La configuración general se leyó de nuevo: `main` continúa como rama predeterminada, sólo squash está habilitado y GitHub elimina la rama origen después de integrar. Con esas reglas, el PR `#7` pasó a estado `CLEAN` y se integró normalmente en `dev`, sin `--admin`, mediante el commit squash `6ad3a1b1288cd743da7ecc07e1a42ce801938d44`. No se promovió a `main`: esa promoción pertenece al recorrido ya aprobado del bloque 8. Cuando se añada un segundo mantenedor con escritura, se abrirá una nueva enmienda para
 exigir al menos una aprobación en `main`; no se activa automáticamente porque GitHub no ofrece una
 condición fiable basada en el número de colaboradores. `dev` seguirá apoyándose en los checks y en
 las conversaciones resueltas, sin aprobación obligatoria.
@@ -567,5 +566,4 @@ dominio ni versión. El responsable eligió 1A, 2A y 3A: cero aprobaciones en am
 etapa de mantenedor único, rulesets separados y conservación completa de checks y protecciones. En
 el repaso eligió 1A, 2A, 3A y 4A: aplicación inmediata, bypass administrativo sólo para emergencias,
 una nueva propuesta para exigir revisión en `main` al llegar otro mantenedor y `dev` sin aprobación
-obligatoria. No quedan decisiones de diseño abiertas; falta la aprobación explícita de esta
-propuesta antes de modificar GitHub.
+obligatoria. No quedan decisiones abiertas.

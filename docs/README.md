@@ -302,7 +302,7 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `proyecto-abierto.md` | **propuesta** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
+| `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
 | `prueba-local.md` | **aprobado** | Bloque 8 detenido por el idioma de una respuesta real; corregir y repetir desde `main` |
 | `arquitectura.md` | **as-built** | Validador local de idioma dentro de `ai`, avisos de terceros y fronteras conservadas |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
