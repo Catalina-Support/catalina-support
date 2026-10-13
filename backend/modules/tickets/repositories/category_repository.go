@@ -100,9 +100,12 @@ func (r *CategoryRepository) CategoryWithCount(id int64) (CategoryConCuenta, err
 func (r *CategoryRepository) CategoryByID(id int64) (TicketCategory, error) {
 	var categoria TicketCategory
 
-	err := r.db.Where("id = ?", id).First(&categoria).Error
-	if err != nil {
-		return TicketCategory{}, traducir(err, ErrCategoryNotFound)
+	result := r.db.Where("id = ?", id).Limit(1).Find(&categoria)
+	if result.Error != nil {
+		return TicketCategory{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return TicketCategory{}, ErrCategoryNotFound
 	}
 
 	return categoria, nil
@@ -113,9 +116,12 @@ func (r *CategoryRepository) CategoryByID(id int64) (TicketCategory, error) {
 func (r *CategoryRepository) CategoryByNormalized(normalized string) (TicketCategory, error) {
 	var categoria TicketCategory
 
-	err := r.db.Where("normalized = ?", normalized).First(&categoria).Error
-	if err != nil {
-		return TicketCategory{}, traducir(err, ErrCategoryNotFound)
+	result := r.db.Where("normalized = ?", normalized).Limit(1).Find(&categoria)
+	if result.Error != nil {
+		return TicketCategory{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return TicketCategory{}, ErrCategoryNotFound
 	}
 
 	return categoria, nil
@@ -334,9 +340,12 @@ func (r *CategoryRepository) ReplaceTags(tx *gorm.DB, ticketID int64, tags []str
 func (r *CategoryRepository) TagNameByNormalized(normalized string) (TicketTagName, error) {
 	var nombre TicketTagName
 
-	err := r.db.Where("normalized = ?", normalized).First(&nombre).Error
-	if err != nil {
-		return TicketTagName{}, traducir(err, ErrTagNotFound)
+	result := r.db.Where("normalized = ?", normalized).Limit(1).Find(&nombre)
+	if result.Error != nil {
+		return TicketTagName{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return TicketTagName{}, ErrTagNotFound
 	}
 
 	return nombre, nil

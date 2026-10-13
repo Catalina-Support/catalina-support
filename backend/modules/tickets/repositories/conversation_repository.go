@@ -69,9 +69,12 @@ func (r *ConversationRepository) CommentsIn(tx *gorm.DB, destino Destino) ([]Com
 func (r *ConversationRepository) CommentByID(id int64) (Comment, error) {
 	var comentario Comment
 
-	err := r.db.Where("id = ?", id).First(&comentario).Error
-	if err != nil {
-		return Comment{}, traducir(err, ErrCommentNotFound)
+	result := r.db.Where("id = ?", id).Limit(1).Find(&comentario)
+	if result.Error != nil {
+		return Comment{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return Comment{}, ErrCommentNotFound
 	}
 
 	return comentario, nil
@@ -107,9 +110,12 @@ func (r *ConversationRepository) Attachments(destino Destino) ([]Attachment, err
 func (r *ConversationRepository) AttachmentByID(id int64) (Attachment, error) {
 	var adjunto Attachment
 
-	err := r.db.Where("id = ?", id).First(&adjunto).Error
-	if err != nil {
-		return Attachment{}, traducir(err, ErrAttachmentNotFound)
+	result := r.db.Where("id = ?", id).Limit(1).Find(&adjunto)
+	if result.Error != nil {
+		return Attachment{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return Attachment{}, ErrAttachmentNotFound
 	}
 
 	return adjunto, nil
