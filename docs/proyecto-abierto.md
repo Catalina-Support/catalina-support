@@ -1,7 +1,9 @@
 # Proyecto abierto, contribuciones y marca
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-12
+> **Última actualización:** 2026-10-13
+>
+> **Séptima enmienda implementada y verificada el 2026-10-13: reglas para un único mantenedor.** La sección 16 separa `main` y `dev`, conserva PR y las protecciones técnicas, y fija cero aprobaciones mientras sólo exista un mantenedor. El responsable eligió 1A, 2A y 3A, cerró el repaso con 1A–4A y aprobó explícitamente el documento. Los rulesets se leyeron de nuevo y el PR `#7` se integró normalmente, sin bypass administrativo.
 >
 > **Publicación abierta cerrada el 2026-10-12.** El historial accesible de `main`, `dev` y
 > `cla-signatures` expresa AGPL-3.0-only; el PR `#2` publicó el árbol vigente en `main` mediante
@@ -521,3 +523,47 @@ con 66A: `main` permanece como principal y se publica primero su historia correg
 La operación no creó una etiqueta, no declaró terminada la versión 1.0.0, no tocó producción ni el
 dominio y no cambió licencias de terceros. La configuración comunitaria de la sección 14 quedó
 aplicada después de que `main` y `dev` alcanzaran el mismo árbol.
+
+## 16. Implementación: reglas de ramas para un único mantenedor
+
+### 16.1 Hallazgo
+
+El ruleset único `Protect main and dev` exige una aprobación para `main` y `dev`. El único mantenedor es también autor de sus pull requests, y GitHub impide que apruebe su propio cambio. Por ello el PR `#7`, con `backend`, `frontend`, `third-party-notices` y `cla` aprobados, quedó bloqueado. Un comentario de revisión no satisface la regla y el bypass administrativo elude precisamente la protección que se quería conservar.
+
+### 16.2 Configuración aplicada
+
+Se sustituyó el ruleset compartido por dos rulesets activos, uno para `refs/heads/main` y otro para
+`refs/heads/dev`. Ambos exigen:
+
+- integración mediante pull request y únicamente por squash;
+- cero aprobaciones obligatorias mientras el repositorio tenga un solo mantenedor con escritura;
+- `backend`, `frontend`, `third-party-notices` y `cla` aprobados;
+- rama actualizada respecto de la base y conversaciones resueltas;
+- historial lineal;
+- prohibición de borrado y force push.
+
+La separación no relaja hoy una rama frente a otra: permite que `main` vuelva a exigir una
+aprobación sin alterar `dev` cuando exista otra persona con acceso de escritura capaz de revisar.
+Hasta entonces, los checks y el PR constituyen la puerta objetiva y reproducible; no se fuerza una
+aprobación imposible ni se usa el bypass como recorrido normal. `dev` conservará cero aprobaciones
+también cuando haya más colaboradores, salvo que otra propuesta futura justifique cambiarlo.
+
+El bypass del rol administrador permanece limitado a pull requests para recuperación o tareas administrativas. No habilita push directo y no forma parte del flujo habitual. `cla-signatures` permanece fuera de ambos rulesets para que el workflow del CLA pueda registrar firmas.
+
+### 16.3 Verificación
+
+La configuración anterior se leyó y conservó temporalmente antes de modificar GitHub. Los rulesets activos son `Protect main` (`24942297`), que alcanza únicamente `refs/heads/main`, y `Protect dev` (`24963846`), que alcanza únicamente `refs/heads/dev`. Ambos conservan exactamente los cuatro checks, cero aprobaciones, actualización estricta, conversaciones resueltas, squash, historial lineal y protección contra borrado y force push. El bypass administrador continúa limitado a pull requests.
+
+La configuración general se leyó de nuevo: `main` continúa como rama predeterminada, sólo squash está habilitado y GitHub elimina la rama origen después de integrar. Con esas reglas, el PR `#7` pasó a estado `CLEAN` y se integró normalmente en `dev`, sin `--admin`, mediante el commit squash `6ad3a1b1288cd743da7ecc07e1a42ce801938d44`. No se promovió a `main`: esa promoción pertenece al recorrido ya aprobado del bloque 8. Cuando se añada un segundo mantenedor con escritura, se abrirá una nueva enmienda para
+exigir al menos una aprobación en `main`; no se activa automáticamente porque GitHub no ofrece una
+condición fiable basada en el número de colaboradores. `dev` seguirá apoyándose en los checks y en
+las conversaciones resueltas, sin aprobación obligatoria.
+
+### 16.4 Alcance y decisiones
+
+No cambian código de producto, permisos de la aplicación, licencia, CLA, visibilidad, producción,
+dominio ni versión. El responsable eligió 1A, 2A y 3A: cero aprobaciones en ambas ramas durante la
+etapa de mantenedor único, rulesets separados y conservación completa de checks y protecciones. En
+el repaso eligió 1A, 2A, 3A y 4A: aplicación inmediata, bypass administrativo sólo para emergencias,
+una nueva propuesta para exigir revisión en `main` al llegar otro mantenedor y `dev` sin aprobación
+obligatoria. No quedan decisiones abiertas.
