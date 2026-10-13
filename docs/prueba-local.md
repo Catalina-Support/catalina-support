@@ -1,7 +1,12 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
+>
+> **Cuarta pasada pública completada, 2026-10-13.** La sección 20 registra el recorrido íntegro
+> desde `main`: instalación vacía, modelo local real, correo, cuentas, ticket, IA, datos de ejemplo,
+> AD, Keycloak y regreso a local. La inspección terminó sin falsos errores ni hallazgos abiertos y
+> todos los recursos desechables fueron retirados; producción permaneció intacta.
 >
 > **Tercera reanudación aprobada, 2026-10-13.** El recorrido completó instalación, IA, correo,
 > ejemplos, AD y Keycloak, pero la revisión final encontró falsos errores `record not found` en
@@ -804,3 +809,43 @@ tickets, se repetirá todo el bloque 8 desde otro clon público de `main`. Adem�
 criterios de 16.6, el examen de logs debe mostrar cero falsos errores por ausencias esperadas y las
 pruebas deben demostrar que un error SQL real conserva su nivel. El responsable eligió 1A–4A; no
 quedan decisiones abiertas.
+
+## 20. Cuarta pasada pública completada
+
+La repetición final probó desde un clon limpio el commit público de `main`
+`b0898922f6d584d9b3349f2de82adc6046e82315`, con Docker 29.5.2 y Compose 5.1.4. El comando exacto
+del README, `docker compose -f dev.yml up -d --build`, construyó y levantó una base nueva en
+29,13 s. La migración automática terminó correctamente y la salud respondió con base disponible.
+`/setup` comenzó sin sello, en inglés, con entrada local y los valores editables de Mailpit.
+
+El administrador de IA levantó en 3,36 s. Desde el asistente se descargó el modelo predeterminado
+`qwen2.5-1.5b-instruct`: 1.117.320.736 bytes en 42,8 s, con checksum válido. La activación tardó
+5,06 s y la generación obligatoria del asistente, 2,49 s. La instalación quedó sellada con inglés,
+`Europe/Berlin`, dirección local, Mailpit y el motor local sano.
+
+La cuenta de fábrica entró y creó por el flujo normal una cuenta de Usuario y una de Soporte. Los
+dos correos de invitación llegaron a Mailpit, sus enlaces permitieron establecer las contraseñas y
+ambas cuentas iniciaron sesión. Se creó `CS-2026-0001`; «Mejorar con IA» devolvió un borrador en
+12,22 s y los resúmenes «Motivo» y «Última acción» llegaron a `listo` en inglés.
+
+El seeder opcional se ejecutó exactamente como indica el README y tardó 4,69 s. Conservó el sello,
+el idioma, la región, la dirección, el correo y la IA; dejó sus 11 cuentas, 25 tickets y 5 adjuntos.
+Entraron las cuentas publicadas de Usuario, Soporte y Desarrollo. Las dos cuentas creadas antes del
+seeder también se conservaron.
+
+Después se levantaron los servicios opcionales. AD respondió a su prueba, se activó y autenticó a
+una persona del directorio, que se aprovisionó al entrar. Keycloak importó el reino, respondió a su
+prueba y completó la vuelta OIDC real con el token en el fragmento; su persona también se
+aprovisionó. La cuenta de fábrica entró durante ambos métodos. Por último se restauró `local` y una
+cuenta local volvió a entrar. El conteo final fue de 15 cuentas —11 del seeder, 2 locales creadas en
+el recorrido y 2 aprovisionadas por AD y Keycloak—, 25 tickets y 5 adjuntos.
+
+La inspección completa de los logs del backend no encontró `ERROR:`, `record not found`, nivel
+`[error]`, pánicos ni errores fatales. La interfaz se abrió además con Chromium en un viewport móvil:
+la instalación sellada redirigió `/setup` a la entrada, conservó `lang=en` y la cuenta local llegó a
+`/tickets`. No se editaron archivos dentro del clon.
+
+Al terminar se bajaron `keycloak.yml`, `active-directory.yml`, `ai.yml` y `dev.yml` con sus
+volúmenes. Se retiraron la base, el modelo de 1,1 GB, cachés, redes, contenedores, clon y herramientas
+temporales del recorrido. Los contenedores detenidos de producción se conservaron sin iniciarlos ni
+modificarlos. Con cero hallazgos abiertos, el bloque 8 queda cerrado.
