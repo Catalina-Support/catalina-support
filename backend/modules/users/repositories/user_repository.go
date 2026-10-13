@@ -85,12 +85,15 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 func (r *UserRepository) FindByID(id int64) (User, error) {
 	var user User
 
-	err := r.db.Where("id = ?", id).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = ?", id).Limit(1).Find(&user)
+	if result.Error != nil {
+		return User{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return User{}, ErrUserNotFound
 	}
 
-	return user, err
+	return user, nil
 }
 
 // FindByEmail busca por correo **sin distinguir mayúsculas**: `Ana@…` y `ana@…` son la misma persona.
@@ -100,24 +103,30 @@ func (r *UserRepository) FindByID(id int64) (User, error) {
 func (r *UserRepository) FindByEmail(email string) (User, error) {
 	var user User
 
-	err := r.db.Where("lower(email) = lower(?)", strings.TrimSpace(email)).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("lower(email) = lower(?)", strings.TrimSpace(email)).Limit(1).Find(&user)
+	if result.Error != nil {
+		return User{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return User{}, ErrUserNotFound
 	}
 
-	return user, err
+	return user, nil
 }
 
 // FindByExternalID busca una cuenta de directorio por su identificador allí.
 func (r *UserRepository) FindByExternalID(origin, externalID string) (User, error) {
 	var user User
 
-	err := r.db.Where("origin = ? AND external_id = ?", origin, externalID).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("origin = ? AND external_id = ?", origin, externalID).Limit(1).Find(&user)
+	if result.Error != nil {
+		return User{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return User{}, ErrUserNotFound
 	}
 
-	return user, err
+	return user, nil
 }
 
 // EmailExists dice si ese correo ya lo usa **otra** cuenta.

@@ -8,16 +8,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type LanguageTemplate struct { Key, Subject, Body string }
+type LanguageTemplate struct{ Key, Subject, Body string }
 
 // ApplyLanguage updates all destination templates and the global language in one transaction.
 func (r *TemplateRepository) ApplyLanguage(language string, templates []LanguageTemplate, actorID *int64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		for _, template := range templates {
 			result := tx.Model(&Template{}).Where("key = ? AND language = ?", template.Key, language).
-				Updates(map[string]any{"subject":template.Subject,"body":template.Body,"updated_at":time.Now(),"updated_by_id":actorID})
-			if result.Error != nil { return result.Error }
-			if result.RowsAffected != 1 { return ErrTemplateNotFound }
+				Updates(map[string]any{"subject": template.Subject, "body": template.Body, "updated_at": time.Now(), "updated_by_id": actorID})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return ErrTemplateNotFound
+			}
 		}
 		return tx.Table("installation_settings").Where("id = 1").Updates(map[string]any{
 			"language": language, "settings_version": gorm.Expr("settings_version + 1"),
@@ -80,12 +84,15 @@ func (r *TemplateRepository) FindAll() ([]Template, error) {
 func (r *TemplateRepository) Find(key, language string) (Template, error) {
 	var template Template
 
-	err := r.db.Where("key = ? AND language = ?", key, language).First(&template).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("key = ? AND language = ?", key, language).Limit(1).Find(&template)
+	if result.Error != nil {
+		return Template{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return Template{}, ErrTemplateNotFound
 	}
 
-	return template, err
+	return template, nil
 }
 
 // Update guarda el texto de una plantilla. No toca las columnas de fábrica: el texto de fábrica no

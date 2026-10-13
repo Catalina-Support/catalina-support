@@ -1,7 +1,12 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-11
+> **Última actualización:** 2026-10-13
+>
+> **Enmienda implementada y verificada el 2026-10-13: ausencia sin falso error.** Las cinco filas
+> únicas conservan `settings.notFound` si falta su migración, pero la consulta ya no registra esa
+> ausencia esperada como `record not found`. Los errores SQL reales permanecen visibles. Forma parte
+> del alcance 1A–4A aprobado para el tercer hallazgo del bloque 8.
 >
 > **Enmienda implementada y verificada el 2026-10-10: metadatos de fuente.** La sección 14 añade
 > licencia y fuente correspondiente a la marca pública. La URL pertenece a la compilación y no es
@@ -961,3 +966,9 @@ de marca.
 La implementación entrega además `development`, que permite presentar `v1.0.0 · dev` sin inferirlo
 de la URL. La verificación del 2026-10-10 pasó todas las pruebas de controladores, DTO y servicios
 de settings. El recorrido aislado de marca comprobó el contrato público y su consumo en PC y móvil.
+## 15. Implementación: fila de configuración ausente
+
+Las lecturas de instalación, tickets, directorio, Keycloak e IA consultan como máximo una fila y
+distinguen cero filas mediante `RowsAffected`. Conservan `ErrSettingsNotFound`, que los servicios
+traducen a la clave pública existente. Un error de conexión, SQL o escaneo sigue propagándose; no se
+modificó el logger global, la API ni las cinco tablas.

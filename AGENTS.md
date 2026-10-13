@@ -88,16 +88,16 @@ completo.
 | `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
 | `docs/modules/tickets.md` | **as-built**: idioma validado en resúmenes y ausencia normal del interno sin falso error |
 | `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **as-built**: healthchecks TCP y migración manual explícita de producción |
+| `docs/ambientes.md` | **as-built**: corrección verificada y cuarta repetición pública aprobada |
 | `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
-| `docs/modules/settings.md` | **as-built**: licencia, fuente y condición de desarrollo en la marca pública |
+| `docs/modules/settings.md` | **as-built**: filas únicas ausentes sin falso error de GORM |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
 | `docs/modules/ai.md` | **as-built**: validación local del idioma global y reintento según modalidad |
-| `docs/modules/mail.md` | **as-built**: valida el idioma de borradores y conserva la edición manual |
-| `docs/modules/auth.md` | **as-built**: identidad y sesión no llevan idioma; los correos usan el idioma global sin cambiar los tres caminos |
-| `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
-| `docs/arquitectura.md` | **as-built**: salud 503 distinguible cuando falta la migración manual |
-| `docs/prueba-local.md` | **aprobado**: segunda pasada detenida por disponibilidad TCP y repetición completa posterior |
+| `docs/modules/mail.md` | **as-built**: plantilla ausente sin falso error de GORM |
+| `docs/modules/auth.md` | **as-built**: token de contraseña ausente sin falso error de GORM |
+| `docs/modules/users.md` | **as-built**: búsquedas previas al alta de directorio sin falsos errores |
+| `docs/arquitectura.md` | **as-built**: ausencias esperadas por repositorio sin silenciar errores SQL |
+| `docs/prueba-local.md` | **aprobado**: tercera pasada completada y cuarta repetición pública pendiente |
 | `docs/proyecto-abierto.md` | **as-built**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 

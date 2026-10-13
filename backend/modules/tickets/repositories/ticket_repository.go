@@ -162,9 +162,12 @@ func (r *TicketRepository) CreateInternal(tx *gorm.DB, entrada CreateInternalInp
 func (r *TicketRepository) ByNumber(number string) (Ticket, error) {
 	var ticket Ticket
 
-	err := r.db.Where("number = ?", number).First(&ticket).Error
-	if err != nil {
-		return Ticket{}, traducir(err, ErrTicketNotFound)
+	result := r.db.Where("number = ?", number).Limit(1).Find(&ticket)
+	if result.Error != nil {
+		return Ticket{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return Ticket{}, ErrTicketNotFound
 	}
 
 	return ticket, nil
@@ -174,9 +177,12 @@ func (r *TicketRepository) ByNumber(number string) (Ticket, error) {
 func (r *TicketRepository) ByID(id int64) (Ticket, error) {
 	var ticket Ticket
 
-	err := r.db.Where("id = ?", id).First(&ticket).Error
-	if err != nil {
-		return Ticket{}, traducir(err, ErrTicketNotFound)
+	result := r.db.Where("id = ?", id).Limit(1).Find(&ticket)
+	if result.Error != nil {
+		return Ticket{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return Ticket{}, ErrTicketNotFound
 	}
 
 	return ticket, nil
@@ -186,9 +192,12 @@ func (r *TicketRepository) ByID(id int64) (Ticket, error) {
 func (r *TicketRepository) InternalByNumber(number string) (InternalTicket, error) {
 	var interno InternalTicket
 
-	err := r.db.Where("number = ?", number).First(&interno).Error
-	if err != nil {
-		return InternalTicket{}, traducir(err, ErrTicketNotFound)
+	result := r.db.Where("number = ?", number).Limit(1).Find(&interno)
+	if result.Error != nil {
+		return InternalTicket{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return InternalTicket{}, ErrTicketNotFound
 	}
 
 	return interno, nil
@@ -493,13 +502,4 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 	}
 
 	return consulta
-}
-
-// traducir cambia «no hay filas» por el error del módulo, y deja pasar los demás tal cual.
-func traducir(err error, cuandoNoHay error) error {
-	if err == gorm.ErrRecordNotFound {
-		return cuandoNoHay
-	}
-
-	return err
 }
