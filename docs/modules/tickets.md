@@ -1,7 +1,13 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo corregido e implementación verificada el 2026-10-13: idioma y consulta esperada.** El bloque 8 encontró
+> un resumen en otro idioma y que leer un principal no escalado imprime `record not found` como si
+> fuera un error. La sección 14 coordina el contrato de IA con `docs/modules/ai.md` y silencia sólo
+> esa ausencia normal. El responsable eligió 1A–12A, con 10B, y aprobó explícitamente la propuesta
+> el 2026-10-13.
 >
 > **Enmienda implementada y verificada el 2026-10-08: capacidad de redacción en el detalle.** La
 > sección 13 hace que el detalle decida si la ayuda se ofrece según papel, permiso y una IA
@@ -1241,3 +1247,29 @@ quedan decisiones abiertas.
 La suite completa del backend y las 225 pruebas del frontend pasan el 2026-10-08. El recorrido
 configurado de Playwright pasa en PC y móvil. El entorno desechable se eliminó al terminar y
 producción no se tocó.
+
+## 14. Implementación: resúmenes en el idioma global y ausencia normal del interno
+
+`tickets` continúa entregando a `ai` el idioma global del despliegue y conserva literalmente el
+contenido escrito por las personas. El andamiaje que construye —rótulos del asunto, descripción,
+estado, adjuntos y conversación, además de los eventos del historial— usa ese mismo idioma. No se
+añade idioma a la cuenta, sesión, ticket ni petición del cliente.
+
+El módulo sólo recibe un resumen listo cuando `ai` ha validado su idioma. Una respuesta claramente
+distinta no aparece en listas ni detalles marcada con el idioma pedido: permanece pendiente durante
+el reintento permitido o pasa a `ai.invalid`. Los textos anteriores se conservan y sólo cambian por
+un movimiento normal o por «Volver a resumir»; no se crea una regeneración masiva.
+
+La lectura de un principal sin ticket interno conserva exactamente su resultado funcional:
+`InternalByTicket` devuelve «no existe» sin error. La consulta se formula de manera que GORM no
+registre esa ausencia esperada como error. Errores reales de base siguen propagándose y
+registrándose; no se baja globalmente el nivel del logger ni se silencian otras consultas.
+
+Las pruebas verifican un principal nunca escalado sin salida de error, un error real que sí se
+propaga y un interno existente que se devuelve. La repetición pública del bloque 8 confirma además
+que el detalle normal no llena los logs con `record not found`. No cambian API, modelo de datos,
+permisos, estados, transiciones ni interfaz. El responsable eligió 3A y las decisiones coordinadas
+1A–12A, con 10B. No quedan decisiones abiertas.
+### 14.1 Implementación y verificación
+
+El contexto de resumen obtiene el idioma global al construir cada encargo y localiza sus rótulos, actores del sistema y nombres conocidos de eventos sin modificar el contenido escrito por las personas. `InternalByTicket` usa una consulta que distingue cero filas mediante `RowsAffected`, por lo que la ausencia normal no dispara el log de `record not found`; los errores reales siguen propagándose. Las pruebas del servicio y del repositorio, además de la suite backend completa, pasaron el 2026-10-13.

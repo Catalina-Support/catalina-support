@@ -175,9 +175,10 @@ func (m *motorDeMentira) peticionHecha() peticion {
 	return m.ultima
 }
 
-// jsonDeDosIdiomas es la respuesta que se le pide al motor: `{"es": "…", "en": "…"}`.
+// jsonDeDosIdiomas conserva el nombre histórico del ayudante; el contrato vigente devuelve un solo
+// texto en el idioma global.
 func jsonDeDosIdiomas(es, en string) string {
-	salida, _ := json.Marshal(map[string]string{"es": es, "en": en})
+	salida, _ := json.Marshal(map[string]string{"text": es})
 
 	return string(salida)
 }
@@ -442,6 +443,7 @@ func ajustesDePrueba(url string) Ajustes {
 		Contexto: 4096,
 		Palabras: 40,
 		Espera:   2 * time.Second,
+		Language: "es",
 	}
 }
 
@@ -507,8 +509,8 @@ func TestElJSONValidoSeGuardaEnLosDosIdiomas(t *testing.T) {
 	if textoDe(fila.TextEs) != resumenEsperado {
 		t.Errorf("el español guardado es %q y se esperaba %q", textoDe(fila.TextEs), resumenEsperado)
 	}
-	if textoDe(fila.TextEn) != resumenIngles {
-		t.Errorf("el inglés guardado es %q y se esperaba %q", textoDe(fila.TextEn), resumenIngles)
+	if textoDe(fila.TextEn) != resumenEsperado {
+		t.Errorf("el segundo hueco transitorio es %q y se esperaba el texto global %q", textoDe(fila.TextEn), resumenEsperado)
 	}
 	if textoDe(fila.Model) != modeloDePrueba {
 		t.Errorf("el modelo guardado es %q y se esperaba %q", textoDe(fila.Model), modeloDePrueba)
@@ -543,7 +545,7 @@ func TestElJSONEnvueltoEnUnBloqueDeCodigoSeRescata(t *testing.T) {
 	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "ultima_accion") == repositories.StateListo })
 
 	fila := almacen.fila(ticketDePrueba, "ultima_accion")
-	if textoDe(fila.TextEs) != resumenEsperado || textoDe(fila.TextEn) != resumenIngles {
+	if textoDe(fila.TextEs) != resumenEsperado || textoDe(fila.TextEn) != resumenEsperado {
 		t.Errorf("el JSON envuelto no se rescató: es=%q en=%q", textoDe(fila.TextEs), textoDe(fila.TextEn))
 	}
 }
@@ -1020,7 +1022,7 @@ func TestLaPeticionLlevaResponseFormatLaTemperaturaYElTopeDePiezas(t *testing.T)
 
 // El encargo lleva el tope de palabras y **la plantilla exacta del objeto**, y la lleva en el mensaje
 // del usuario, al final: es lo último que lee el modelo antes de escribir.
-func TestElEncargoLlevaElTopeDePalabrasYElFormatoPedido(t *testing.T) {
+func TestElEncargoLlevaElIdiomaYElFormatoPedido(t *testing.T) {
 	motor := motorQueContesta(t, jsonDeDosIdiomas(resumenEsperado, resumenIngles))
 	almacen := nuevoAlmacenDeMentira()
 
@@ -1036,14 +1038,8 @@ func TestElEncargoLlevaElTopeDePalabrasYElFormatoPedido(t *testing.T) {
 
 	encargo := motor.encargosHechos()[0]
 
-	if !strings.Contains(encargo.usuario, "25 palabras") {
-		t.Errorf("el encargo no lleva el tope de palabras: %q", encargo.usuario)
-	}
-	if !strings.Contains(encargo.usuario, "EXACTAMENTE") {
-		t.Errorf("el encargo no exige el objeto exacto: %q", encargo.usuario)
-	}
-	if !strings.HasSuffix(encargo.usuario, `{"es": "…", "en": "…"}`) {
-		t.Errorf("la plantilla del objeto tiene que ir al final del encargo: %q", encargo.usuario)
+	if !strings.Contains(encargo.usuario, "Write only in Spanish") || !strings.Contains(encargo.usuario, `{"text":"..."}`) {
+		t.Errorf("el encargo no exige el idioma global y el objeto exacto: %q", encargo.usuario)
 	}
 	// El texto del ticket va antes de la exigencia: primero se le da el ticket, después se le pide el
 	// formato.

@@ -1,7 +1,16 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-11
+> **Última actualización:** 2026-10-13
+>
+> **Enmienda implementada y verificada el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
+> idioma como configuración única del despliegue, incorpora el detector dentro de `ai`, actualiza
+> avisos de terceros y preserva las fronteras con `tickets` y `mail`. La implementación se mantuvo dentro de la propuesta aprobada explícitamente el 2026-10-13.
+>
+> **Enmendado el 2026-10-12: publicación cerrada.** La sección 19 deja de describir como pendientes
+> la visibilidad, la configuración comunitaria y la integración del árbol vigente en `main`. El
+> repositorio público, su historial AGPL y sus reglas efectivas quedaron verificados; producción,
+> dominio y la etiqueta `v1.0.0` permanecen aplazados.
 >
 > **Enmienda implementada y verificada el 2026-10-10: preparación del repositorio público.** La
 > sección 19 coordina la auditoría completa, la reescritura única del historial y los metadatos de
@@ -1221,13 +1230,18 @@ identificadores, se termina primero el contenido, se conserva una referencia pri
 se verifica el historial nuevo y sólo después se decide retirar la referencia. Un hallazgo sensible
 nuevo detiene el proceso para informar al responsable antes de otra mutación.
 
-La reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle privado. Las
-ramas `main` y `dev` ya no contienen el correo personal, los dominios reales ni las rutas reales; el
-escaneo de secretos sólo requiere dos huellas históricas exactas para valores declarados de
-desarrollo. Las ramas remotas privadas se reemplazaron mediante `--force-with-lease`, se verificaron
-contra sus nuevos identificadores y las referencias locales anteriores se retiraron después de
-confirmar el remoto. El bundle privado recuperable se conserva fuera del repositorio. El
-repositorio continúa privado.
+La primera reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle
+privado. Las ramas `main` y `dev` dejaron de contener el correo personal, los dominios reales y las
+rutas reales; el escaneo de secretos sólo requirió dos huellas históricas exactas para valores
+declarados de desarrollo. Las referencias remotas se reemplazaron mediante `--force-with-lease`, se
+verificaron contra sus nuevos identificadores y las referencias locales anteriores se retiraron
+después de confirmar el remoto.
+
+Al descubrir que el repositorio ya era público con la licencia MIT histórica en `main`, se creó un
+segundo bundle privado y se reescribieron `main`, `dev` y `cla-signatures` para que la licencia raíz
+propia y sus declaraciones históricas expresaran AGPL-3.0-only. La operación conservó licencias de
+terceros y la firma del CLA, pasó Gitleaks y publicó primero `main`. El PR `#2` integró después el
+árbol vigente mediante squash. Los dos bundles recuperables se conservan fuera del repositorio.
 
 La trazabilidad visible usa la marca pública como fuente única: el backend entrega versión,
 `AGPL-3.0-only` y URL del código correspondiente. Las versiones publicadas enlazan su etiqueta; el
@@ -1236,11 +1250,40 @@ compilación, no a la base ni a la configuración administrativa.
 
 Los archivos comunitarios y la automatización de CLA forman una frontera de mantenimiento en la
 raíz y `.github`; no introducen dependencias de ejecución. Las acciones se fijan por hash y se
-revisan sus permisos mínimos. El cambio de visibilidad, producción, el dominio público y cualquier
-etiqueta de versión permanecen fuera de esta implementación.
+revisan sus permisos mínimos. El repositorio es público y GitHub reconoce AGPL-3.0. Producción, el
+dominio público de la aplicación y cualquier etiqueta de versión permanecen fuera de esta
+implementación.
 
 La verificación coordinada del 2026-10-10 pasó settings en el backend, las fronteras y las 227
 pruebas del frontend y los 12 casos aislados de marca en PC y móvil. La prueba independiente del
 CLA había confirmado antes su cuarto check en verde. El entorno E2E se eliminó con sus volúmenes al
-terminar. La configuración comunitaria restante de GitHub y la instalación limpia desde el README
-siguen siendo pasos previos a presentar la decisión final de visibilidad.
+terminar. El 2026-10-12 se verificaron además la descripción, los temas, Issues, Discussions,
+reportes privados de vulnerabilidades, sólo squash, limpieza automática y el ruleset efectivo de
+`main` y `dev`; `cla-signatures` quedó fuera y escribible por la acción.
+
+## 20. Implementación: frontera del validador de idioma
+
+La detección de idioma pertenece al módulo `ai`, junto a la interpretación del resultado del motor.
+`tickets` y `mail` entregan el idioma global y reciben texto válido o el error estable existente; no
+importan la biblioteca, no conocen su confianza y no duplican reglas. El detector funciona dentro
+del proceso del backend y no abre endpoints, tablas, trabajos ni comunicación externa.
+
+La dependencia elegida debe admitir español e inglés, exponer confianza suficiente para distinguir
+una discrepancia clara y tener licencia compatible con AGPL-3.0-only. Se fija su versión en `go.mod`
+y se añade a `THIRD_PARTY_NOTICES.md` y `third_party_licenses/` mediante el mecanismo vigente. Las
+pruebas sustituyen el detector cuando necesiten controlar cada rama y prueban además un conjunto
+pequeño de frases reales para evitar que el adaptador invierta español e inglés.
+
+El idioma solicitado procede de la configuración global en cada operación. No reaparece en
+identidad, sesión ni preferencias personales. Los reintentos permanecen dentro de `ai`: uno para
+`local` y `remote`, ninguno para `provider`; por ello no cambian las interfaces entre módulos ni el
+contador persistido de intentos de la cola. La traducción de rótulos del contexto se hace antes de
+cruzar la interfaz y el contenido de usuario sigue literal.
+
+La limpieza del `record not found` esperado permanece dentro del repositorio de `tickets` y no
+cambia el logger global de GORM. Producción, observabilidad nueva y cambios en las reglas de
+dependencias del frontend quedan fuera. El responsable cerró 1A–12A con 10B; no quedan decisiones
+abiertas.
+### 20.1 Implementación y verificación
+
+`whatlanggo` 1.0.1 queda encerrado en `backend/modules/ai/services`; ningún otro módulo importa el detector. Su licencia MIT se incorporó al inventario generado de terceros. La cola conserva un solo intento persistido para el reintento interno de idioma y evita automáticamente una segunda llamada en modalidad `provider`. La suite backend completa y `go vet` pasaron el 2026-10-13.

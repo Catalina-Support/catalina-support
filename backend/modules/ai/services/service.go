@@ -57,6 +57,7 @@ const (
 var (
 	ErrSinMotor          = errors.New(ClaveSinMotor)
 	ErrRespuestaInvalida = errors.New(ClaveInvalida)
+	errIdiomaInvalido    = errors.New("la respuesta no está en el idioma global")
 )
 
 // Entrada es el encargo que se le hace al motor: un ticket, un campo y el texto ya armado.
@@ -142,13 +143,10 @@ const (
 	// se daría por caído un motor que está trabajando, y el campo quedaría en `sin_motor` sin motivo.
 	esperaDeFabrica = 240 * time.Second
 
-	// Los intentos de un motor que no contesta, y los de una respuesta que no vale: **el motor caído
-	// se reintenta tres veces con espera creciente y una respuesta mala sólo una** (decisión 8).
+	// Los intentos de un motor que no contesta y de una respuesta con formato inválido.
 	intentosMotor = 3
-	// **Tres**, no dos: medido con el motor de verdad, una de cada tantas respuestas de un modelo de
-	// 1,5B llega a medias —sólo un idioma, o cortada por el tope de piezas— y el reintento es inmediato,
-	// así que insistir sale barato. Lo que **no** hay es bucle: a la tercera, el campo queda en `error`
-	// con su clave (docs/modules/ai.md, decisión 8).
+	// El idioma se valida aparte: local y servidor propio reciben un único reintento reforzado, y un
+	// proveedor de pago ninguno.
 	intentosRespuesta = 3
 
 	// La espera entre intentos del motor caído, que crece con cada uno: 2 s, 4 s.
@@ -466,8 +464,12 @@ func (s *Service) Traducir(texto, idioma string) (string, error) {
 	ajustes.Palabras = 2000
 	ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
 	defer cancelar()
+	sistema := "Translate the supplied email template faithfully. Preserve every protected token exactly, including its position. Return no explanations."
+	if idioma == "es" {
+		sistema = "Traduce fielmente la plantilla de correo proporcionada. Conserva exactamente cada marcador protegido, incluida su posición. No devuelvas explicaciones."
+	}
 	traducido, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{
-		sistema: "Translate the supplied email template faithfully. Preserve every protected token exactly, including its position. Return no explanations.",
+		sistema: sistema,
 		texto:   texto,
 	})
 	return traducido, err
@@ -490,6 +492,9 @@ func (s *Service) MejorarRedaccion(borrador, tono, destinatario, tipo, idioma st
 		"empathetic":   "empathetic and respectful",
 		"technical":    "precise and technical",
 	}
+	if idioma == "es" {
+		tonalidades = map[string]string{"professional": "profesional", "friendly": "amable y cercano", "brief": "breve y directo", "empathetic": "empático y respetuoso", "technical": "preciso y técnico"}
+	}
 	estilo, ok := tonalidades[tono]
 	if !ok {
 		return "", ErrRespuestaInvalida
@@ -499,12 +504,20 @@ func (s *Service) MejorarRedaccion(borrador, tono, destinatario, tipo, idioma st
 	if tipo == "internal" {
 		clase = "internal ticket between Support and Development"
 	}
-	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario +
-		"\nTicket type: " + clase + "\nTone: " + estilo
+	sistema := "Improve the supplied support message. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations."
+	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario + "\nTicket type: " + clase + "\nTone: " + estilo
+	if idioma == "es" {
+		clase = "ticket principal de soporte"
+		if tipo == "internal" {
+			clase = "ticket interno entre Soporte y Desarrollo"
+		}
+		sistema = "Mejora el mensaje de soporte proporcionado. Corrige la ortografía y la claridad, conservando cada hecho, nombre, número y detalle técnico. No inventes información. Usa el nombre del destinatario sólo si resulta natural. Devuelve texto plano sin Markdown, HTML, menciones ni explicaciones."
+		prompt = "Borrador:\n" + borrador + "\n\nNombre del destinatario: " + destinatario + "\nTipo de ticket: " + clase + "\nTono: " + estilo
+	}
 	ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
 	defer cancelar()
 	mejorado, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{
-		sistema: "Improve the supplied support message. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations.",
+		sistema: sistema,
 		texto:   prompt,
 	})
 	if err != nil {

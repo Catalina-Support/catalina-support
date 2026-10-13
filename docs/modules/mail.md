@@ -1,7 +1,11 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-13
+>
+> **Enmienda implementada y verificada el 2026-10-13: validar el idioma de los borradores.** La sección 12 adopta
+> el control central de `ai`: una traducción claramente incorrecta no sustituye el borrador y un
+> proveedor externo no recibe un reintento automático. El responsable cerró 1A–12A con 10B. El cambio se mantuvo dentro de lo aprobado explícitamente por el responsable.
 >
 > **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
 > idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las
@@ -418,3 +422,24 @@ rechazarla conserva el camino manual. No quedan decisiones abiertas; corrección
 marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El modo manual devuelve el
 destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
 transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.
+
+## 12. Implementación: idioma validado en cada borrador de plantilla
+
+Cada asunto y cuerpo traducido pasa por la validación central descrita en `docs/modules/ai.md`,
+sección 15, además de la protección vigente de HTML y marcadores. El idioma esperado es el nuevo
+idioma global del despliegue. El contenido original se entrega literalmente; sólo las instrucciones
+y rótulos añadidos por la aplicación usan el idioma del destino.
+
+Si una discrepancia clara persiste después del único reintento permitido para `local` o `remote`,
+esa plantilla conserva su borrador anterior y muestra `ai.invalid`. En `provider` el primer
+incumplimiento produce el mismo error sin otra solicitud facturable. Las demás plantillas no se
+aplican parcialmente: el Administrador puede corregir manualmente cualquier borrador y la
+transacción existente exige que las once estén válidas antes de cambiar el idioma global.
+
+No cambian las veintidós plantillas, marcadores, confirmación comercial, estimación de costo,
+endpoints ni edición manual. Las pruebas cubren asunto y cuerpo, conservación del destino anterior,
+edición posterior y ausencia de segunda llamada al proveedor. El responsable eligió 6A, 7A, 10B,
+11A y 12A; no quedan decisiones abiertas.
+### 12.1 Implementación y verificación
+
+El servicio de traducción reutiliza el validador central de `ai`; por ello sólo entrega al flujo de borradores un texto compatible con el idioma de destino. Ante `ai.invalid`, el flujo existente no aplica parcialmente las plantillas y conserva la edición manual. Las pruebas focalizadas y la suite backend completa pasaron el 2026-10-13.

@@ -3,6 +3,7 @@ module catalina-support/backend
 go 1.27
 
 require (
+	github.com/abadojack/whatlanggo v1.0.1
 	github.com/go-ldap/ldap/v3 v3.4.14
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/juanky-estevez/go-logs v1.0.1

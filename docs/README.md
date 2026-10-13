@@ -302,21 +302,21 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `proyecto-abierto.md` | **aprobado** | Publicación abierta en ejecución; dependencias y avisos de terceros ya están regularizados |
-| `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
-| `arquitectura.md` | **aprobado** | Prepara auditoría, reescritura controlada y trazabilidad de la fuente; lo anterior sigue as-built |
+| `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
+| `prueba-local.md` | **aprobado** | Bloque 8 detenido por el idioma de una respuesta real; corregir y repetir desde `main` |
+| `arquitectura.md` | **as-built** | Validador local de idioma dentro de `ai`, avisos de terceros y fronteras conservadas |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
 | `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
-| `modules/settings.md` | **aprobado** | Añade licencia y fuente correspondiente a la marca pública; lo anterior sigue as-built |
-| `modules/mail.md` | **as-built** | Usa el idioma global y genera borradores revisables o manuales de las once plantillas al cambiarlo |
+| `modules/settings.md` | **as-built** | Configuración completa y metadatos públicos de licencia, versión y fuente correspondiente |
+| `modules/mail.md` | **as-built** | Valida el idioma de cada borrador y no reintenta automáticamente con proveedores externos |
 | `modules/auth.md` | **as-built** | Identidad y sesión no llevan idioma personal; los correos de cuenta usan el idioma global |
 | `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
-| `interfaz-y-experiencia.md` | **aprobado** | Añade el enlace accesible de código fuente y licencia; lo anterior sigue as-built |
+| `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Matriz visual aislada verificada y limpiada; producción no se tocó |
-| `modules/ai.md` | **as-built** | Expone internamente sólo si existe una configuración activa, sin comprobar salud |
-| `modules/tickets.md` | **as-built** | Lleva `capabilities.aiWriting` en el detalle y la recalcula en cada lectura |
+| `ambientes.md` | **aprobado** | Primera pasada limpia retirada; repetir todo el bloque 8 después de la corrección |
+| `modules/ai.md` | **as-built** | Valida el idioma global, reintenta sólo motores sin proveedor pagado y descarta discrepancias |
+| `modules/tickets.md` | **as-built** | Rótulos en el idioma global y ausencia normal del ticket interno sin falso log de error |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
