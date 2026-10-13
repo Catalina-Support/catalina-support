@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -9,10 +10,31 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"catalina-support/backend/shared/config"
 	"catalina-support/backend/shared/database"
 )
+
+type loggerDeErrores struct {
+	errores []error
+}
+
+func (l *loggerDeErrores) LogMode(logger.LogLevel) logger.Interface { return l }
+func (l *loggerDeErrores) Info(context.Context, string, ...any)     {}
+func (l *loggerDeErrores) Warn(context.Context, string, ...any)     {}
+func (l *loggerDeErrores) Error(_ context.Context, _ string, args ...any) {
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			l.errores = append(l.errores, err)
+		}
+	}
+}
+func (l *loggerDeErrores) Trace(_ context.Context, _ time.Time, _ func() (string, int64), err error) {
+	if err != nil {
+		l.errores = append(l.errores, err)
+	}
+}
 
 // Las pruebas del repositorio del catálogo van **contra la base de datos de verdad**, porque lo que
 // hay que comprobar aquí es el SQL: que el nombre normalizado es único, que las etiquetas de un
@@ -115,6 +137,28 @@ func TestCatalogoDeCategorias(t *testing.T) {
 	// El guardado se apoya en la transacción: nada de esto queda al terminar.
 	if err := tx.Rollback().Error; err != nil {
 		t.Fatalf("no se pudo deshacer la transacción: %v", err)
+	}
+}
+
+func TestAusenciaEsperadaNoSeRegistraComoError(t *testing.T) {
+	_, _, tx := repositorioDePrueba(t)
+	registro := &loggerDeErrores{}
+	db := tx.Session(&gorm.Session{Logger: registro})
+	repositorio := NewCategoryRepository(db)
+
+	nombre := "ausente-" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	if _, err := repositorio.CategoryByNormalized(nombre); !errors.Is(err, ErrCategoryNotFound) {
+		t.Fatalf("la categoría ausente debería devolver %v y devolvió %v", ErrCategoryNotFound, err)
+	}
+	if len(registro.errores) != 0 {
+		t.Fatalf("la ausencia esperada se registró como error: %v", registro.errores)
+	}
+
+	if err := db.Table("tabla_que_no_existe_para_prueba").Find(&[]struct{}{}).Error; err == nil {
+		t.Fatal("la consulta inválida tenía que fallar")
+	}
+	if len(registro.errores) == 0 {
+		t.Fatal("un error SQL real no llegó al logger")
 	}
 }
 

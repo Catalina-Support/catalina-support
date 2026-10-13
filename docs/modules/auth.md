@@ -1,7 +1,12 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-13
+>
+> **Enmienda implementada y verificada el 2026-10-13: token ausente sin falso error.** Buscar una
+> invitación o recuperación inexistente conserva `auth.token.used` sin registrar
+> `record not found`. Los fallos SQL reales no se silencian. Forma parte de 1A–4A aprobado tras el
+> tercer recorrido del bloque 8.
 >
 > **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: identidad, sesión y
 > respuestas de cuenta ya no llevan idioma personal. Los tres correos de cuenta consultan el idioma
@@ -777,3 +782,8 @@ de caducidad se forma con ese mismo idioma. No cambian token, duración, contras
 fábrica, AD, Keycloak, permisos ni rutas. La propuesta fue confirmada por el responsable el
 2026-10-06 y en el repaso eligió actualizar las sesiones abiertas con las cabeceras de idioma y
 versión, sin cerrar sesión. Se implementó y verificó el 2026-10-07.
+## 15. Implementación: enlace de contraseña ausente
+
+`FindByHash` limita la consulta a una fila y usa `RowsAffected` para distinguir un token que no
+existe. Conserva el mismo error de dominio para enlaces desconocidos, sustituidos o ya retirados;
+no cambia caducidad, uso único, respuestas públicas ni ninguno de los tres métodos de entrada.

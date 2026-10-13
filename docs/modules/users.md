@@ -1,7 +1,13 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13.** La creación automática desde AD y
+> Keycloak funcionó, pero las comprobaciones por correo y por identidad externa registraron la
+> ausencia normal como error de GORM. La sección 12 propone conservar el mismo alta o vínculo sin
+> ese falso error. El responsable eligió y aprobó el alcance general 1A–4A; las pruebas pasaron
+> contra PostgreSQL real.
 >
 > **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: `users.language`
 > desaparece de la migración, el modelo, las API y las pantallas. El perfil conserva nombre y
@@ -326,3 +332,19 @@ contraseña usan también ese valor global, sin leer la cuenta.
 No cambian papeles, orígenes, permisos, directorios, desactivación ni contraseñas. El responsable
 confirmó el alcance el 2026-10-06. El repaso no añadió excepciones personales ni migración de
 valores. Se implementó y verificó el 2026-10-07.
+## 12. Implementación: búsquedas previas a la creación automática
+
+El primer acceso por AD o Keycloak busca primero una cuenta por correo y por la pareja
+origen/identificador externo. Que ambas búsquedas estén vacías es el caso normal que conduce a crear
+la cuenta; no se registrará como error. Los métodos conservarán sus resultados actuales de
+encontrado, ausente y error real, y el servicio conservará las reglas vigentes para crear, vincular
+o actualizar.
+
+Las pruebas ejercen una identidad nueva, una ya vinculada y un error real de base, y capturan el
+logger para confirmar que sólo la primera ausencia queda silenciosa. No cambian el inicio de sesión,
+los datos sincronizados, los papeles ni los permisos.
+
+`FindByEmail` y `FindByExternalID` distinguen ahora cero filas con `RowsAffected`; `FindByID` aplica
+la misma regla al contrato de cuenta ausente. La prueba de integración confirmó las dos búsquedas
+vacías sin eventos de error y una consulta SQL inválida todavía visible. La suite backend completa y
+`go vet` pasaron el 2026-10-13.

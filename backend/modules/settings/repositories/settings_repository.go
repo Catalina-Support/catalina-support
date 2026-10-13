@@ -162,57 +162,72 @@ func NewSettingsRepository(db *gorm.DB) *SettingsRepository {
 func (r *SettingsRepository) Installation() (InstallationSettings, error) {
 	var ajustes InstallationSettings
 
-	err := r.db.Where("id = 1").First(&ajustes).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = 1").Limit(1).Find(&ajustes)
+	if result.Error != nil {
+		return InstallationSettings{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return InstallationSettings{}, ErrSettingsNotFound
 	}
 
-	return ajustes, err
+	return ajustes, nil
 }
 
 // Tickets devuelve la configuración de los tickets.
 func (r *SettingsRepository) Tickets() (TicketSettings, error) {
 	var ajustes TicketSettings
 
-	err := r.db.Where("id = 1").First(&ajustes).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = 1").Limit(1).Find(&ajustes)
+	if result.Error != nil {
+		return TicketSettings{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return TicketSettings{}, ErrSettingsNotFound
 	}
 
-	return ajustes, err
+	return ajustes, nil
 }
 
 // Directory devuelve la configuración del directorio.
 func (r *SettingsRepository) Directory() (DirectorySettings, error) {
 	var ajustes DirectorySettings
 
-	err := r.db.Where("id = 1").First(&ajustes).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = 1").Limit(1).Find(&ajustes)
+	if result.Error != nil {
+		return DirectorySettings{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return DirectorySettings{}, ErrSettingsNotFound
 	}
 
-	return ajustes, err
+	return ajustes, nil
 }
 
 // Keycloak devuelve la configuración del camino de Keycloak.
 func (r *SettingsRepository) Keycloak() (KeycloakSettings, error) {
 	var ajustes KeycloakSettings
 
-	err := r.db.Where("id = 1").First(&ajustes).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = 1").Limit(1).Find(&ajustes)
+	if result.Error != nil {
+		return KeycloakSettings{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return KeycloakSettings{}, ErrSettingsNotFound
 	}
 
-	return ajustes, err
+	return ajustes, nil
 }
 
 func (r *SettingsRepository) AI() (AISettings, error) {
 	var ajustes AISettings
-	err := r.db.Where("id = 1").First(&ajustes).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("id = 1").Limit(1).Find(&ajustes)
+	if result.Error != nil {
+		return AISettings{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return AISettings{}, ErrSettingsNotFound
 	}
-	return ajustes, err
+	return ajustes, nil
 }
 
 func (r *SettingsRepository) UpdateAI(cambios map[string]any, updatedByID *int64) error {

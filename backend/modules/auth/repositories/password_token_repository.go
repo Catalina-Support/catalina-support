@@ -72,12 +72,15 @@ func (r *PasswordTokenRepository) Create(token *PasswordToken) error {
 func (r *PasswordTokenRepository) FindByHash(hash string) (PasswordToken, error) {
 	var token PasswordToken
 
-	err := r.db.Where("token_hash = ?", hash).First(&token).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.Where("token_hash = ?", hash).Limit(1).Find(&token)
+	if result.Error != nil {
+		return PasswordToken{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return PasswordToken{}, ErrTokenNotFound
 	}
 
-	return token, err
+	return token, nil
 }
 
 // MarkUsed marca el enlace como usado: un enlace, un uso.

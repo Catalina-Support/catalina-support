@@ -3,6 +3,12 @@
 > **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
+> **Tercera reanudación aprobada, 2026-10-13.** El recorrido completó instalación, IA, correo,
+> ejemplos, AD y Keycloak, pero la revisión final encontró falsos errores `record not found` en
+> búsquedas cuya ausencia es normal. La sección 19 conserva la evidencia y exige una cuarta pasada
+> completa después de la corrección. El responsable eligió y aprobó 1A–4A; la corrección ya pasó
+> contra PostgreSQL real y falta integrarla en `main`.
+>
 > **Segunda reanudación aprobada el 2026-10-13.** El bloque 8 se detuvo antes de `/setup` porque `migrate` recibió `connection refused` después de un healthcheck por socket prematuro. La sección 18 registra tiempos, limpieza y repetición completa desde otro `main` corregido. El responsable aprobó la corrección y el plan; falta publicar y ejecutar la repetición completa.
 >
 >
@@ -772,3 +778,29 @@ publicar y montar las migraciones, permitir que el comando manual levante la bas
 estable, cubrir los tres estados con pruebas y explicar el orden también en el README. Se conservan
 6B, 7A, 8A y 9A, junto con 10A–13A. No quedan decisiones abiertas; falta aprobar explícitamente la
 propuesta antes de modificar código o configuración.
+
+## 19. Reanudación aprobada después del hallazgo de logs
+
+La tercera ejecución pública probó el commit
+`2f7c6468555fdf23efec08716d42755ccefa8b31` con Docker 29.5.2 y Compose 5.1.4. El clon tardó 1,30 s,
+el entorno 47,87 s y el administrador de IA 4,15 s. Desarrollo migró automáticamente sin errores de
+tablas; `/setup` comenzó vacío, en inglés y con Mailpit precargado. El modelo 1.5B descargó
+1.117.320.736 bytes en 49,25 s, quedó sano en 14,62 s y completó la prueba del asistente en 3,04 s.
+
+Se selló la instalación, se completaron altas locales mediante correos reales, se creó
+`CS-2026-0001`, la mejora de redacción devolvió texto y los dos resúmenes quedaron listos con
+`language=en`. El seeder conservó configuración e IA y dejó 11 cuentas, 25 tickets y 5 adjuntos.
+Entraron cuentas de Usuario, Soporte y Desarrollo; después funcionaron AD con creación automática,
+Keycloak mediante su vuelta OIDC real, la cuenta de fábrica y el retorno final al método local.
+
+La inspección final encontró `record not found` con nivel de error al buscar la categoría
+normalizada antes de crearla y al buscar por correo e identidad externa antes de crear cuentas de
+AD y Keycloak. Los resultados funcionales eran correctos, pero contradicen el requisito de una
+operación sin ruido. Se detuvo el cierre y se limpió por completo el entorno, incluido el modelo de
+1,1 GB; producción permaneció intacta.
+
+Tras aprobar, implementar, probar e integrar las secciones propuestas de arquitectura, usuarios y
+tickets, se repetirá todo el bloque 8 desde otro clon público de `main`. Además de los siete
+criterios de 16.6, el examen de logs debe mostrar cero falsos errores por ausencias esperadas y las
+pruebas deben demostrar que un error SQL real conserva su nivel. El responsable eligió 1A–4A; no
+quedan decisiones abiertas.

@@ -3,6 +3,13 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13.** La instalación, el seeder y los tres
+> métodos de entrada funcionaron, pero las búsquedas previas a crear una categoría y una cuenta de
+> directorio escribieron `record not found` con nivel de error. La sección 22 propone distinguir en
+> cada repositorio las ausencias esperadas, conservar todos los errores SQL reales y verificar
+> también el nivel del log. El responsable eligió y aprobó 1A–4A; la suite backend y `go vet`
+> pasaron también contra PostgreSQL real.
+>
 > **Hallazgo corregido y verificado el 2026-10-13: salud con esquema pendiente.** La sección 21 distingue una base inaccesible de una base disponible cuya migración manual falta, con `503`, clave estable y un único aviso. El responsable cerró y aprobó las decisiones coordinadas de disponibilidad, producción y pruebas. La suite backend, `go vet` y PostgreSQL vacío verificaron la implementación.
 >
 >
@@ -1303,6 +1310,34 @@ La interfaz conserva la pantalla existente de servidor no disponible: el detalle
 salud y logs, sin una pantalla nueva.
 
 En desarrollo y pruebas el backend sigue esperando al servicio automático `migrate`, por lo que esta condición protege principalmente el orden manual de producción y diagnósticos accidentales. No se introducen migraciones automáticas dentro del proceso Go, reintentos SQL, tablas nuevas ni cambios de permisos.
+
+## 22. Implementación: ausencias esperadas sin falsos errores
+
+Una consulta cuyo contrato admite que no haya fila no es un fallo de base. Los repositorios que ya
+traducen esa situación a un resultado de dominio usarán una consulta que entregue cero filas y
+`RowsAffected == 0`, sin producir `gorm.ErrRecordNotFound`. Esto cubre configuración opcional,
+plantillas y tokens buscados por clave, tickets o relaciones opcionales, categorías y cuentas que
+se comprueban antes de crearse o vincularse.
+
+La decisión se toma en cada método del repositorio; no se configura
+`IgnoreRecordNotFoundError` globalmente. Un error de conexión, permisos, SQL, escaneo o cualquier
+otro error de GORM se propaga y conserva su nivel actual. Tampoco se cambia el significado público
+de encontrado, ausente, duplicado o no autorizado.
+
+Las pruebas de repositorio cubrirán al menos una ausencia por cada patrón modificado y comprobarán
+dos resultados: el valor de dominio existente y que el logger de GORM no reciba un evento de nivel
+error. También incluirán un fallo SQL real para demostrar que no quedó silenciado. No se añade un
+sistema nuevo de observabilidad ni una dependencia de logging.
+
+Quedan fuera cambios de API, modelo de datos, migraciones, interfaz, permisos y reglas de negocio.
+El responsable eligió corregir todas las ausencias esperadas, hacerlo consulta por consulta, probar
+comportamiento y log, y repetir después el bloque 8 completo (1A–4A). No quedan decisiones abiertas.
+
+La implementación sustituyó las lecturas `First` que traducían `gorm.ErrRecordNotFound` por
+`Limit(1).Find`, comprobación inmediata del error y después `RowsAffected`. No queda ninguna lectura
+`First` en los repositorios de módulos. Las pruebas con PostgreSQL real confirmaron la ausencia sin
+evento de error para categorías y para las dos búsquedas de identidad; una tabla inexistente siguió
+llegando al logger. La suite backend completa y `go vet` pasaron el 2026-10-13.
 
 Las pruebas automatizadas cubren los tres estados: PostgreSQL inaccesible, conexión válida sin
 `installation_settings` y esquema presente. También comprueban el código HTTP, la forma JSON y que
