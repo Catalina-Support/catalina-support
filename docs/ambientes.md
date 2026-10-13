@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Cuarta pasada pública completada, 2026-10-13.** La sección 22 registra que los cuatro entornos
+> documentados se levantaron desde el `main` público, completaron el recorrido aprobado y fueron
+> eliminados con sus volúmenes. No quedaron falsos errores ni recursos de auditoría; producción no
+> se inició ni se modificó.
+>
 > **Tercera reanudación aprobada del bloque 8, 2026-10-13.** El recorrido público completó todos
 > los hitos funcionales, pero el examen final de logs encontró falsos errores de GORM en ausencias
 > normales. La sección 21 registra la evidencia, la limpieza y la repetición completa elegida por el
@@ -1188,3 +1193,16 @@ cero, ejecutó `migrate` una vez, arrancó el backend después de su salida corr
 `installation_settings` y eliminó su contenedor, red y volumen. Sin el perfil, la configuración
 resuelta de producción no incluye `migrate`; con él sí. `bash -n` y la validación de los tres
 archivos Compose terminaron limpias. Producción no se inició ni se modificó.
+
+## 22. Resultado de la cuarta pasada del bloque 8
+
+El commit público `b0898922f6d584d9b3349f2de82adc6046e82315` levantó correctamente `dev.yml`,
+`ai.yml`, `active-directory.yml` y `keycloak.yml` desde un clon nuevo. Desarrollo aplicó la
+migración automáticamente; IA descargó y ejecutó el modelo 1.5B; AD y Keycloak autenticaron y
+aprovisionaron cuentas; y el retorno al método local quedó comprobado. Los conteos y tiempos
+detallados viven en `docs/prueba-local.md`, sección 20.
+
+La revisión final de logs quedó vacía para errores de SQL, ausencias esperadas, pánicos y errores
+fatales. La limpieza bajó los cuatro proyectos por sus archivos Compose y eliminó sus volúmenes y
+redes. No se usó una poda global. Los recursos detenidos de producción se preservaron y no se
+ejecutaron `prod-build.sh`, la migración de producción, nginx, el dominio ni la etiqueta 1.0.0.
