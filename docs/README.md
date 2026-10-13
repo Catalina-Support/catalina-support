@@ -3,6 +3,10 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Bloque 8 cerrado, 2026-10-13:** `prueba-local.md` y `ambientes.md` registran la cuarta pasada
+> íntegra desde el repositorio público. Instalación vacía, IA, correo, seeders, AD, Keycloak y vuelta
+> a local funcionaron; los logs terminaron limpios y el entorno desechable fue retirado.
+>
 > **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13:** `arquitectura.md`,
 > `modules/settings.md`, `modules/auth.md`, `modules/mail.md`, `modules/users.md` y
 > `modules/tickets.md` retiran los falsos errores de GORM para ausencias
@@ -309,7 +313,7 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
-| `prueba-local.md` | **aprobado** | Tercera pasada completa; corrección verificada y cuarta repetición pública pendiente |
+| `prueba-local.md` | **as-built** | Cuarta pasada pública completa, limpia y sin hallazgos abiertos |
 | `arquitectura.md` | **as-built** | Ausencias esperadas por repositorio sin silenciar errores SQL reales |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
@@ -320,7 +324,7 @@ escribe código sin un documento aprobado antes.
 | `modules/users.md` | **as-built** | Alta automática de AD y Keycloak sin falsos errores en búsquedas previas |
 | `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Entorno limpio y cuarta repetición pública aprobada |
+| `ambientes.md` | **as-built** | Cuarta repetición pública completada y entorno limpio |
 | `modules/ai.md` | **as-built** | Valida el idioma global, reintenta sólo motores sin proveedor pagado y descarta discrepancias |
 | `modules/tickets.md` | **as-built** | Ausencia normal sin falso error en tickets y catálogos |
 

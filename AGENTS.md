@@ -88,7 +88,7 @@ completo.
 | `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
 | `docs/modules/tickets.md` | **as-built**: idioma validado en resúmenes y ausencia normal del interno sin falso error |
 | `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **as-built**: corrección verificada y cuarta repetición pública aprobada |
+| `docs/ambientes.md` | **as-built**: cuarta repetición pública completada y entorno limpio |
 | `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
 | `docs/modules/settings.md` | **as-built**: filas únicas ausentes sin falso error de GORM |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
@@ -97,7 +97,7 @@ completo.
 | `docs/modules/auth.md` | **as-built**: token de contraseña ausente sin falso error de GORM |
 | `docs/modules/users.md` | **as-built**: búsquedas previas al alta de directorio sin falsos errores |
 | `docs/arquitectura.md` | **as-built**: ausencias esperadas por repositorio sin silenciar errores SQL |
-| `docs/prueba-local.md` | **aprobado**: tercera pasada completada y cuarta repetición pública pendiente |
+| `docs/prueba-local.md` | **as-built**: cuarta pasada pública completa y sin hallazgos abiertos |
 | `docs/proyecto-abierto.md` | **as-built**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
