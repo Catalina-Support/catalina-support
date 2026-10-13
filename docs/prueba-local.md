@@ -3,6 +3,9 @@
 > **Estado:** aprobado
 > **Última actualización:** 2026-10-13
 >
+> **Segunda reanudación aprobada el 2026-10-13.** El bloque 8 se detuvo antes de `/setup` porque `migrate` recibió `connection refused` después de un healthcheck por socket prematuro. La sección 18 registra tiempos, limpieza y repetición completa desde otro `main` corregido. El responsable aprobó la corrección y el plan; falta publicar y ejecutar la repetición completa.
+>
+>
 > **Hallazgo del bloque 8 y reanudación propuesta, 2026-10-13.** La primera ejecución se detuvo al
 > obtener un «Motivo» en español en un despliegue inglés. La sección 17 conserva la evidencia,
 > remite la corrección a los documentos de IA y tickets y exige repetir el recorrido completo desde
@@ -754,3 +757,18 @@ Tras implementar y verificar `docs/modules/ai.md`, sección 15, y `docs/modules/
 todo el bloque 8 desde una clonación y recursos nuevos: instalación vacía, IA local real, alta por
 Mailpit, resúmenes y redacción, seeders, AD, Keycloak, retorno a local, tiempos y limpieza. El cierre
 sigue exigiendo cero hallazgos abiertos.
+
+## 18. Propuesta de reanudación después del hallazgo de disponibilidad TCP
+
+La segunda ejecución pública probó el commit `80e01a75c7bc3b284778bcd214850efb0690714b` con Docker 29.5.2 y Compose 5.1.4. El clon terminó en 2,21 s. El primer `up -d --build` tardó 63,87 s y falló antes del backend: `database` figuró saludable, pero `migrate` recibió `connection refused` al conectar por TCP a `database:11003`. No se inició IA ni se alcanzó `/setup`.
+
+El fallo se atribuye al healthcheck por socket durante la transición entre el servidor temporal de inicialización de PostgreSQL y el servidor definitivo. Se detuvo conforme a 16.6 y se retiraron contenedores, redes, volúmenes, imágenes propias y clon; producción no se consultó ni modificó.
+
+Después de implementar y verificar las secciones nuevas de `docs/ambientes.md` y `docs/arquitectura.md`, la corrección se publicará primero en `main`. Entonces se repetirá nuevamente todo el bloque 8 desde recursos y clon nuevos; no se continúa desde el fallo. Además de los criterios existentes, la pasada comprobará que una base nueva no presenta la carrera, que desarrollo y pruebas migran automáticamente, y que la salud distingue en una comprobación aislada el esquema pendiente de una base inaccesible.
+
+Antes de la repetición pública pasan las pruebas automatizadas de los tres estados de salud y una
+ejecución desechable del servicio manual de producción. En el repaso el responsable eligió 14A–18A:
+publicar y montar las migraciones, permitir que el comando manual levante la base, devolver JSON
+estable, cubrir los tres estados con pruebas y explicar el orden también en el README. Se conservan
+6B, 7A, 8A y 9A, junto con 10A–13A. No quedan decisiones abiertas; falta aprobar explícitamente la
+propuesta antes de modificar código o configuración.

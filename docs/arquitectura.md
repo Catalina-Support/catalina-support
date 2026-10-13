@@ -3,6 +3,9 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Hallazgo corregido y verificado el 2026-10-13: salud con esquema pendiente.** La sección 21 distingue una base inaccesible de una base disponible cuya migración manual falta, con `503`, clave estable y un único aviso. El responsable cerró y aprobó las decisiones coordinadas de disponibilidad, producción y pruebas. La suite backend, `go vet` y PostgreSQL vacío verificaron la implementación.
+>
+>
 > **Enmienda implementada y verificada el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
 > idioma como configuración única del despliegue, incorpora el detector dentro de `ai`, actualiza
 > avisos de terceros y preserva las fronteras con `tickets` y `mail`. La implementación se mantuvo dentro de la propuesta aprobada explícitamente el 2026-10-13.
@@ -1287,3 +1290,29 @@ abiertas.
 ### 20.1 Implementación y verificación
 
 `whatlanggo` 1.0.1 queda encerrado en `backend/modules/ai/services`; ningún otro módulo importa el detector. Su licencia MIT se incorporó al inventario generado de terceros. La cola conserva un solo intento persistido para el reintento interno de idioma y evita automáticamente una segunda llamada en modalidad `provider`. La suite backend completa y `go vet` pasaron el 2026-10-13.
+
+## 21. Salud distinguible con esquema pendiente
+
+El backend puede arrancar en producción después de que PostgreSQL acepte TCP aunque el operador todavía no haya ejecutado la migración manual. Al iniciar comprueba la existencia de `installation_settings`, tabla esencial de `v1.0.0.sql`, sin crear una tabla de control ni modificar el esquema. Si falta, registra una sola vez que la migración está pendiente.
+
+`GET /api/health` responde `503` con el objeto estable
+`{"status":"error","errorKey":"database.schema_pending"}` mientras falte esa tabla. Una base
+desconectada o un error real de PostgreSQL conserva la clasificación general de base no disponible;
+no se confunden ambos diagnósticos. Las consultas de salud no repiten el mensaje en cada llamada.
+La interfaz conserva la pantalla existente de servidor no disponible: el detalle operativo vive en
+salud y logs, sin una pantalla nueva.
+
+En desarrollo y pruebas el backend sigue esperando al servicio automático `migrate`, por lo que esta condición protege principalmente el orden manual de producción y diagnósticos accidentales. No se introducen migraciones automáticas dentro del proceso Go, reintentos SQL, tablas nuevas ni cambios de permisos.
+
+Las pruebas automatizadas cubren los tres estados: PostgreSQL inaccesible, conexión válida sin
+`installation_settings` y esquema presente. También comprueban el código HTTP, la forma JSON y que
+la comprobación no escriba el mismo aviso repetidamente.
+
+### 21.1 Implementación y verificación
+
+El arranque consulta `to_regclass('public.installation_settings')` antes de construir los módulos.
+Si la tabla falta, registra el aviso una vez y monta un servidor mínimo: salud devuelve la clave
+estable y las demás rutas API devuelven `503`, de modo que la interfaz activa su pantalla existente
+de servidor no disponible. Después de migrar se reinicia el backend para montar las rutas completas.
+La suite backend y `go vet` pasaron. La prueba con PostgreSQL vacío confirmó que no aparecen
+consultas a `installation_settings` ni `ai_insights` y que la respuesta real es la acordada.

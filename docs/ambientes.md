@@ -1,7 +1,10 @@
 # Ambientes: despliegue y pruebas
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
+>
+> **Hallazgo corregido y verificado el 2026-10-13: disponibilidad TCP y migración manual.** La segunda pasada pública del bloque 8 encontró una carrera entre el healthcheck por socket y la conexión TCP de `migrate`. La sección 20 conserva migración automática en desarrollo y pruebas, añade el comando manual de producción y publica su SQL. El responsable cerró 1B, 2A, 3A, 4A, 5B, 6B, 7A–9A, la corrección 10A–13A, el repaso 14A–18A y aprobó explícitamente la propuesta. La corrección pasó en instancias desechables; queda repetir el recorrido público completo.
+>
 >
 > **Hallazgo limpiado y reanudación propuesta, 2026-10-13.** El bloque 8 se detuvo por una respuesta
 > de IA en otro idioma y retiró todos sus recursos temporales. La sección 19 exige una nueva pasada
@@ -1131,3 +1134,36 @@ La repetición vuelve a ejecutar la sección 18 completa después de que la corr
 fronteras: nombres explícitos, sin poda global, sin respaldo de los datos desechables y sin tocar
 producción. Un nuevo hallazgo funcional vuelve a detener y limpiar la pasada antes de cualquier
 cambio de código.
+
+## 20. Disponibilidad TCP y migración manual de producción
+
+La segunda pasada del bloque 8 sobre `main` (`80e01a75c7bc3b284778bcd214850efb0690714b`) se detuvo en el primer `docker compose -f dev.yml up -d --build`. El healthcheck declaró saludable a PostgreSQL mientras su servidor temporal de inicialización respondía por el socket local; `migrate`, que conecta por TCP, arrancó durante el cambio al servidor definitivo y recibió `connection refused`. El entorno y el clon se eliminaron por completo antes de proponer cambios.
+
+Los healthchecks de PostgreSQL en `dev.yml`, `tests.yml` y `prod.yml` comprobarán `127.0.0.1` y el puerto configurado. Así sólo habilitan dependencias cuando la misma vía TCP que usan otros contenedores acepta conexiones. `migrate` no incorpora esperas ni reintentos propios: desarrollo y pruebas conservan su migración automática y el backend continúa dependiendo de que termine correctamente.
+
+Producción conserva migraciones manuales. `prod.yml` añade un servicio `migrate` bajo el perfil
+`migrate`, por lo que `up` nunca lo ejecuta implícitamente. El comando explícito será
+`docker compose -f prod.yml --profile migrate run --rm migrate`; durante la 1.0.0 aplica únicamente
+`migrations/v1.0.0.sql` con `ON_ERROR_STOP=1`. Su dependencia puede levantar `database` si estaba
+detenida y espera a que acepte TCP. `prod-build.sh` publica `backend/migrations/` en
+`/srv/catalina-support/migrations`, que el servicio monta en sólo lectura, pero no ejecuta ni
+pregunta por la migración.
+
+El runbook y el README separan el orden: construir y publicar artefactos sin desplegar, levantar la
+base —o dejar que el comando manual lo haga—, ejecutar `migrate` y sólo después desplegar o reiniciar
+la aplicación. No se presenta `prod-build.sh` como ejecutor de SQL.
+
+El seeder sigue siendo una acción voluntaria y aplica primero el esquema idempotente. No cambian los datos de ejemplo ni la política futura de un archivo por versión. Cuando exista una migración posterior se actualizarán el servicio y el runbook mediante su propio ciclo documental.
+
+La verificación automatizada reproduce una base nueva por TCP en desarrollo y pruebas. La
+verificación de producción inspecciona la configuración resuelta de Compose y ejecuta el servicio
+manual contra una base desechable, sin tocar el despliegue aplazado.
+
+### 20.1 Implementación y verificación
+
+Los tres healthchecks usan `127.0.0.1`. Una instancia desechable de `tests.yml` creó PostgreSQL desde
+cero, ejecutó `migrate` una vez, arrancó el backend después de su salida correcta y respondió salud
+`200`. Una copia temporal y aislada de `prod.yml` ejecutó el comando manual, confirmó
+`installation_settings` y eliminó su contenedor, red y volumen. Sin el perfil, la configuración
+resuelta de producción no incluye `migrate`; con él sí. `bash -n` y la validación de los tres
+archivos Compose terminaron limpias. Producción no se inició ni se modificó.

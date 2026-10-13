@@ -1,8 +1,8 @@
 // Catalina-Support: backend de una mesa de ayuda de dos niveles.
 //
 // El arranque hace, en este orden: leer configuración, comprobar que se puede escribir
-// el log, conectar con la base de datos, montar las rutas y escuchar. Cualquier fallo
-// de esos pasos detiene el arranque: es preferible no arrancar a arrancar a medias.
+// el log, conectar con la base de datos, comprobar el esquema, montar las rutas y escuchar.
+// Sin esquema sólo queda disponible la salud operativa hasta que se migre y reinicie.
 //
 // Las rutas de los módulos se registran con el prefijo /api/<módulo>/... y nginx las
 // pasa tal cual (no las reescribe), así que el backend es el dueño de ese prefijo.
@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/juanky-estevez/go-logs"
-	"gorm.io/gorm"
 
 	airepositories "catalina-support/backend/modules/ai/repositories"
 	aiservices "catalina-support/backend/modules/ai/services"
@@ -205,6 +204,24 @@ func run() error {
 	}
 	logs.LogSuccess("conexión a la base de datos establecida")
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("no se pudo obtener la conexión a la base de datos: %w", err)
+	}
+	schemaReady, err := database.SchemaReady(context.Background(), db)
+	if err != nil {
+		return fmt.Errorf("no se pudo comprobar el esquema de la base de datos: %w", err)
+	}
+	if !schemaReady {
+		logs.LogWarning("la migración de la base de datos está pendiente")
+		handler := pendingSchemaHandler(sqlDB, func(ctx context.Context) (bool, error) {
+			return database.SchemaReady(ctx, db)
+		})
+		return serve(cfg, middleware.Chain(handler, middleware.Recover), func() error {
+			return sqlDB.Close()
+		})
+	}
+
 	// El token de sesión: sin secreto no se firma nada, y en producción el arranque no sigue.
 	tokens, err := auth.NewTokenManager(cfg.TokenSecret)
 	if err != nil {
@@ -365,7 +382,9 @@ func run() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", health(db))
+	mux.HandleFunc("GET /api/health", health(sqlDB, func(ctx context.Context) (bool, error) {
+		return database.SchemaReady(ctx, db)
+	}))
 
 	// El editor de plantillas de correo: los cuatro endpoints son de administrador
 	// (docs/modules/mail.md, sección 7).
@@ -524,9 +543,18 @@ func run() error {
 	mux.HandleFunc("GET /api/settings/brand", settingsController.Brand)
 	mux.HandleFunc("GET /api/settings/brand/logo", settingsController.LogoFile)
 
+	return serve(cfg, middleware.Chain(mux, aiConfigured, middleware.Recover), func() error {
+		// Se para la cola del motor antes de cerrar la base: un trabajo a medias escribiría en una conexión
+		// cerrada.
+		aiService.Parar()
+		return sqlDB.Close()
+	})
+}
+
+func serve(cfg config.Config, handler http.Handler, cleanup func() error) error {
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           middleware.Chain(mux, aiConfigured, middleware.Recover),
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -560,14 +588,8 @@ func run() error {
 		return fmt.Errorf("no se pudo cerrar el servidor con orden: %w", err)
 	}
 
-	// Se para la cola del motor antes de cerrar la base: un trabajo a medias escribiría en una conexión
-	// cerrada.
-	aiService.Parar()
-
-	if sqlDB, err := db.DB(); err == nil {
-		if err := sqlDB.Close(); err != nil {
-			return fmt.Errorf("no se pudo cerrar la conexión a la base de datos: %w", err)
-		}
+	if err := cleanup(); err != nil {
+		return fmt.Errorf("no se pudo cerrar la conexión a la base de datos: %w", err)
 	}
 
 	logs.LogSuccess("backend detenido")
@@ -618,22 +640,44 @@ func loadIdentity(users *userservices.Service) auth.IdentityLoader {
 	}
 }
 
-// health comprueba que el proceso responde y que la base de datos contesta de verdad.
-func health(db *gorm.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		sqlDB, err := db.DB()
-		if err != nil {
-			logs.LogError("health: no se pudo obtener la conexión a la base de datos: " + err.Error())
+type databasePinger interface {
+	PingContext(context.Context) error
+}
+
+type schemaProbe func(context.Context) (bool, error)
+
+func pendingSchemaHandler(db databasePinger, schema schemaProbe) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", health(db, schema))
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
+		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error", "errorKey": "database.schema_pending"})
+	})
+	return mux
+}
+
+// health comprueba que el proceso responde, que PostgreSQL acepta conexiones y que
+// ya tiene el esquema mínimo. La ausencia del esquema tiene una respuesta propia para
+// distinguir una migración pendiente de una caída de la base.
+func health(db databasePinger, schema schemaProbe) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		// La comprobación termina por su propio plazo. Un cliente de monitoreo puede cerrar
+		// la conexión al enviar la petición; eso no debe cancelar ni dañar la conexión SQL.
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := db.PingContext(ctx); err != nil {
+			logs.LogError("health: la base de datos no responde: " + err.Error())
 			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error", "database": "error"})
 			return
 		}
-
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-
-		if err := sqlDB.PingContext(ctx); err != nil {
-			logs.LogError("health: la base de datos no responde: " + err.Error())
+		ready, err := schema(ctx)
+		if err != nil {
+			logs.LogError("health: no se pudo comprobar el esquema: " + err.Error())
 			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error", "database": "error"})
+			return
+		}
+		if !ready {
+			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error", "errorKey": "database.schema_pending"})
 			return
 		}
 

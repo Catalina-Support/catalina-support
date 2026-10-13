@@ -295,8 +295,8 @@ despliegue actual todavía requiere trabajo del servidor:
 - Docker Compose, Bash, nginx y un certificado TLS para tu dominio.
 - Crear `config/env/prod.env` a partir de [prod.env.example](config/env/prod.env.example), con valores
   propios de `ADMIN_PASSWORD`, `TOKEN_SECRET` y PostgreSQL. Ese archivo no se versiona.
-- Construir los artefactos, aplicar las migraciones de versión (nunca los archivos `_dev`) y
-  completar el asistente antes de exponer la instalación.
+- Construir los artefactos, aplicar manualmente las migraciones de versión (nunca los archivos
+  `_dev`) y completar el asistente antes de exponer la instalación.
 - Configurar el SMTP real y crear las cuentas; mantener copias de la base **y de los adjuntos**.
   El script de copias sólo incluye la base y conserva 14 días.
 
@@ -312,6 +312,22 @@ despliegue actual todavía requiere trabajo del servidor:
 
 El [runbook](docs/ambientes.md) conserva los detalles del despliegue realizado y sus pendientes.
 La revisión del README no modifica scripts ni abre producción.
+
+El orden de una instalación o actualización es explícito. `prod-build.sh` publica también la
+carpeta `migrations`, pero no modifica la base ni pide confirmación:
+
+```bash
+./scripts/prod-build.sh --no-deploy
+cd /srv/catalina-support
+docker compose -f prod.yml --profile migrate run --rm migrate
+docker compose -f prod.yml up -d
+```
+
+El servicio `migrate` aplica únicamente `v1.0.0.sql` y existe bajo el perfil `migrate`, por lo que
+un `docker compose -f prod.yml up -d` normal nunca lo ejecuta. Puede levantar la base que necesita
+y espera a que PostgreSQL acepte conexiones TCP. Si el backend llega a arrancar antes de aplicar el
+esquema, sólo expone `/api/health`, que responde `503` con
+`{"status":"error","errorKey":"database.schema_pending"}`; después de migrar hay que reiniciarlo.
 
 ## Pruebas para quienes desarrollan
 

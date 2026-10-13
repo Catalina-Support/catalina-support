@@ -6,6 +6,7 @@ name: catalina-support-prod
 #
 #   docker compose -f prod.yml --profile build run --rm builder_backend
 #   docker compose -f prod.yml --profile build run --rm builder_frontend
+#   docker compose -f prod.yml --profile migrate run --rm migrate
 #   docker compose -f prod.yml up -d
 #
 # PENDIENTE: los puertos 21001-21003, el dominio, el TLS y las rutas de artefactos
@@ -70,10 +71,29 @@ services:
     volumes:
       - database:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -p 21003"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB -p 21003"]
       interval: 5s
       timeout: 5s
       retries: 12
+
+  # En producción la migración es una acción manual y visible. El perfil evita que
+  # `up` la ejecute; `run` puede levantar por sí mismo la base de la que depende.
+  migrate:
+    profiles: ["migrate"]
+    image: postgres:18-alpine
+    env_file:
+      - ./config/env/prod.env
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: ["sh", "-ec"]
+    command:
+      - |
+        export PGPASSWORD="$$POSTGRES_PASSWORD"
+        psql -h "$$POSTGRES_HOST" -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
+        echo "Migración v1.0.0 aplicada."
 
   builder_frontend:
     profiles: ["build"]
