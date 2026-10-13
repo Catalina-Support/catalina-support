@@ -199,12 +199,12 @@ func (r *TicketRepository) InternalByNumber(number string) (InternalTicket, erro
 func (r *TicketRepository) InternalByTicket(ticketID int64) (InternalTicket, bool, error) {
 	var interno InternalTicket
 
-	err := r.db.Where("ticket_id = ?", ticketID).First(&interno).Error
-	if err == gorm.ErrRecordNotFound {
-		return InternalTicket{}, false, nil
+	resultado := r.db.Where("ticket_id = ?", ticketID).Limit(1).Find(&interno)
+	if resultado.Error != nil {
+		return InternalTicket{}, false, resultado.Error
 	}
-	if err != nil {
-		return InternalTicket{}, false, err
+	if resultado.RowsAffected == 0 {
+		return InternalTicket{}, false, nil
 	}
 
 	return interno, true, nil

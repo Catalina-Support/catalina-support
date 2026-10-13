@@ -7,6 +7,7 @@ It inventories production dependencies distributed with Catalina Support. Develo
 | Ecosystem | Component | Version | License | Source | License text |
 | --- | --- | --- | --- | --- | --- |
 | Go | `github.com/Azure/go-ntlmssp` | `v0.1.1` | `MIT` | [source](https://pkg.go.dev/github.com/Azure/go-ntlmssp@v0.1.1) | [text](third_party_licenses/go--github.com--Azure--go-ntlmssp--v0.1.1.txt) |
+| Go | `github.com/abadojack/whatlanggo` | `v1.0.1` | `MIT` | [source](https://pkg.go.dev/github.com/abadojack/whatlanggo@v1.0.1) | [text](third_party_licenses/go--github.com--abadojack--whatlanggo--v1.0.1.txt) |
 | Go | `github.com/go-asn1-ber/asn1-ber` | `v1.5.8` | `MIT` | [source](https://pkg.go.dev/github.com/go-asn1-ber/asn1-ber@v1.5.8) | [text](third_party_licenses/go--github.com--go-asn1-ber--asn1-ber--v1.5.8.txt) |
 | Go | `github.com/go-ldap/ldap/v3` | `v3.4.14` | `MIT` | [source](https://pkg.go.dev/github.com/go-ldap/ldap/v3@v3.4.14) | [text](third_party_licenses/go--github.com--go-ldap--ldap--v3--v3.4.14.txt) |
 | Go | `github.com/golang-jwt/jwt/v5` | `v5.3.1` | `MIT` | [source](https://pkg.go.dev/github.com/golang-jwt/jwt/v5@v5.3.1) | [text](third_party_licenses/go--github.com--golang-jwt--jwt--v5--v5.3.1.txt) |

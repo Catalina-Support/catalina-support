@@ -1,9 +1,9 @@
 # Tickets: modelo de datos, transiciones y módulos
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
-> **Hallazgo y enmienda propuesta el 2026-10-13: idioma y consulta esperada.** El bloque 8 encontró
+> **Hallazgo corregido e implementación verificada el 2026-10-13: idioma y consulta esperada.** El bloque 8 encontró
 > un resumen en otro idioma y que leer un principal no escalado imprime `record not found` como si
 > fuera un error. La sección 14 coordina el contrato de IA con `docs/modules/ai.md` y silencia sólo
 > esa ausencia normal. El responsable eligió 1A–12A, con 10B, y aprobó explícitamente la propuesta
@@ -1248,7 +1248,7 @@ La suite completa del backend y las 225 pruebas del frontend pasan el 2026-10-08
 configurado de Playwright pasa en PC y móvil. El entorno desechable se eliminó al terminar y
 producción no se tocó.
 
-## 14. Propuesta: resúmenes en el idioma global y ausencia normal del interno
+## 14. Implementación: resúmenes en el idioma global y ausencia normal del interno
 
 `tickets` continúa entregando a `ai` el idioma global del despliegue y conserva literalmente el
 contenido escrito por las personas. El andamiaje que construye —rótulos del asunto, descripción,
@@ -1270,3 +1270,6 @@ propaga y un interno existente que se devuelve. La repetición pública del bloq
 que el detalle normal no llena los logs con `record not found`. No cambian API, modelo de datos,
 permisos, estados, transiciones ni interfaz. El responsable eligió 3A y las decisiones coordinadas
 1A–12A, con 10B. No quedan decisiones abiertas.
+### 14.1 Implementación y verificación
+
+El contexto de resumen obtiene el idioma global al construir cada encargo y localiza sus rótulos, actores del sistema y nombres conocidos de eventos sin modificar el contenido escrito por las personas. `InternalByTicket` usa una consulta que distingue cero filas mediante `RowsAffected`, por lo que la ausencia normal no dispara el log de `record not found`; los errores reales siguen propagándose. Las pruebas del servicio y del repositorio, además de la suite backend completa, pasaron el 2026-10-13.

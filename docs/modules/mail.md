@@ -1,12 +1,11 @@
 # mail
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
-> **Enmienda propuesta el 2026-10-13: validar el idioma de los borradores.** La sección 12 adopta
+> **Enmienda implementada y verificada el 2026-10-13: validar el idioma de los borradores.** La sección 12 adopta
 > el control central de `ai`: una traducción claramente incorrecta no sustituye el borrador y un
-> proveedor externo no recibe un reintento automático. El responsable cerró 1A–12A con 10B. No se
-> cambia código fuera de lo aprobado; el responsable la aprobó explícitamente el 2026-10-13.
+> proveedor externo no recibe un reintento automático. El responsable cerró 1A–12A con 10B. El cambio se mantuvo dentro de lo aprobado explícitamente por el responsable.
 >
 > **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
 > idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las
@@ -424,7 +423,7 @@ marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El mo
 destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
 transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.
 
-## 12. Propuesta: idioma validado en cada borrador de plantilla
+## 12. Implementación: idioma validado en cada borrador de plantilla
 
 Cada asunto y cuerpo traducido pasa por la validación central descrita en `docs/modules/ai.md`,
 sección 15, además de la protección vigente de HTML y marcadores. El idioma esperado es el nuevo
@@ -441,3 +440,6 @@ No cambian las veintidós plantillas, marcadores, confirmación comercial, estim
 endpoints ni edición manual. Las pruebas cubren asunto y cuerpo, conservación del destino anterior,
 edición posterior y ausencia de segunda llamada al proveedor. El responsable eligió 6A, 7A, 10B,
 11A y 12A; no quedan decisiones abiertas.
+### 12.1 Implementación y verificación
+
+El servicio de traducción reutiliza el validador central de `ai`; por ello sólo entrega al flujo de borradores un texto compatible con el idioma de destino. Ante `ai.invalid`, el flujo existente no aplica parcialmente las plantillas y conserva la edición manual. Las pruebas focalizadas y la suite backend completa pasaron el 2026-10-13.

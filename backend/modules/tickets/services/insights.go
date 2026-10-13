@@ -99,6 +99,12 @@ func (s *Service) TextoParaElMotor(numero string) (string, error) {
 // texto** y **los adjuntos por su nombre**, nunca su contenido. El recorte, si el texto es largo, lo
 // hace el módulo `ai` (decisión 6), que es quien conoce el tope: aquí se manda lo que hay.
 func (s *Service) textoParaElMotor(numero string) (string, error) {
+	idioma := "es"
+	if s.language != nil {
+		if actual, err := s.language.Language(); err == nil && actual == "en" {
+			idioma = "en"
+		}
+	}
 	principal, esInterno, hay, err := s.porNumero(numero)
 	if err != nil {
 		return "", err
@@ -148,31 +154,41 @@ func (s *Service) textoParaElMotor(numero string) (string, error) {
 	}
 
 	var texto strings.Builder
-	fmt.Fprintf(&texto, "Asunto: %s\n", asunto)
-	fmt.Fprintf(&texto, "Descripción: %s\n", TextoPlano(descripcion))
+	labels := etiquetasDelContexto(idioma)
+	fmt.Fprintf(&texto, "%s: %s\n", labels.asunto, asunto)
+	fmt.Fprintf(&texto, "%s: %s\n", labels.descripcion, TextoPlano(descripcion))
 
 	if hay {
-		fmt.Fprintf(&texto, "Estado: %s\n", principal.State)
+		fmt.Fprintf(&texto, "%s: %s\n", labels.estado, principal.State)
 	}
 	if motivo != "" {
-		fmt.Fprintf(&texto, "Motivo del escalado: %s\n", TextoPlano(motivo))
+		fmt.Fprintf(&texto, "%s: %s\n", labels.escalado, TextoPlano(motivo))
 	}
 
 	if nombres := nombresDe(adjuntos); nombres != "" {
-		fmt.Fprintf(&texto, "Adjuntos: %s\n", nombres)
+		fmt.Fprintf(&texto, "%s: %s\n", labels.adjuntos, nombres)
 	}
 
-	texto.WriteString("\nConversación (de lo más antiguo a lo más reciente):\n")
+	fmt.Fprintf(&texto, "\n%s:\n", labels.conversacion)
 
 	// **Comentarios e historial en una sola línea de tiempo**, en orden: es lo que hace que la última
 	// línea del texto sea, de verdad, la última acción.
-	for _, renglon := range lineasDe(comentarios, historial, porID) {
+	for _, renglon := range lineasDe(comentarios, historial, porID, idioma) {
 		texto.WriteString("- ")
 		texto.WriteString(renglon)
 		texto.WriteString("\n")
 	}
 
 	return texto.String(), nil
+}
+
+type etiquetasContexto struct{ asunto, descripcion, estado, escalado, adjuntos, conversacion string }
+
+func etiquetasDelContexto(idioma string) etiquetasContexto {
+	if idioma == "en" {
+		return etiquetasContexto{"Subject", "Description", "State", "Escalation reason", "Attachments", "Conversation (oldest to newest)"}
+	}
+	return etiquetasContexto{"Asunto", "Descripción", "Estado", "Motivo del escalado", "Adjuntos", "Conversación (de lo más antiguo a lo más reciente)"}
 }
 
 // nombresDe junta los nombres de los adjuntos, sin repetir y en el orden en que se subieron.
@@ -197,6 +213,7 @@ func lineasDe(
 	comentarios []repositories.Comment,
 	historial []repositories.HistoryEntry,
 	porID map[int64]auth.Account,
+	idioma string,
 ) []string {
 	type conFecha struct {
 		cuando time.Time
@@ -210,11 +227,14 @@ func lineasDe(
 		cuerpo := TextoPlano(comentario.Body)
 		if comentario.DeletedAt != nil {
 			cuerpo = "(comentario borrado)"
+			if idioma == "en" {
+				cuerpo = "(deleted comment)"
+			}
 		}
 
 		renglones = append(renglones, conFecha{
 			cuando: comentario.CreatedAt,
-			texto:  fmt.Sprintf("%s (comentario): %s", quienEs(&comentario.AuthorID, porID), cuerpo),
+			texto:  fmt.Sprintf("%s (%s): %s", quienEs(&comentario.AuthorID, porID, idioma), map[bool]string{true: "comment", false: "comentario"}[idioma == "en"], cuerpo),
 		})
 	}
 
@@ -228,7 +248,7 @@ func lineasDe(
 
 		renglones = append(renglones, conFecha{
 			cuando: entrada.CreatedAt,
-			texto:  fmt.Sprintf("%s (%s): %s", quienEs(entrada.ActorID, porID), entrada.Event, detalle),
+			texto:  fmt.Sprintf("%s (%s): %s", quienEs(entrada.ActorID, porID, idioma), nombreDeEvento(entrada.Event, idioma), detalle),
 		})
 	}
 
@@ -242,14 +262,35 @@ func lineasDe(
 	return lineas
 }
 
+func nombreDeEvento(evento, idioma string) string {
+	if idioma != "en" {
+		return evento
+	}
+	traducidos := map[string]string{
+		"estado": "state changed", "resuelto": "resolved", "cerrado": "closed", "reabierto": "reopened",
+		"creado": "created", "asignado": "assigned", "escalado": "escalated", "devuelto": "returned",
+		"observador_agregado": "watcher added", "observador_eliminado": "watcher removed",
+	}
+	if traducido, ok := traducidos[evento]; ok {
+		return traducido
+	}
+	return evento
+}
+
 // quienEs es el nombre de esa cuenta, o «el sistema» cuando la entrada no tiene autor.
-func quienEs(id *int64, porID map[int64]auth.Account) string {
+func quienEs(id *int64, porID map[int64]auth.Account, idioma string) string {
 	if id == nil {
+		if idioma == "en" {
+			return "the system"
+		}
 		return "el sistema"
 	}
 
 	cuenta, hay := porID[*id]
 	if !hay {
+		if idioma == "en" {
+			return "someone"
+		}
 		return "alguien"
 	}
 

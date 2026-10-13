@@ -1,12 +1,11 @@
 # Arquitectura
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
-> **Enmienda propuesta el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
+> **Enmienda implementada y verificada el 2026-10-13: validación local del idioma.** La sección 20 mantiene el
 > idioma como configuración única del despliegue, incorpora el detector dentro de `ai`, actualiza
-> avisos de terceros y preserva las fronteras con `tickets` y `mail`. No se modifica código hasta
-> salir del alcance aprobado. El responsable aprobó explícitamente la propuesta el 2026-10-13.
+> avisos de terceros y preserva las fronteras con `tickets` y `mail`. La implementación se mantuvo dentro de la propuesta aprobada explícitamente el 2026-10-13.
 >
 > **Enmendado el 2026-10-12: publicación cerrada.** La sección 19 deja de describir como pendientes
 > la visibilidad, la configuración comunitaria y la integración del árbol vigente en `main`. El
@@ -1262,7 +1261,7 @@ terminar. El 2026-10-12 se verificaron además la descripción, los temas, Issue
 reportes privados de vulnerabilidades, sólo squash, limpieza automática y el ruleset efectivo de
 `main` y `dev`; `cla-signatures` quedó fuera y escribible por la acción.
 
-## 20. Propuesta: frontera del validador de idioma
+## 20. Implementación: frontera del validador de idioma
 
 La detección de idioma pertenece al módulo `ai`, junto a la interpretación del resultado del motor.
 `tickets` y `mail` entregan el idioma global y reciben texto válido o el error estable existente; no
@@ -1285,3 +1284,6 @@ La limpieza del `record not found` esperado permanece dentro del repositorio de 
 cambia el logger global de GORM. Producción, observabilidad nueva y cambios en las reglas de
 dependencias del frontend quedan fuera. El responsable cerró 1A–12A con 10B; no quedan decisiones
 abiertas.
+### 20.1 Implementación y verificación
+
+`whatlanggo` 1.0.1 queda encerrado en `backend/modules/ai/services`; ningún otro módulo importa el detector. Su licencia MIT se incorporó al inventario generado de terceros. La cola conserva un solo intento persistido para el reintento interno de idioma y evita automáticamente una segunda llamada en modalidad `provider`. La suite backend completa y `go vet` pasaron el 2026-10-13.
