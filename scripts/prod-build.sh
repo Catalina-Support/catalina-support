@@ -52,6 +52,8 @@ rm -rf "$OUT_DIR/config"
 cp -a "$REPO_DIR/config" "$OUT_DIR/config"
 rm -rf "$OUT_DIR/ai-manager"
 cp -a "$REPO_DIR/ai-manager" "$OUT_DIR/ai-manager"
+rm -rf "$OUT_DIR/migrations"
+cp -a "$REPO_DIR/backend/migrations" "$OUT_DIR/migrations"
 
 
 # ---------------------------------------------------------------------------------------

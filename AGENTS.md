@@ -88,7 +88,7 @@ completo.
 | `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
 | `docs/modules/tickets.md` | **as-built**: idioma validado en resúmenes y ausencia normal del interno sin falso error |
 | `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **aprobado**: repetir el bloque 8 limpio después de corregir el hallazgo de idioma |
+| `docs/ambientes.md` | **as-built**: healthchecks TCP y migración manual explícita de producción |
 | `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
 | `docs/modules/settings.md` | **as-built**: licencia, fuente y condición de desarrollo en la marca pública |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
@@ -96,8 +96,8 @@ completo.
 | `docs/modules/mail.md` | **as-built**: valida el idioma de borradores y conserva la edición manual |
 | `docs/modules/auth.md` | **as-built**: identidad y sesión no llevan idioma; los correos usan el idioma global sin cambiar los tres caminos |
 | `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
-| `docs/arquitectura.md` | **as-built**: detector dentro de `ai`, avisos de terceros y fronteras preservadas |
-| `docs/prueba-local.md` | **aprobado**: hallazgo del bloque 8 y repetición completa desde `main` tras corregirlo |
+| `docs/arquitectura.md` | **as-built**: salud 503 distinguible cuando falta la migración manual |
+| `docs/prueba-local.md` | **aprobado**: segunda pasada detenida por disponibilidad TCP y repetición completa posterior |
 | `docs/proyecto-abierto.md` | **as-built**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
