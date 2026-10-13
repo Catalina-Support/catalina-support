@@ -3,6 +3,12 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Tercera reanudación aprobada del bloque 8, 2026-10-13.** El recorrido público completó todos
+> los hitos funcionales, pero el examen final de logs encontró falsos errores de GORM en ausencias
+> normales. La sección 21 registra la evidencia, la limpieza y la repetición completa elegida por el
+> responsable en 4A. La corrección pasó contra PostgreSQL real y la cuarta pasada queda pendiente
+> de que llegue a `main`.
+>
 > **Hallazgo corregido y verificado el 2026-10-13: disponibilidad TCP y migración manual.** La segunda pasada pública del bloque 8 encontró una carrera entre el healthcheck por socket y la conexión TCP de `migrate`. La sección 20 conserva migración automática en desarrollo y pruebas, añade el comando manual de producción y publica su SQL. El responsable cerró 1B, 2A, 3A, 4A, 5B, 6B, 7A–9A, la corrección 10A–13A, el repaso 14A–18A y aprobó explícitamente la propuesta. La corrección pasó en instancias desechables; queda repetir el recorrido público completo.
 >
 >
@@ -1140,6 +1146,21 @@ cambio de código.
 La segunda pasada del bloque 8 sobre `main` (`80e01a75c7bc3b284778bcd214850efb0690714b`) se detuvo en el primer `docker compose -f dev.yml up -d --build`. El healthcheck declaró saludable a PostgreSQL mientras su servidor temporal de inicialización respondía por el socket local; `migrate`, que conecta por TCP, arrancó durante el cambio al servidor definitivo y recibió `connection refused`. El entorno y el clon se eliminaron por completo antes de proponer cambios.
 
 Los healthchecks de PostgreSQL en `dev.yml`, `tests.yml` y `prod.yml` comprobarán `127.0.0.1` y el puerto configurado. Así sólo habilitan dependencias cuando la misma vía TCP que usan otros contenedores acepta conexiones. `migrate` no incorpora esperas ni reintentos propios: desarrollo y pruebas conservan su migración automática y el backend continúa dependiendo de que termine correctamente.
+
+## 21. Entorno aprobado para la cuarta pasada del bloque 8
+
+La tercera pasada probó desde `main` una instalación vacía, Mailpit, el modelo 1.5B real, resumen y
+redacción, seeder, AD, Keycloak y regreso a local. La revisión final encontró los falsos errores
+descritos en `docs/arquitectura.md`; por la regla de cero hallazgos no se considera cerrada.
+
+Todos sus contenedores, redes, volúmenes, modelo, imágenes propias, clon y archivos temporales se
+eliminaron. El inventario final conservó únicamente los tres contenedores de producción que ya
+existían y que no fueron consultados ni modificados.
+
+Después de integrar la corrección en `main`, se repetirá completa la sección 18 desde otro clon y
+recursos nuevos. La inspección final exigirá que los recorridos exitosos no produzcan falsos errores
+de ausencia y que los errores reales sigan siendo visibles. Se mantienen tiempos, conteos, limpieza
+y todas las exclusiones ya aprobadas.
 
 Producción conserva migraciones manuales. `prod.yml` añade un servicio `migrate` bajo el perfil
 `migrate`, por lo que `up` nunca lo ejecuta implícitamente. El comando explícito será

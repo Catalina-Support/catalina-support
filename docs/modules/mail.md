@@ -3,6 +3,10 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Enmienda implementada y verificada el 2026-10-13: plantilla ausente sin falso error.** La
+> búsqueda conserva `mail.template.notFound` sin registrar `record not found`; los fallos SQL reales
+> siguen visibles. Forma parte de 1A–4A aprobado tras el tercer recorrido del bloque 8.
+>
 > **Enmienda implementada y verificada el 2026-10-13: validar el idioma de los borradores.** La sección 12 adopta
 > el control central de `ai`: una traducción claramente incorrecta no sustituye el borrador y un
 > proveedor externo no recibe un reintento automático. El responsable cerró 1A–12A con 10B. El cambio se mantuvo dentro de lo aprobado explícitamente por el responsable.
@@ -443,3 +447,8 @@ edición posterior y ausencia de segunda llamada al proveedor. El responsable el
 ### 12.1 Implementación y verificación
 
 El servicio de traducción reutiliza el validador central de `ai`; por ello sólo entrega al flujo de borradores un texto compatible con el idioma de destino. Ante `ai.invalid`, el flujo existente no aplica parcialmente las plantillas y conserva la edición manual. Las pruebas focalizadas y la suite backend completa pasaron el 2026-10-13.
+## 13. Implementación: plantilla ausente
+
+La lectura por clave e idioma consulta como máximo una plantilla y distingue cero filas mediante
+`RowsAffected`. Conserva el mismo error de dominio y no cambia el editor, los once pares, el idioma
+global, la vista previa ni el envío.

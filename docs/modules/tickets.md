@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-13
 >
+> **Segundo hallazgo de ruido corregido y verificado, 2026-10-13.** Aunque la ausencia del ticket interno ya
+> quedó corregida, el seeder mostró el mismo falso error al comprobar una categoría normalizada
+> antes de crearla. La sección 15 extiende la regla a todas las ausencias esperadas del repositorio
+> de tickets. El responsable eligió y aprobó 1A–4A; la suite pasó contra PostgreSQL real.
+>
 > **Hallazgo corregido e implementación verificada el 2026-10-13: idioma y consulta esperada.** El bloque 8 encontró
 > un resumen en otro idioma y que leer un principal no escalado imprime `record not found` como si
 > fuera un error. La sección 14 coordina el contrato de IA con `docs/modules/ai.md` y silencia sólo
@@ -1273,3 +1278,19 @@ permisos, estados, transiciones ni interfaz. El responsable eligió 3A y las dec
 ### 14.1 Implementación y verificación
 
 El contexto de resumen obtiene el idioma global al construir cada encargo y localiza sus rótulos, actores del sistema y nombres conocidos de eventos sin modificar el contenido escrito por las personas. `InternalByTicket` usa una consulta que distingue cero filas mediante `RowsAffected`, por lo que la ausencia normal no dispara el log de `record not found`; los errores reales siguen propagándose. Las pruebas del servicio y del repositorio, además de la suite backend completa, pasaron el 2026-10-13.
+
+## 15. Implementación: ausencias esperadas en tickets y catálogos
+
+La regla ya aplicada al interno inexistente se extiende a las demás consultas del módulo cuyo
+contrato admite ausencia: búsqueda de ticket, comentario o adjunto para responder con su resultado
+de dominio, y comprobaciones de categoría o nombre normalizado antes de crear o rechazar un
+duplicado. Cero filas se distinguirá con `RowsAffected`; cualquier error real seguirá propagándose.
+
+Las pruebas conservan las respuestas actuales y comprueban el nivel del logger, incluida la
+creación de una categoría nueva sin `record not found` y un fallo SQL que sí debe permanecer como
+error. No cambia el catálogo, el seeder, la numeración ni ningún endpoint.
+
+Las búsquedas singulares de tickets, comentarios, adjuntos, categorías y nombres de etiqueta usan
+ahora `Find` y `RowsAffected`. La prueba con PostgreSQL real confirmó una categoría ausente sin
+evento de error y un fallo SQL real visible; las pruebas existentes conservaron los resultados de
+dominio. La suite backend completa y `go vet` pasaron el 2026-10-13.

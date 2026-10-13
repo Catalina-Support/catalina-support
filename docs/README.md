@@ -1,7 +1,13 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-11
+> **Última actualización:** 2026-10-13
+>
+> **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13:** `arquitectura.md`,
+> `modules/settings.md`, `modules/auth.md`, `modules/mail.md`, `modules/users.md` y
+> `modules/tickets.md` retiran los falsos errores de GORM para ausencias
+> esperadas. `ambientes.md` y `prueba-local.md` conservan la cuarta repetición íntegra aprobada. El
+> responsable aprobó 1A–4A; backend y `go vet` pasaron contra PostgreSQL real.
 >
 > **Propuesta coordinada del 2026-10-10:** `proyecto-abierto.md`, `arquitectura.md`,
 > `modules/settings.md` e `interfaz-y-experiencia.md` preparan la publicación bajo AGPL-3.0-only,
@@ -303,20 +309,20 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
-| `prueba-local.md` | **aprobado** | Segunda pasada del bloque 8 detenida por disponibilidad TCP; corrección lista y repetición completa pendiente |
-| `arquitectura.md` | **as-built** | Salud distingue esquema pendiente de base inaccesible |
+| `prueba-local.md` | **aprobado** | Tercera pasada completa; corrección verificada y cuarta repetición pública pendiente |
+| `arquitectura.md` | **as-built** | Ausencias esperadas por repositorio sin silenciar errores SQL reales |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
 | `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
-| `modules/settings.md` | **as-built** | Configuración completa y metadatos públicos de licencia, versión y fuente correspondiente |
-| `modules/mail.md` | **as-built** | Valida el idioma de cada borrador y no reintenta automáticamente con proveedores externos |
-| `modules/auth.md` | **as-built** | Identidad y sesión no llevan idioma personal; los correos de cuenta usan el idioma global |
-| `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
+| `modules/settings.md` | **as-built** | Configuración completa; una fila ausente conserva su error de dominio sin falso error de GORM |
+| `modules/mail.md` | **as-built** | Plantilla ausente sin falso error; valida idioma y no reintenta automáticamente proveedores externos |
+| `modules/auth.md` | **as-built** | Token ausente sin falso error; identidad y sesión conservan el idioma global |
+| `modules/users.md` | **as-built** | Alta automática de AD y Keycloak sin falsos errores en búsquedas previas |
 | `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Healthchecks TCP y migración manual explícita de producción |
+| `ambientes.md` | **as-built** | Entorno limpio y cuarta repetición pública aprobada |
 | `modules/ai.md` | **as-built** | Valida el idioma global, reintenta sólo motores sin proveedor pagado y descarta discrepancias |
-| `modules/tickets.md` | **as-built** | Rótulos en el idioma global y ausencia normal del ticket interno sin falso log de error |
+| `modules/tickets.md` | **as-built** | Ausencia normal sin falso error en tickets y catálogos |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
