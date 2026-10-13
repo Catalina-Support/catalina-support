@@ -2,6 +2,7 @@
 package database
 
 import (
+	"context"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -10,6 +11,16 @@ import (
 
 	"catalina-support/backend/shared/config"
 )
+
+// SchemaReady comprueba la tabla mínima que necesita el arranque. No mantiene una
+// versión paralela del esquema: las migraciones siguen siendo la única fuente de verdad.
+func SchemaReady(ctx context.Context, db *gorm.DB) (bool, error) {
+	var ready bool
+	err := db.WithContext(ctx).
+		Raw("SELECT to_regclass('public.installation_settings') IS NOT NULL").
+		Scan(&ready).Error
+	return ready, err
+}
 
 // Connect abre la conexión, la configura y comprueba que la base responde.
 //
