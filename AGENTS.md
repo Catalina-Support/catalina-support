@@ -98,7 +98,7 @@ completo.
 | `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
 | `docs/arquitectura.md` | **as-built**: detector dentro de `ai`, avisos de terceros y fronteras preservadas |
 | `docs/prueba-local.md` | **aprobado**: hallazgo del bloque 8 y repetición completa desde `main` tras corregirlo |
-| `docs/proyecto-abierto.md` | **as-built**: repositorio público bajo AGPL, historial saneado, CLA y configuración comunitaria verificados |
+| `docs/proyecto-abierto.md` | **propuesta**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
