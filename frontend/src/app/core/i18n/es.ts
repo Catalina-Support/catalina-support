@@ -56,8 +56,10 @@ export const ES = {
     idiomaAyuda:
       'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
     traduccionTitulo: 'Revisar el cambio de idioma',
-    traduccionAyuda: 'Revisa y corrige las once plantillas antes de aplicar el idioma a toda la instalación.',
-    traduccionCosto: 'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
+    traduccionAyuda:
+      'Revisa y corrige las doce plantillas antes de aplicar el idioma a toda la instalación.',
+    traduccionCosto:
+      'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
     traducirConfirmando: 'Aceptar costo y traducir',
     editarManualmente: 'Editar manualmente',
     asuntoTraducido: 'Asunto',
@@ -333,6 +335,7 @@ export const ES = {
     reabierto: '{quien} lo reabrió',
     observador: '{quien} quitó a {detalle} de los observadores',
     observador_anadido: '{quien} añadió a {detalle} a los observadores',
+    prioridad: '{quien} cambió la prioridad de «{desde}» a «{hasta}»',
     elSistema: 'El sistema',
   },
 
@@ -501,6 +504,7 @@ export const ES = {
     'ticket.closed': 'Ticket cerrado, al usuario',
     'ticket.backToSupport': 'El ticket vuelve a Soporte',
     'ticket.mentioned': 'Te han etiquetado en un ticket',
+    'ticket.priorityCritical': 'Prioridad crítica, a Soporte',
     'auth.invitation': 'Alta de una cuenta',
     'auth.recovery': 'Recuperar la contraseña',
     'auth.passwordChanged': 'Contraseña cambiada',
@@ -513,6 +517,19 @@ export const ES = {
     buscarEtiqueta: 'Buscar',
     filtroEstado: 'Estado',
     filtroTipo: 'Tipo',
+    filtroPrioridad: 'Prioridad',
+    prioridad: 'Prioridad',
+    prioridadAyuda: 'Indica la urgencia inicial. Soporte podrá corregirla durante la atención.',
+    cambiarPrioridad: 'Cambiar la prioridad',
+    prioridadBaja: 'Baja',
+    prioridadMedia: 'Media',
+    prioridadAlta: 'Alta',
+    prioridadCritica: 'Crítica',
+    orden: 'Orden',
+    ordenPrioridad: 'Prioridad y antigüedad',
+    ordenActualizacion: 'Actualización más reciente',
+    prioridadGuardada: 'Prioridad actualizada.',
+    prioridadAvisoFallido: 'La prioridad se guardó, pero no se pudo enviar el aviso a Soporte.',
     tipoPrincipal: 'Principales',
     tipoInterno: 'Internos',
     tipoTodos: 'Todos',
@@ -536,8 +553,10 @@ export const ES = {
     resumenVacio: '—',
     iaRedaccionAbrir: 'Mejorar con IA',
     iaRedaccionTitulo: 'Mejorar la redacción con IA',
-    iaRedaccionAyuda: 'Revisa el borrador y elige cómo debe sonar. La propuesta no se guardará hasta que la uses y publiques o guardes el editor principal.',
-    iaRedaccionPrivacidad: 'El motor configurado procesará este texto. Si es un servidor o proveedor externo, el texto saldrá de esta instalación conforme a la configuración aceptada por el Administrador.',
+    iaRedaccionAyuda:
+      'Revisa el borrador y elige cómo debe sonar. La propuesta no se guardará hasta que la uses y publiques o guardes el editor principal.',
+    iaRedaccionPrivacidad:
+      'El motor configurado procesará este texto. Si es un servidor o proveedor externo, el texto saldrá de esta instalación conforme a la configuración aceptada por el Administrador.',
     iaRedaccionBorrador: 'Borrador',
     iaRedaccionTono: 'Tonalidad',
     iaTonoProfesional: 'Profesional',
@@ -959,10 +978,12 @@ export const ES = {
     // El motor de IA (docs/modules/ai.md): o no está, o contestó algo que no vale.
     'ai.unavailable': 'El motor de resúmenes no está disponible. Los tickets funcionan igual.',
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
-    'mail.translation.costConfirmationRequired': 'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
-    'mail.translation.incomplete': 'Revisa las once plantillas antes de aplicar el idioma.',
-    'mail.translation.protectedChanged': 'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
-    'settings.language.reviewRequired': 'Revisa las once plantillas antes de aplicar el idioma.',
+    'mail.translation.costConfirmationRequired':
+      'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
+    'mail.translation.incomplete': 'Revisa las doce plantillas antes de aplicar el idioma.',
+    'mail.translation.protectedChanged':
+      'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
+    'settings.language.reviewRequired': 'Revisa las doce plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -1081,6 +1102,9 @@ export const ES = {
       'Escribe por qué se escala: sin el motivo, Desarrollo no sabe qué hace falta.',
     'tickets.comment.required': 'Escribe un comentario.',
     'tickets.state.unknown': 'Ese estado no existe.',
+    'tickets.priority.unknown': 'Esa prioridad no existe.',
+    'tickets.priority.notificationFailed':
+      'La prioridad se guardó, pero no se pudo enviar el aviso a Soporte.',
     'tickets.transition.notAllowed': 'Ese cambio de estado no se puede hacer así.',
     'tickets.forbidden': 'Eso no te toca en este ticket.',
     'tickets.closed': 'El ticket está cerrado: reábrelo para seguir.',

@@ -55,9 +55,9 @@ test.describe('El editor de los correos', () => {
     await page.getByRole('link', { name: 'Editar los correos' }).click();
     await expect(page).toHaveURL(/\/mail$/);
 
-    // Los **once** correos, y los dos idiomas del elegido. Eran diez hasta el 2026-09-27, que entró el
+    // Los **doce** correos, y los dos idiomas del elegido. Eran diez hasta el 2026-09-27, que entró el
     // aviso de que te han etiquetado (`docs/modules/mail.md`, sección 5.1).
-    await expect(page.getByRole('navigation', { name: 'Qué correo' }).getByRole('button')).toHaveCount(11);
+    await expect(page.getByRole('navigation', { name: 'Qué correo' }).getByRole('button')).toHaveCount(12);
 
     const texto = marca();
     const asunto = `Aviso de prueba ${texto}: {{numero}}`;

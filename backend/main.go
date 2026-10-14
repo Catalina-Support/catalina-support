@@ -480,6 +480,7 @@ func run() error {
 	mux.Handle("GET /api/tickets/assignees", authenticated(http.HandlerFunc(ticketsController.Assignees)))
 	mux.Handle("GET /api/tickets/{number}", authenticated(http.HandlerFunc(ticketsController.Show)))
 	mux.Handle("PATCH /api/tickets/{number}", authenticated(http.HandlerFunc(ticketsController.Update)))
+	mux.Handle("PATCH /api/tickets/{number}/actions/priority", authenticated(http.HandlerFunc(ticketsController.Priority)))
 	mux.Handle("POST /api/tickets/{number}/assign", authenticated(http.HandlerFunc(ticketsController.Assign)))
 	mux.Handle("POST /api/tickets/{number}/state", authenticated(http.HandlerFunc(ticketsController.State)))
 	mux.Handle("POST /api/tickets/{number}/escalate", authenticated(http.HandlerFunc(ticketsController.Escalate)))

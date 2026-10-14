@@ -520,7 +520,7 @@ export class SettingsPage {
         this.ajustes.guardar({
           ...configuracion,
           name: this.nombreElegido().trim(),
-          // El idioma sólo cambia mediante la aplicación atómica de las once plantillas.
+          // El idioma sólo cambia mediante la aplicación atómica de las doce plantillas.
           language: configuracion.language,
         }),
       this.t().configuracion.instalacionGuardada,

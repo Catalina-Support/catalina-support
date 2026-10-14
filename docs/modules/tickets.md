@@ -1,7 +1,11 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 16 incorpora la prioridad compartida,
+> sus permisos, historial, filtros, orden y datos de ejemplo conforme a 1A–25A. Retira la prioridad
+> de la exclusión histórica de la sección 7. El responsable la aprobó explícitamente.
 >
 > **Segundo hallazgo de ruido corregido y verificado, 2026-10-13.** Aunque la ausencia del ticket interno ya
 > quedó corregida, el seeder mostró el mismo falso error al comprobar una categoría normalizada
@@ -1025,8 +1029,7 @@ crea la gente.
 - **Búsqueda de texto completo** con índices dedicados: se usa `ILIKE` hasta que duela.
 - **Exportar** tickets a CSV o PDF.
 - **Respuestas predefinidas** y plantillas.
-- **Campos personalizados** y prioridad. **Las categorías salieron de esta lista el 2026-09-27**: entraron
-  al aprobarse (sección 2.3.2), y esta línea se quedó diciendo lo contrario.
+- **Campos personalizados** distintos de categoría y prioridad.
 - **Tiempo real** (websockets) y contadores en vivo.
 - **SLA, métricas e informes.**
 - **Fusión y duplicado de tickets.**
@@ -1294,3 +1297,40 @@ Las búsquedas singulares de tickets, comentarios, adjuntos, categorías y nombr
 ahora `Find` y `RowsAffected`. La prueba con PostgreSQL real confirmó una categoría ausente sin
 evento de error y un fallo SQL real visible; las pruebas existentes conservaron los resultados de
 dominio. La suite backend completa y `go vet` pasaron el 2026-10-13.
+
+## 16. Prioridad de los tickets
+
+`tickets.priority` es obligatorio y admite únicamente `low`, `medium`, `high` y `critical`, con
+`medium` como valor predeterminado. La migración abierta `v1.0.0.sql` añade la columna de forma
+idempotente, completará cualquier fila previa con `medium` y aplicará la restricción. Aunque no hay
+tickets productivos que convertir, esta secuencia conserva la migración repetible.
+
+Crear acepta la prioridad propuesta por el Usuario o por Soporte cuando crea en su nombre. Una ruta
+del módulo permite cambiarla en tickets abiertos: Soporte desde el principal y Desarrollo sólo si
+puede acceder al interno. El cambio actualiza el principal dentro de una transacción y añade un
+evento de historial con valor anterior, nuevo, autor y fecha. Guardar el mismo valor no crea evento
+ni correo. Un ticket cerrado rechaza el cambio.
+
+Las respuestas de alta, lista y detalle incluyen la prioridad. El principal y el interno exponen el
+mismo valor; no se añade una columna al interno. Las listas aceptan varias prioridades como filtro y
+un orden explícito. El orden predeterminado es crítica, alta, media y baja; dentro del nivel, el
+más antiguo primero. Filtros y orden viven en la URL. No cambian búsqueda, estados, asignación,
+reparto ni resúmenes de IA.
+
+La primera llegada histórica a `critical`, incluida la creación, solicita el aviso definido en
+`docs/flujos.md`. Una marca persistente en el principal evita repetirlo aunque después se baje y se
+vuelva a subir. El envío ocurre después de guardar: un fallo SMTP se comunica al actor sin revertir
+prioridad ni historial.
+
+`v1.0.0_dev.sql` reparte los 25 tickets de forma realista: mayoría media, algunos bajos y altos y
+pocos críticos. Las pruebas cubren valores inválidos, valor predeterminado, permisos, ticket
+cerrado, historial, valor compartido, filtros combinados, orden estable y aviso único no bloqueante.
+
+### 16.1 Implementación y verificación
+
+La prioridad vive únicamente en el principal y se proyecta en el interno. `PATCH
+/api/tickets/{number}/actions/priority` aplica los permisos por tipo, bloquea tickets cerrados y
+registra el cambio en la línea de tiempo. La marca `critical_notified_at` se fija en la misma
+transacción que la primera llegada a crítica; el correo se intenta después del `COMMIT` y su fallo
+vuelve como aviso sin deshacer datos. La suite backend completa, las 228 pruebas del frontend, la
+compilación y el recorrido E2E focalizado pasaron el 2026-10-14.

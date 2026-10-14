@@ -886,20 +886,20 @@ el valor ilegible.
 
 ### 12.4 Cambio atómico de idioma
 
-`settings` coordina, pero no traduce plantillas. Pide a `mail` borradores de las once plantillas a
+`settings` coordina, pero no traduce plantillas. Pide a `mail` borradores de las doce plantillas a
 partir de la versión actualmente activa. `mail` protege HTML y marcadores, `ai` traduce sólo el texto
 y `mail` valida que no aparezcan marcadores nuevos ni se alteren los existentes. Si el destino no
 estaba personalizado, la pantalla compara origen y borrador. Si ya tenía cambios, muestra tres
 versiones: fuente activa, borrador de IA y destino personalizado existente. El Administrador elige
 una, o combina y corrige el texto; nunca se sobrescribe silenciosamente.
 
-Al confirmar, una transacción guarda los once destinos y el idioma global. Si falta una traducción,
+Al confirmar, una transacción guarda los doce destinos y el idioma global. Si falta una traducción,
 un marcador cambió o alguna escritura falla, no se cambia nada. Los resúmenes existentes no forman
 parte de esta operación: se conservan y siguen visibles con su idioma de origen; sólo los nuevos o
 los que se vuelvan a pedir usan el nuevo idioma global.
 
 Con proveedor externo, la pantalla pide confirmación económica exclusivamente para traducir las
-plantillas. Si se rechaza, no llama al proveedor y permite editar manualmente los once destinos; la
+plantillas. Si se rechaza, no llama al proveedor y permite editar manualmente los doce destinos; la
 edición manual está disponible siempre. Con motor local o servidor propio genera borradores sin esa
 confirmación económica.
 

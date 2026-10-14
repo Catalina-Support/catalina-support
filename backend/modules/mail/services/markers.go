@@ -71,6 +71,13 @@ var markersFor = map[string][]Marker{
 		{Name: "asunto"},
 		{Name: "enlace", Essential: true},
 	},
+	"ticket.priorityCritical": {
+		{Name: "numero", Essential: true},
+		{Name: "asunto"},
+		{Name: "solicitante"},
+		{Name: "prioridad"},
+		{Name: "enlace", Essential: true},
+	},
 	"auth.invitation": {
 		{Name: "nombre"},
 		{Name: "enlace", Essential: true},
@@ -91,7 +98,7 @@ var markersFor = map[string][]Marker{
 // Languages son los idiomas en los que existe cada plantilla.
 var Languages = []string{"es", "en"}
 
-// Keys son las once claves, en el orden en que se enseñan en el editor.
+// Keys son las doce claves, en el orden en que se enseñan en el editor.
 var Keys = []string{
 	"ticket.created",
 	"ticket.escalated",
@@ -101,6 +108,7 @@ var Keys = []string{
 	"ticket.closed",
 	"ticket.backToSupport",
 	"ticket.mentioned",
+	"ticket.priorityCritical",
 	"auth.invitation",
 	"auth.recovery",
 	"auth.passwordChanged",

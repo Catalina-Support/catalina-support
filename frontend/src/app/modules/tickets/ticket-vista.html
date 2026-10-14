@@ -445,6 +445,54 @@
               </dd>
             </div>
 
+            <div class="flex flex-wrap items-center gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.prioridad }}:</dt>
+              <dd class="text-texto">
+                @if (puedeCambiarPrioridad() && editandoPrioridad()) {
+                  <app-selector
+                    [identificador]="'prioridad-' + ticket().number"
+                    [etiqueta]="t().tickets.prioridad"
+                    [etiquetaVisible]="false"
+                    [opciones]="opcionesDePrioridad()"
+                    [valor]="prioridadElegida()"
+                    (valorChange)="prioridadElegida.set($any($event))"
+                  />
+                  <span class="mt-2 flex flex-wrap gap-2">
+                    <app-boton
+                      [texto]="t().tickets.guardar"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="guardarPrioridad()"
+                    />
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.cancelar"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="cancelarPrioridad()"
+                    />
+                  </span>
+                } @else {
+                  {{
+                    prioridadElegida() === 'low'
+                      ? t().tickets.prioridadBaja
+                      : prioridadElegida() === 'high'
+                        ? t().tickets.prioridadAlta
+                        : prioridadElegida() === 'critical'
+                          ? t().tickets.prioridadCritica
+                          : t().tickets.prioridadMedia
+                  }}
+                  @if (puedeCambiarPrioridad()) {
+                    <app-boton
+                      forma="secundario"
+                      [soloIcono]="true"
+                      nombreDeIcono="editar"
+                      [etiqueta]="t().tickets.cambiarPrioridad"
+                      (pulsado)="abrirPrioridad()"
+                    />
+                  }
+                }
+              </dd>
+            </div>
+
             <!--
               **Las etiquetas no se le enseñan al usuario** (decisión del responsable, 2026-09-29,
               decisión 82): etiquetar es cosa de Soporte y Desarrollo —clasificar y filtrar—, y el usuario
@@ -787,3 +835,10 @@
     }
   </app-dialogo>
 </article>
+@if (toastPrioridad(); as toast) {
+  <app-toast
+    [mensaje]="toast"
+    [etiquetaCerrar]="t().comun.cerrar"
+    (cerrado)="toastPrioridad.set(null)"
+  />
+}

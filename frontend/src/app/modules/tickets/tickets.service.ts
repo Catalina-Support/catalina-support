@@ -71,6 +71,7 @@ export interface Ticket {
   readonly subject: string;
   readonly description: string;
   readonly state: string;
+  readonly priority?: Prioridad;
   /**
    * La **categoría** del caso: el *qué es* del ticket. Es obligatoria y la hereda el interno al
    * leerse, así que aquí siempre viene —el backend no puede dejar un ticket sin clasificar—, pero se
@@ -200,6 +201,8 @@ export interface FiltrosDeBandeja {
   readonly state: string;
   readonly q: string;
   readonly page: number;
+  readonly priorities?: readonly Prioridad[];
+  readonly order?: 'priority' | 'updated';
   /**
    * **La categoría** por la que se filtra, con su identificador en texto (los filtros viajan como
    * cadenas). Vacío es «todas» (`docs/interfaz-y-experiencia.md`, sección 3.3).
@@ -221,12 +224,21 @@ export interface FiltrosDeBandeja {
 }
 
 /** Los filtros de partida. */
-export const FILTROS_VACIOS: FiltrosDeBandeja = { type: '', state: '', q: '', page: 1 };
+export const FILTROS_VACIOS: FiltrosDeBandeja = {
+  type: '',
+  state: '',
+  q: '',
+  page: 1,
+  order: 'priority',
+};
+
+export type Prioridad = 'low' | 'medium' | 'high' | 'critical';
 
 /** Lo que hace falta para dar de alta un ticket. */
 export interface AltaDeTicket {
   readonly subject: string;
   readonly description: string;
+  readonly priority?: Prioridad;
   /**
    * **La categoría**, obligatoria: no hay ticket sin clasificar (`docs/modules/tickets.md`, decisión
    * 65). Se manda su identificador, no su nombre, para que renombrar la categoría no toque los tickets.
@@ -289,6 +301,12 @@ export class TicketsService {
     if (filtros.view) {
       parametros = parametros.set('view', filtros.view);
     }
+    for (const prioridad of filtros.priorities ?? []) {
+      parametros = parametros.append('priority', prioridad);
+    }
+    if (filtros.order) {
+      parametros = parametros.set('order', filtros.order);
+    }
 
     return firstValueFrom(this.http.get<PaginaDeTickets>('/api/tickets', { params: parametros }));
   }
@@ -350,8 +368,21 @@ export class TicketsService {
   }
 
   /** Crea un ticket. `requesterId` es de Soporte: lo crea en nombre de otra persona. */
-  crear(alta: AltaDeTicket): Promise<{ ticket: Ticket }> {
-    return firstValueFrom(this.http.post<{ ticket: Ticket }>('/api/tickets', alta));
+  crear(alta: AltaDeTicket): Promise<{ ticket: Ticket; warning?: string }> {
+    return firstValueFrom(
+      this.http.post<{ ticket: Ticket; warning?: string }>('/api/tickets', alta),
+    );
+  }
+
+  cambiarPrioridad(
+    numero: string,
+    priority: Prioridad,
+  ): Promise<{ ticket: Ticket; warning?: string }> {
+    return firstValueFrom(
+      this.http.patch<{ ticket: Ticket; warning?: string }>(`/api/tickets/${numero}/actions/priority`, {
+        priority,
+      }),
+    );
   }
 
   /**

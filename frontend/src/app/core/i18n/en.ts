@@ -55,8 +55,10 @@ export const EN: Textos = {
     idiomaAyuda:
       'The language of the whole installation: interface, dates, emails, and AI-generated text.',
     traduccionTitulo: 'Review language change',
-    traduccionAyuda: 'Review and correct all eleven templates before applying the language to the whole installation.',
-    traduccionCosto: 'The external provider may charge for 22 requests: a conservative estimate of 12,000 input tokens and 8,000 output tokens. You can accept or edit the templates manually.',
+    traduccionAyuda:
+      'Review and correct all twelve templates before applying the language to the whole installation.',
+    traduccionCosto:
+      'The external provider may charge for 22 requests: a conservative estimate of 12,000 input tokens and 8,000 output tokens. You can accept or edit the templates manually.',
     traducirConfirmando: 'Accept cost and translate',
     editarManualmente: 'Edit manually',
     asuntoTraducido: 'Subject',
@@ -321,6 +323,7 @@ export const EN: Textos = {
     reabierto: '{quien} reopened it',
     observador: '{quien} removed {detalle} from the watchers',
     observador_anadido: '{quien} added {detalle} to the watchers',
+    prioridad: '{quien} changed the priority from “{desde}” to “{hasta}”',
     elSistema: 'The system',
   },
 
@@ -485,6 +488,7 @@ export const EN: Textos = {
     'ticket.closed': 'Ticket closed, to the user',
     'ticket.backToSupport': 'The ticket goes back to Support',
     'ticket.mentioned': 'You were mentioned in a ticket',
+    'ticket.priorityCritical': 'Critical priority, to Support',
     'auth.invitation': 'Account creation',
     'auth.recovery': 'Password recovery',
     'auth.passwordChanged': 'Password changed',
@@ -496,6 +500,20 @@ export const EN: Textos = {
     buscarEtiqueta: 'Search',
     filtroEstado: 'State',
     filtroTipo: 'Type',
+    filtroPrioridad: 'Priority',
+    prioridad: 'Priority',
+    prioridadAyuda: 'Set the initial urgency. Support can correct it while handling the ticket.',
+    cambiarPrioridad: 'Change priority',
+    prioridadBaja: 'Low',
+    prioridadMedia: 'Medium',
+    prioridadAlta: 'High',
+    prioridadCritica: 'Critical',
+    orden: 'Order',
+    ordenPrioridad: 'Priority and age',
+    ordenActualizacion: 'Most recently updated',
+    prioridadGuardada: 'Priority updated.',
+    prioridadAvisoFallido:
+      'The priority was saved, but the Support notification could not be sent.',
     tipoPrincipal: 'Main',
     tipoInterno: 'Internal',
     tipoTodos: 'All',
@@ -517,8 +535,10 @@ export const EN: Textos = {
     resumenVacio: '—',
     iaRedaccionAbrir: 'Improve with AI',
     iaRedaccionTitulo: 'Improve the writing with AI',
-    iaRedaccionAyuda: 'Review the draft and choose how it should sound. The proposal is not saved until you use it and publish or save the main editor.',
-    iaRedaccionPrivacidad: 'The configured engine will process this text. If it is an external server or provider, the text will leave this installation under the configuration accepted by the Administrator.',
+    iaRedaccionAyuda:
+      'Review the draft and choose how it should sound. The proposal is not saved until you use it and publish or save the main editor.',
+    iaRedaccionPrivacidad:
+      'The configured engine will process this text. If it is an external server or provider, the text will leave this installation under the configuration accepted by the Administrator.',
     iaRedaccionBorrador: 'Draft',
     iaRedaccionTono: 'Tone',
     iaTonoProfesional: 'Professional',
@@ -915,10 +935,12 @@ export const EN: Textos = {
 
     'ai.unavailable': 'The summary engine is not available. Tickets work just the same.',
     'ai.invalid': 'The summary engine answered something we cannot read.',
-    'mail.translation.costConfirmationRequired': 'Confirm the possible provider cost or edit the templates manually.',
-    'mail.translation.incomplete': 'Review all eleven templates before applying the language.',
-    'mail.translation.protectedChanged': 'The translation changed HTML or a marker. Correct that template manually.',
-    'settings.language.reviewRequired': 'Review all eleven templates before applying the language.',
+    'mail.translation.costConfirmationRequired':
+      'Confirm the possible provider cost or edit the templates manually.',
+    'mail.translation.incomplete': 'Review all twelve templates before applying the language.',
+    'mail.translation.protectedChanged':
+      'The translation changed HTML or a marker. Correct that template manually.',
+    'settings.language.reviewRequired': 'Review all twelve templates before applying the language.',
     'tickets.mention.notAllowed': 'You cannot mention anyone in this ticket.',
 
     'auth.invalidCredentials': 'The email address or the password is not correct.',
@@ -1035,6 +1057,9 @@ export const EN: Textos = {
       'Write why it is escalated: without the reason, Development does not know what is needed.',
     'tickets.comment.required': 'Write a comment.',
     'tickets.state.unknown': 'That state does not exist.',
+    'tickets.priority.unknown': 'That priority does not exist.',
+    'tickets.priority.notificationFailed':
+      'The priority was saved, but the Support notification could not be sent.',
     'tickets.transition.notAllowed': 'That state change cannot be done that way.',
     'tickets.forbidden': 'That is not yours to do on this ticket.',
     'tickets.closed': 'The ticket is closed: reopen it to carry on.',

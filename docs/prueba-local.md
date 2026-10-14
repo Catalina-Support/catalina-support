@@ -1,7 +1,11 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 21 añade la comprobación local de las
+> cuatro prioridades, orden, filtros, historial y aviso crítico no bloqueante. No se modifica código
+> antes de implementarla. El responsable la aprobó explícitamente.
 >
 > **Cuarta pasada pública completada, 2026-10-13.** La sección 20 registra el recorrido íntegro
 > desde `main`: instalación vacía, modelo local real, correo, cuentas, ticket, IA, datos de ejemplo,
@@ -849,3 +853,23 @@ Al terminar se bajaron `keycloak.yml`, `active-directory.yml`, `ai.yml` y `dev.y
 volúmenes. Se retiraron la base, el modelo de 1,1 GB, cachés, redes, contenedores, clon y herramientas
 temporales del recorrido. Los contenedores detenidos de producción se conservaron sin iniciarlos ni
 modificarlos. Con cero hallazgos abiertos, el bloque 8 queda cerrado.
+
+## 21. Recorrido de prioridades
+
+Sobre una instalación desechable se crea un ticket sin cambiar la selección y se comprueba `medium`.
+Después se crean o modifican casos de los cuatro niveles, se verifica que principal e interno lean
+el mismo valor y que los permisos coincidan con la matriz. Las bandejas se prueban en PC y móvil con
+filtro múltiple, URL recargable y orden crítica→baja con antigüedad como desempate.
+
+El recorrido marca un ticket como crítico y confirma un único correo a todo Soporte activo, con los
+campos mínimos y el idioma global. Luego baja y vuelve a subir la prioridad y comprueba que no haya
+otro correo. Finalmente interrumpe SMTP, cambia otro ticket a crítico y confirma prioridad e
+historial guardados junto al aviso visible de que el correo falló. El seeder debe mostrar los cuatro
+niveles con una distribución realista.
+
+El recorrido automatizado del 2026-10-14 cubre en PC y móvil la corrección de prioridad, la
+persistencia de filtros y orden en la dirección, el historial, la lectura sin edición del Usuario y
+el único correo en Mailpit. El fallo de SMTP se comprueba en backend contra PostgreSQL real: la
+prioridad y su historial permanecen guardados y la respuesta lleva el aviso que presenta el toast.
+Dos aplicaciones consecutivas del seeder dejaron la misma distribución: 2 críticos, 6 altos, 11
+medios y 6 bajos.

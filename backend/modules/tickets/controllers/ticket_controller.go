@@ -48,7 +48,9 @@ func (c *TicketController) List(w http.ResponseWriter, r *http.Request) {
 		View: strings.TrimSpace(consulta.Get("view")),
 		// `category` es el identificador de la categoría y `tag` una etiqueta: los dos chips de filtro
 		// (decisión 68). La etiqueta se normaliza en el servicio, que es quien conoce la regla.
-		Tag: strings.TrimSpace(consulta.Get("tag")),
+		Tag:        strings.TrimSpace(consulta.Get("tag")),
+		Priorities: consulta["priority"],
+		Order:      strings.TrimSpace(consulta.Get("order")),
 	}
 
 	// `category` se filtra por identificador, que es lo que manda el chip. Un valor que no es un
@@ -126,20 +128,36 @@ func (c *TicketController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := c.service.Create(services.CreateInput{
+	ticket, aviso, err := c.service.Create(services.CreateInput{
 		Subject:        entrada.Subject,
 		Description:    entrada.Description,
 		CategoryID:     entrada.CategoryID,
 		Tags:           entrada.Tags,
 		RequesterID:    entrada.RequesterID,
 		RequesterEmail: entrada.RequesterEmail,
+		Priority:       entrada.Priority,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket)})
+	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket), Warning: aviso})
+}
+
+// Priority cambia la prioridad compartida por el principal y su ticket interno.
+func (c *TicketController) Priority(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.PriorityRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	ticket, aviso, err := c.service.ChangePriority(r.PathValue("number"), entrada.Priority, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket), Warning: aviso})
 }
 
 // Assignees devuelve quién puede ser responsable de cada tipo de ticket.
@@ -710,6 +728,8 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.comment.required")
 	case errors.Is(err, services.ErrStateUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.state.unknown")
+	case errors.Is(err, services.ErrPriorityUnknown):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.priority.unknown")
 	case errors.Is(err, services.ErrCierreSinComentario):
 		// **Un ticket no se cierra sin decir por qué** (decisión 81): lo exige el servidor, no la
 		// pantalla, y se contesta con la clave que el frontend ya traduce.
