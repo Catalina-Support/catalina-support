@@ -377,3 +377,25 @@ func TestFiltros(t *testing.T) {
 		t.Fatal("una página razonable se respeta tal cual")
 	}
 }
+
+func TestPrioridades(t *testing.T) {
+	for entrada, esperada := range map[string]string{
+		"": repositories.PriorityMedium, " LOW ": repositories.PriorityLow,
+		"high": repositories.PriorityHigh, "critical": repositories.PriorityCritical,
+	} {
+		obtenida, err := normalizarPrioridad(entrada)
+		if err != nil || obtenida != esperada {
+			t.Fatalf("normalizarPrioridad(%q) = %q, %v; se esperaba %q", entrada, obtenida, err, esperada)
+		}
+	}
+	if _, err := normalizarPrioridad("urgent"); err != ErrPriorityUnknown {
+		t.Fatalf("una prioridad inventada debería devolver %v y devolvió %v", ErrPriorityUnknown, err)
+	}
+
+	filtros := NormalizarFiltros(repositories.Filtros{
+		Priorities: []string{"critical", "urgent", "high", "critical"}, Order: "otro",
+	})
+	if filtros.Order != "priority" || len(filtros.Priorities) != 2 || filtros.Priorities[0] != "critical" || filtros.Priorities[1] != "high" {
+		t.Fatalf("los filtros de prioridad no se normalizaron: %+v", filtros)
+	}
+}

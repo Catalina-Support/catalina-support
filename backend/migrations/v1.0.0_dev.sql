@@ -873,4 +873,15 @@ UPDATE installation_settings
 END IF;
 END $$;
 
+-- Las cuatro prioridades aparecen en la demo. La marca evita que volver a sembrar simule un aviso:
+-- los seeders cargan datos; los correos se prueban mediante la aplicación.
+UPDATE tickets
+SET priority = CASE
+    WHEN number_seq IN (4, 17) THEN 'critical'
+    WHEN number_seq IN (2, 7, 11, 16, 21, 24) THEN 'high'
+    WHEN number_seq IN (3, 8, 13, 18, 22, 25) THEN 'low'
+    ELSE 'medium'
+END,
+critical_notified_at = CASE WHEN number_seq IN (4, 17) THEN created_at ELSE NULL END;
+
 COMMIT;

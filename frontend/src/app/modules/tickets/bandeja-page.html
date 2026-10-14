@@ -97,6 +97,7 @@
               {{ t().tickets.columnaClasificacion }}
             </th>
             <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaEstado }}</th>
+            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.prioridad }}</th>
             <th scope="col" class="hidden px-4 py-2 font-medium xl:table-cell">
               {{ t().tickets.columnaSolicitante }}
             </th>
@@ -164,6 +165,15 @@
                 <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
               </td>
 
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center gap-1 rounded border border-borde-fuerte px-2 py-1 text-xs font-medium text-texto"
+                >
+                  <span aria-hidden="true">{{ iconoDePrioridad(ticket.priority ?? 'medium') }}</span
+                  >{{ prioridad(ticket) }}
+                </span>
+              </td>
+
               <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ solicitante(ticket) }}</td>
 
               <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ responsable(ticket) }}</td>
@@ -196,6 +206,12 @@
                 {{ ticket.number }}
               </a>
               <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
+              <span
+                class="inline-flex items-center gap-1 rounded border border-borde-fuerte px-2 py-1 text-xs font-medium text-texto"
+              >
+                <span aria-hidden="true">{{ iconoDePrioridad(ticket.priority ?? 'medium') }}</span
+                >{{ prioridad(ticket) }}
+              </span>
             </div>
 
             <!-- En las tarjetas del móvil van los mismos chips, debajo del número (sección 3.3). -->
@@ -293,6 +309,33 @@
         [valor]="borrador().q ?? ''"
         (valorChange)="escribirEnElBorrador('q', $event)"
       />
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="text-sm font-medium text-texto">{{ t().tickets.filtroPrioridad }}</legend>
+        @for (prioridad of ['critical', 'high', 'medium', 'low']; track prioridad) {
+          <label class="flex min-h-11 items-center gap-2 text-sm text-texto">
+            <input
+              type="checkbox"
+              [checked]="borrador().priorities?.includes($any(prioridad))"
+              (change)="alternarPrioridad($any(prioridad), $any($event.target).checked)"
+            />
+            <span aria-hidden="true">{{ iconoDePrioridad($any(prioridad)) }}</span>
+            {{ etiquetaDePrioridad($any(prioridad)) }}
+          </label>
+        }
+      </fieldset>
+
+      <label class="flex flex-col gap-1 text-sm font-medium text-texto">
+        {{ t().tickets.orden }}
+        <select
+          class="min-h-11 rounded-md border border-borde-fuerte bg-superficie px-3 text-texto"
+          [value]="borrador().order"
+          (change)="borrador.update((f) => ({ ...f, order: $any($event.target).value }))"
+        >
+          <option value="priority">{{ t().tickets.ordenPrioridad }}</option>
+          <option value="updated">{{ t().tickets.ordenActualizacion }}</option>
+        </select>
+      </label>
 
       @if (conChipDeVista()) {
         <app-conmutador

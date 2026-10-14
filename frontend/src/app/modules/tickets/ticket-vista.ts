@@ -35,6 +35,7 @@ import {
 import { Estado } from '../../shared/components/estado';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
+import { Toast } from '../../shared/components/toast';
 import { claveDelError } from '../../shared/errores';
 import {
   AccionesDelTicket,
@@ -63,6 +64,7 @@ import {
   type EntradaDeHistorial,
   type Observador,
   type Persona,
+  type Prioridad,
   type Resumen,
 } from './tickets.service';
 
@@ -158,6 +160,7 @@ interface Pendiente {
     MejorarRedaccion,
     Selector,
     Tarjeta,
+    Toast,
   ],
   templateUrl: './ticket-vista.html',
 })
@@ -208,7 +211,9 @@ export class TicketVista implements OnDestroy {
   /** Y el del comentario que se está editando: sólo se edita uno a la vez. */
   private readonly elDeLaEdicion = viewChild<EditorConAdjuntos>('elDeLaEdicion');
   private readonly modalDeRedaccion = viewChild<MejorarRedaccion>('modalDeRedaccion');
-  private readonly destinoDeRedaccion = signal<'description' | 'comment' | 'editedComment'>('comment');
+  private readonly destinoDeRedaccion = signal<'description' | 'comment' | 'editedComment'>(
+    'comment',
+  );
 
   /**
    * **Los archivos que no han subido**, con el comentario al que iban.
@@ -223,6 +228,7 @@ export class TicketVista implements OnDestroy {
 
   protected readonly trabajando = signal(false);
   protected readonly mensaje = signal<MensajeDePantalla | null>(null);
+  protected readonly toastPrioridad = signal<MensajeDePantalla | null>(null);
 
   protected readonly editando = signal<number | null>(null);
   protected readonly textoEditado = signal('');
@@ -263,6 +269,8 @@ export class TicketVista implements OnDestroy {
    * sigue siendo lo que tiene el ticket.
    */
   protected readonly categoriaElegida = signal('');
+  protected readonly prioridadElegida = signal<Prioridad>('medium');
+  protected readonly editandoPrioridad = signal(false);
 
   /**
    * Si está abierto el **modal de etiquetas** (decisión 82), que es donde se marcan y desmarcan todas
@@ -334,6 +342,7 @@ export class TicketVista implements OnDestroy {
     effect(() => {
       const ticket = this.detalle().ticket;
       this.categoriaElegida.set(ticket.category ? String(ticket.category.id) : '');
+      this.prioridadElegida.set(ticket.priority ?? 'medium');
     });
 
     // **El motor escribe en segundo plano: la ficha se vuelve a leer sola mientras quede algo
@@ -675,9 +684,14 @@ export class TicketVista implements OnDestroy {
   protected aplicarMejora(texto: string): void {
     const html = textoComoHtml(texto);
     switch (this.destinoDeRedaccion()) {
-      case 'description': this.descripcionEditada.set(html); break;
-      case 'editedComment': this.textoEditado.set(html); break;
-      default: this.comentario.set(html);
+      case 'description':
+        this.descripcionEditada.set(html);
+        break;
+      case 'editedComment':
+        this.textoEditado.set(html);
+        break;
+      default:
+        this.comentario.set(html);
     }
   }
 
@@ -704,7 +718,7 @@ export class TicketVista implements OnDestroy {
       return false;
     }
 
-    return this.ticket().internal ? this.esSoporte() || this.esDesarrollo() : this.esSoporte();
+    return this.ticket().internal ? this.esDesarrollo() : this.esSoporte();
   }
 
   protected puedeTocarComentario(comentario: Comentario): boolean {
@@ -751,6 +765,21 @@ export class TicketVista implements OnDestroy {
     return etiquetaDeEstado(this.t(), estado, this.esUsuario());
   }
 
+  protected opcionesDePrioridad(): readonly OpcionSelector[] {
+    const p = this.t().tickets;
+    return [
+      { valor: 'low', etiqueta: `↓ ${p.prioridadBaja}`, grupo: p.prioridad },
+      { valor: 'medium', etiqueta: `• ${p.prioridadMedia}`, grupo: p.prioridad },
+      { valor: 'high', etiqueta: `↑ ${p.prioridadAlta}`, grupo: p.prioridad },
+      { valor: 'critical', etiqueta: `! ${p.prioridadCritica}`, grupo: p.prioridad },
+    ];
+  }
+
+  protected puedeCambiarPrioridad(): boolean {
+    if (this.soloLectura() || this.ticket().state === 'cerrado') return false;
+    return this.ticket().internal ? this.esSoporte() || this.esDesarrollo() : this.esSoporte();
+  }
+
   protected cuando(iso: string): string {
     return fechaHora(iso, this.idioma(), this.marca.zonaHoraria());
   }
@@ -785,13 +814,32 @@ export class TicketVista implements OnDestroy {
       reabierto: textos.historial.reabierto,
       observador: textos.historial.observador,
       observador_anadido: textos.historial.observador_anadido,
+      prioridad: textos.historial.prioridad,
     };
 
     return interpolar(frases[entrada.event] ?? textos.historial.creado, {
       quien,
       detalle: entrada.detail ?? '',
       estado: this.estado(entrada.toState ?? ''),
+      desde: this.etiquetaDePrioridad(entrada.fromState),
+      hasta: this.etiquetaDePrioridad(entrada.toState),
     });
+  }
+
+  private etiquetaDePrioridad(valor?: string): string {
+    const t = this.t().tickets;
+    return (
+      (
+        {
+          low: t.prioridadBaja,
+          medium: t.prioridadMedia,
+          high: t.prioridadAlta,
+          critical: t.prioridadCritica,
+        } as Record<string, string>
+      )[valor ?? ''] ??
+      valor ??
+      ''
+    );
   }
 
   /** El texto de un comentario, ya pintado con formato y con sus adjuntos en su sitio. */
@@ -1200,6 +1248,35 @@ export class TicketVista implements OnDestroy {
     await this.actuar(async () => {
       await this.tickets.editar(this.ticket().number, { categoryId: categoria });
       return { forma: 'exito', texto: this.t().tickets.categoriaCambiada };
+    });
+  }
+
+  protected abrirPrioridad(): void {
+    this.prioridadElegida.set(this.ticket().priority ?? 'medium');
+    this.editandoPrioridad.set(true);
+  }
+
+  protected cancelarPrioridad(): void {
+    this.prioridadElegida.set(this.ticket().priority ?? 'medium');
+    this.editandoPrioridad.set(false);
+  }
+
+  protected async guardarPrioridad(): Promise<void> {
+    await this.actuar(async () => {
+      const respuesta = await this.tickets.cambiarPrioridad(
+        this.ticket().number,
+        this.prioridadElegida(),
+      );
+      this.editandoPrioridad.set(false);
+      if (respuesta.warning) {
+        this.toastPrioridad.set({
+          forma: 'atencion',
+          texto: this.t().tickets.prioridadAvisoFallido,
+        });
+      }
+      return respuesta.warning
+        ? null
+        : { forma: 'exito', texto: this.t().tickets.prioridadGuardada };
     });
   }
 

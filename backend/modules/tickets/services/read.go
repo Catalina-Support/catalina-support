@@ -220,17 +220,19 @@ func (s *Service) listaDeLosDos(filtros repositories.Filtros) (Page, error) {
 
 	todos := append(append([]Ticket{}, principales.Tickets...), internos.Tickets...)
 
-	// El mismo orden que la base: lo cerrado al final, y dentro de eso lo que lleva más tiempo
-	// esperando, primero.
+	// El mismo orden estable que aplica cada consulta antes de mezclar los dos tipos.
 	sort.SliceStable(todos, func(i, j int) bool {
-		cerradoI := todos[i].State == repositories.StateCerrado
-		cerradoJ := todos[j].State == repositories.StateCerrado
-
-		if cerradoI != cerradoJ {
-			return !cerradoI
+		if filtros.Order == "updated" {
+			return todos[i].UpdatedAt.After(todos[j].UpdatedAt)
 		}
-
-		return todos[i].UpdatedAt.Before(todos[j].UpdatedAt)
+		rango := map[string]int{repositories.PriorityCritical: 0, repositories.PriorityHigh: 1, repositories.PriorityMedium: 2, repositories.PriorityLow: 3}
+		if rango[todos[i].Priority] != rango[todos[j].Priority] {
+			return rango[todos[i].Priority] < rango[todos[j].Priority]
+		}
+		if !todos[i].CreatedAt.Equal(todos[j].CreatedAt) {
+			return todos[i].CreatedAt.Before(todos[j].CreatedAt)
+		}
+		return todos[i].Number < todos[j].Number
 	})
 
 	desde := (filtros.Page - 1) * filtros.PerPage
@@ -469,6 +471,7 @@ func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Accou
 		Subject:             ticket.Subject,
 		Description:         ticket.Description,
 		State:               ticket.State,
+		Priority:            ticket.Priority,
 		Category:            categoria,
 		Tags:                etiquetas,
 		Parent:              "",
@@ -496,6 +499,7 @@ func (s *Service) aTicketInterno(interno repositories.InternalTicket, principal 
 		Subject:     principal.Subject,
 		Description: principal.Description,
 		State:       interno.State,
+		Priority:    principal.Priority,
 		Reason:      interno.EscalationReason,
 		Parent:      principal.Number,
 		Category:    categoria,

@@ -1,7 +1,11 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-11
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 22 define selección, chip accesible,
+> edición en el lugar, filtro múltiple y orden de prioridades en PC y móvil. No se modifica código
+> antes de implementarla. El responsable la aprobó explícitamente.
 >
 > **Corrección aprobada y verificada el 2026-10-10:** el repaso de la sección 21 encontró que el
 > documento prometía conservar el enlace de fuente en el menú plegado, mientras la implementación
@@ -718,7 +722,7 @@ modularidad (sección 4.4).
 | --- | --- | --- |
 | El editor de los correos | `/mail` | Administrador |
 
-- **A la izquierda, los once correos**; a la derecha, el que se está editando: su **asunto**, su
+- **A la izquierda, los doce correos**; a la derecha, el que se está editando: su **asunto**, su
   **cuerpo** y sus **marcadores**, con los imprescindibles marcados.
 - **Los dos idiomas van al lado** —el mismo correo en español y en inglés, para ver que dicen lo
   mismo— **y en móvil se apilan**: en un teléfono no caben dos columnas.
@@ -1503,11 +1507,11 @@ tarjeta.
 
 ### 16.4 Revisión del cambio de idioma
 
-La revisión presenta las once plantillas como lista de pendientes. Al abrir una se ven origen y
+La revisión presenta las doce plantillas como lista de pendientes. Al abrir una se ven origen y
 borrador lado a lado en PC y apilados en móvil, con asunto, cuerpo y marcadores. Si ya existe un
 destino personalizado, aparece como tercera versión y el Administrador elige conservarlo, usar el
 borrador o combinarlos en el editor. No se reemplaza en silencio. **Aplicar idioma** sólo se habilita
-cuando las once están válidas; cancelar descarta los borradores y vuelve al idioma persistido.
+cuando las doce están válidas; cancelar descarta los borradores y vuelve al idioma persistido.
 
 Tras confirmar, la interfaz completa adopta el nuevo idioma. Los resúmenes anteriores se conservan y
 siguen visibles en el idioma en que fueron redactados. Los nuevos y los que se vuelvan a pedir se
@@ -1704,3 +1708,21 @@ recorrido aislado de `marca.spec.ts` pasó sus 12 casos en PC y móvil: comprob�
 licencia en la entrada y el menú, además de versión, tema, logo y color. El menú plegado ocultó el
 enlace conforme a 39A y volvió a ofrecerlo al desplegarse. Los contenedores, la red y los volúmenes
 del entorno desechable se retiraron al terminar.
+
+## 22. Prioridad visible y operable
+
+El alta ofrece las cuatro prioridades con media seleccionada. En listas y detalle aparece un chip
+con texto traducido e icono; color e icono ayudan, pero el significado nunca depende de ellos. El
+detalle permite a Soporte y, desde la vista interna autorizada, a Desarrollo cambiar el valor en el
+lugar con Guardar y Cancelar. El Usuario y el Administrador lo ven sin editor. Cerrado no ofrece el
+control.
+
+El modal de búsqueda admite seleccionar varias prioridades. Las bandejas ordenan de fábrica crítica,
+alta, media y baja, y dentro de cada grupo muestran primero el ticket más antiguo. La persona puede
+cambiar el orden. Filtro y orden se reflejan en parámetros de URL y sobreviven a recarga, regreso y
+enlaces compartidos. Tabla y tarjetas móviles muestran el mismo dato sin crear desplazamiento
+horizontal.
+
+El historial escribe las etiquetas traducidas anterior y nueva, el autor y la fecha. Si falla el
+correo crítico, un toast persistente de atención confirma que la prioridad quedó guardada y que el
+aviso no salió; no ofrece guardar de nuevo ni afirma que la operación falló completa.

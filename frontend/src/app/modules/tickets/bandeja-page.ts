@@ -1,5 +1,5 @@
 import { Component, type OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { BrandService } from '../../core/services/brand.service';
@@ -29,6 +29,7 @@ import {
   type Categoria,
   type FiltrosDeBandeja,
   type PaginaDeTickets,
+  type Prioridad,
   type Ticket,
 } from './tickets.service';
 
@@ -76,6 +77,7 @@ export class BandejaPage implements OnInit, OnDestroy {
   private readonly marca = inject(BrandService);
   private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly pagina = signal<PaginaDeTickets>({
     tickets: [],
@@ -200,7 +202,22 @@ export class BandejaPage implements OnInit, OnDestroy {
     // El tipo de ticket: el que fija la lista cuando es una del «todo», y si no el de siempre —el
     // usuario y Soporte, los principales; Desarrollo, los internos; el Administrador, los principales,
     // que puede cambiar con su chip—.
-    this.filtros.set({ ...FILTROS_VACIOS, ...this.vistaInicial(), type: this.tipoInicial() });
+    const consulta = this.route.snapshot.queryParamMap;
+    const priorities = consulta.getAll('priority').filter(esPrioridad);
+    const view = consulta.get('view') === 'all' ? '' : (consulta.get('view') ?? this.vistaInicial().view);
+    this.filtros.set({
+      ...FILTROS_VACIOS,
+      ...this.vistaInicial(),
+      view,
+      type: consulta.get('type') === 'all' ? '' : (consulta.get('type') ?? this.tipoInicial(view)),
+      state: consulta.get('state') ?? '',
+      q: consulta.get('q') ?? '',
+      category: consulta.get('category') ?? '',
+      tag: consulta.get('tag') ?? '',
+      priorities,
+      order: consulta.get('order') === 'updated' ? 'updated' : 'priority',
+      page: Number(consulta.get('page')) || 1,
+    });
     void this.cargar();
     void this.cargarCategorias();
   }
@@ -292,6 +309,35 @@ export class BandejaPage implements OnInit, OnDestroy {
     return fechaHora(ticket.updatedAt, this.textos.idioma(), this.marca.zonaHoraria());
   }
 
+  protected prioridad(ticket: Ticket): string {
+    const p = ticket.priority ?? 'medium';
+    return this.etiquetaDePrioridad(p);
+  }
+
+  protected iconoDePrioridad(prioridad: Prioridad): string {
+    return { low: '↓', medium: '•', high: '↑', critical: '!' }[prioridad];
+  }
+
+  protected etiquetaDePrioridad(prioridad: Prioridad): string {
+    const t = this.t().tickets;
+    return {
+      low: t.prioridadBaja,
+      medium: t.prioridadMedia,
+      high: t.prioridadAlta,
+      critical: t.prioridadCritica,
+    }[prioridad];
+  }
+
+  protected alternarPrioridad(prioridad: Prioridad, activa: boolean): void {
+    const actuales = this.borrador().priorities ?? [];
+    this.borrador.update((filtros) => ({
+      ...filtros,
+      priorities: activa
+        ? [...actuales, prioridad]
+        : actuales.filter((valor) => valor !== prioridad),
+    }));
+  }
+
   protected hayFiltros(): boolean {
     const filtros = this.filtros();
     return Boolean(
@@ -299,6 +345,7 @@ export class BandejaPage implements OnInit, OnDestroy {
       filtros.q ||
       filtros.category ||
       filtros.tag ||
+      filtros.priorities?.length ||
       (this.conChipDeTipo() && filtros.type !== this.tipoInicial()),
     );
   }
@@ -393,6 +440,9 @@ export class BandejaPage implements OnInit, OnDestroy {
     if (filtros.tag) {
       puestos.push(this.t().tickets.filtroEtiqueta);
     }
+    if (filtros.priorities?.length) {
+      puestos.push(this.t().tickets.filtroPrioridad);
+    }
 
     return puestos;
   }
@@ -471,8 +521,29 @@ export class BandejaPage implements OnInit, OnDestroy {
   }
 
   private async cargar(): Promise<void> {
+    void this.sincronizarDireccion();
     await this.leerLaLista();
     this.vigilarElMotor();
+  }
+
+  private sincronizarDireccion(): Promise<boolean> {
+    const f = this.filtros();
+    return this.router.navigate([], {
+      relativeTo: this.route,
+      replaceUrl: true,
+      queryParams: {
+        type: this.conChipDeTipo() && f.type !== this.tipoInicial(f.view) ? f.type || 'all' : null,
+        state: f.state || null,
+        q: f.q || null,
+        category: f.category || null,
+        tag: f.tag || null,
+        view:
+          this.conChipDeVista() && f.view !== this.vistaInicial().view ? f.view || 'all' : null,
+        priority: f.priorities?.length ? f.priorities : null,
+        order: f.order === 'updated' ? 'updated' : null,
+        page: f.page > 1 ? f.page : null,
+      },
+    });
   }
 
   /** La petición de la lista, sin tocar la vigilancia del motor: la comparten la carga y la relectura. */
@@ -537,4 +608,8 @@ export class BandejaPage implements OnInit, OnDestroy {
       this.temporizadorDelMotor = null;
     }
   }
+}
+
+function esPrioridad(valor: string): valor is Prioridad {
+  return ['low', 'medium', 'high', 'critical'].includes(valor);
 }

@@ -1,7 +1,11 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda propuesta para 1.0.0, 2026-10-14.** La sección 14 añade el duodécimo correo editable,
+> el aviso único de prioridad crítica, en los dos idiomas globales. No se modifica código antes de
+> implementarla. El responsable la aprobó explícitamente.
 >
 > **Enmienda implementada y verificada el 2026-10-13: plantilla ausente sin falso error.** La
 > búsqueda conserva `mail.template.notFound` sin registrar `record not found`; los fallos SQL reales
@@ -13,7 +17,7 @@
 >
 > **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
 > idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las
-> once plantillas, protegiendo HTML y marcadores. El responsable retiró la regeneración masiva de
+> doce plantillas, protegiendo HTML y marcadores. El responsable retiró la regeneración masiva de
 > resúmenes del cambio de idioma y confirmó que siempre habrá edición manual.
 >
 > **Enmendado el 2026-09-30**: el módulo estrena **`Probar`**, que **conecta y autentica contra el
@@ -39,7 +43,7 @@
 > descuido de forma, no porque faltara nada; lo cuenta el registro de su implementación, más abajo.
 >
 > Aprobado por el responsable el 2026-09-23, tras repasarlo en forma de preguntas. Fija la tabla de
-> plantillas, los marcadores, **los veintidós textos por defecto** (once correos en español e inglés),
+> plantillas, los marcadores, **los veinticuatro textos por defecto** (doce correos en español e inglés),
 > el envío en HTML con versión de texto y el editor de la pantalla de Configuración.
 >
 > **Es el primer módulo que se implementa**, porque `auth` lo necesita para mandar el correo de alta.
@@ -101,7 +105,7 @@ tickets: **recibe una plantilla, un idioma, unos destinatarios y unos datos, y e
 | Columna | Tipo | Notas |
 | --- | --- | --- |
 | `id` | `bigserial` | |
-| `key` | `text` | Cuál de los once correos: `ticket.created`, `auth.recovery`… |
+| `key` | `text` | Cuál de los doce correos: `ticket.created`, `auth.recovery`… |
 | `language` | `text` | `es` o `en` |
 | `subject` | `text` | El asunto actual, con sus marcadores |
 | `body` | `text` | El **HTML** actual del cuerpo, con sus marcadores |
@@ -110,9 +114,9 @@ tickets: **recibe una plantilla, un idioma, unos destinatarios y unos datos, y e
 | `updated_at` | `timestamptz` | Cuándo se editó por última vez |
 | `updated_by_id` | `bigint` | Quién lo editó. Nulo mientras siga el texto de fábrica, y también cuando edita la cuenta de fábrica `admin`, que no está en la tabla de cuentas |
 
-**Único por (`key`, `language`)**: veintidós filas, ni una más —once correos en dos idiomas—.
+**Único por (`key`, `language`)**: veinticuatro filas, ni una más —doce correos en dos idiomas—.
 
-- **Los veintidós textos se siembran en la migración**, con `INSERT ... ON CONFLICT DO NOTHING`. Eso
+- **Los veinticuatro textos se siembran en la migración**, con `INSERT ... ON CONFLICT DO NOTHING`. Eso
   importa: al ser idempotente, **volver a aplicar la migración no pisa lo que un administrador haya
   editado**. Si algún día hay que cambiar un texto de fábrica, será con una migración nueva que lo
   diga, no reescribiendo la siembra.
@@ -147,7 +151,7 @@ Se escriben con llaves dobles y en minúsculas: `{{numero}}`, `{{enlace}}`, `{{n
   `PUBLIC_APP_URL` queda **como respaldo**, nunca con un host escrito en el texto: el mismo
   texto tiene que servir en desarrollo y en producción.
 
-## 5. Los once correos por defecto
+## 5. Los doce correos por defecto
 
 Estos son los textos que se siembran. **Se revisan aquí, que es donde se pueden corregir sin tocar
 código.**
@@ -286,7 +290,7 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
 
 | Método y ruta | Qué hace | Quién |
 | --- | --- | --- |
-| `GET /api/mail/templates` | Las veintidós plantillas: clave, idioma, asunto y cuerpo | Administrador |
+| `GET /api/mail/templates` | Las veinticuatro plantillas: clave, idioma, asunto y cuerpo | Administrador |
 | `POST /api/mail/templates/{key}/{language}/preview` | El asunto y el cuerpo **ya renderizados**, con datos de ejemplo. Acepta el **borrador** que se está escribiendo | Administrador |
 | `PUT /api/mail/templates/{key}/{language}` | Guarda una plantilla. Valida los marcadores | Administrador |
 | `POST /api/mail/templates/{key}/{language}/reset` | Restaura el texto de fábrica | Administrador |
@@ -310,7 +314,7 @@ contexto que su propia clave:
 | Clave | Cuándo | Código |
 | --- | --- | --- |
 | `mail.template.notFound` | La plantilla (clave + idioma) no está en la tabla | **404** |
-| `mail.template.unknownKey` | Esa clave no es ninguno de los once correos | **404** |
+| `mail.template.unknownKey` | Esa clave no es ninguno de los doce correos | **404** |
 | `mail.language.unknown` | El idioma no es `es` ni `en` | **404** |
 | `mail.subject.required` | El asunto viene vacío | **422** |
 | `mail.body.required` | El cuerpo viene vacío | **422** |
@@ -329,7 +333,7 @@ el editor no tenga que volver a pedirla ni duplicar reglas:
 
 | Endpoint | Devuelve |
 | --- | --- |
-| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veintidós |
+| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veinticuatro |
 | `PUT /api/mail/templates/{key}/{language}` | `{"template": { … }}` y, si falta algún marcador imprescindible, `"missing": ["enlace"]` junto a ella |
 | `POST /api/mail/templates/{key}/{language}/reset` | `{"template": { … }}` con el texto de fábrica ya puesto |
 | `POST /api/mail/templates/{key}/{language}/test` | `{"sentTo": "quien@demo.com"}` |
@@ -372,7 +376,7 @@ Y **qué lleva cada plantilla**, que es lo que el editor necesita para pintarse 
 | 16 | **La prueba desde la cuenta de fábrica** | No se puede: esa cuenta no tiene correo y se responde 422 con `mail.test.noEmail`. El destino sigue siendo siempre el de quien pide la prueba |
 | 17 | **La vista previa** | **La renderiza el backend**, con un quinto endpoint y los mismos datos de ejemplo que la prueba: una sola versión de la sustitución de marcadores y del escapado |
 | 18 | **Los dos idiomas** | **Dos columnas en PC** —el mismo correo en español y en inglés, uno al lado del otro— **y apilados en móvil**: en un teléfono no caben dos columnas |
-| 20 | **Un correo que no sale queda en el log** | **Hallazgo y corrección del 2026-09-27**: los avisos se mandan en segundo plano, y el error de `Send` **no lo miraba nadie** —la acción que lo provocó ya había terminado—, así que una plantilla mal puesta o un servidor de correo caído **no avisaban a nadie, ni al log**. Pasó de verdad: la plantilla del etiquetado existía en la migración, la lista cerrada de `markers.go` no la conocía, `Send` la rechazaba y **el correo no salió sin dejar rastro**. Ahora el fallo se registra, con la clave, el idioma y **los destinatarios** —la dirección sí se registra, el contenido del correo nunca—. Y la lista de `markers.go` tiene las once claves |
+| 20 | **Un correo que no sale queda en el log** | **Hallazgo y corrección del 2026-09-27**: los avisos se mandan en segundo plano, y el error de `Send` **no lo miraba nadie** —la acción que lo provocó ya había terminado—, así que una plantilla mal puesta o un servidor de correo caído **no avisaban a nadie, ni al log**. Pasó de verdad: la plantilla del etiquetado existía en la migración, la lista cerrada de `markers.go` no la conocía, `Send` la rechazaba y **el correo no salió sin dejar rastro**. Ahora el fallo se registra, con la clave, el idioma y **los destinatarios** —la dirección sí se registra, el contenido del correo nunca—. Y la lista de `markers.go` tiene las doce claves |
 | 19 | **Los marcadores** | Se ven los de ese correo, con los imprescindibles marcados, y **se insertan al pulsarlos** en el punto donde esté el cursor: nadie tiene que memorizar `{{solicitante}}` ni escribirlo bien |
 
 ## 10. Qué habilita este documento
@@ -380,7 +384,7 @@ Y **qué lleva cada plantilla**, que es lo que el editor necesita para pintarse 
 Con `docs/modules/mail.md` aprobado, **`mail` es el primer módulo que se implementa**, porque `auth`
 lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 
-1. La tabla `mail_templates` y los veintidós textos sembrados, en `migrations/v1.0.0.sql`.
+1. La tabla `mail_templates` y los veinticuatro textos sembrados, en `migrations/v1.0.0.sql`.
 2. El rellenado de marcadores y el escapado, con sus pruebas: es la parte que más se rompe.
 3. El envío por SMTP con las dos versiones, y el registro en el log.
 4. Los cuatro endpoints.
@@ -388,11 +392,11 @@ lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 
 ## 11. Implementación: plantillas traducidas al cambiar el idioma global
 
-Se conservan las veintidós plantillas —once por idioma— como memoria editable de ambos idiomas, pero
+Se conservan las veinticuatro plantillas —once por idioma— como memoria editable de ambos idiomas, pero
 los envíos eligen siempre la versión del idioma global. `Send` y `SendAsync` dejan de recibir el
 idioma del destinatario y lo resuelven desde la instalación en cada envío.
 
-Al solicitar un cambio global, `mail` toma como fuente las once plantillas personalizadas del idioma
+Al solicitar un cambio global, `mail` toma como fuente las doce plantillas personalizadas del idioma
 activo. Antes de enviarlas a `ai`, sustituye etiquetas HTML y marcadores `{{…}}` por elementos
 protegidos. La IA traduce sólo el texto; `mail` recompone el HTML y rechaza un borrador si pierde,
 añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guarda todavía.
@@ -400,7 +404,7 @@ añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guard
 Si el destino conserva el texto de fábrica, el Administrador revisa fuente y borrador. Si el destino
 ya fue personalizado, revisa tres versiones: fuente activa, borrador de IA y destino existente, y
 puede elegir una o combinarlas en el editor. Nunca se reemplaza una personalización sin mostrarla.
-Al confirmar, una transacción guarda las once plantillas destino y el nuevo idioma global. Si una fila o
+Al confirmar, una transacción guarda las doce plantillas destino y el nuevo idioma global. Si una fila o
 validación falla, no cambia ninguna plantilla ni el idioma. El historial de traducciones no crea una
 tabla adicional: permanecen las dos versiones actuales y `updated_at`/`updated_by_id` dicen quién
 confirmó la última.
@@ -409,10 +413,10 @@ La traducción usa la IA activa y por ello no puede iniciar si la instalación e
 requerida. No se mandan destinatarios, direcciones ni datos reales de tickets: sólo asuntos, cuerpos
 y marcadores de las plantillas. Restaurar y editar manualmente continúan disponibles.
 
-Con un proveedor externo, antes de traducir se muestran las veintidós solicitudes —asunto y cuerpo
+Con un proveedor externo, antes de traducir se muestran las veinticuatro solicitudes —asunto y cuerpo
 de cada plantilla— y una estimación de tokens y costo. Si el Administrador no la acepta, no se hace
-ninguna llamada: los once destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
-se habilita cuando las once plantillas destino pasan su validación, procedan de la IA, del destino
+ninguna llamada: los doce destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
+se habilita cuando las doce plantillas destino pasan su validación, procedan de la IA, del destino
 existente o de la edición manual.
 
 El responsable eligió traducción por IA con borrador revisable y aplicación atómica el 2026-10-06.
@@ -422,7 +426,7 @@ rechazarla conserva el camino manual. No quedan decisiones abiertas; corrección
 
 ### 11.1 Implementación verificada
 
-`POST /api/mail/language/drafts` devuelve las once comparaciones sin persistir; protege etiquetas y
+`POST /api/mail/language/drafts` devuelve las doce comparaciones sin persistir; protege etiquetas y
 marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El modo manual devuelve el
 destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
 transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.
@@ -440,7 +444,7 @@ incumplimiento produce el mismo error sin otra solicitud facturable. Las demás 
 aplican parcialmente: el Administrador puede corregir manualmente cualquier borrador y la
 transacción existente exige que las once estén válidas antes de cambiar el idioma global.
 
-No cambian las veintidós plantillas, marcadores, confirmación comercial, estimación de costo,
+No cambian las veinticuatro plantillas, marcadores, confirmación comercial, estimación de costo,
 endpoints ni edición manual. Las pruebas cubren asunto y cuerpo, conservación del destino anterior,
 edición posterior y ausencia de segunda llamada al proveedor. El responsable eligió 6A, 7A, 10B,
 11A y 12A; no quedan decisiones abiertas.
@@ -450,5 +454,21 @@ El servicio de traducción reutiliza el validador central de `ai`; por ello sól
 ## 13. Implementación: plantilla ausente
 
 La lectura por clave e idioma consulta como máximo una plantilla y distingue cero filas mediante
-`RowsAffected`. Conserva el mismo error de dominio y no cambia el editor, los once pares, el idioma
+`RowsAffected`. Conserva el mismo error de dominio y no cambia el editor, los doce pares, el idioma
 global, la vista previa ni el envío.
+
+## 14. Aviso de prioridad crítica
+
+El catálogo tiene doce plantillas y veinticuatro filas por sus versiones en
+inglés y español. La nueva clave de prioridad crítica es editable, restaurable, previsualizable y
+se puede enviar como prueba desde el editor, como las demás. Usa el idioma global vigente.
+
+El correo incluye número, asunto, nombre del solicitante, prioridad y enlace público al ticket. No
+incluye descripción, comentarios ni adjuntos. Sus destinatarios son todas las cuentas activas de
+Soporte, sin duplicados. Un fallo devuelve información al módulo de tickets, pero nunca deshace la
+prioridad guardada.
+
+La clave implementada es `ticket.priorityCritical`; forma parte del mismo catálogo editable,
+restaurable y previsualizable que las otras once. La migración deja veinticuatro filas y las pruebas
+de backend y de extremo a extremo comprobaron un solo mensaje aunque el ticket baje y vuelva a
+crítica.

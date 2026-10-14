@@ -47,7 +47,7 @@ interface RespuestaDePlantilla {
 export class MailService {
   private readonly http = inject(HttpClient);
 
-  /** Las veinte plantillas: diez correos en dos idiomas. */
+  /** Las veinticuatro filas: doce correos en dos idiomas. */
   async listar(): Promise<readonly Plantilla[]> {
     const respuesta = await firstValueFrom(
       this.http.get<{ templates: readonly Plantilla[] }>('/api/mail/templates'),

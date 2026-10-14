@@ -8,7 +8,7 @@
 --   psql -v ON_ERROR_STOP=1 -U catalina_support -d catalina_support -p 11003 < backend/migrations/v1.0.0.sql
 --
 -- **Lleva también los datos sin los cuales la aplicación no funciona** —las dos filas de
--- configuración y las veintidós plantillas de correo—, porque eso no es un dato de ejemplo: en una
+-- configuración y las veinticuatro plantillas de correo—, porque eso no es un dato de ejemplo: en una
 -- instalación recién desplegada, sin la fila de configuración no se puede leer ni el idioma ni el
 -- nombre, y sin plantilla no sale ningún correo (docs/modules/settings.md, decisión 10).
 --
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS mail_templates (
 );
 
 COMMENT ON TABLE mail_templates IS
-    'Los once correos del sistema, en dos idiomas: veintidós filas. Los escribe un administrador; el texto de fábrica se conserva para poder restaurarlo.';
+    'Los doce correos del sistema, en dos idiomas: veinticuatro filas. Los escribe un administrador; el texto de fábrica se conserva para poder restaurarlo.';
 
--- Las veintidós plantillas de fábrica (docs/modules/mail.md, sección 5).
+-- Las veinticuatro plantillas de fábrica (docs/modules/mail.md, sección 5).
 -- ON CONFLICT DO NOTHING: volver a aplicar la migración NO pisa lo que un administrador haya editado.
 INSERT INTO mail_templates (key, language, subject, body, default_subject, default_body) VALUES
 -- ---------------------------------------------------------------- avisos de ticket
@@ -144,6 +144,18 @@ INSERT INTO mail_templates (key, language, subject, body, default_subject, defau
  '<p>You were mentioned in ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p>You are following it from your inbox, under “Watching”.</p><p><a href="{{enlace}}">Open the ticket</a></p>',
  'You were mentioned in {{numero}}: {{asunto}}',
  '<p>You were mentioned in ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p>You are following it from your inbox, under “Watching”.</p><p><a href="{{enlace}}">Open the ticket</a></p>'),
+
+('ticket.priorityCritical', 'es',
+ 'Prioridad crítica: {{numero}}',
+ '<p>El ticket <strong>{{numero}}</strong> se ha marcado como crítico.</p><p>{{asunto}}</p><p>Lo ha solicitado {{solicitante}}.</p><p><strong>Prioridad:</strong> {{prioridad}}</p><p><a href="{{enlace}}">Abrir el ticket</a></p>',
+ 'Prioridad crítica: {{numero}}',
+ '<p>El ticket <strong>{{numero}}</strong> se ha marcado como crítico.</p><p>{{asunto}}</p><p>Lo ha solicitado {{solicitante}}.</p><p><strong>Prioridad:</strong> {{prioridad}}</p><p><a href="{{enlace}}">Abrir el ticket</a></p>'),
+
+('ticket.priorityCritical', 'en',
+ 'Critical priority: {{numero}}',
+ '<p>Ticket <strong>{{numero}}</strong> has been marked critical.</p><p>{{asunto}}</p><p>Requested by {{solicitante}}.</p><p><strong>Priority:</strong> {{prioridad}}</p><p><a href="{{enlace}}">Open the ticket</a></p>',
+ 'Critical priority: {{numero}}',
+ '<p>Ticket <strong>{{numero}}</strong> has been marked critical.</p><p>{{asunto}}</p><p>Requested by {{solicitante}}.</p><p><strong>Priority:</strong> {{prioridad}}</p><p><a href="{{enlace}}">Open the ticket</a></p>'),
 
 -- ---------------------------------------------------------------- correos de cuenta
 ('auth.invitation', 'es',
@@ -607,6 +619,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     subject               text        NOT NULL,
     description           text        NOT NULL,
     state                 text        NOT NULL DEFAULT 'nuevo',
+    priority              text        NOT NULL DEFAULT 'medium',
+    critical_notified_at  timestamptz,
     requester_id          bigint      NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
     created_by_id         bigint      NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
     -- Nulo sólo si no había ningún técnico activo al repartir.
@@ -621,6 +635,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     CONSTRAINT tickets_state_check CHECK (
         state IN ('nuevo', 'en progreso', 'en espera', 'escalado', 'resuelto', 'cerrado')
     ),
+    CONSTRAINT tickets_priority_check CHECK (priority IN ('low', 'medium', 'high', 'critical')),
     CONSTRAINT tickets_subject_check CHECK (btrim(subject) <> ''),
     CONSTRAINT tickets_description_check CHECK (btrim(description) <> ''),
     CONSTRAINT tickets_number_seq_check CHECK (number_seq > 0),
@@ -629,6 +644,13 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 COMMENT ON TABLE tickets IS
     'Los tickets principales. La API se dirige por `number`, nunca por `id`.';
+
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS priority text NOT NULL DEFAULT 'medium';
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS critical_notified_at timestamptz;
+UPDATE tickets SET priority = 'medium' WHERE priority IS NULL;
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_priority_check;
+ALTER TABLE tickets ADD CONSTRAINT tickets_priority_check
+    CHECK (priority IN ('low', 'medium', 'high', 'critical'));
 
 CREATE TABLE IF NOT EXISTS internal_tickets (
     id                bigserial   PRIMARY KEY,
@@ -724,7 +746,7 @@ CREATE TABLE IF NOT EXISTS ticket_history (
         OR (ticket_id IS NULL AND internal_ticket_id IS NOT NULL)
     ),
     CONSTRAINT ticket_history_event_check CHECK (
-        event IN ('creado', 'editado', 'asignado', 'estado', 'escalado', 'resuelto', 'cerrado', 'reabierto', 'observador', 'observador_anadido')
+        event IN ('creado', 'editado', 'asignado', 'estado', 'escalado', 'resuelto', 'cerrado', 'reabierto', 'observador', 'observador_anadido', 'prioridad')
     )
 );
 
@@ -739,7 +761,7 @@ COMMENT ON TABLE ticket_history IS
 ALTER TABLE ticket_history DROP CONSTRAINT IF EXISTS ticket_history_event_check;
 ALTER TABLE ticket_history
     ADD CONSTRAINT ticket_history_event_check CHECK (
-        event IN ('creado', 'editado', 'asignado', 'estado', 'escalado', 'resuelto', 'cerrado', 'reabierto', 'observador', 'observador_anadido')
+        event IN ('creado', 'editado', 'asignado', 'estado', 'escalado', 'resuelto', 'cerrado', 'reabierto', 'observador', 'observador_anadido', 'prioridad')
     );
 
 -- Los observadores de un ticket: **quien sigue el ticket sin atenderlo**, y no son lo mismo que el

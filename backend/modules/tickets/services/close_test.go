@@ -23,6 +23,8 @@ import (
 // prueba no llega ni a la transacción.
 type correoDePrueba struct{}
 
+func (correoDePrueba) Send(string, string, []string, map[string]string) error { return nil }
+
 func (correoDePrueba) SendAsync(string, string, []string, map[string]string) {}
 
 func (correoDePrueba) Link(ruta string) string { return ruta }

@@ -1,7 +1,12 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Prioridades implementadas para 1.0.0, 2026-10-14:** nueve documentos vuelven a `as-built` tras
+> incorporar baja, media, alta y crítica, con permisos, historial, orden, filtro, correo único y
+> pruebas. El responsable cerró 1A–25A con correcciones propias a 3A, 13A y 18A y aprobó
+> explícitamente la propuesta coordinada.
 >
 > **Bloque 8 cerrado, 2026-10-13:** `prueba-local.md` y `ambientes.md` registran la cuarta pasada
 > íntegra desde el repositorio público. Instalación vacía, IA, correo, seeders, AD, Keycloak y vuelta
@@ -313,20 +318,20 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
-| `prueba-local.md` | **as-built** | Cuarta pasada pública completa, limpia y sin hallazgos abiertos |
-| `arquitectura.md` | **as-built** | Ausencias esperadas por repositorio sin silenciar errores SQL reales |
-| `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
-| `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
-| `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
+| `prueba-local.md` | **as-built** | Recorrido de prioridades sobre la cuarta pasada pública ya cerrada |
+| `arquitectura.md` | **as-built** | Persistencia y aviso crítico no bloqueante dentro de las fronteras actuales |
+| `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Incorpora prioridad a la 1.0.0 y corrige su exclusión histórica |
+| `usuarios-y-permisos.md` | **as-built** | Permisos para proponer, modificar y consultar prioridad |
+| `flujos.md` | **as-built** | Aviso único a todo Soporte al llegar por primera vez a crítica |
 | `modules/settings.md` | **as-built** | Configuración completa; una fila ausente conserva su error de dominio sin falso error de GORM |
-| `modules/mail.md` | **as-built** | Plantilla ausente sin falso error; valida idioma y no reintenta automáticamente proveedores externos |
+| `modules/mail.md` | **as-built** | Duodécima plantilla para prioridad crítica en los dos idiomas |
 | `modules/auth.md` | **as-built** | Token ausente sin falso error; identidad y sesión conservan el idioma global |
 | `modules/users.md` | **as-built** | Alta automática de AD y Keycloak sin falsos errores en búsquedas previas |
-| `interfaz-y-experiencia.md` | **as-built** | Interfaz verificada, incluida la fuente y licencia accesibles en entrada y menú |
+| `interfaz-y-experiencia.md` | **as-built** | Selector, chip, edición, filtros y orden de prioridad |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Cuarta repetición pública completada y entorno limpio |
+| `ambientes.md` | **as-built** | Verificación de prioridades en las tres capas, sin producción |
 | `modules/ai.md` | **as-built** | Valida el idioma global, reintenta sólo motores sin proveedor pagado y descarta discrepancias |
-| `modules/tickets.md` | **as-built** | Ausencia normal sin falso error en tickets y catálogos |
+| `modules/tickets.md` | **as-built** | Modelo, API, historial, filtros, orden y seeder de prioridades |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe

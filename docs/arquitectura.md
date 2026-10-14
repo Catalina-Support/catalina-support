@@ -1,7 +1,11 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 23 coordina persistencia, API,
+> transacción, correo no bloqueante y pruebas de prioridad sin crear módulos ni dependencias. No se
+> modifica código fuera de este alcance. El responsable la aprobó explícitamente.
 >
 > **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13.** La instalación, el seeder y los tres
 > métodos de entrada funcionaron, pero las búsquedas previas a crear una categoría y una cuenta de
@@ -869,7 +873,7 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | El motor de IA, configurable desde la pantalla | **Su dirección y su modelo se configuran en Configuración**, con **su tarjeta y su botón de «Probar la conexión»** (prueba `<dirección>/health` con un tiempo corto y **no guarda nada**): el módulo `ai` los lee **en cada petición**, y `AI_URL`/`AI_MODEL` quedan **como respaldo**. La prueba se salta sola si el motor no está levantado (`docs/modules/settings.md`, decisión 16, sección 5.13) |
 | La vista de primer arranque (`/setup`) y el sello | En una instalación **sin sellar** —`installation_settings.installed_at` nulo— la aplicación lleva a **`/setup`**, que pide **en cinco pasos** instalación, entrada, ubicación, correo e IA, y al terminar **sella** la instalación: la vista no vuelve y su API contesta **409 `setup.alreadyInstalled`**. **Una instalación que ya estaba configurada queda sellada al actualizar**, y en desarrollo **el archivo de ejemplos sella**, para que el asistente no salga en cada arranque. Comprobado en navegador y por la API, incluido el 409. `docs/primer-arranque.md` |
 | Los endpoints de `users` | Probados de extremo a extremo: la lista con filtros y búsqueda, la ficha, los cambios, el perfil propio, desactivar y reactivar. Y los límites: Soporte no cambia el papel ni el correo de otro (**403**) ni ve la ficha de nadie, nadie se desactiva a sí mismo (**403 `users.selfDeactivation`**), el estado no se cambia por el `PATCH` (**422**), el origen inventado (**422**) y pasar a directorio se rechaza mientras no exista su consulta (**422**) |
-| El editor de los correos | La pantalla del módulo `mail`: los once correos a la izquierda, **los dos idiomas al lado** —apilados en móvil, medido por la prueba—, el cuerpo con sus botones de formato **envolviendo lo seleccionado**, los marcadores que **se insertan al pulsarlos**, la **vista previa que renderiza el backend** con los datos de ejemplo de la prueba, y los botones de guardar, volver al de fábrica y **enviarme una prueba**, que se lee en el buzón. Probado de extremo a extremo |
+| El editor de los correos | La pantalla del módulo `mail`: los doce correos a la izquierda, **los dos idiomas al lado** —apilados en móvil, medido por la prueba—, el cuerpo con sus botones de formato **envolviendo lo seleccionado**, los marcadores que **se insertan al pulsarlos**, la **vista previa que renderiza el backend** con los datos de ejemplo de la prueba, y los botones de guardar, volver al de fábrica y **enviarme una prueba**, que se lee en el buzón. Probado de extremo a extremo |
 | El idioma de la instalación | Es global para interfaz, correos y nuevos resúmenes; las cuentas no guardan idioma propio |
 | Las pantallas de tickets | La **bandeja** —una sola con tres nombres, tabla en PC y tarjetas en móvil, con chips de estado, búsqueda, paginación y el chip de tipo del Administrador—, el **alta** con arrastrar y soltar, y el **detalle**: una línea de tiempo con los comentarios y lo que hizo el sistema, la ficha con las acciones —a la derecha en PC y debajo en móvil, medido por la prueba—, **la vista doble** cuando hay interno y los adjuntos **con vista previa**. Probado en PC y en móvil, incluido que **el usuario no ve el interno**, que **Desarrollo no escribe en el principal** y que **al Administrador no se le ofrece ningún botón** |
 | El reparto y el prefijo, desde Configuración | La pantalla de Configuración tiene ya el **prefijo** —con el aviso de que no cambia los números ya emitidos— y el **reparto y el aviso** de cada tipo de ticket, con la opción «al asignado» desactivada cuando no se reparte |
@@ -1351,3 +1355,21 @@ estable y las demás rutas API devuelven `503`, de modo que la interfaz activa s
 de servidor no disponible. Después de migrar se reinicia el backend para montar las rutas completas.
 La suite backend y `go vet` pasaron. La prueba con PostgreSQL vacío confirmó que no aparecen
 consultas a `installation_settings` ni `ai_insights` y que la respuesta real es la acordada.
+
+## 23. Prioridad dentro del módulo de tickets
+
+La prioridad pertenece a la entidad principal de `tickets`; no nace un módulo, catálogo ni tabla
+configurable. La base guarda valores técnicos ingleses estables y el frontend traduce sus rótulos.
+La restricción SQL, el tipo de dominio y la validación HTTP comparten los cuatro valores y el orden
+operativo explícito.
+
+El servicio de tickets autoriza y guarda prioridad más historial en una transacción. Después del
+commit solicita a `mail` el aviso crítico mediante la interfaz interna existente entre módulos. La
+marca persistente de primer aviso se actualiza en la misma operación que decide enviarlo, evitando
+duplicados ante solicitudes concurrentes. El fallo posterior de SMTP no revierte datos ni añade
+colas o reintentos.
+
+Las consultas aplican filtros parametrizados y un `CASE` explícito para el orden, seguido por fecha
+de creación e identificador para estabilidad. El frontend conserva filtros y orden en la URL sin
+preferencias por cuenta. Las fronteras automáticas siguen iguales: la pantalla de tickets sólo llama
+a `/api/tickets/**` y `tickets` usa una interfaz para pedir el correo.

@@ -15,6 +15,7 @@ import (
 type CreateTicketRequest struct {
 	Subject     string `json:"subject"`
 	Description string `json:"description"`
+	Priority    string `json:"priority"`
 	// **Todo ticket nace con una categoría** (docs/modules/tickets.md, decisión 65): `categoryId` es
 	// obligatoria. `tags` es la lista de etiquetas tal y como se escriben: el backend las normaliza.
 	CategoryID int64    `json:"categoryId"`
@@ -49,6 +50,10 @@ type StateRequest struct {
 	State   string `json:"state"`
 	To      string `json:"to"`
 	Comment string `json:"comment"`
+}
+
+type PriorityRequest struct {
+	Priority string `json:"priority"`
 }
 
 // EscalateRequest escala el ticket: el motivo es obligatorio.
@@ -116,6 +121,7 @@ type TicketResponse struct {
 	Subject     string `json:"subject"`
 	Description string `json:"description"`
 	State       string `json:"state"`
+	Priority    string `json:"priority"`
 
 	// Reason es el motivo del escalado, en los internos. Parent es el número del principal, y Child el
 	// del interno: es lo que permite saltar de uno a otro en la vista doble.
@@ -216,7 +222,8 @@ type ObserverTicketResponse struct {
 
 // TicketEnvelope es la respuesta de un ticket y de las acciones sobre él.
 type TicketEnvelope struct {
-	Ticket TicketResponse `json:"ticket"`
+	Ticket  TicketResponse `json:"ticket"`
+	Warning string         `json:"warning,omitempty"`
 }
 
 // TicketDetailResponse es un ticket con todo lo que cuelga de él.
@@ -365,6 +372,7 @@ func NewTicketResponse(ticket services.Ticket) TicketResponse {
 		Subject:             ticket.Subject,
 		Description:         ticket.Description,
 		State:               ticket.State,
+		Priority:            ticket.Priority,
 		Reason:              ticket.Reason,
 		Parent:              ticket.Parent,
 		Child:               ticket.Child,

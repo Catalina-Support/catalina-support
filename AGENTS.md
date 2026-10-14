@@ -84,20 +84,20 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
-| `docs/propósito-y-alcance.md` | **as-built**: define el producto (los dos equipos, el modelo de tickets, la numeración y los estados), que es lo que hace hoy `backend/modules/tickets/**` |
-| `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
-| `docs/modules/tickets.md` | **as-built**: idioma validado en resúmenes y ausencia normal del interno sin falso error |
-| `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **as-built**: cuarta repetición pública completada y entorno limpio |
-| `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
+| `docs/propósito-y-alcance.md` | **as-built**: incorpora prioridad a la versión 1.0.0 |
+| `docs/usuarios-y-permisos.md` | **as-built**: permisos para proponer y modificar prioridad |
+| `docs/modules/tickets.md` | **as-built**: modelo, API, historial, filtros y orden de prioridad |
+| `docs/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
+| `docs/ambientes.md` | **as-built**: verificación de prioridades en las tres capas |
+| `docs/interfaz-y-experiencia.md` | **as-built**: selector, chip, edición y filtros de prioridad |
 | `docs/modules/settings.md` | **as-built**: filas únicas ausentes sin falso error de GORM |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
 | `docs/modules/ai.md` | **as-built**: validación local del idioma global y reintento según modalidad |
-| `docs/modules/mail.md` | **as-built**: plantilla ausente sin falso error de GORM |
+| `docs/modules/mail.md` | **as-built**: duodécima plantilla para prioridad crítica |
 | `docs/modules/auth.md` | **as-built**: token de contraseña ausente sin falso error de GORM |
 | `docs/modules/users.md` | **as-built**: búsquedas previas al alta de directorio sin falsos errores |
-| `docs/arquitectura.md` | **as-built**: ausencias esperadas por repositorio sin silenciar errores SQL |
-| `docs/prueba-local.md` | **as-built**: cuarta pasada pública completa y sin hallazgos abiertos |
+| `docs/arquitectura.md` | **as-built**: persistencia y correo crítico no bloqueante |
+| `docs/prueba-local.md` | **as-built**: recorrido local de las cuatro prioridades |
 | `docs/proyecto-abierto.md` | **as-built**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
@@ -130,14 +130,14 @@ con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `http
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
-La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintidós plantillas, `users`,
+La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veinticuatro plantillas, `users`,
 `password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
 IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
 su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
 Windows). Hay **cuatro módulos en marcha**:
 
-- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los once correos en sus dos idiomas, con vista previa y prueba—.
+- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los doce correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
@@ -327,9 +327,16 @@ cambiar el prefijo **no cambia los números ya emitidos**, y el enlace al **edit
 que es una pantalla del módulo `mail` a propósito: llamar a `/api/mail/**` desde `settings` rompería
 la regla dura de modularidad.
 
-**El editor de los correos está hecho**: los once correos con sus dos idiomas al lado, el cuerpo con
+**El editor de los correos está hecho**: los doce correos con sus dos idiomas al lado, el cuerpo con
 sus botones de formato sobre lo seleccionado, los marcadores que se insertan al pulsarlos y una **vista
 previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
+
+**Los tickets tienen prioridad operativa** (2026-10-14): baja, media, alta y crítica, con media como
+valor inicial. El Usuario la propone al crear; Soporte la corrige desde el principal y Desarrollo
+desde el interno, mientras el ticket siga abierto. Principal e interno comparten el valor, cada
+cambio queda en el historial y las listas filtran varios niveles y ordenan por prioridad o por
+actualización. La primera llegada a crítica manda una sola vez el duodécimo correo a todo Soporte
+activo; un fallo SMTP se muestra en un toast y no revierte el cambio.
 
 **Y el idioma de la instalación es el que se le pone a una cuenta nueva** cuando quien la da de alta no
 elige otro.
@@ -361,7 +368,7 @@ de soporte manual (decisión del responsable, 2026-09-25).
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f tests.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra una instalación
-desechable aislada, en PC y en móvil, con **218 casos** (180 ejecutables y 38 que se omiten según el
+desechable aislada, en PC y en móvil, con **222 casos** (184 ejecutables y 38 que se omiten según el
 servicio, el dispositivo o el perfil). **Los dos caminos de directorio se incluyen con el perfil `directory` de `tests.yml`**,
 que levanta servicios propios, separados de los opcionales del entorno local. Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no

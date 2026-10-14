@@ -1,7 +1,11 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 23 incorpora a las tres capas de prueba
+> la prioridad, su orden estable y el aviso crítico no bloqueante. Producción permanece fuera. No se
+> modifica producción. El responsable la aprobó explícitamente.
 >
 > **Cuarta pasada pública completada, 2026-10-13.** La sección 22 registra que los cuatro entornos
 > documentados se levantaron desde el `main` público, completaron el recorrido aprobado y fueron
@@ -1206,3 +1210,23 @@ La revisión final de logs quedó vacía para errores de SQL, ausencias esperada
 fatales. La limpieza bajó los cuatro proyectos por sus archivos Compose y eliminó sus volúmenes y
 redes. No se usó una poda global. Los recursos detenidos de producción se preservaron y no se
 ejecutaron `prod-build.sh`, la migración de producción, nginx, el dominio ni la etiqueta 1.0.0.
+
+## 23. Verificación de prioridades
+
+Backend cubre validación, autorización, transacción, aviso único, ticket cerrado y fallo SMTP contra
+PostgreSQL. Frontend cubre selector, chip accesible, edición, URL y toast de fallo. Playwright
+recorre creación, corrección por Soporte, lectura del Usuario, bandejas y Mailpit en PC y móvil; los
+permisos de Desarrollo sobre el interno y la conservación ante SMTP interrumpido se comprueban en
+backend. La suite de fronteras debe continuar limpia.
+
+La migración `v1.0.0.sql` se aplica dos veces sobre una base nueva. El seeder también se repite y
+conserva su carácter opcional e idempotente. No se ejecuta producción, no se abre el dominio y no se
+crea la etiqueta de versión.
+
+La verificación del 2026-10-14 ejecutó la suite backend completa, 228 pruebas del frontend y su
+compilación, además del recorrido E2E en PC y móvil. La pasada completa tuvo 181 casos aprobados y
+38 omisiones previstas; una recarga en vivo durante la revisión interrumpió un caso ajeno de
+Configuración, que después pasó aislado en una instancia recién creada. El recorrido focalizado de
+prioridades comprobó creación, edición, historial, URL recargable, lectura del Usuario y aviso único.
+La migración se reaplicó dos veces sin cambios y el seeder dos veces sin duplicados; quedaron 25
+tickets de ejemplo —2 críticos, 6 altos, 11 medios y 6 bajos— y 24 plantillas.
