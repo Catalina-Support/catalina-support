@@ -279,7 +279,7 @@ export const EN: Textos = {
     bandeja: 'Inbox',
     ticketsPrincipales: 'Main tickets',
     ticketsInternos: 'Internal tickets',
-    categorias: 'Categories and tags',
+    categorias: 'Classification',
     usuarios: 'Users',
     configuracion: 'Settings',
     opciones: 'Options',
@@ -781,7 +781,7 @@ export const EN: Textos = {
     nombreDeEtiqueta: 'Tag',
     etiquetasDescripcion:
       'This is what tells apart what a category does not. Tags are born when someone writes them on a ticket, and here they are fixed and retired.',
-    categoriasTitulo: 'Categories and tags',
+    categoriasTitulo: 'Classification',
     categoriasDescripcion:
       'Tickets are classified with this. Retiring a category stops offering it when creating, but does not touch the tickets that already have it.',
     categoriasLista: 'Categories',

@@ -282,7 +282,7 @@ export const ES = {
     bandeja: 'Bandeja',
     ticketsPrincipales: 'Tickets principales',
     ticketsInternos: 'Tickets internos',
-    categorias: 'Categorías y etiquetas',
+    categorias: 'Clasificación',
     usuarios: 'Usuarios',
     configuracion: 'Configuración',
     opciones: 'Opciones',
@@ -815,7 +815,7 @@ export const ES = {
     // --- «Categorías y etiquetas»: el catálogo (docs/interfaz-y-experiencia.md, sección 3.7) ---
     // La lista de categorías la mantienen Soporte y el Administrador; **retirar es sólo del
     // Administrador** (decisión 64). Abajo, las etiquetas que se están usando, con su cuenta.
-    categoriasTitulo: 'Categorías y etiquetas',
+    categoriasTitulo: 'Clasificación',
     categoriasDescripcion:
       'Con esto se clasifica cada ticket. Retirar una categoría deja de ofrecerla al crear, pero no toca los tickets que ya la tienen.',
     categoriasLista: 'Categorías',

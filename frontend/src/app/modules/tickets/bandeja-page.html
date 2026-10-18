@@ -1,6 +1,6 @@
 <main
   #contenedor
-  class="mx-auto flex max-w-[88rem] flex-col gap-6 md:h-[calc(100dvh-4.5rem)] md:min-h-[19rem]"
+  class="mx-auto flex max-w-[88rem] flex-col gap-6 md:h-[calc(100dvh-5.5rem)] md:min-h-[19rem] md:gap-3 lg:h-[calc(100dvh-2rem)]"
 >
   <!--
     **El nombre del módulo, los filtros y «Nuevo ticket», en una sola fila** (decisión del responsable,
@@ -23,7 +23,12 @@
     cuáles— con su botón de quitarlos. Antes eran tres filas de filtros, y la de categorías se salía de
     la pantalla en cuanto el catálogo crecía.
   -->
-    <app-boton forma="secundario" [texto]="t().tickets.abrirBusqueda" (pulsado)="abrirBusqueda()" />
+    <app-boton
+      forma="secundario"
+      [compacto]="true"
+      [texto]="t().tickets.abrirBusqueda"
+      (pulsado)="abrirBusqueda()"
+    />
 
     @if (cuantosFiltros()) {
       <span class="text-sm text-apagado">
@@ -42,7 +47,12 @@
     }
 
     @if (puedeCrear()) {
-      <app-boton class="ml-auto" [texto]="t().tickets.nuevo" (pulsado)="irANuevo()" />
+      <app-boton
+        class="ml-auto"
+        [compacto]="true"
+        [texto]="t().tickets.nuevo"
+        (pulsado)="irANuevo()"
+      />
     }
   </div>
 

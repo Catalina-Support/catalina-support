@@ -3,6 +3,19 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-17
 >
+> **Cambio de interfaz del 2026-10-17, aprobado, implementado y verificado:**
+> `interfaz-y-experiencia.md` amplía verticalmente las tablas operativas de tickets y usuarios,
+> compacta sus cabeceras y conserva 16 px de aire superior, inferior e interior. El repaso 1A–15A
+> quedó cerrado. Pasaron las 238 pruebas del frontend, las fronteras y la compilación; el navegador
+> confirmó ambas tablas en escritorio y que las tarjetas de tickets permanecen intactas en móvil.
+>
+> **Cambio de interfaz del 2026-10-17, aprobado, implementado y verificado:**
+> `interfaz-y-experiencia.md` reduce el menú lateral a 208/56 px, coloca el logo y el nombre en una
+> cabecera vertical centrada, separa el único control de plegado por encima del logo cuando está
+> plegado y renombra la pantalla conjunta como Classification/Clasificación. El repaso 1A–14A quedó
+> cerrado. Pasaron las 238 pruebas del frontend, las fronteras y la compilación; el navegador
+> confirmó escritorio abierto y plegado, cajón móvil, la marca centrada y Classification.
+>
 > **Portada pública cerrada el 2026-10-17:** `proyecto-abierto.md`, `ambientes.md` y
 > `prueba-local.md` documentan el README bilingüe, el sitio oficial, la demo compartida, Ko-fi y
 > dos capturas reales complementarias de la vista doble y la IA. Los enlaces relativos, la marca

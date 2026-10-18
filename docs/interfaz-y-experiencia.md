@@ -1,7 +1,26 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-16
+> **Última actualización:** 2026-10-17
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-17.** La sección 42 aprovecha el alto
+> disponible en las tablas operativas de tickets y usuarios: 16 px exteriores arriba y abajo, 12 px
+> entre cabecera y tabla, fila de acciones de 42 px y contenedor estable hasta el borde inferior.
+> El hallazgo es que hoy el armazón reserva 32 px arriba y 40 px abajo, la bandeja añade 24 px entre
+> bloques y sólo tickets calcula el alto restante; Usuarios conserva el flujo normal de página. El
+> responsable cerró el repaso con 1A–15A; no quedan decisiones abiertas. Pasaron las 238 pruebas
+> del frontend, sus fronteras y la compilación. El navegador confirmó en las bandejas de tickets y
+> Usuarios la cabecera compacta, el uso del alto disponible y la conservación de las tarjetas móviles.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-17.** La sección 41 reduce y
+> recompone el menú lateral: 208 px abierto y 56 px plegado, marca vertical centrada, logo mayor y
+> un único control de plegado en la parte superior. También adopta **Classification / Clasificación**
+> como nombre breve de la pantalla conjunta de categorías y etiquetas. El hallazgo de partida es que
+> esta sección todavía documentaba y la implementación todavía usa 240/64 px y una cabecera
+> horizontal que desplaza el logo al plegarse. El responsable cerró el repaso con 1A, 2A, 3B, 4C,
+> 5A–14A; no quedan decisiones abiertas. Pasaron las 238 pruebas del frontend, sus fronteras y la
+> compilación. El navegador confirmó escritorio abierto y plegado, cajón móvil, el control único,
+> la marca centrada y Classification con sus dos tarjetas.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 40 distingue el
 > rótulo visible de `en espera` según quien consulta el ticket: el Usuario leerá `Waiting for you` /
@@ -533,11 +552,10 @@ El orden importa: cuando dos choquen, gana el de más arriba.
 - En PC el menú se puede **plegar** y queda una tira de iconos; en tablet se plegará solo. **El
   estado se recuerda** en el navegador, como el tema: quien trabaja con el menú plegado no tiene que
   plegarlo cada mañana.
-- **Mide 15 rem (240 px)** y **4 rem (64 px) plegado** (ajustado el 2026-09-26: eran 16 rem). Es un
-  ancho que **enseña entero lo que hay dentro** —las opciones, tu nombre, salir y la versión— y que le
-  deja 16 px más al contenido, que es donde se leen los tickets. **Un nombre largo se corta con puntos
-  suspensivos**, no ensancha el menú ni parte la línea: lo que no puede pasar es que el menú crezca
-  según lo que alguien se llame.
+- **Mide 13 rem (208 px)** y **3,5 rem (56 px) plegado**. La reducción entrega más ancho al
+  contenido sin estrechar los blancos táctiles. El nombre de la instalación se muestra completo,
+  centrado y en las líneas que necesite debajo del logo; no ensancha el menú y la cabecera puede
+  crecer verticalmente.
 - **El menú enseña lo que existe**: cada entrada llega **con su pantalla**, no antes —un menú que
   lleva a ninguna parte es peor que un menú corto—, y no se enseña a quien no le toca. El usuario ve
   una sola opción, **Mis tickets**, y eso es todo lo que necesita: pedir y seguir lo suyo.
@@ -556,13 +574,13 @@ El orden importa: cuando dos choquen, gana el de más arriba.
 | Papel | Opciones del menú |
 | --- | --- |
 | **Usuario** | Mis tickets |
-| **Soporte** | Mis tickets · Tickets principales · Tickets internos · **Categorías y etiquetas** · Usuarios |
+| **Soporte** | Mis tickets · Tickets principales · Tickets internos · **Clasificación** · Usuarios |
 | **Desarrollo** | Mis tickets · Tickets principales · Tickets internos |
-| **Administrador** | Bandeja (sólo lectura) · **Categorías y etiquetas** · Usuarios · Configuración |
+| **Administrador** | Bandeja (sólo lectura) · **Clasificación** · Usuarios · Configuración |
 
 **Cinco entradas como máximo** en el caso más cargado —Soporte— y cuatro el Administrador, y **los
 controles no cuentan**: el perfil, **el idioma**, el tema y salir van abajo y son iguales para todos.
-**Eran cuatro hasta el 2026-09-27**, que entró **«Categorías y etiquetas»** con las categorías: es una
+**Eran cuatro hasta el 2026-09-27**, que entró la pantalla hoy llamada **«Clasificación»** con las categorías: es una
 pantalla de tickets —el catálogo son datos de los tickets, no configuración de la instalación— y por eso
 vive en el menú y no dentro de Configuración (`docs/modules/tickets.md`, decisión 64). Si algún papel
 llegara a necesitar más opciones, es señal de que algo se ha complicado en otro sitio.
@@ -790,7 +808,7 @@ cambia es lo que cada uno puede hacer dentro, no la pantalla.
 | **La bandeja del Administrador** | `/tickets` | Administrador | **Bandeja** |
 | El alta | `/tickets/new` | Usuario, Soporte y Desarrollo | — (se entra por el botón de la bandeja) |
 | El detalle | `/tickets/{numero}` | Quien pueda verlo | — |
-| **Categorías y etiquetas** | `/tickets/categories` | Soporte (mantiene el catálogo) y Administrador (además lo retira) | **Categorías y etiquetas** |
+| **Clasificación** | `/tickets/categories` | Soporte (consulta el catálogo) y Administrador (lo mantiene) | **Clasificación** |
 | El prefijo y el reparto | `/settings` | Administrador | **Configuración** |
 
 - **Una sola pantalla de lista con cuatro nombres**: es el papel el que decide qué se ve dentro, y el
@@ -2559,3 +2577,131 @@ El responsable decidió el 2026-10-16:
 El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
 el 2026-10-16. La implementación respeta el alcance aprobado; pasaron 76 pruebas focalizadas, las
 fronteras del frontend y la compilación.
+
+## 41. Menú lateral más estrecho y marca vertical
+
+El menú lateral conserva sus tres zonas y sus mismos permisos, rutas y controles, pero aprovecha
+mejor el ancho de la vista. En escritorio y en el cajón móvil mide **208 px abierto**. En escritorio
+plegado mide **56 px**; el cajón móvil no ofrece el estado plegado. Los enlaces conservan su área
+táctil, sus iconos, el estado activo y el foco visible.
+
+La cabecera abierta deja de ser una fila. El logo ocupa un marco de **80 × 80 px**, centrado, y el
+nombre completo de la instalación aparece debajo, también centrado, en tantas líneas como necesite.
+El nombre no ensancha el menú ni se trunca. El botón de plegar o cerrar ocupa la esquina superior
+derecha en un espacio reservado: no empuja ni descentra el logo.
+
+En el estado plegado, el único botón para desplegar se coloca arriba. El logo de **40 × 40 px** queda
+centrado debajo, y un único separador cierra todo el bloque de marca. Se elimina el segundo botón de
+desplegar que hoy se repite en la zona inferior. La marca no comparte fila con el control y, por
+tanto, no se desplaza hacia la izquierda. El nombre queda oculto visualmente en este estado.
+
+Los enlaces plegados mantienen el nombre mediante tooltip al pasar el puntero y mediante texto
+accesible para tecnologías de asistencia. La reducción no elimina ni sustituye ninguna entrada.
+
+La pantalla conjunta `/tickets/categories` y su entrada pasan a llamarse **Classification** en
+inglés y **Clasificación** en español. Dentro conserva dos tarjetas claramente tituladas
+**Categories / Categorías** y **Tags / Etiquetas**. No se separa en dos rutas ni en dos módulos, y no
+cambian sus datos, API, permisos ni operaciones.
+
+### 41.1 Hallazgo y alcance
+
+El contrato anterior fija 240 px abierto y 64 px plegado, y la implementación vigente coloca logo,
+nombre y control en una fila. En el estado plegado, los 64 px no alcanzan para logo y botón sin
+desplazar la marca. Además, `Categories and tags` no cabe con comodidad en el ancho propuesto aunque
+las dos materias ya forman una sola clasificación en listas y fichas.
+
+Quedan fuera de alcance las demás etiquetas del menú, el orden de las entradas, la navegación, los
+papeles, la persistencia del estado plegado, el comportamiento del cajón, el formato de los logos y
+la administración de categorías o etiquetas.
+
+### 41.2 Pruebas
+
+Las pruebas deben cubrir 208 px abierto y 56 px plegado, logo de 80 y 40 px, nombre institucional
+de varias líneas, un único botón de desplegar, ausencia de desplazamiento lateral de la marca,
+tooltip y nombre accesible en los enlaces plegados, y la nueva denominación en ambos idiomas. La
+comprobación en navegador recorrerá escritorio y móvil, menú abierto y plegado, nombre corto y largo,
+los ocho temas y los papeles que ven Clasificación.
+
+### 41.3 Registro del repaso
+
+El responsable decidió el 2026-10-17:
+
+1. conservar una sola pantalla y llamarla Classification / Clasificación;
+2. usar 208 px abierta y 56 px plegada, también 208 px en el cajón móvil;
+3. mostrar el logo a 80 × 80 px abierto y 40 × 40 px plegado;
+4. mostrar el nombre completo, centrado y sin límite de líneas;
+5. reservar la esquina superior derecha para plegar o cerrar sin mover la marca;
+6. poner el único control de despliegue arriba del logo cuando el menú está plegado;
+7. conservar un único separador debajo de todo el bloque de marca;
+8. eliminar el control inferior duplicado y conservar tooltip y texto accesible en las entradas;
+9. renombrar también el título de la pantalla y mantener dentro Categories y Tags.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
+el 2026-10-17. La implementación respeta el alcance aprobado; pasaron las 238 pruebas del frontend,
+las fronteras y la compilación. La comprobación real cubrió escritorio abierto y plegado y cajón
+móvil, y confirmó la marca centrada, el control único y Classification con Categories y Tags.
+
+## 42. Altura disponible para las tablas operativas
+
+Desde **768 px**, las bandejas de tickets y la lista de usuarios ocupan el alto disponible de la
+ventana. El armazón deja **16 px arriba y 16 px abajo** en estas pantallas. La cabecera y la tabla se
+distribuyen en una columna de alto limitado por la vista; la tabla crece con `flex` para llegar hasta
+el margen inferior incluso cuando tiene pocos resultados.
+
+La cabecera de cada listado conserva su jerarquía y contenido, pero reduce el espacio desperdiciado:
+la separación entre la cabecera y la tabla es de **12 px**. En tickets, título, Search/Buscar,
+resumen de filtros, limpieza y New ticket/Nuevo ticket comparten una sola fila de **42 px**, centrada
+verticalmente cuando el ancho lo permite. Los botones de esa fila usan 42 px, igual que los
+desplegables normalizados; el título conserva tamaño y peso.
+
+En Usuarios se mantienen el título, su descripción y el panel completo de filtros. La descripción
+continúa debajo del título con una separación menor, y sólo se reducen los márgenes externos del
+panel: campos, conmutadores y blancos internos conservan sus medidas actuales. New account/Nueva
+cuenta usa los mismos 42 px de la cabecera. La tabla pasa a administrar el alto restante como la de
+tickets.
+
+Los dos contenedores tienen un mínimo de **240 px** para seguir siendo utilizables en ventanas
+bajas. Después de la última fila conservan **16 px de espacio interior**, aunque haya pocos
+resultados. El borde exterior termina a 16 px del borde inferior de la ventana; no se ajusta a la
+última fila ni cambia de altura con el número de resultados.
+
+Por debajo de 768 px se conserva el flujo actual de tarjetas y de página. No se compactan controles
+táctiles ni se fuerza una región desplazable de alto fijo.
+
+### 42.1 Hallazgo y alcance
+
+El armazón vigente aplica 32 px superiores y 40 px inferiores en escritorio. La bandeja de tickets
+añade 24 px entre su cabecera y la tabla y calcula un alto de vista que descuenta 72 px. Usuarios no
+calcula el alto restante: sus filtros y tabla crecen con el documento. Esto produce márgenes
+desiguales y deja área vertical sin aprovechar.
+
+El cambio se limita a las bandejas de tickets y a la lista de usuarios. Quedan fuera los catálogos,
+el editor de correos, las fichas, formularios, configuración, tablas incrustadas, filas, columnas,
+orden, filtros, carga progresiva, paginación y contratos de API.
+
+### 42.2 Pruebas
+
+Las pruebas deben comprobar desde 768 px: 16 px exteriores arriba y abajo, 12 px entre cabecera y
+tabla, controles de cabecera de 42 px, tabla con mínimo de 240 px y 16 px interiores tras la última
+fila. También deben cubrir tickets con y sin acción de alta, Usuarios con descripción y filtros,
+pocos y muchos resultados, ventanas bajas y altas, y ausencia de cambio por debajo de 768 px. La
+comprobación real recorrerá escritorio, tableta y móvil en ambos idiomas y con menú abierto y plegado.
+
+### 42.3 Registro del repaso
+
+El responsable decidió el 2026-10-17:
+
+1. aplicar el patrón a las bandejas de tickets y a la tabla de usuarios;
+2. dejar 16 px arriba y abajo y 12 px entre cabecera y tabla;
+3. usar 42 px en los botones de las cabeceras, sin reducir el título;
+4. conservar una sola fila compacta en tickets cuando el ancho lo permita;
+5. mantener el contenedor hasta el borde inferior aunque haya pocos registros;
+6. conservar en Usuarios la descripción y el panel de filtros, reduciendo sólo márgenes externos;
+7. mantener un mínimo de tabla de 240 px y 16 px interiores después de la última fila;
+8. aplicar el alto disponible desde 768 px y conservar el flujo móvil actual.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
+el 2026-10-17. La implementación respeta el alcance acordado: aplica el alto disponible sólo a las
+bandejas de tickets y a Usuarios desde 768 px, compacta sus cabeceras y conserva el flujo móvil. Las
+238 pruebas del frontend, las fronteras y la compilación pasaron; la comprobación real confirmó las
+dos tablas en escritorio y las tarjetas de tickets en móvil.

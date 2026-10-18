@@ -43,33 +43,36 @@
     class="fixed left-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto border-r border-borde bg-superficie transition-transform duration-200 lg:sticky lg:translate-x-0"
     [class]="
       (cajonAbierto() ? 'translate-x-0 ' : '-translate-x-full ') +
-      (plegadoEfectivo() ? 'w-16 px-2' : 'w-60 px-3')
+      (plegadoEfectivo() ? 'w-14 px-1' : 'w-52 px-3')
     "
   >
     <!-- Zona 1: el producto. Es lo único que no se mueve. -->
     <div
-      class="flex items-center gap-2 border-b border-borde py-3"
-      [class.justify-center]="plegadoEfectivo()"
+      class="relative flex flex-col items-center gap-2 border-b border-borde py-3"
     >
-      <app-logo tamano="menu" />
-
       @if (plegadoEfectivo()) {
         <button
           type="button"
-          class="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
           [attr.aria-label]="t().menu.desplegar"
           (click)="alternarPlegado()"
         >
           <app-icono nombre="plegar" />
         </button>
+
+        <app-logo tamano="menu" />
       } @else {
-        <span class="truncate text-sm font-semibold text-texto">{{ nombreDeLaInstalacion() }}</span>
+        <app-logo tamano="menu-grande" />
+
+        <span class="w-full break-words text-center text-sm font-semibold text-texto">{{
+          nombreDeLaInstalacion()
+        }}</span>
 
         @if (esAncha()) {
           <!-- Plegar sólo donde hay sitio para la tira de iconos. -->
           <button
             type="button"
-            class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
+            class="absolute right-0 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
             [attr.aria-label]="t().menu.plegar"
             (click)="alternarPlegado()"
           >
@@ -80,7 +83,7 @@
         <!-- Y el cajón se cierra con su botón: en móvil el menú tapa el contenido. -->
         <button
           type="button"
-          class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto lg:hidden"
+          class="absolute right-0 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto lg:hidden"
           [attr.aria-label]="t().menu.cerrar"
           (click)="cerrarCajon()"
         >
@@ -112,18 +115,7 @@
 
     <!-- Zona 3: los controles, iguales para todos, separados por una línea. -->
     <div class="flex flex-col gap-3 border-t border-borde py-3">
-      @if (plegadoEfectivo()) {
-        <!-- Plegado no hay sitio para el nombre ni para los controles: se despliega para usarlos. -->
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-md px-3 py-2 text-sm text-apagado hover:bg-superficie-suave hover:text-texto"
-          [attr.title]="t().menu.desplegar"
-          (click)="alternarPlegado()"
-        >
-          <app-icono nombre="plegar" />
-          <span class="sr-only">{{ t().menu.desplegar }}</span>
-        </button>
-      } @else {
+      @if (!plegadoEfectivo()) {
         <!--
           Tu nombre es el camino a tu perfil: es lo que dice la sección 3.6, y evita una entrada más en
           el menú. La cuenta de fábrica no tiene perfil, así que ahí es texto y no enlace.
@@ -204,7 +196,13 @@
   <!-- El contenido. En móvil se le deja sitio para la tira de arriba, y **el hueco es más ancho en
        pantallas grandes sin llegar a ocupar todo** (quinta enmienda del 2026-09-29): `px-5` de base y
        `px-10` a partir de tablet/escritorio. -->
-  <main class="min-w-0 flex-1 px-5 pb-10 pt-20 lg:px-10 lg:pt-8">
+  <main
+    [class]="
+      esListadoOperativo()
+        ? 'min-w-0 flex-1 px-5 pb-10 pt-20 md:pb-4 md:pt-[4.5rem] lg:px-10 lg:pt-4'
+        : 'min-w-0 flex-1 px-5 pb-10 pt-20 lg:px-10 lg:pt-8'
+    "
+  >
     <router-outlet />
   </main>
 </div>

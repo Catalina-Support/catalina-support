@@ -1,11 +1,13 @@
-<main class="mx-auto flex max-w-6xl flex-col gap-6">
+<main
+  class="mx-auto flex max-w-6xl flex-col gap-6 md:h-[calc(100dvh-5.5rem)] md:min-h-[19rem] md:gap-3 lg:h-[calc(100dvh-2rem)]"
+>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-xl font-semibold text-texto">{{ t().usuarios.titulo }}</h1>
       <p class="text-sm text-apagado">{{ t().usuarios.descripcion }}</p>
     </div>
 
-    <app-boton [texto]="t().usuarios.nueva" (pulsado)="abrirAlta()" />
+    <app-boton [compacto]="true" [texto]="t().usuarios.nueva" (pulsado)="abrirAlta()" />
   </div>
 
   @if (mensaje(); as aviso) {
@@ -69,7 +71,9 @@
     documento duplicaría los identificadores de los campos de edición, y la etiqueta acabaría
     apuntando al campo escondido.
   -->
-  <section class="rounded-lg border border-borde bg-superficie">
+  <section
+    class="rounded-lg border border-borde bg-superficie md:min-h-60 md:flex-1 md:overflow-auto md:pb-4"
+  >
     @if (cargando()) {
       <p class="px-4 py-6 text-sm text-apagado">{{ t().usuarios.cargando }}</p>
     } @else if (!cuentas().length) {
