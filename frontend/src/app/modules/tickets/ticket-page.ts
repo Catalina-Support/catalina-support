@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { TranslationService } from '../../core/i18n/translation.service';
@@ -8,6 +8,7 @@ import { Boton } from '../../shared/components/boton';
 import { Conmutador, type OpcionConmutador } from '../../shared/components/conmutador';
 import { Estado } from '../../shared/components/estado';
 import { claveDelError } from '../../shared/errores';
+import { consultaDeAncho } from '../../shared/pantalla';
 import { AccionesDelTicket } from './acciones-del-ticket';
 import { etiquetaDeEstado } from './etiquetas';
 import { TicketVista, type Responsables } from './ticket-vista';
@@ -32,7 +33,7 @@ type FormaDeVer = 'principal' | 'losdos' | 'interno';
   imports: [AccionesDelTicket, Aviso, Boton, Conmutador, Estado, TicketVista],
   templateUrl: './ticket-page.html',
 })
-export class TicketPage implements OnInit {
+export class TicketPage implements OnInit, OnDestroy {
   /** El número que viene en la dirección: `ACME-2026-0042` o `INT-ACME-2026-0042`. */
   readonly numero = input.required<string>();
 
@@ -52,6 +53,17 @@ export class TicketPage implements OnInit {
   protected readonly categorias = signal<readonly Categoria[]>([]);
   protected readonly forma = signal<FormaDeVer>('principal');
   protected readonly copiado = signal(false);
+  private ultimaFormaIndividual: Exclude<FormaDeVer, 'losdos'> | null = null;
+
+  /** Las dos conversaciones caben como comparación desde 1152 px (decisión 8B). */
+  private readonly consultaDeComparacion = consultaDeAncho(1152);
+  protected readonly cabeLaComparacion = signal(this.consultaDeComparacion?.matches ?? true);
+  private readonly alCambiarElAncho = (evento: MediaQueryListEvent): void => {
+    this.cabeLaComparacion.set(evento.matches);
+    if (!evento.matches && this.forma() === 'losdos') {
+      this.forma.set(this.ultimaFormaIndividual ?? this.vistaDeEntrada());
+    }
+  };
 
   protected readonly esUsuario = computed(() => this.sesion.usuario()?.role === 'usuario');
 
@@ -83,11 +95,39 @@ export class TicketPage implements OnInit {
   /** Si el número que se abrió era el del interno y no el del principal. */
   private pedidoEraElInterno = false;
 
-  protected readonly opcionesDeVista = computed<readonly OpcionConmutador[]>(() => [
-    { valor: 'principal', etiqueta: this.t().tickets.vistaPrincipal },
-    { valor: 'losdos', etiqueta: this.t().tickets.vistaDoble },
-    { valor: 'interno', etiqueta: this.t().tickets.vistaInterna },
-  ]);
+  protected readonly opcionesDeVista = computed<readonly OpcionConmutador[]>(() => {
+    const opciones: OpcionConmutador[] = [
+      { valor: 'principal', etiqueta: this.t().tickets.vistaPrincipal },
+    ];
+    if (this.cabeLaComparacion()) {
+      opciones.push({ valor: 'losdos', etiqueta: this.t().tickets.vistaDoble });
+    }
+    opciones.push({ valor: 'interno', etiqueta: this.t().tickets.vistaInterna });
+    return opciones;
+  });
+
+  constructor() {
+    this.consultaDeComparacion?.addEventListener('change', this.alCambiarElAncho);
+  }
+
+  ngOnDestroy(): void {
+    this.consultaDeComparacion?.removeEventListener('change', this.alCambiarElAncho);
+  }
+
+  protected clasesDePagina(): string {
+    const base = 'flex flex-col gap-6';
+    return this.forma() === 'losdos'
+      ? `${base} h-[calc(100dvh-4.5rem)] min-h-0 w-full max-w-none overflow-hidden`
+      : `${base} mx-auto max-w-[88rem]`;
+  }
+
+  protected cambiarForma(valor: string): void {
+    const forma = valor as FormaDeVer;
+    if (forma !== 'losdos') {
+      this.ultimaFormaIndividual = forma;
+    }
+    this.forma.set(forma);
+  }
 
   /**
    * El ticket que se está mirando cuando **sólo se ve uno**, que es el que lleva el desplegable de
@@ -208,7 +248,7 @@ export class TicketPage implements OnInit {
       // **La vista por defecto es la del papel** (decisión del responsable, 2026-09-27): Soporte entra
       // por el principal y Desarrollo por el interno, que es el ticket con el que cada uno trabaja. Los
       // dos pueden cambiar a «Los dos» o al otro con el conmutador.
-      this.forma.set(this.vistaDeEntrada());
+      this.cambiarForma(this.vistaDeEntrada());
 
       await this.cargarResponsables();
       await this.cargarCategorias();

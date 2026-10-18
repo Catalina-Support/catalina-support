@@ -58,7 +58,7 @@ type PriorityRequest struct {
 
 // EscalateRequest escala el ticket: el motivo es obligatorio.
 type EscalateRequest struct {
-	Reason string `json:"reason"`
+	EscalationReason string `json:"escalationReason"`
 }
 
 // CommentRequest escribe un comentario.
@@ -67,13 +67,14 @@ type CommentRequest struct {
 }
 
 type ImproveWritingRequest struct {
-	Editor string `json:"editor"`
-	Draft  string `json:"draft"`
-	Tone   string `json:"tone"`
+	Editor             string `json:"editor"`
+	Draft              string `json:"draft"`
+	PreviousSuggestion string `json:"previousSuggestion,omitempty"`
 }
 
 type ImproveWritingResponse struct {
-	Text string `json:"text"`
+	Text           string `json:"text"`
+	QualityWarning bool   `json:"qualityWarning"`
 }
 
 // AssigneesResponse son las personas que pueden ser responsables, por tipo de ticket.
@@ -123,11 +124,11 @@ type TicketResponse struct {
 	State       string `json:"state"`
 	Priority    string `json:"priority"`
 
-	// Reason es el motivo del escalado, en los internos. Parent es el número del principal, y Child el
+	// EscalationReason es el motivo del escalado, en los internos. Parent es el número del principal, y Child el
 	// del interno: es lo que permite saltar de uno a otro en la vista doble.
-	Reason string `json:"reason,omitempty"`
-	Parent string `json:"parent,omitempty"`
-	Child  string `json:"child,omitempty"`
+	EscalationReason string `json:"escalationReason,omitempty"`
+	Parent           string `json:"parent,omitempty"`
+	Child            string `json:"child,omitempty"`
 
 	// **La categoría y las etiquetas viajan en el ticket** (docs/modules/tickets.md, decisión 67): en
 	// las listas y en la ficha, y en un interno son las de su principal, que es lo que hereda.
@@ -335,7 +336,7 @@ func NewPersonResponse(cuenta *auth.Account) *PersonResponse {
 // NewTicketResponse traduce un ticket.
 // InsightsResponse son los dos resúmenes del motor de IA, con lo que hace falta para pintarlos.
 type InsightsResponse struct {
-	Motivo       ResumenResponse `json:"motivo"`
+	Summary      ResumenResponse `json:"summary"`
 	UltimaAccion ResumenResponse `json:"ultimaAccion"`
 }
 
@@ -350,7 +351,7 @@ type ResumenResponse struct {
 // NewInsightsResponse traduce los dos campos de un ticket.
 func NewInsightsResponse(resumen services.Resumenes) InsightsResponse {
 	return InsightsResponse{
-		Motivo:       NewResumenResponse(resumen.Motivo),
+		Summary:      NewResumenResponse(resumen.Summary),
 		UltimaAccion: NewResumenResponse(resumen.UltimaAccion),
 	}
 }
@@ -373,7 +374,7 @@ func NewTicketResponse(ticket services.Ticket) TicketResponse {
 		Description:         ticket.Description,
 		State:               ticket.State,
 		Priority:            ticket.Priority,
-		Reason:              ticket.Reason,
+		EscalationReason:    ticket.EscalationReason,
 		Parent:              ticket.Parent,
 		Child:               ticket.Child,
 		Category:            NewCategoryResponse(ticket.Category),

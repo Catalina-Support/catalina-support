@@ -174,9 +174,16 @@ describe('TicketPage', () => {
     const columnas = [...host.querySelectorAll('app-ticket-vista')];
     expect(columnas.length).toBe(2);
 
+    const pagina = host.querySelector('main');
+    expect(pagina?.className).toContain('max-w-none');
+    expect(pagina?.className).toContain('overflow-hidden');
+
     // **Uno en cada columna**: no hay un control único de arriba del que no se sabría a quién cambia.
     for (const columna of columnas) {
       expect(columna.querySelectorAll('header app-acciones-del-ticket').length).toBe(1);
+      expect(columna.className).toContain('overflow-y-auto');
+      expect(columna.getAttribute('role')).toBe('region');
+      expect(columna.getAttribute('tabindex')).toBe('0');
     }
 
     expect(host.querySelectorAll('app-acciones-del-ticket').length).toBe(2);

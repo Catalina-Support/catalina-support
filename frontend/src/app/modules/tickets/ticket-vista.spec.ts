@@ -189,6 +189,25 @@ describe('TicketVista', () => {
     input.dispatchEvent(new Event('change'));
   }
 
+  it('usa todo el ancho sólo cuando muestra la conversación sin la ficha lateral', () => {
+    const individual = montar('soporte');
+    const rejillaIndividual = (individual.nativeElement as HTMLElement).querySelector(
+      'article > div.grid',
+    );
+    expect(rejillaIndividual?.className).toContain('lg:grid-cols-[2fr_1fr]');
+    expect(rejillaIndividual?.className).not.toContain('grid-cols-1');
+
+    individual.destroy();
+
+    const doble = montar('soporte');
+    doble.componentRef.setInput('soloLaConversacion', true);
+    doble.detectChanges();
+
+    const rejillaDoble = (doble.nativeElement as HTMLElement).querySelector('article > div.grid');
+    expect(rejillaDoble?.className).toContain('grid-cols-1');
+    expect(rejillaDoble?.className).not.toContain('lg:grid-cols-[2fr_1fr]');
+  });
+
   /**
    * Abre el modal de etiquetas (decisión 82) y comprueba que **pide el catálogo entero**: `all=1` y sin
    * `q`, porque no es la lista de sugerencias sino el catálogo.
@@ -386,7 +405,7 @@ describe('TicketVista', () => {
     expect(host.querySelector<HTMLSelectElement>('#asignar-CS-2026-0001')).toBeNull();
   });
 
-  it('con un resumen pendiente la ficha se relee sola y para cuando los dos están listos', () => {
+  it('con un resumen pendiente relee sólo los resúmenes y para cuando están listos', async () => {
     vi.useFakeTimers();
     try {
       const conPendiente: DetalleDeTicket = {
@@ -394,31 +413,46 @@ describe('TicketVista', () => {
         ticket: {
           ...DETALLE.ticket,
           insights: {
-            motivo: { state: 'pendiente' },
+            summary: { state: 'pendiente' },
             ultimaAccion: { state: 'pendiente' },
           },
         },
       };
 
       const fixture = montar('soporte', conPendiente);
-      let recargas = 0;
-      fixture.componentInstance.cambio.subscribe(() => (recargas += 1));
+      let recargasCompletas = 0;
+      fixture.componentInstance.cambio.subscribe(() => (recargasCompletas += 1));
 
-      // **El motor tarda, así que la ficha se relee sola** mientras haya algo pendiente.
+      // **El motor tarda, así que se consultan sólo sus datos** mientras haya algo pendiente.
       vi.advanceTimersByTime(8000);
-      expect(recargas).toBe(1);
-
-      // El padre recarga y sigue pendiente: se programa la siguiente relectura.
-      fixture.componentRef.setInput('detalle', { ...conPendiente });
+      const peticion = http.expectOne('/api/tickets/CS-2026-0001');
+      peticion.flush({
+        ...DETALLE,
+        ticket: { ...DETALLE.ticket, insights: conPendiente.ticket.insights },
+      });
+      await Promise.resolve();
       fixture.detectChanges();
+      expect(recargasCompletas).toBe(0);
+
+      // Si sigue pendiente, programa otra lectura; esta vez llegan ambos campos listos.
       vi.advanceTimersByTime(8000);
-      expect(recargas).toBe(2);
+      http.expectOne('/api/tickets/CS-2026-0001').flush({
+        ...DETALLE,
+        ticket: {
+          ...DETALLE.ticket,
+          insights: {
+            summary: { state: 'listo', text: 'Falla la red.' },
+            ultimaAccion: { state: 'listo', text: 'El usuario abrió el ticket.' },
+          },
+        },
+      });
+      await Promise.resolve();
+      fixture.detectChanges();
 
       // **Los dos listos: se para** y no se vuelve a sondear.
-      fixture.componentRef.setInput('detalle', { ...DETALLE });
-      fixture.detectChanges();
       vi.advanceTimersByTime(80000);
-      expect(recargas).toBe(2);
+      http.expectNone('/api/tickets/CS-2026-0001');
+      expect(recargasCompletas).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -538,9 +572,7 @@ describe('TicketVista', () => {
     const botonesDeSoporte = [
       ...(soporte.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
     ];
-    const ayuda = botonesDeSoporte.find(
-      (boton) => boton.textContent?.trim() === 'Mejorar con IA',
-    );
+    const ayuda = botonesDeSoporte.find((boton) => boton.textContent?.trim() === 'Mejorar con IA');
     expect(ayuda).toBeTruthy();
     expect(ayuda?.querySelector('[data-icono="ia"]')).toBeTruthy();
 
@@ -562,7 +594,9 @@ describe('TicketVista', () => {
         ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
       ].map((boton) => boton.textContent?.trim());
       expect(textos).not.toContain('Mejorar con IA');
-      expect((fixture.nativeElement as HTMLElement).querySelector('app-mejorar-redaccion')).toBeNull();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('app-mejorar-redaccion'),
+      ).toBeNull();
       fixture.destroy();
     }
   });

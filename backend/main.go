@@ -108,15 +108,15 @@ type resumidorDeIA struct {
 
 func (r resumidorDeIA) Configured() bool { return r.ai.Configurado() }
 
-func (r resumidorDeIA) ImproveDraft(draft, tone, recipient, ticketType, language string) (string, error) {
-	text, err := r.ai.MejorarRedaccion(draft, tone, recipient, ticketType, language)
+func (r resumidorDeIA) ImproveDraft(draft, previousSuggestion, recipient, ticketType, language string) (ticketservices.WritingSuggestion, error) {
+	result, err := r.ai.MejorarRedaccion(draft, previousSuggestion, recipient, ticketType, language)
 	if errors.Is(err, aiservices.ErrSinMotor) {
-		return "", ticketservices.ErrWritingUnavailable
+		return ticketservices.WritingSuggestion{}, ticketservices.ErrWritingUnavailable
 	}
 	if errors.Is(err, aiservices.ErrRespuestaInvalida) {
-		return "", ticketservices.ErrWritingInvalid
+		return ticketservices.WritingSuggestion{}, ticketservices.ErrWritingInvalid
 	}
-	return text, err
+	return ticketservices.WritingSuggestion{Text: result.Texto, QualityWarning: result.CalidadInsuficiente}, err
 }
 
 // Pedir encola un resumen. **No espera al motor**: quien crea un ticket no puede quedarse mirando un
@@ -139,7 +139,7 @@ func (r resumidorDeIA) De(numeros []string) (map[string]ticketservices.Resumenes
 	convertidos := make(map[string]ticketservices.Resumenes, len(resumenes))
 	for numero, dos := range resumenes {
 		convertidos[numero] = ticketservices.Resumenes{
-			Motivo:       resumenDelMotor(dos.Motivo),
+			Summary:      resumenDelMotor(dos.Summary),
 			UltimaAccion: resumenDelMotor(dos.UltimaAccion),
 		}
 	}
@@ -158,6 +158,10 @@ type textosDeTickets struct {
 // TextoParaElMotor arma otra vez el texto de ese ticket.
 func (t textosDeTickets) TextoParaElMotor(numero string) (string, error) {
 	return t.tickets.TextoParaElMotor(numero)
+}
+
+func (t textosDeTickets) NumerosParaRegenerarInsights() ([]string, error) {
+	return t.tickets.NumerosParaRegenerarInsights()
 }
 
 // resumenDelMotor traduce un resumen del módulo `ai` al que espera `tickets`.
@@ -436,8 +440,14 @@ func run() error {
 	mux.HandleFunc("POST /api/setup/ai", setupController.SaveAI)
 	mux.HandleFunc("GET /api/setup/ai/models", setupController.AIModels)
 	mux.HandleFunc("POST /api/setup/ai/models/{id}/download", setupController.DownloadAIModel)
+	mux.HandleFunc("DELETE /api/setup/ai/models/{id}/download", setupController.CancelAIModelDownload)
+	mux.HandleFunc("DELETE /api/setup/ai/models/{id}/partial", setupController.DeleteAIModelPartial)
+	mux.HandleFunc("POST /api/setup/ai/models/active/test", setupController.TestActiveAIModel)
 	mux.HandleFunc("POST /api/setup/ai/models/{id}/activate", setupController.ActivateAIModel)
+	mux.HandleFunc("POST /api/setup/ai/models/{id}/deactivate", setupController.DeactivateAIModel)
 	mux.HandleFunc("DELETE /api/setup/ai/models/{id}", setupController.DeleteAIModel)
+	mux.HandleFunc("POST /api/setup/brand/logo", setupController.UploadLogo)
+	mux.HandleFunc("DELETE /api/setup/brand/logo", setupController.DeleteLogo)
 	// Las dos pruebas de conexión del asistente: se prueba **lo que hay en pantalla**, antes de
 	// guardarlo, y por eso van por `POST` con los datos en el cuerpo y no tocan la base. El candado es
 	// el mismo que el del resto del asistente: sellada la instalación, contestan **409**
@@ -485,9 +495,8 @@ func run() error {
 	mux.Handle("POST /api/tickets/{number}/state", authenticated(http.HandlerFunc(ticketsController.State)))
 	mux.Handle("POST /api/tickets/{number}/escalate", authenticated(http.HandlerFunc(ticketsController.Escalate)))
 	mux.Handle("POST /api/tickets/{number}/reopen", authenticated(http.HandlerFunc(ticketsController.Reopen)))
-	// «Regenerar» los dos campos que redacta el motor de IA: es de `tickets` y no de `ai`, porque la
-	// pantalla de tickets sólo habla con su propia API (docs/modules/ai.md, sección 5).
-	mux.Handle("POST /api/tickets/{number}/insights", authenticated(http.HandlerFunc(ticketsController.Insights)))
+	// La mejora de borradores pertenece a `tickets`, no a `ai`: la pantalla sólo habla con la API
+	// de su módulo y `tickets` aplica permisos y construye el contexto autorizado.
 	mux.Handle("POST /api/tickets/{number}/writing/improve", authenticated(http.HandlerFunc(ticketsController.ImproveWriting)))
 	// El catálogo de categorías y las etiquetas (docs/modules/tickets.md, decisiones 64 a 68). Los
 	// caminos literales `categories` y `tags` **no chocan con `{number}`**: el enrutador de Go 1.22
@@ -534,7 +543,11 @@ func run() error {
 	mux.Handle("POST /api/settings/ai/activate", admin(http.HandlerFunc(settingsController.ActivateAI)))
 	mux.Handle("GET /api/settings/ai/models", admin(http.HandlerFunc(settingsController.AIModels)))
 	mux.Handle("POST /api/settings/ai/models/{id}/download", admin(http.HandlerFunc(settingsController.DownloadAIModel)))
+	mux.Handle("DELETE /api/settings/ai/models/{id}/download", admin(http.HandlerFunc(settingsController.CancelAIModelDownload)))
+	mux.Handle("DELETE /api/settings/ai/models/{id}/partial", admin(http.HandlerFunc(settingsController.DeleteAIModelPartial)))
+	mux.Handle("POST /api/settings/ai/models/active/test", admin(http.HandlerFunc(settingsController.TestActiveAIModel)))
 	mux.Handle("POST /api/settings/ai/models/{id}/activate", admin(http.HandlerFunc(settingsController.ActivateAIModel)))
+	mux.Handle("POST /api/settings/ai/models/{id}/deactivate", admin(http.HandlerFunc(settingsController.DeactivateAIModel)))
 	mux.Handle("DELETE /api/settings/ai/models/{id}", admin(http.HandlerFunc(settingsController.DeleteAIModel)))
 	mux.Handle("DELETE /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.DeleteLogo)))
 

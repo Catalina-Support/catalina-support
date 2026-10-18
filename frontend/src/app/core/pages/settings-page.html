@@ -108,15 +108,17 @@
 
             <div class="flex flex-wrap items-center gap-4">
               <!-- La vista previa: lo que se ve es lo que hay puesto, con el hueco que toca. -->
-              <span
-                class="inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-borde bg-superficie p-1"
+              <label
+                class="inline-flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-borde bg-superficie p-1 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primario"
+                [attr.aria-label]="hueco.oscuro ? t().configuracion.logoOscuro : t().configuracion.logoClaro"
               >
                 <img
                   [src]="vistaPrevia(hueco.oscuro)"
                   [alt]="t().configuracion.vistaPrevia"
                   class="max-h-full max-w-full object-contain"
                 />
-              </span>
+                <input class="sr-only" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="elegirArchivo(hueco.oscuro, $event)" />
+              </label>
 
               <div class="flex flex-1 flex-col gap-2">
                 @if (hayLogoPropio(hueco.oscuro)) {
@@ -132,28 +134,9 @@
                   <p class="text-sm text-apagado">{{ t().configuracion.logoDeFabrica }}</p>
                 }
 
-                <!-- El campo de archivo va etiquetado: es lo que hace visible que ahí se elige uno. -->
-                <label class="flex flex-col gap-1 text-sm font-medium text-texto">
-                  {{ t().configuracion.elegirArchivo }}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    class="rounded-md border border-borde-fuerte bg-superficie px-2 py-1.5 text-sm text-texto"
-                    (change)="elegirArchivo(hueco.oscuro, $event)"
-                  />
-                </label>
-
                 <p class="text-xs text-apagado">{{ t().configuracion.formatos }}</p>
 
                 <div class="flex flex-wrap gap-2">
-                  <app-boton
-                    [texto]="t().configuracion.subir"
-                    [textoTrabajando]="t().configuracion.subiendo"
-                    [trabajando]="guardando()"
-                    [deshabilitado]="!(hueco.oscuro ? archivoOscuro() : archivoClaro())"
-                    (pulsado)="subir(hueco.oscuro)"
-                  />
-
                   @if (hayLogoPropio(hueco.oscuro)) {
                     <app-boton
                       forma="secundario"
@@ -679,29 +662,34 @@
         />
 
         @if (iaModo() === 'local') {
-          <app-selector identificador="ia-modelo-local" [etiqueta]="t().configuracion.iaModelo"
-            [opciones]="opcionesDeModeloLocal()" [valor]="iaModelo()"
-            (valorChange)="iaModelo.set($event)" />
           <div class="flex flex-col gap-3 rounded-md border border-borde p-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3>
               <app-boton forma="secundario" [texto]="t().configuracion.iaCargarCatalogo"
-                [trabajando]="guardando()" (pulsado)="cargarCatalogoIA()" />
+                [textoTrabajando]="t().configuracion.iaRefrescandoCatalogo"
+                [trabajando]="refrescandoCatalogo()" (pulsado)="cargarCatalogoIA()" />
             </div>
             @if (catalogoIA(); as catalogo) {
               <p class="text-xs text-apagado">{{ interpolar(t().configuracion.iaDiscoDisponible, { cantidad: formatoBytes(catalogo.diskAvailableBytes) }) }}</p>
               @for (modelo of catalogo.models; track modelo.id) {
                 <article class="flex flex-col gap-2 rounded-md bg-superficie-suave p-3 text-sm">
-                  <div class="flex flex-wrap justify-between gap-2"><strong>{{ modelo.name }}</strong><span>{{ modelo.active ? t().configuracion.iaActivo + ' · ' + (modelo.healthy ? t().configuracion.iaSaludable : t().configuracion.iaNoSaludable) : modelo.installed ? t().configuracion.iaInstalado : modelo.downloading ? t().configuracion.iaDescargando : '' }}</span></div>
+                  <div class="flex flex-wrap justify-between gap-2"><strong>{{ modelo.name }}</strong><span>{{ modelo.active ? t().configuracion.iaActivo + ' · ' + (modelo.healthy ? t().configuracion.iaSaludable : t().configuracion.iaNoSaludable) : modelo.installed ? t().configuracion.iaInactivo : modelo.downloading ? t().configuracion.iaDescargando : '' }}</span></div>
                   @if (modelo.error) { <p class="text-xs text-error">{{ modelo.error }}</p> }
+                  @if (modelo.downloading || modelo.downloadedBytes > 0) {
+                    <progress class="h-2 w-full" [value]="modelo.downloadedBytes" [max]="modelo.downloadBytes">{{ progreso(modelo) }}%</progress>
+                    <p class="text-xs text-apagado">{{ progreso(modelo) }}% · {{ formatoBytes(modelo.downloadedBytes) }} / {{ formatoBytes(modelo.downloadBytes) }}</p>
+                  }
                   <p class="text-apagado">{{ interpolar(t().configuracion.iaRecursos, { disco: formatoBytes(modelo.downloadBytes), ram: formatoBytes(modelo.ramBytes) }) }}</p>
                   <p class="break-all text-xs text-apagado">SHA-256: {{ modelo.checksum }}</p>
                   <a class="text-primario underline" [href]="modelo.source" target="_blank" rel="noopener">{{ modelo.license }}</a>
                   @if (!modelo.installed && !modelo.downloading) {
                     <label class="flex gap-2"><input type="checkbox" [checked]="licenciasAceptadas().has(modelo.id)" (change)="aceptarLicencia(modelo.id, $any($event.target).checked)" />{{ t().configuracion.iaAceptarLicencia }}</label>
-                    <app-boton forma="secundario" [texto]="t().configuracion.iaDescargar" [deshabilitado]="!licenciasAceptadas().has(modelo.id)" (pulsado)="descargarModelo(modelo.id)" />
+                    <app-boton forma="secundario" [texto]="modelo.partial ? t().configuracion.iaReanudar : t().configuracion.iaDescargar" [deshabilitado]="!licenciasAceptadas().has(modelo.id)" (pulsado)="descargarModelo(modelo.id)" />
+                    @if(modelo.partial){<app-boton forma="secundario" [texto]="t().configuracion.iaEliminarParcial" (pulsado)="pedirEliminarParcial(modelo.id)" />}
                   }
-                  @if (modelo.installed && !modelo.active) { <div class="flex gap-2"><app-boton [texto]="t().configuracion.iaActivar" (pulsado)="activarModelo(modelo.id)" /><app-boton forma="secundario" [texto]="t().configuracion.iaEliminar" (pulsado)="eliminarModelo(modelo.id)" /></div> }
+                  @if(modelo.downloading){<app-boton forma="secundario" [texto]="t().configuracion.iaCancelar" (pulsado)="cancelarDescarga(modelo.id)" />}
+                  @if (modelo.installed && !modelo.active) { <div class="flex gap-2"><app-boton [texto]="t().configuracion.iaActivar" (pulsado)="activarModelo(modelo.id)" /><app-boton forma="secundario" [texto]="t().configuracion.iaEliminar" (pulsado)="pedirEliminarModelo(modelo.id)" /></div> }
+                  @if(modelo.active){<div class="flex flex-wrap gap-2"><app-boton forma="secundario" [texto]="t().configuracion.iaDesactivar" (pulsado)="desactivarModelo(modelo.id)" /> @if(modelo.healthy){<app-boton forma="secundario" [texto]="t().configuracion.iaPruename" (pulsado)="probarModeloActivo()" />}</div>}
                 </article>
               }
             }
@@ -763,5 +751,17 @@
         {{ t().configuracion.editarCorreos }}
       </a>
     </app-tarjeta>
+  }
+
+  @if (confirmacionModelo(); as confirmacion) {
+    <app-dialogo [titulo]="confirmacion.parcial ? t().configuracion.iaEliminarParcial : t().configuracion.iaEliminar" [etiquetaCerrar]="t().comun.cerrar" [abierto]="true" (cerrado)="confirmacionModelo.set(null)">
+      <div class="flex flex-col gap-5">
+        <p class="text-sm text-texto">{{ confirmacion.parcial ? t().configuracion.iaConfirmarEliminarParcial : t().configuracion.iaConfirmarEliminar }}</p>
+        <div class="flex flex-wrap justify-end gap-2">
+          <app-boton forma="secundario" [texto]="t().comun.cancelar" (pulsado)="confirmacionModelo.set(null)" />
+          <app-boton forma="peligro" [texto]="confirmacion.parcial ? t().configuracion.iaEliminarParcial : t().configuracion.iaEliminar" (pulsado)="confirmarEliminacion()" />
+        </div>
+      </div>
+    </app-dialogo>
   }
 </main>

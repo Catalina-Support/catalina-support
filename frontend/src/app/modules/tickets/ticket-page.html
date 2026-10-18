@@ -1,4 +1,4 @@
-<main class="mx-auto flex max-w-[88rem] flex-col gap-6">
+<main [class]="clasesDePagina()">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-3">
       <!--
@@ -64,7 +64,7 @@
           [etiqueta]="t().tickets.vistaEtiqueta"
           [opciones]="opcionesDeVista()"
           [valor]="forma()"
-          (valorChange)="forma.set($any($event))"
+          (valorChange)="cambiarForma($event)"
         />
       }
 
@@ -95,12 +95,16 @@
       (cambio)="recargar()"
     />
   } @else if (forma() === 'losdos') {
-    <div class="grid gap-6 xl:grid-cols-2">
+    <div class="grid min-h-0 flex-1 grid-cols-2 gap-6">
       @if (principal(); as detalle) {
         <!-- **Sólo la conversación**: en «Los dos» las fichas no se enseñan (decisión del responsable,
              2026-09-27); con las cuatro columnas la pantalla se ve saturada. Para actuar sobre uno de
              los dos, se elige con el conmutador. -->
         <app-ticket-vista
+          class="min-h-0 overflow-y-auto overscroll-contain pr-2"
+          role="region"
+          tabindex="0"
+          [attr.aria-label]="detalle.ticket.number"
           [detalle]="detalle"
           [responsables]="responsables()"
           [categorias]="categorias()"
@@ -112,6 +116,10 @@
 
       @if (interno(); as detalle) {
         <app-ticket-vista
+          class="min-h-0 overflow-y-auto overscroll-contain pr-2"
+          role="region"
+          tabindex="0"
+          [attr.aria-label]="detalle.ticket.number"
           [detalle]="detalle"
           [responsables]="responsables()"
           [categorias]="categorias()"

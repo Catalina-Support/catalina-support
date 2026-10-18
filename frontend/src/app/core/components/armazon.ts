@@ -1,5 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 
 import { Controles } from './controles';
 import { Aviso } from '../../shared/components/aviso';
@@ -42,6 +44,19 @@ export class Armazon {
   private readonly textos = inject(TranslationService);
   private readonly router = inject(Router);
 
+  /** La ruta activa decide si el armazón entrega casi todo el alto a una tabla operativa. */
+  private readonly rutaActiva = toSignal(
+    this.router.events.pipe(
+      filter((evento): evento is NavigationEnd => evento instanceof NavigationEnd),
+      map((evento) => evento.urlAfterRedirects.split(/[?#]/, 1)[0]),
+    ),
+    { initialValue: this.router.url.split(/[?#]/, 1)[0] },
+  );
+
+  protected readonly esListadoOperativo = computed(() =>
+    ['/tickets', '/tickets/main', '/tickets/internal', '/users'].includes(this.rutaActiva()),
+  );
+
   protected readonly usuario = this.sesion.usuario;
 
   /**
@@ -54,8 +69,6 @@ export class Armazon {
   /** La versión del sistema, con su `v`: se lee en la fila de salir, alineada a la derecha. */
   protected readonly versionDelSistema = this.marca.versionDelSistema;
 
-  /** Licencia y fuente correspondiente de esta compilación. */
-  protected readonly fuente = this.marca.fuente;
 
   /** Si el menú está recogido: la tira de iconos. Es una elección, y se recuerda. */
   private readonly plegado = signal(leerPlegado());

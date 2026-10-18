@@ -71,12 +71,41 @@ func (c *SettingsController) ActivateAIModel(w http.ResponseWriter, r *http.Requ
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+func (c *SettingsController) DeactivateAIModel(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.DeactivateAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 func (c *SettingsController) DeleteAIModel(w http.ResponseWriter, r *http.Request) {
 	if err := c.service.DeleteAIModel(r.PathValue("id")); err != nil {
 		c.fail(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SettingsController) CancelAIModelDownload(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.CancelAIModelDownload(r.PathValue("id")); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SettingsController) DeleteAIModelPartial(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.DeleteAIModelPartial(r.PathValue("id")); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SettingsController) TestActiveAIModel(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.TestActiveAIModel()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // Update guarda la configuración.

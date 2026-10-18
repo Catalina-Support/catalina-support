@@ -1,7 +1,141 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-17
+>
+> **Cambio de interfaz del 2026-10-17, aprobado, implementado y verificado:**
+> `interfaz-y-experiencia.md` amplía verticalmente las tablas operativas de tickets y usuarios,
+> compacta sus cabeceras y conserva 16 px de aire superior, inferior e interior. El repaso 1A–15A
+> quedó cerrado. Pasaron las 238 pruebas del frontend, las fronteras y la compilación; el navegador
+> confirmó ambas tablas en escritorio y que las tarjetas de tickets permanecen intactas en móvil.
+>
+> **Cambio de interfaz del 2026-10-17, aprobado, implementado y verificado:**
+> `interfaz-y-experiencia.md` reduce el menú lateral a 208/56 px, coloca el logo y el nombre en una
+> cabecera vertical centrada, separa el único control de plegado por encima del logo cuando está
+> plegado y renombra la pantalla conjunta como Classification/Clasificación. El repaso 1A–14A quedó
+> cerrado. Pasaron las 238 pruebas del frontend, las fronteras y la compilación; el navegador
+> confirmó escritorio abierto y plegado, cajón móvil, la marca centrada y Classification.
+>
+> **Portada pública cerrada el 2026-10-17:** `proyecto-abierto.md`, `ambientes.md` y
+> `prueba-local.md` documentan el README bilingüe, el sitio oficial, la demo compartida, Ko-fi y
+> dos capturas reales complementarias de la vista doble y la IA. Los enlaces relativos, la marca
+> local restaurada y los Compose de desarrollo e IA quedaron verificados; no se tocó producción ni
+> ningún entorno público.
+>
+> **Corrección coordinada del 2026-10-16, aprobada, implementada y verificada:**
+> `modules/tickets.md` devuelve a Soporte la transición visible Esperando → En progreso que el
+> backend ya admite. `modules/ai.md` impide que una generación antigua sobrescriba a la vigente,
+> añade una recuperación automática diferida y finita y recupera una vez los errores existentes.
+> Parte de tres fallos reproducidos durante el recorrido real de `CS-2026-0028` a `CS-2026-0030`.
+> El responsable eligió 1A–4A. Pasaron 238 pruebas frontend, compilación, fronteras y las pruebas de
+> IA contra repositorio real; el navegador ejecutó el retorno en `CS-2026-0011`. La suite backend
+> conserva el fallo previo y ajeno de prioridad desde un interno. No vuelven las acciones manuales
+> de IA.
+>
+> **Cambio del 2026-10-16, aprobado, implementado y verificado:** `interfaz-y-experiencia.md` distingue el
+> estado `en espera` por papel en toda la UI: `Waiting for you` / `Esperándote` para el Usuario y
+> `Waiting` / `Esperando` para Soporte, Desarrollo y Administrador. No cambia API, base de datos ni
+> correos. Pasaron 76 pruebas focalizadas, las fronteras y la compilación del frontend.
+>
+> **Propuesta coordinada del 2026-10-15, pendiente de aprobación documental:**
+> `interfaz-y-experiencia.md` y `modules/tickets.md` hacen visible **Action/Acción** sobre la columna
+> de **Open/Abrir**, centrada y con ancho mínimo. La UI confirmó que la celda estaba dentro de la
+> tabla, pero su encabezado `sr-only` provocaba la separación visual. El repaso posterior define
+> orden, jerarquía de anchos, truncado, clasificación limitada, variantes intermedia y móvil y
+> pruebas en ambos idiomas. El repaso final añade ayudas accesibles con teclado, etiquetas ocultas
+> enumeradas, respuesta al ancho real del contenedor y conservación de la ordenación existente. No
+> quedan decisiones abiertas y todavía no se modifica código.
+>
+> **Cambio coordinado del 2026-10-15, aprobado, implementado y verificado:** `modules/ai.md`,
+> `modules/tickets.md`, `interfaz-y-experiencia.md` y `arquitectura.md` convierten Motivo/Reason en
+> Summary/Resumen estable, retiran botones y endpoint de reintento, y migran el contrato afectado a
+> `summary` y `escalationReason`. El responsable eligió 1A–20B, aceptó la regeneración total incluso
+> con proveedor y no dejó decisiones abiertas. La migración se aplicó sólo en desarrollo; pasaron
+> las pruebas específicas, las 231 pruebas del frontend, sus fronteras y la compilación. La suite
+> completa del backend conserva el fallo previo de prioridad desde un interno, ajeno a este cambio.
+>
+> **Corrección coordinada del 2026-10-15, aprobada, implementada y verificada:** `modules/ai.md`,
+> `modules/tickets.md` y `arquitectura.md` corrigen la última acción que copiaba la razón, entregan
+> contexto funcional completo de principal e interno, vinculan evento y comentario, validan actor y
+> acción y regeneran en segundo plano las filas existentes. El responsable eligió 1A–14A y aprobó
+> explícitamente los documentos; no quedan decisiones abiertas.
+>
+> **Corrección coordinada del 2026-10-15, aprobada, implementada y verificada:**
+> `interfaz-y-experiencia.md` fija todos los desplegables en 42 px para igualarlos al conmutador
+> Main/Both/Internal. `ambientes.md` confirma que `ng serve` ya reconstruye y recarga con respuestas
+> `no-cache`, por lo que no se añaden banderas redundantes ni polling. El responsable eligió 1A–5A.
+> Pasaron las 232 pruebas del frontend, la compilación y la medición real de 42 px; no quedan
+> decisiones abiertas.
+>
+> **Ajuste del 2026-10-15, aprobado, implementado y verificado:**
+> `interfaz-y-experiencia.md` registra que los 52 px se sirvieron correctamente pero resultaron
+> demasiado grandes. Todos los desplegables usan ahora 48 px, conservando tipografía y padding.
+> Pasaron las 232 pruebas del frontend, la compilación y la medición en una pestaña nueva; no quedan
+> decisiones abiertas.
+>
+> **Corrección del 2026-10-15, aprobada, implementada y verificada:**
+> `interfaz-y-experiencia.md` registra que los 44 px sí se aplicaron, pero todavía se percibían
+> demasiado delgados. Todos los desplegables usan ahora 52 px sin agrandar la tipografía. Pasaron
+> las 232 pruebas del frontend, la compilación y la medición real; no fue necesario reiniciar los
+> contenedores y no quedan decisiones abiertas.
+>
+> **Implementación del 2026-10-15, aprobada y verificada:** `interfaz-y-experiencia.md` alinea todos
+> los desplegables con la altura mínima de 44 px y el espaciado de los campos de texto, sin variantes
+> compactas y en todos los tamaños de pantalla. Pasaron las 232 pruebas del frontend, la compilación
+> y la revisión real en PC y móvil; no quedan decisiones abiertas.
+>
+> **Implementación coordinada cerrada el 2026-10-15, con aprobación explícita:** `modules/ai.md`,
+> `modules/tickets.md` e `interfaz-y-experiencia.md` rechazan resúmenes sin significado, conservan
+> el texto anterior ante fallos, miden paráfrasis reales y evitan que el refresco de la IA destruya
+> borradores o propuestas locales. Parte de los hallazgos reproducidos en `CS-2026-0026`; el repaso
+> 1A–15A quedó cerrado, con 8B. La corrección posterior del responsable retiró la ayuda permanente
+> del editor de comentarios y el estado neutro de propuesta lista. Pasaron 231 pruebas del frontend,
+> la compilación, las pruebas afectadas del backend y el recorrido real `CS-2026-0027`; no quedan
+> decisiones abiertas.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `modules/ai.md`,
+> `modules/tickets.md` e `interfaz-y-experiencia.md` eliminan el modal y las cinco tonalidades de
+> «Mejorar con IA». La generación será profesional e inmediata, con propuesta inline por editor,
+> aplicación o descarte y paráfrasis distinta al regenerar. Pasaron las 230 pruebas del frontend,
+> la compilación de producción, las pruebas afectadas del backend y el recorrido real sin publicar;
+> el único fallo de la suite completa del backend es el caso ajeno de prioridad registrado en esos
+> documentos. No quedan decisiones abiertas.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `modules/tickets.md` e
+> `interfaz-y-experiencia.md` retiran la columna interna que permanece vacía en **Los dos** y hacen
+> que cada conversación ocupe por completo su mitad, conservando 24 px entre paneles y sin tocar las
+> vistas individuales. La comparación aparecerá desde 1152 px. El responsable eligió 1A–6A, 7B y
+> 8B. Pasaron las 229 pruebas del frontend, la compilación y el recorrido real en 1800, 1152 y 1151
+> px; no quedan decisiones abiertas.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `modules/tickets.md` e
+> `interfaz-y-experiencia.md` convierten la vista simultánea en dos paneles 50/50 con scroll propio,
+> cabecera común visible y ancho útil completo; móvil y tableta vertical mantienen un ticket por vez.
+> El responsable eligió 1A–4A. Pasaron las 228 pruebas del frontend, la compilación y el recorrido
+> real en PC y tableta vertical; no quedan decisiones abiertas.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `primer-arranque.md`,
+> `modules/settings.md` e `interfaz-y-experiencia.md` muestran automáticamente el catálogo local y
+> reservan el botón **Refrescar catálogo** para actualizar sin ocultar las fichas. Pasaron las 228
+> pruebas del frontend, la compilación y el recorrido real de `/setup`.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `primer-arranque.md`,
+> `modules/settings.md` e `interfaz-y-experiencia.md` sustituyen todas las confirmaciones nativas por
+> el diálogo temático y añaden al paso 1 los ocho temas y el color institucional con vista previa.
+> Pasaron backend, 227 pruebas del frontend, compilación y recorrido real en PC y móvil.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `primer-arranque.md`,
+> `modules/ai.md`, `modules/settings.md` e `interfaz-y-experiencia.md` definen logos pulsables sin
+> nombre de archivo, control de activación y desactivación desde cada ficha, saludo atribuido por
+> toast y una política común de cierre manual con duración máxima de diez segundos. El responsable
+> cerró 1A, 2A y corrigió 3A al límite común de diez segundos; no quedan decisiones abiertas.
+>
+> **Implementación coordinada del 2026-10-14, aprobada y verificada:** `primer-arranque.md`, `modules/ai.md`,
+> `modules/settings.md` e `interfaz-y-experiencia.md` vuelven a `as-built` tras mostrar y controlar la
+> descarga de modelos, activar y probar el elegido, administrar modelos inactivos y cargar los dos
+> logos desde el paso 1. El hallazgo —la interfaz anterior no mostraba el progreso ni impedía
+> avanzar durante la descarga— quedó corregido tras la aprobación explícita. Pasaron el administrador
+> aislado, todo el backend, las 228 pruebas del frontend y el recorrido real del modelo 3B.
 >
 > **Prioridades implementadas para 1.0.0, 2026-10-14:** nueve documentos vuelven a `as-built` tras
 > incorporar baja, media, alta y crítica, con permisos, historial, orden, filtro, correo único y
@@ -317,21 +451,21 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `proyecto-abierto.md` | **as-built** | Rulesets separados para `main` y `dev`, sin aprobación imposible durante la etapa de un único mantenedor |
-| `prueba-local.md` | **as-built** | Recorrido de prioridades sobre la cuarta pasada pública ya cerrada |
-| `arquitectura.md` | **as-built** | Persistencia y aviso crítico no bloqueante dentro de las fronteras actuales |
+| `proyecto-abierto.md` | **as-built** | Portada bilingüe, sitio oficial, demo pública y apoyo mediante Ko-fi |
+| `prueba-local.md` | **as-built** | Verificación del README bilingüe y capturas públicas con IA |
+| `arquitectura.md` | **as-built** | Migración técnica a `summary` y `escalationReason` |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Incorpora prioridad a la 1.0.0 y corrige su exclusión histórica |
 | `usuarios-y-permisos.md` | **as-built** | Permisos para proponer, modificar y consultar prioridad |
 | `flujos.md` | **as-built** | Aviso único a todo Soporte al llegar por primera vez a crítica |
-| `modules/settings.md` | **as-built** | Configuración completa; una fila ausente conserva su error de dominio sin falso error de GORM |
+| `modules/settings.md` | **as-built** | Catálogo local automático y refresco sin ocultar fichas |
 | `modules/mail.md` | **as-built** | Duodécima plantilla para prioridad crítica en los dos idiomas |
 | `modules/auth.md` | **as-built** | Token ausente sin falso error; identidad y sesión conservan el idioma global |
 | `modules/users.md` | **as-built** | Alta automática de AD y Keycloak sin falsos errores en búsquedas previas |
-| `interfaz-y-experiencia.md` | **as-built** | Selector, chip, edición, filtros y orden de prioridad |
-| `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
-| `ambientes.md` | **as-built** | Verificación de prioridades en las tres capas, sin producción |
-| `modules/ai.md` | **as-built** | Valida el idioma global, reintenta sólo motores sin proveedor pagado y descarta discrepancias |
-| `modules/tickets.md` | **as-built** | Modelo, API, historial, filtros, orden y seeder de prioridades |
+| `interfaz-y-experiencia.md` | **as-built** | Rótulo de `en espera` distinto para Usuario y papeles técnicos |
+| `primer-arranque.md` | **as-built** (8 enmiendas previas) | Catálogo visible automáticamente en el paso 5 |
+| `ambientes.md` | **as-built** | Guía resumida de instalación y límites de la demo alojada |
+| `modules/ai.md` | **as-built** | Resultados vigentes y recuperación automática finita |
+| `modules/tickets.md` | **as-built** | Retorno visible de Esperando a En progreso para Soporte |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe

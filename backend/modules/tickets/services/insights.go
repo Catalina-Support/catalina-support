@@ -15,7 +15,7 @@ import (
 // Los dos campos que redacta el motor de IA (`docs/modules/ai.md`). Son los mismos nombres que usa
 // su tabla, y se declaran aquí para no escribirlos de dos maneras.
 const (
-	TipoMotivo       = "motivo"
+	TipoSummary      = "summary"
 	TipoUltimaAccion = "ultima_accion"
 )
 
@@ -29,7 +29,7 @@ type Resumen struct {
 
 // Resumenes son los dos campos de un ticket.
 type Resumenes struct {
-	Motivo       Resumen
+	Summary      Resumen
 	UltimaAccion Resumen
 }
 
@@ -92,6 +92,27 @@ func (s *Service) TextoParaElMotor(numero string) (string, error) {
 	return s.textoParaElMotor(numero)
 }
 
+// NumerosParaRegenerarInsights enumera los dos tipos sin cruzar la frontera de datos: `ai`
+// decide versiones, pero `tickets` sigue siendo quien conoce dónde viven sus números.
+func (s *Service) NumerosParaRegenerarInsights() ([]string, error) {
+	type fila struct{ Number string }
+	var filas []fila
+	err := s.tickets.DB().Raw(`
+		SELECT number FROM tickets
+		UNION ALL
+		SELECT number FROM internal_tickets
+		ORDER BY number
+	`).Scan(&filas).Error
+	if err != nil {
+		return nil, err
+	}
+	numeros := make([]string, 0, len(filas))
+	for _, actual := range filas {
+		numeros = append(numeros, actual.Number)
+	}
+	return numeros, nil
+}
+
 // textoParaElMotor arma lo que lee el motor: **el ticket en texto plano**.
 //
 // Lo que se manda y por qué está en `docs/modules/ai.md`, sección 3: el asunto, la descripción y la
@@ -110,27 +131,49 @@ func (s *Service) textoParaElMotor(numero string) (string, error) {
 		return "", err
 	}
 
-	destino := repositories.DestinoDePrincipal(principal.ID)
-	asunto := principal.Subject
-	descripcion := principal.Description
-	motivo := ""
+	interno, tieneInterno, err := s.tickets.InternalByTicket(principal.ID)
+	if err != nil {
+		return "", err
+	}
 
-	if esInterno {
-		interno, _, err := s.tickets.InternalByTicket(principal.ID)
+	destinoPrincipal := repositories.DestinoDePrincipal(principal.ID)
+	comentariosPrincipal, adjuntosPrincipal, historialPrincipal, err := s.conversacionDe(destinoPrincipal)
+	if err != nil {
+		return "", err
+	}
+
+	var comentariosInterno []repositories.Comment
+	var adjuntosInterno []repositories.Attachment
+	var historialInterno []repositories.HistoryEntry
+	if tieneInterno {
+		comentariosInterno, adjuntosInterno, historialInterno, err = s.conversacionDe(repositories.DestinoDeInterno(interno.ID))
 		if err != nil {
 			return "", err
 		}
-
-		destino = repositories.DestinoDeInterno(interno.ID)
-		// Un interno no tiene asunto ni descripción propios: lo que cuenta es el motivo del escalado.
-		asunto = principal.Subject
-		descripcion = interno.EscalationReason
-		motivo = interno.EscalationReason
 	}
-
-	comentarios, adjuntos, historial, err := s.conversacionDe(destino)
+	observadoresPrincipal, err := s.conversation.Observers(s.tickets.DB(), destinoPrincipal)
 	if err != nil {
 		return "", err
+	}
+	var observadoresInterno []repositories.TicketObserver
+	if tieneInterno {
+		observadoresInterno, err = s.conversation.Observers(s.tickets.DB(), repositories.DestinoDeInterno(interno.ID))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	comentarios := comentariosPrincipal
+	adjuntos := adjuntosPrincipal
+	historial := historialPrincipal
+	estadoObjetivo := principal.State
+	razonObjetivo := TextoPlano(principal.Description)
+	if esInterno {
+		comentarios = comentariosInterno
+		adjuntos = adjuntosInterno
+		historial = historialInterno
+		estadoObjetivo = interno.State
+		razonObjetivo = TextoPlano(interno.EscalationReason)
 	}
 
 	// Los nombres de las personas que aparecen: para el motor, «Soporte pidió una captura» dice más que
@@ -139,12 +182,27 @@ func (s *Service) textoParaElMotor(numero string) (string, error) {
 	if principal.AssigneeID != nil {
 		ids = append(ids, *principal.AssigneeID)
 	}
-	for i := range comentarios {
-		ids = append(ids, comentarios[i].AuthorID)
+	if tieneInterno {
+		ids = append(ids, interno.CreatedByID)
+		if interno.AssigneeID != nil {
+			ids = append(ids, *interno.AssigneeID)
+		}
 	}
-	for i := range historial {
-		if historial[i].ActorID != nil {
-			ids = append(ids, *historial[i].ActorID)
+	for _, grupo := range [][]repositories.Comment{comentariosPrincipal, comentariosInterno} {
+		for i := range grupo {
+			ids = append(ids, grupo[i].AuthorID)
+		}
+	}
+	for _, grupo := range [][]repositories.HistoryEntry{historialPrincipal, historialInterno} {
+		for i := range grupo {
+			if grupo[i].ActorID != nil {
+				ids = append(ids, *grupo[i].ActorID)
+			}
+		}
+	}
+	for _, grupo := range [][]repositories.TicketObserver{observadoresPrincipal, observadoresInterno} {
+		for _, observador := range grupo {
+			ids = append(ids, observador.AccountID, observador.AddedByID)
 		}
 	}
 
@@ -153,33 +211,140 @@ func (s *Service) textoParaElMotor(numero string) (string, error) {
 		return "", err
 	}
 
+	ultimo := ultimoHecho(comentarios, historial, porID, idioma)
 	var texto strings.Builder
-	labels := etiquetasDelContexto(idioma)
-	fmt.Fprintf(&texto, "%s: %s\n", labels.asunto, asunto)
-	fmt.Fprintf(&texto, "%s: %s\n", labels.descripcion, TextoPlano(descripcion))
-
-	if hay {
-		fmt.Fprintf(&texto, "%s: %s\n", labels.estado, principal.State)
+	fmt.Fprintf(&texto, "[TARGET_NUMBER] %s\n", numero)
+	fmt.Fprintf(&texto, "[TARGET_STATE] %s\n", estadoObjetivo)
+	fmt.Fprintf(&texto, "[TARGET_REASON] %s\n", razonObjetivo)
+	fmt.Fprintf(&texto, "[TARGET_LAST_EVENT] %s\n", ultimo.evento)
+	fmt.Fprintf(&texto, "[TARGET_LAST_ACTOR] %s\n", ultimo.actor)
+	fmt.Fprintf(&texto, "[TARGET_LAST_STATE] %s\n", ultimo.estado)
+	fmt.Fprintf(&texto, "[TARGET_LAST_COMMENT] %s\n\n", ultimo.comentario)
+	fmt.Fprintf(&texto, "Requester: %s\nCreated by: %s\n", nombreDeCuenta(principal.RequesterID, porID), nombreDeCuenta(principal.CreatedByID, porID))
+	if principal.AssigneeID != nil {
+		fmt.Fprintf(&texto, "Main assignee: %s\n", nombreDeCuenta(*principal.AssigneeID, porID))
 	}
-	if motivo != "" {
-		fmt.Fprintf(&texto, "%s: %s\n", labels.escalado, TextoPlano(motivo))
+	if tieneInterno {
+		fmt.Fprintf(&texto, "Internal created by: %s\n", nombreDeCuenta(interno.CreatedByID, porID))
+		if interno.AssigneeID != nil {
+			fmt.Fprintf(&texto, "Internal assignee: %s\n", nombreDeCuenta(*interno.AssigneeID, porID))
+		}
 	}
 
-	if nombres := nombresDe(adjuntos); nombres != "" {
-		fmt.Fprintf(&texto, "%s: %s\n", labels.adjuntos, nombres)
+	if esInterno {
+		escribirContexto(&texto, "INTERNAL", interno.Number, interno.State, principal.Subject,
+			"", interno.EscalationReason, comentariosInterno, adjuntosInterno, historialInterno, porID, idioma)
+		escribirFechas(&texto, interno.CreatedAt, interno.UpdatedAt, interno.ResolvedAt, interno.ClosedAt)
+		escribirObservadores(&texto, observadoresInterno, porID)
+	}
+	escribirContexto(&texto, "MAIN", principal.Number, principal.State, principal.Subject,
+		principal.Description, "", comentariosPrincipal, adjuntosPrincipal, historialPrincipal, porID, idioma)
+	escribirFechas(&texto, principal.CreatedAt, principal.UpdatedAt, principal.ResolvedAt, principal.ClosedAt)
+	escribirObservadores(&texto, observadoresPrincipal, porID)
+	if tieneInterno && !esInterno {
+		escribirContexto(&texto, "INTERNAL", interno.Number, interno.State, principal.Subject,
+			"", interno.EscalationReason, comentariosInterno, adjuntosInterno, historialInterno, porID, idioma)
+		escribirFechas(&texto, interno.CreatedAt, interno.UpdatedAt, interno.ResolvedAt, interno.ClosedAt)
+		escribirObservadores(&texto, observadoresInterno, porID)
 	}
 
-	fmt.Fprintf(&texto, "\n%s:\n", labels.conversacion)
-
-	// **Comentarios e historial en una sola línea de tiempo**, en orden: es lo que hace que la última
-	// línea del texto sea, de verdad, la última acción.
-	for _, renglon := range lineasDe(comentarios, historial, porID, idioma) {
-		texto.WriteString("- ")
-		texto.WriteString(renglon)
-		texto.WriteString("\n")
+	if s.categories != nil {
+		if categoria, e := s.categories.CategoryByID(principal.CategoryID); e == nil {
+			fmt.Fprintf(&texto, "\nCategory: %s\n", categoria.Name)
+		}
+		if tags, e := s.categories.TagsByTicket(principal.ID); e == nil && len(tags) > 0 {
+			fmt.Fprintf(&texto, "Tags: %s\n", strings.Join(tags, ", "))
+		}
 	}
+	fmt.Fprintf(&texto, "Priority: %s\n", principal.Priority)
+	_ = hay
+	_ = adjuntos
 
 	return texto.String(), nil
+}
+
+func escribirFechas(texto *strings.Builder, creada, actualizada time.Time, resuelta, cerrada *time.Time) {
+	fmt.Fprintf(texto, "Created at: %s\nUpdated at: %s\n", creada.Format(time.RFC3339), actualizada.Format(time.RFC3339))
+	if resuelta != nil {
+		fmt.Fprintf(texto, "Resolved at: %s\n", resuelta.Format(time.RFC3339))
+	}
+	if cerrada != nil {
+		fmt.Fprintf(texto, "Closed at: %s\n", cerrada.Format(time.RFC3339))
+	}
+}
+
+func nombreDeCuenta(id int64, porID map[int64]auth.Account) string {
+	if cuenta, ok := porID[id]; ok {
+		return cuenta.FullName()
+	}
+	return ""
+}
+
+func escribirObservadores(texto *strings.Builder, observadores []repositories.TicketObserver, porID map[int64]auth.Account) {
+	nombres := make([]string, 0, len(observadores))
+	for _, observador := range observadores {
+		if cuenta, ok := porID[observador.AccountID]; ok {
+			nombres = append(nombres, cuenta.FullName())
+		}
+	}
+	if len(nombres) > 0 {
+		fmt.Fprintf(texto, "Observers: %s\n", strings.Join(nombres, ", "))
+	}
+}
+
+type hechoObjetivo struct{ evento, actor, estado, comentario string }
+
+func ultimoHecho(comentarios []repositories.Comment, historial []repositories.HistoryEntry, porID map[int64]auth.Account, idioma string) hechoObjetivo {
+	ultimo := hechoObjetivo{}
+	var cuando time.Time
+	porComentario := make(map[int64]repositories.Comment, len(comentarios))
+	for _, comentario := range comentarios {
+		porComentario[comentario.ID] = comentario
+		if comentario.CreatedAt.After(cuando) {
+			cuando = comentario.CreatedAt
+			ultimo = hechoObjetivo{"comentario", quienEs(&comentario.AuthorID, porID, idioma), "", TextoPlano(comentario.Body)}
+		}
+	}
+	for _, entrada := range historial {
+		if entrada.CreatedAt.Before(cuando) {
+			continue
+		}
+		cuando = entrada.CreatedAt
+		ultimo = hechoObjetivo{entrada.Event, quienEs(entrada.ActorID, porID, idioma), textoDePuntero(entrada.ToState), ""}
+		if entrada.CommentID != nil {
+			if comentario, ok := porComentario[*entrada.CommentID]; ok && comentario.DeletedAt == nil {
+				ultimo.comentario = TextoPlano(comentario.Body)
+			}
+		}
+	}
+	return ultimo
+}
+
+func textoDePuntero(valor *string) string {
+	if valor == nil {
+		return ""
+	}
+	return *valor
+}
+
+func escribirContexto(texto *strings.Builder, tipo, numero, estado, asunto, descripcion, motivo string,
+	comentarios []repositories.Comment, adjuntos []repositories.Attachment, historial []repositories.HistoryEntry,
+	porID map[int64]auth.Account, idioma string) {
+	labels := etiquetasDelContexto(idioma)
+	fmt.Fprintf(texto, "[%s TICKET]\nNumber: %s\n%s: %s\n%s: %s\n", tipo, numero, labels.estado, estado, labels.asunto, asunto)
+	if descripcion != "" {
+		fmt.Fprintf(texto, "%s: %s\n", labels.descripcion, TextoPlano(descripcion))
+	}
+	if motivo != "" {
+		fmt.Fprintf(texto, "%s: %s\n", labels.escalado, TextoPlano(motivo))
+	}
+	if nombres := nombresDe(adjuntos); nombres != "" {
+		fmt.Fprintf(texto, "%s: %s\n", labels.adjuntos, nombres)
+	}
+	fmt.Fprintf(texto, "%s:\n", labels.conversacion)
+	for _, renglon := range lineasDe(comentarios, historial, porID, idioma) {
+		fmt.Fprintf(texto, "- %s\n", renglon)
+	}
 }
 
 type etiquetasContexto struct{ asunto, descripcion, estado, escalado, adjuntos, conversacion string }
@@ -188,7 +353,7 @@ func etiquetasDelContexto(idioma string) etiquetasContexto {
 	if idioma == "en" {
 		return etiquetasContexto{"Subject", "Description", "State", "Escalation reason", "Attachments", "Conversation (oldest to newest)"}
 	}
-	return etiquetasContexto{"Asunto", "Descripción", "Estado", "Motivo del escalado", "Adjuntos", "Conversación (de lo más antiguo a lo más reciente)"}
+	return etiquetasContexto{"Asunto", "Descripción", "Estado", "Summary del escalado", "Adjuntos", "Conversación (de lo más antiguo a lo más reciente)"}
 }
 
 // nombresDe junta los nombres de los adjuntos, sin repetir y en el orden en que se subieron.
@@ -295,35 +460,6 @@ func quienEs(id *int64, porID map[int64]auth.Account, idioma string) string {
 	}
 
 	return cuenta.FullName()
-}
-
-// PedirResumenes vuelve a pedir los dos campos, a mano.
-//
-// Es el botón «Regenerar» de la ficha: lo pueden pulsar **Soporte y Desarrollo**, que son los que
-// trabajan el ticket; el Administrador mira sin botones y el usuario no tiene por qué ver esto
-// (docs/modules/ai.md, decisión 5). Devuelve el ticket ya leído, para que la pantalla se pinte con lo
-// que hay de verdad.
-func (s *Service) PedirResumenes(number string, actor auth.Identity) (Ticket, error) {
-	if actor.Role != auth.RoleSoporte && actor.Role != auth.RoleDesarrollo {
-		return Ticket{}, ErrForbidden
-	}
-
-	// Se comprueba que el ticket existe —y que esa persona puede verlo— antes de encolar nada.
-	detalle, err := s.ByNumber(number, actor)
-	if err != nil {
-		return Ticket{}, err
-	}
-
-	// **En un interno no se pide el motivo**: su motivo es el del escalado, que ya está escrito
-	// (docs/modules/ai.md, decisión 5). Se pide sólo la última acción.
-	tipos := []string{TipoMotivo, TipoUltimaAccion}
-	if detalle.Ticket.Internal {
-		tipos = []string{TipoUltimaAccion}
-	}
-
-	s.pedirAlMotor(detalle.Ticket.Number, tipos...)
-
-	return detalle.Ticket, nil
 }
 
 // pegarResumenes escribe los dos campos en una lista de tickets, **de una sola consulta**.

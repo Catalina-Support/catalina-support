@@ -24,6 +24,7 @@ describe('Las guardas de la instalación', () => {
       aiRequired: false,
       name: 'Ayuntamiento de Ejemplo',
       language: 'es',
+      primaryColor: '#1d4ed8',
       entryMethod: 'local',
       timeZone: 'UTC',
       publicAppUrl: '',

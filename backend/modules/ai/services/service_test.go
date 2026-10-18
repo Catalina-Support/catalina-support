@@ -209,6 +209,87 @@ type almacenDeMentira struct {
 	resultados int
 }
 
+// almacenVersionado añade a la base de mentira el contrato que usa el repositorio real para
+// descartar escrituras obsoletas y limitar la recuperación a un ciclo.
+type almacenVersionado struct{ *almacenDeMentira }
+
+func nuevoAlmacenVersionado() *almacenVersionado {
+	return &almacenVersionado{almacenDeMentira: nuevoAlmacenDeMentira()}
+}
+
+func (a *almacenVersionado) MarcarPendienteConGeneracion(numero, tipo string) (int64, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	clave := claveDePrueba(numero, tipo)
+	fila := a.filas[clave]
+	fila.TicketNumber, fila.Kind, fila.State = numero, tipo, repositories.StatePendiente
+	fila.Generation++
+	fila.RecoveryCount, fila.RetryAt, fila.Attempts, fila.ErrorKey = 0, nil, 0, nil
+	fila.RequestedAt = time.Now()
+	a.filas[clave] = fila
+	return fila.Generation, nil
+}
+
+func (a *almacenVersionado) GuardarResultadoSiVigente(numero, tipo string, generacion int64, es, en, modelo string, generado time.Time) (bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	clave := claveDePrueba(numero, tipo)
+	fila := a.filas[clave]
+	if fila.Generation != generacion {
+		return false, nil
+	}
+	fila.State, fila.TextEs, fila.TextEn, fila.Model, fila.GeneratedAt, fila.ErrorKey = repositories.StateListo, &es, &en, &modelo, &generado, nil
+	a.filas[clave] = fila
+	a.resultados++
+	return true, nil
+}
+
+func (a *almacenVersionado) SubirIntentosSiVigente(numero, tipo string, generacion int64) (bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	clave := claveDePrueba(numero, tipo)
+	fila := a.filas[clave]
+	if fila.Generation != generacion {
+		return false, nil
+	}
+	fila.Attempts++
+	a.filas[clave] = fila
+	a.intentos++
+	return true, nil
+}
+
+func (a *almacenVersionado) MarcarFalloSiVigente(numero, tipo string, generacion int64, estado, claveError string) (bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	clave := claveDePrueba(numero, tipo)
+	fila := a.filas[clave]
+	if fila.Generation != generacion {
+		return false, nil
+	}
+	fila.State, fila.ErrorKey, fila.RetryAt = estado, &claveError, nil
+	a.filas[clave] = fila
+	return true, nil
+}
+
+func (a *almacenVersionado) PrepararRecuperacion(numero, tipo string, generacion int64, noAntes time.Time) (int64, bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	clave := claveDePrueba(numero, tipo)
+	fila := a.filas[clave]
+	if fila.Generation != generacion || fila.RecoveryCount != 0 {
+		return 0, false, nil
+	}
+	fila.Generation++
+	fila.State, fila.ErrorKey, fila.Attempts = repositories.StatePendiente, nil, 0
+	fila.RecoveryCount, fila.RetryAt = 1, &noAntes
+	a.filas[clave] = fila
+	return fila.Generation, true, nil
+}
+
+func (a *almacenVersionado) GeneracionVigente(numero, tipo string, generacion int64) (bool, error) {
+	return a.fila(numero, tipo).Generation == generacion, nil
+}
+
 func nuevoAlmacenDeMentira() *almacenDeMentira {
 	return &almacenDeMentira{filas: make(map[string]repositories.AIInsight)}
 }
@@ -449,7 +530,7 @@ func ajustesDePrueba(url string) Ajustes {
 
 // servicioDePrueba monta el servicio con un motor y un almacén de mentira. Sin motor —`motor == nil`—
 // es una instalación que no lo tiene puesto.
-func servicioDePrueba(t *testing.T, motor *motorDeMentira, almacen *almacenDeMentira) *Service {
+func servicioDePrueba(t *testing.T, motor *motorDeMentira, almacen Store) *Service {
 	t.Helper()
 
 	url := ""
@@ -501,11 +582,11 @@ func TestElJSONValidoSeGuardaEnLosDosIdiomas(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
 	servicio := servicioDePrueba(t, motor, almacen)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 
-	fila := almacen.fila(ticketDePrueba, "motivo")
+	fila := almacen.fila(ticketDePrueba, "summary")
 	if textoDe(fila.TextEs) != resumenEsperado {
 		t.Errorf("el español guardado es %q y se esperaba %q", textoDe(fila.TextEs), resumenEsperado)
 	}
@@ -555,11 +636,11 @@ func TestUnaRespuestaQueNoValeDejaErrorConSuClave(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
 	servicio := servicioDePrueba(t, motor, almacen)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateError })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateError })
 
-	fila := almacen.fila(ticketDePrueba, "motivo")
+	fila := almacen.fila(ticketDePrueba, "summary")
 	if textoDe(fila.ErrorKey) != ClaveInvalida {
 		t.Errorf("la clave del error es %q y se esperaba %q", textoDe(fila.ErrorKey), ClaveInvalida)
 	}
@@ -577,6 +658,24 @@ func TestUnaRespuestaQueNoValeDejaErrorConSuClave(t *testing.T) {
 	}
 }
 
+func TestUltimaAccionDeUnTicketNuevoTieneFallbackTrasElReintento(t *testing.T) {
+	motor := motorQueContesta(t, `{"text":"..."}`)
+	almacen := nuevoAlmacenDeMentira()
+	servicio := servicioDePrueba(t, motor, almacen)
+	texto := "Subject: Error E-451\nDescription: Falla al guardar.\n\nConversation (oldest to newest):\n- Ana (created): "
+
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: UltimaAccion, Texto: texto})
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "ultima_accion") == repositories.StateListo })
+
+	fila := almacen.fila(ticketDePrueba, "ultima_accion")
+	if textoDe(fila.TextEs) != "El ticket fue abierto y se describió el problema reportado." {
+		t.Fatalf("el fallback de apertura no quedó guardado: %+v", fila)
+	}
+	if motor.veces() != intentosRespuesta {
+		t.Fatalf("el fallback debe usarse después del reintento: llamadas=%d", motor.veces())
+	}
+}
+
 func TestElMotorQueNoContestaDejaSinMotorYNoBloquea(t *testing.T) {
 	motor := motorQueNoContesta(t)
 	almacen := nuevoAlmacenDeMentira()
@@ -589,15 +688,15 @@ func TestElMotorQueNoContestaDejaSinMotorYNoBloquea(t *testing.T) {
 	t.Cleanup(servicio.Parar)
 
 	empezado := time.Now()
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 
 	if tardanza := time.Since(empezado); tardanza > 100*time.Millisecond {
 		t.Fatalf("Pedir tardó %s: no puede esperar al motor", tardanza)
 	}
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateSinMotor })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateSinMotor })
 
-	fila := almacen.fila(ticketDePrueba, "motivo")
+	fila := almacen.fila(ticketDePrueba, "summary")
 	if textoDe(fila.ErrorKey) != ClaveSinMotor {
 		t.Errorf("la clave del error es %q y se esperaba %q", textoDe(fila.ErrorKey), ClaveSinMotor)
 	}
@@ -624,7 +723,7 @@ func TestPedirNoBloqueaAunqueElMotorTarde(t *testing.T) {
 	servicio := servicioDePrueba(t, motor, almacen)
 
 	empezado := time.Now()
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 	tardanza := time.Since(empezado)
 
 	if tardanza > 250*time.Millisecond {
@@ -632,7 +731,7 @@ func TestPedirNoBloqueaAunqueElMotorTarde(t *testing.T) {
 	}
 
 	// Y el campo quedó `pendiente` en la base desde el primer momento.
-	if estado := almacen.estado(ticketDePrueba, "motivo"); estado != repositories.StatePendiente {
+	if estado := almacen.estado(ticketDePrueba, "summary"); estado != repositories.StatePendiente {
 		t.Errorf("el campo quedó en %q y se esperaba %q", estado, repositories.StatePendiente)
 	}
 }
@@ -642,11 +741,11 @@ func TestLosDosEncargosSonDistintosYSonDosPeticiones(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
 	servicio := servicioDePrueba(t, motor, almacen)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: UltimaAccion, Texto: textoDePrueba})
 
 	esperarA(t, func() bool {
-		return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo &&
+		return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo &&
 			almacen.estado(ticketDePrueba, "ultima_accion") == repositories.StateListo
 	})
 
@@ -682,20 +781,20 @@ func TestUnEncargoPorTicketYCampoSustituyeAlQueEsperaba(t *testing.T) {
 	servicio.esperaBase = 5 * time.Millisecond
 	t.Cleanup(servicio.Parar)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: "Texto de la primera vez"})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: "Texto de la primera vez"})
 	esperarA(t, func() bool { return motor.veces() == 1 })
 
 	for i := 0; i < 5; i++ {
 		servicio.Pedir(Entrada{
 			Numero: ticketDePrueba,
-			Tipo:   Motivo,
+			Tipo:   Summary,
 			Texto:  fmt.Sprintf("Texto que ya no sirve, %d", i),
 		})
 	}
 
 	close(suelta)
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 	esperarA(t, func() bool { return motor.veces() == 2 })
 
 	if veces := motor.veces(); veces != 2 {
@@ -703,12 +802,52 @@ func TestUnEncargoPorTicketYCampoSustituyeAlQueEsperaba(t *testing.T) {
 	}
 }
 
+func TestUnaRespuestaAntiguaNoSobrescribeLaPeticionMasReciente(t *testing.T) {
+	suelta := make(chan struct{})
+	motor := nuevoMotorDeMentira(t, func(veces int) respuestaDeMentira {
+		if veces == 1 {
+			return respuestaDeMentira{contenido: jsonDeDosIdiomas("Resumen antiguo con suficiente contenido.", ""), suelta: suelta}
+		}
+		return respuestaDeMentira{contenido: jsonDeDosIdiomas("Resumen nuevo con la información vigente.", "")}
+	})
+	almacen := nuevoAlmacenVersionado()
+	servicio := servicioDePrueba(t, motor, almacen)
+
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: "Contexto anterior suficientemente detallado"})
+	esperarA(t, func() bool { return motor.veces() == 1 })
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: "Contexto vigente suficientemente detallado"})
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
+	close(suelta)
+	esperarA(t, func() bool { return motor.veces() == 2 })
+
+	time.Sleep(20 * time.Millisecond)
+	if textoDe(almacen.fila(ticketDePrueba, "summary").TextEs) != "Resumen nuevo con la información vigente." {
+		t.Fatalf("una respuesta antigua sobrescribió la revisión vigente: %+v", almacen.fila(ticketDePrueba, "summary"))
+	}
+}
+
+func TestUnFalloRecibeUnSoloCicloDeRecuperacion(t *testing.T) {
+	motor := motorQueContesta(t, `{"text":"..."}`)
+	almacen := nuevoAlmacenVersionado()
+	servicio := servicioDePrueba(t, motor, almacen)
+	servicio.SetFuente(&fuenteDeMentira{})
+	servicio.esperaRecuperacion = time.Millisecond
+
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateError })
+
+	fila := almacen.fila(ticketDePrueba, "summary")
+	if fila.RecoveryCount != 1 || motor.veces() != intentosRespuesta*2 {
+		t.Fatalf("la recuperación no fue exactamente un ciclo: fila=%+v llamadas=%d", fila, motor.veces())
+	}
+}
+
 func TestDeDevuelveLosDosCamposDeVariosTicketsEnUnaConsulta(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
-	almacen.conTexto(ticketDePrueba, "motivo", "No puede entrar.", "Cannot sign in.")
+	almacen.conTexto(ticketDePrueba, "summary", "No puede entrar.", "Cannot sign in.")
 	almacen.conTexto(ticketDePrueba, "ultima_accion", "Se pidió una captura.", "A screenshot was requested.")
 	almacen.conTexto(internoPrueba, "ultima_accion", "Desarrollo lo está mirando.", "Development is on it.")
-	almacen.pendiente("ACME-2026-0043", "motivo")
+	almacen.pendiente("ACME-2026-0043", "summary")
 
 	servicio := servicioDePrueba(t, nil, almacen)
 
@@ -720,19 +859,19 @@ func TestDeDevuelveLosDosCamposDeVariosTicketsEnUnaConsulta(t *testing.T) {
 	if len(resumenes) != 3 {
 		t.Fatalf("el mapa trae %d tickets y se esperaban 3", len(resumenes))
 	}
-	if resumenes[ticketDePrueba].Motivo.Es != "No puede entrar." {
-		t.Errorf("el motivo es %q", resumenes[ticketDePrueba].Motivo.Es)
+	if resumenes[ticketDePrueba].Summary.Es != "No puede entrar." {
+		t.Errorf("el motivo es %q", resumenes[ticketDePrueba].Summary.Es)
 	}
 	if resumenes[ticketDePrueba].UltimaAccion.En != "A screenshot was requested." {
 		t.Errorf("la última acción en inglés es %q", resumenes[ticketDePrueba].UltimaAccion.En)
 	}
-	if resumenes[ticketDePrueba].Motivo.Estado != EstadoListo {
-		t.Errorf("el estado del motivo es %q", resumenes[ticketDePrueba].Motivo.Estado)
+	if resumenes[ticketDePrueba].Summary.Estado != EstadoListo {
+		t.Errorf("el estado del motivo es %q", resumenes[ticketDePrueba].Summary.Estado)
 	}
 	if resumenes[internoPrueba].UltimaAccion.Es != "Desarrollo lo está mirando." {
 		t.Errorf("la última acción del interno es %q", resumenes[internoPrueba].UltimaAccion.Es)
 	}
-	if resumenes["ACME-2026-0043"].Motivo.Estado != EstadoPendiente {
+	if resumenes["ACME-2026-0043"].Summary.Estado != EstadoPendiente {
 		t.Error("un campo pendiente se lee con su estado")
 	}
 
@@ -796,7 +935,7 @@ func TestSinMotorConfiguradoNoSeEncolaNadaYQuedaSinMotor(t *testing.T) {
 
 func TestSinMotorLaListaSeSigueLeyendoYLosTicketsSiguenSuVida(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
-	almacen.caido(ticketDePrueba, "motivo", 1)
+	almacen.caido(ticketDePrueba, "summary", 1)
 
 	servicio := servicioDePrueba(t, nil, almacen)
 
@@ -806,8 +945,8 @@ func TestSinMotorLaListaSeSigueLeyendoYLosTicketsSiguenSuVida(t *testing.T) {
 	if err != nil {
 		t.Fatalf("De devolvió un error sin motor: %v", err)
 	}
-	if resumenes[ticketDePrueba].Motivo.Estado != EstadoSinMotor {
-		t.Errorf("el estado leído es %q y se esperaba %q", resumenes[ticketDePrueba].Motivo.Estado, EstadoSinMotor)
+	if resumenes[ticketDePrueba].Summary.Estado != EstadoSinMotor {
+		t.Errorf("el estado leído es %q y se esperaba %q", resumenes[ticketDePrueba].Summary.Estado, EstadoSinMotor)
 	}
 
 	// Y sin motor no hay nada que retomar.
@@ -822,11 +961,11 @@ func TestRetomarVuelveAPedirLoSuyoYOlvidaLoQueEstaEnError(t *testing.T) {
 	almacen := nuevoAlmacenDeMentira()
 
 	// Lo que quedó a medias cuando se apagó el backend, y lo que ya está decidido.
-	almacen.pendiente("ACME-2026-0001", "motivo")
+	almacen.pendiente("ACME-2026-0001", "summary")
 	almacen.pendiente("ACME-2026-0002", "ultima_accion")
-	almacen.caido("ACME-2026-0003", "motivo", 1)
-	almacen.enError("ACME-2026-0004", "motivo")
-	almacen.caido("ACME-2026-0005", "motivo", intentosMotor)
+	almacen.caido("ACME-2026-0003", "summary", 1)
+	almacen.enError("ACME-2026-0004", "summary")
+	almacen.caido("ACME-2026-0005", "summary", intentosMotor)
 
 	fuente := &fuenteDeMentira{}
 
@@ -846,10 +985,10 @@ func TestRetomarVuelveAPedirLoSuyoYOlvidaLoQueEstaEnError(t *testing.T) {
 
 	// **Lo que está en `error` no se reintenta solo**, y un campo que agotó sus intentos tampoco:
 	// reiniciar el backend no puede ser la forma de saltarse el tope (decisión 8 y 10).
-	if estado := almacen.estado("ACME-2026-0004", "motivo"); estado != repositories.StateError {
+	if estado := almacen.estado("ACME-2026-0004", "summary"); estado != repositories.StateError {
 		t.Errorf("el campo en error quedó en %q", estado)
 	}
-	if estado := almacen.estado("ACME-2026-0005", "motivo"); estado != repositories.StateSinMotor {
+	if estado := almacen.estado("ACME-2026-0005", "summary"); estado != repositories.StateSinMotor {
 		t.Errorf("el campo que agotó sus intentos quedó en %q", estado)
 	}
 }
@@ -857,7 +996,7 @@ func TestRetomarVuelveAPedirLoSuyoYOlvidaLoQueEstaEnError(t *testing.T) {
 func TestRetomarSinQuienArmeElTextoNoPierdeNada(t *testing.T) {
 	motor := motorQueContesta(t, jsonDeDosIdiomas(resumenEsperado, resumenIngles))
 	almacen := nuevoAlmacenDeMentira()
-	almacen.pendiente(ticketDePrueba, "motivo")
+	almacen.pendiente(ticketDePrueba, "summary")
 
 	servicio := servicioDePrueba(t, motor, almacen)
 
@@ -868,7 +1007,7 @@ func TestRetomarSinQuienArmeElTextoNoPierdeNada(t *testing.T) {
 	if veces := motor.veces(); veces != 0 {
 		t.Errorf("se le pidieron %d resúmenes al motor sin poder armar su texto", veces)
 	}
-	if estado := almacen.estado(ticketDePrueba, "motivo"); estado != repositories.StatePendiente {
+	if estado := almacen.estado(ticketDePrueba, "summary"); estado != repositories.StatePendiente {
 		t.Errorf("el campo quedó en %q y se esperaba %q", estado, repositories.StatePendiente)
 	}
 }
@@ -914,7 +1053,7 @@ func TestPararCierraLaColaSinEsperarAlMotor(t *testing.T) {
 	servicio := nuevoServicio(almacen, ajustes)
 	servicio.esperaBase = 5 * time.Millisecond
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 	esperarA(t, func() bool { return motor.veces() >= 1 })
 
 	empezado := time.Now()
@@ -943,11 +1082,11 @@ func TestElTopeDePalabrasSeRespetaAunqueElModeloSePase(t *testing.T) {
 	servicio.esperaBase = 5 * time.Millisecond
 	t.Cleanup(servicio.Parar)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 
-	fila := almacen.fila(ticketDePrueba, "motivo")
+	fila := almacen.fila(ticketDePrueba, "summary")
 	if palabras := len(strings.Fields(textoDe(fila.TextEs))); palabras > 20 {
 		t.Errorf("el resumen guardado tiene %d palabras y el tope es 20", palabras)
 	}
@@ -956,24 +1095,24 @@ func TestElTopeDePalabrasSeRespetaAunqueElModeloSePase(t *testing.T) {
 	}
 }
 
-func TestAlMotorLeLlegaElFinalDelTextoYNoElPrincipio(t *testing.T) {
+func TestAlMotorLeLleganLasAnclasYElFinalDelTexto(t *testing.T) {
 	motor := motorQueContesta(t, jsonDeDosIdiomas(resumenEsperado, resumenIngles))
 	almacen := nuevoAlmacenDeMentira()
 	servicio := servicioDePrueba(t, motor, almacen)
 
-	// Un ticket con doscientos comentarios: lo que hay que leer es lo último, y lo primero se queda
-	// fuera del encargo (decisión 6).
-	texto := "PRINCIPIO: esto ya no importa\n" + strings.Repeat("relleno que hace bulto\n", 400) +
+	// El encabezado estructurado y el final reciente no se pierden; la conversación antigua del
+	// centro es la que cede espacio.
+	texto := "[TARGET_LAST_EVENT] comentario\nPRINCIPIO: datos base del objetivo\n" + strings.Repeat("relleno que hace bulto\n", 400) +
 		"Última acción: se pidió una captura"
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: UltimaAccion, Texto: texto})
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: texto})
 
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "ultima_accion") == repositories.StateListo })
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 
 	enviado := motor.encargosHechos()[0].usuario
 
-	if strings.Contains(enviado, "PRINCIPIO") {
-		t.Error("al motor le llegó el principio del texto, y el recorte quita por el principio")
+	if !strings.Contains(enviado, "[TARGET_LAST_EVENT] comentario") || !strings.Contains(enviado, "PRINCIPIO") {
+		t.Error("al motor no le llegaron las anclas y los datos base del objetivo")
 	}
 	if !strings.Contains(enviado, "Última acción: se pidió una captura") {
 		t.Errorf("al motor no le llegó el final del texto: %q", enviado[len(enviado)-80:])
@@ -994,8 +1133,8 @@ func TestLaPeticionLlevaResponseFormatLaTemperaturaYElTopeDePiezas(t *testing.T)
 	servicio.esperaBase = 5 * time.Millisecond
 	t.Cleanup(servicio.Parar)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo })
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 
 	peticion := motor.peticionHecha()
 
@@ -1033,8 +1172,8 @@ func TestElEncargoLlevaElIdiomaYElFormatoPedido(t *testing.T) {
 	servicio.esperaBase = 5 * time.Millisecond
 	t.Cleanup(servicio.Parar)
 
-	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Motivo, Texto: textoDePrueba})
-	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "motivo") == repositories.StateListo })
+	servicio.Pedir(Entrada{Numero: ticketDePrueba, Tipo: Summary, Texto: textoDePrueba})
+	esperarA(t, func() bool { return almacen.estado(ticketDePrueba, "summary") == repositories.StateListo })
 
 	encargo := motor.encargosHechos()[0]
 

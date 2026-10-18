@@ -29,3 +29,20 @@ func TestAIManagerPreservesStructuredMemoryError(t *testing.T) {
 		t.Fatalf("unexpected details: %+v", memory)
 	}
 }
+
+func TestDeactivateAIModelUsesDedicatedManagerAction(t *testing.T) {
+	var method, path string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		method, path = r.Method, r.URL.Path
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	service := NewService(nil, "")
+	service.SetAIManager(server.URL, "secret")
+	if err := service.DeactivateAIModel("qwen2.5-3b-instruct"); err != nil {
+		t.Fatal(err)
+	}
+	if method != http.MethodPost || path != "/models/qwen2.5-3b-instruct/deactivate" {
+		t.Fatalf("petición inesperada: %s %s", method, path)
+	}
+}

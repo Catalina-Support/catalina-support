@@ -1,7 +1,20 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-15
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 25 migra el
+> contrato de `motivo/reason` a `summary/escalationReason`, elimina la escritura manual y versiona
+> una regeneración total de Summary. El responsable eligió 1A–20B, aceptó el costo potencial del
+> proveedor y no dejó decisiones abiertas. La migración abierta se aplicó sólo en desarrollo;
+> pasaron las pruebas específicas, las 231 pruebas del frontend, las fronteras y la compilación. La
+> suite completa del backend conserva el fallo previo de prioridad interna, ajeno a esta enmienda.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 24 añade el vínculo
+> persistente entre historial y comentario, una versión de contexto para regeneraciones idempotentes
+> y un trabajo de fondo acotado. No crea módulos ni cruza fronteras: `tickets` arma los hechos y `ai`
+> redacta y valida. El responsable eligió 1A–14A y aprobó explícitamente los documentos; no quedan
+> decisiones abiertas.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 23 coordina persistencia, API,
 > transacción, correo no bloqueante y pruebas de prioridad sin crear módulos ni dependencias. No se
@@ -1373,3 +1386,55 @@ Las consultas aplican filtros parametrizados y un `CASE` explícito para el orde
 de creación e identificador para estabilidad. El frontend conserva filtros y orden en la URL sin
 preferencias por cuenta. Las fronteras automáticas siguen iguales: la pantalla de tickets sólo llama
 a `/api/tickets/**` y `tickets` usa una interfaz para pedir el correo.
+
+## 24. Contexto verificable y regeneración versionada de IA
+
+La propiedad de los datos no cambia. `tickets` lee principal, interno, participantes, clasificación,
+comentarios, adjuntos e historial y construye un contrato interno estructurado. `ai` recibe ese
+contrato, aplica presupuesto, redacta, valida y persiste el resumen. Ningún repositorio de `ai` lee
+tablas de tickets y ninguna pantalla llama a un prefijo ajeno.
+
+La migración abierta de `v1.0.0.sql` añade una referencia opcional de `ticket_history` al comentario
+que acompaña el movimiento. La referencia es nula para movimientos sin comentario y para datos
+históricos que no puedan vincularse con certeza. La transacción de tickets crea comentario, guarda
+su identificador en el historial y cambia el estado como una sola unidad.
+
+`ai_insights` incorpora una versión de contexto. Los resultados nuevos se guardan con la versión
+vigente; las últimas acciones anteriores quedan detectables sin una marca global volátil. Al arrancar,
+el trabajador existente recoge en lotes acotados las filas antiguas, evita duplicarlas en la cola y
+continúa después de reiniciar. Una instalación atiende solicitudes mientras se regenera y un motor
+caído no impide levantar backend ni trabajar con tickets.
+
+El respaldo de una acción explícita se produce con datos estructurados de `tickets`; por eso actor,
+acción y estado final no dependen de interpretar texto libre. `ai` puede mejorar la frase y resumir
+el comentario asociado, pero sólo acepta la salida si preserva esas anclas. Para un comentario
+independiente continúa usando generación normal y sus errores existentes.
+
+Las pruebas atraviesan las fronteras con contratos falsos, PostgreSQL real y reinicio simulado.
+Comprueban claves foráneas, atomicidad, lotes, versión, exclusión de duplicados, presupuesto de
+contexto, modalidades local/remota/proveedor y que el backend permanece disponible durante el
+barrido. Producción, dominio y etiqueta siguen fuera de alcance.
+
+La migración abierta se aplicó únicamente a desarrollo. La versión nueva quedó persistida y el
+trabajador regeneró el caso reproducido sin bloquear el backend. Las pruebas afectadas, `go vet`,
+las 232 pruebas del frontend, las fronteras automáticas y la compilación pasaron; permanece el fallo
+previo de prioridad interna documentado fuera de este cambio.
+
+## 25. Implementación: migración de Summary y frontera automática
+
+La propiedad modular no cambia: `tickets` decide cuándo un cambio requiere Summary o Last action,
+construye la fuente autorizada y llama a la interfaz interna de `ai`; `ai` genera, valida y persiste.
+La retirada del endpoint manual reduce la superficie HTTP y no crea una llamada del frontend a
+`/api/ai/**`.
+
+La migración abierta convierte el discriminador `motivo` de `ai_insights` en `summary`. API, DTO,
+tipos Go y TypeScript usan `summary`; el motivo del escalado usa `escalationReason`, mientras la
+columna `escalation_reason` no necesita cambio. No hay lectura doble, alias ni compatibilidad
+transitoria. Se incrementa la versión de contexto de Summary para que el trabajador regenere todas
+las filas —también con proveedor— en lotes acotados e idempotentes.
+
+Los intentos de cada trabajo siguen teniendo límite. No nace un cron ni una cola infinita: tras un
+fallo, sólo un cambio pertinente vuelve a encolar el campo. El estado persistido permite mostrar
+pendiente o error en la ficha y texto vacío en los consumidores compactos. Las pruebas atraviesan
+migración, repositorio, reinicio, proveedor, contratos HTTP y fronteras del frontend. No se toca
+producción ni se crea la etiqueta `v1.0.0`.

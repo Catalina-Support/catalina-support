@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/abadojack/whatlanggo"
 )
@@ -140,6 +141,44 @@ func (m *motor) probarConfiguracion(ctx context.Context, baseURL, model, provide
 	return nil
 }
 
+func (m *motor) saludar(ctx context.Context, baseURL, model, language, current string) (string, error) {
+	idioma := "English"
+	if language == "es" {
+		idioma = "Spanish"
+	}
+	prompt := "Reply only with JSON {\"text\":\"...\"}. Greet the user in " + idioma + " and include exactly this current date and time: " + current
+	body, _ := json.Marshal(peticion{Model: model, Messages: []mensaje{{Role: "user", Content: prompt}}, Temperature: 0, MaxTokens: 128, ResponseFormat: formatoDeRespuesta{Type: "json_object"}})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, direccionDe(baseURL, "/v1/chat/completions"), bytes.NewReader(body))
+	if err != nil {
+		return "", ErrSinMotor
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := m.cliente.Do(req)
+	if err != nil {
+		return "", ErrSinMotor
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		vaciar(resp.Body)
+		return "", ErrSinMotor
+	}
+	content, err := contenidoDeRespuesta(resp.Body, "local")
+	if err != nil {
+		return "", err
+	}
+	obj, ok := primerObjetoJSON(content)
+	if !ok {
+		return "", ErrRespuestaInvalida
+	}
+	var parsed struct {
+		Text string `json:"text"`
+	}
+	if json.Unmarshal([]byte(obj), &parsed) != nil || strings.TrimSpace(parsed.Text) == "" {
+		return "", ErrRespuestaInvalida
+	}
+	return strings.TrimSpace(parsed.Text), nil
+}
+
 // pedir hace **una** llamada al motor y devuelve las dos redacciones.
 //
 // Los dos fallos salen distintos porque el módulo los trata distinto: `ErrSinMotor` cuando no
@@ -230,7 +269,29 @@ func (m *motor) pedirGlobalUnaVez(ctx context.Context, ajustes Ajustes, encargo 
 		return "", ErrRespuestaInvalida
 	}
 	text := recortarPalabras(strings.TrimSpace(parsed.Text), ajustes.Palabras)
+	if !textoSignificativo(text) {
+		return "", &respuestaInvalida{forma: "texto sin letras ni números significativos"}
+	}
 	return text, nil
+}
+
+// textoSignificativo impide guardar como resumen los marcadores que un modelo pequeño puede copiar
+// del contrato (`...`, `—`, `N/A`) o cualquier respuesta compuesta sólo por puntuación.
+func textoSignificativo(texto string) bool {
+	limpio := strings.TrimSpace(texto)
+	if limpio == "" {
+		return false
+	}
+	marcador := strings.ToLower(strings.Trim(limpio, " .…—-_/"))
+	if marcador == "" || marcador == "n/a" || marcador == "na" {
+		return false
+	}
+	for _, r := range limpio {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func idiomaCompatible(texto, esperado string) bool {

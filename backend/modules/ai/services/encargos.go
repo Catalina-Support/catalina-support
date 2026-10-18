@@ -30,10 +30,11 @@ type encargo struct {
 //
 // El texto del ticket va recortado por el principio (decisión 6).
 func encargoDe(tipo Tipo, texto string, palabras int, idioma string) encargo {
+	contenido := recortarJerarquizado(texto)
 	return encargo{
 		sistema: oficioDe(tipo, idioma),
-		usuario: recortar(texto) + "\n\n" + exigenciaDelFormato(palabras, idioma),
-		texto:   recortar(texto),
+		usuario: contenido + "\n\n" + exigenciaDelFormato(tipo, palabras, idioma),
+		texto:   contenido,
 	}
 }
 
@@ -41,23 +42,25 @@ func encargoDe(tipo Tipo, texto string, palabras int, idioma string) encargo {
 func oficioDe(tipo Tipo, idioma string) string {
 	if idioma == "en" {
 		switch tipo {
-		case Motivo:
-			return "You summarize help desk tickets. State WHAT THE TICKET IS ABOUT in one direct present-tense sentence: what is happening to the requester and what they need. Focus on the subject, description and request, not later actions."
+		case Summary:
+			return "You summarize help desk tickets. State WHAT THE TICKET IS ABOUT in one direct present-tense sentence: what is happening to the requester and what they need. For a main ticket, focus on its subject and TARGET_REASON description. For an internal ticket, summarize its subject and TARGET_REASON escalation reason. Ignore later actions and the linked ticket's activity."
 		case UltimaAccion:
-			return "You summarize help desk tickets. State WHAT HAPPENED LAST in one direct past-tense sentence. The newest information is at the end of the conversation. Say whether the ticket is waiting for the requester, Support or Development."
+			return "You summarize help desk tickets. State WHAT HAPPENED LAST in one direct past-tense sentence. The mandatory fact is identified by TARGET_LAST_EVENT, TARGET_LAST_ACTOR, TARGET_LAST_STATE and TARGET_LAST_COMMENT. Preserve the actor name and action; use the linked comment only to explain why. The linked ticket is context, never the target."
 		}
 	}
 	switch tipo {
-	case Motivo:
+	case Summary:
 		return "Eres quien resume tickets en una mesa de ayuda. Escribe DE QUÉ VA EL TICKET en una sola " +
 			"frase, en presente y sin rodeos, como se lo contarías a un compañero que va a atenderlo: " +
-			"qué le pasa a quien lo abrió y qué necesita. Fíjate en el asunto, en la descripción y en " +
-			"lo que pide el usuario, no en lo que se ha hecho después."
+			"qué le pasa a quien lo abrió y qué necesita. Para un ticket principal, usa su asunto y la " +
+			"descripción TARGET_REASON. Para un ticket interno, resume su asunto y el motivo de escalado " +
+			"TARGET_REASON. Ignora las acciones posteriores y la actividad del ticket enlazado."
 	case UltimaAccion:
 		return "Eres quien resume tickets en una mesa de ayuda. Escribe QUÉ FUE LO ÚLTIMO QUE PASÓ en " +
-			"este ticket, en una sola frase, en pasado y sin rodeos. Lo último está al final de la " +
-			"conversación: fíjate en el último comentario y en el último cambio de estado, y di si el " +
-			"ticket está esperando a alguien (al usuario, a soporte o a desarrollo)."
+			"este ticket, en una sola frase, en pasado y sin rodeos. El hecho obligatorio está separado " +
+			"como TARGET_LAST_EVENT, TARGET_LAST_ACTOR, TARGET_LAST_STATE y TARGET_LAST_COMMENT. Conserva " +
+			"el nombre del actor y la acción; usa el comentario vinculado sólo para explicar el porqué. " +
+			"El ticket enlazado aporta contexto, pero nunca sustituye al objetivo."
 	}
 
 	return ""
@@ -70,15 +73,29 @@ func oficioDe(tipo Tipo, idioma string) string {
 // La plantilla se le enseña tal cual —`{"es": "…", "en": "…"}`— porque es lo que hace que el modelo
 // conteste ese objeto y no el suyo: se midió que sin ella se inventa las claves, y con ella sale bien
 // incluso con un ticket de 6 000 caracteres.
-func exigenciaDelFormato(palabras int, idioma string) string {
+func exigenciaDelFormato(tipo Tipo, palabras int, idioma string) string {
 	if idioma == "en" {
-		return "Do not invent anything absent from the ticket. Use at most " + strconv.Itoa(palabras) + " words. Return only the requested JSON object."
+		ejemplo := "A meaningful summary sentence."
+		if tipo == UltimaAccion {
+			ejemplo = "The requester opened the ticket and described the reported problem."
+		}
+		return "Do not invent anything absent from the ticket. Preserve every proper name exactly as written. Use at most " + strconv.Itoa(palabras) +
+			` words. Return exactly {"text":"` + ejemplo + `"}; replace the example sentence with the summary and never return placeholders such as ..., — or N/A.`
 	}
-	return "Devuelve EXACTAMENTE este objeto JSON, con esas dos claves y ningún campo más: el español " +
-		"en \"es\" y el inglés en \"en\". El inglés no es una traducción del español, es el mismo " +
-		"resumen escrito en inglés.\n" +
-		"No inventes nada que no esté en el ticket: si un dato no aparece, no lo pongas.\n" +
-		"No pases de " + strconv.Itoa(palabras) + " palabras en cada idioma.\n" +
-		"Devuelve sólo el objeto, sin texto alrededor y sin bloques de código:\n" +
-		`{"es": "…", "en": "…"}`
+	ejemplo := "Una frase de resumen con contenido."
+	if tipo == UltimaAccion {
+		ejemplo = "El usuario abrió el ticket y describió el problema reportado."
+	}
+	return "No inventes nada que no esté en el ticket y conserva cada nombre propio exactamente como está escrito. " +
+		"No pases de " + strconv.Itoa(palabras) + " palabras. " +
+		`Devuelve exactamente {"text":"` + ejemplo + `"}; sustituye la frase de ejemplo por el resumen y nunca devuelvas marcadores como ..., — o N/A.`
+}
+
+func reforzarEncargo(encargo encargo, idioma string) encargo {
+	refuerzo := "Your previous answer was invalid. Answer with a complete sentence containing letters and meaningful ticket information. Never answer with only punctuation, ..., — or N/A."
+	if idioma == "es" {
+		refuerzo = "Tu respuesta anterior no fue válida. Contesta con una frase completa que tenga letras e información real del ticket. Nunca respondas sólo con puntuación, ..., — o N/A."
+	}
+	encargo.usuario += "\n\n" + refuerzo
+	return encargo
 }

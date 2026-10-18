@@ -182,9 +182,9 @@ func (s *Service) listaDeInternos(filtros repositories.Filtros) (Page, error) {
 		))
 	}
 
-	// **Los internos también llevan sus dos campos**: el «Motivo» de un interno es el del escalado —lo
-	// pinta la pantalla, no viene de aquí— y la «Última acción» la redacta el motor para él, con su
-	// propio número. Sin esta línea, las dos columnas salían vacías en la lista de internos.
+	// **Los internos también llevan sus dos campos**: el «Resumen» se redacta a partir del motivo del
+	// escalado y la «Última acción» a partir del movimiento más reciente, ambos con el número propio
+	// del interno. Sin esta línea, las dos columnas salían vacías en la lista de internos.
 	s.pegarResumenes(tickets)
 
 	return Page{Tickets: tickets, Total: total, Page: filtros.Page, PerPage: filtros.PerPage}, nil
@@ -493,24 +493,24 @@ func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Accou
 // categoría y las etiquetas (decisión 67).
 func (s *Service) aTicketInterno(interno repositories.InternalTicket, principal repositories.Ticket, porID map[int64]auth.Account, categoria *Category, etiquetas []string) Ticket {
 	return Ticket{
-		ID:          interno.ID,
-		Number:      interno.Number,
-		Internal:    true,
-		Subject:     principal.Subject,
-		Description: principal.Description,
-		State:       interno.State,
-		Priority:    principal.Priority,
-		Reason:      interno.EscalationReason,
-		Parent:      principal.Number,
-		Category:    categoria,
-		Tags:        etiquetas,
-		Requester:   cuentaDeID(porID, principal.RequesterID),
-		CreatedBy:   cuentaDeID(porID, interno.CreatedByID),
-		Assignee:    cuentaDeIDOpcional(porID, interno.AssigneeID),
-		ResolvedAt:  interno.ResolvedAt,
-		ClosedAt:    interno.ClosedAt,
-		CreatedAt:   interno.CreatedAt,
-		UpdatedAt:   interno.UpdatedAt,
+		ID:               interno.ID,
+		Number:           interno.Number,
+		Internal:         true,
+		Subject:          principal.Subject,
+		Description:      principal.Description,
+		State:            interno.State,
+		Priority:         principal.Priority,
+		EscalationReason: interno.EscalationReason,
+		Parent:           principal.Number,
+		Category:         categoria,
+		Tags:             etiquetas,
+		Requester:        cuentaDeID(porID, principal.RequesterID),
+		CreatedBy:        cuentaDeID(porID, interno.CreatedByID),
+		Assignee:         cuentaDeIDOpcional(porID, interno.AssigneeID),
+		ResolvedAt:       interno.ResolvedAt,
+		ClosedAt:         interno.ClosedAt,
+		CreatedAt:        interno.CreatedAt,
+		UpdatedAt:        interno.UpdatedAt,
 	}
 }
 

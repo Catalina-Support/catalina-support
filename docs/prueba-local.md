@@ -1,7 +1,12 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-17
+>
+> **Enmienda implementada y verificada el 2026-10-17: README bilingüe y capturas públicas.** La
+> sección 22 registra la comprobación del recorrido reordenado y de su equivalencia en español. Se
+> restauraron los datos locales, la marca de fábrica y se verificaron visualmente la vista doble y
+> el panel de IA. No se tocó ningún entorno público.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 21 añade la comprobación local de las
 > cuatro prioridades, orden, filtros, historial y aviso crítico no bloqueante. No se modifica código
@@ -873,3 +878,27 @@ el único correo en Mailpit. El fallo de SMTP se comprueba en backend contra Pos
 prioridad y su historial permanecen guardados y la respuesta lleva el aviso que presenta el toast.
 Dos aplicaciones consecutivas del seeder dejaron la misma distribución: 2 críticos, 6 altos, 11
 medios y 6 bajos.
+
+## 22. Verificación de la nueva portada
+
+Después de reescribir ambos README se comprobará que una persona puede seguir el camino principal
+en inglés y encontrar el equivalente completo en español; los comandos, puertos, credenciales y
+advertencias deben coincidir. Se verificarán todos los enlaces relativos y los enlaces públicos al
+sitio, la demo y Ko-fi, sin automatizar accesos ni pagos externos.
+
+Para la imagen pública se ejecutará conscientemente el seeder sobre el entorno local, aceptando su
+limpieza documentada de tickets, categorías, etiquetas, cuentas `@demo.com` y adjuntos de
+desarrollo. Antes de capturar se confirmarán marca de fábrica, tema con color institucional, vista
+doble, `Summary`, `Last action` y ausencia de información personal. La evidencia no mostrará la
+cuenta de fábrica, secretos, correos privados ni identificadores de infraestructura.
+
+La validación no tocó producción, `demo.catalina-support.com`, DNS, el sitio, Ko-fi ni el script
+externo de restauración. Todos los enlaces relativos existen, `git diff --check` terminó limpio y
+los Compose de desarrollo e IA son válidos. `prod.yml` confirmó su protección esperada: no puede
+evaluarse sin el archivo privado `config/env/prod.env`, requisito que el README explica en vez de
+ocultar.
+
+La interfaz comprobó en 1920 × 1200 el ticket principal y el interno completos, y en el detalle del
+mismo ticket mostró resultados reales en `Summary` y `Last action` junto a `Improve with AI`. La
+vista doble no renderiza ese panel lateral; se registró el desajuste respecto de la propuesta y se
+resolvió con dos capturas reales complementarias, sin componer ni maquillar la UI.

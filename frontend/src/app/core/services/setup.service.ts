@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import type { CatalogoLocalDeIA, ConfiguracionDeIA, ConfiguracionDeIAEscrita } from './settings.service';
+import type { CatalogoLocalDeIA, ConfiguracionDeIA, ConfiguracionDeIAEscrita, SaludoDeIA } from './settings.service';
 
 /**
  * La configuración del directorio tal y como la ve el asistente: **sin la contraseña**, con
@@ -54,6 +54,7 @@ export interface EstadoDeInstalacion {
   readonly aiRequired: boolean;
   readonly name: string;
   readonly language: string;
+  readonly primaryColor: string;
   readonly entryMethod: string;
   readonly timeZone: string;
   readonly publicAppUrl: string;
@@ -76,6 +77,7 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
   aiRequired: false,
   name: '',
   language: 'es',
+  primaryColor: '#1d4ed8',
   entryMethod: 'local',
   timeZone: 'UTC',
   publicAppUrl: '',
@@ -113,6 +115,7 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
 export interface Paso1 {
   readonly name: string;
   readonly language: string;
+  readonly primaryColor: string;
 }
 
 export interface Paso2 {
@@ -202,7 +205,7 @@ export class SetupService {
     return (await this.estadoDeInstalacion()).installed;
   }
 
-  /** Guarda el paso 1: el nombre y el idioma. */
+  /** Guarda el paso 1: el nombre, el idioma y el color institucional. */
   async guardarInstalacion(paso: Paso1): Promise<EstadoDeInstalacion> {
     return this.guardar('/api/setup/installation', paso);
   }
@@ -235,7 +238,13 @@ export class SetupService {
   async modelosLocales(): Promise<CatalogoLocalDeIA> { return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/setup/ai/models')); }
   async descargarModelo(id: string, acceptLicense: boolean): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense })); }
   async activarModelo(id: string): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/activate`, {})); }
+  async desactivarModelo(id: string): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/deactivate`, {})); }
   async eliminarModelo(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}`)); }
+  async cancelarDescarga(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/download`)); }
+  async eliminarParcial(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/partial`)); }
+  async subirLogo(oscuro: boolean, archivo: File): Promise<void> { const data=new FormData(); data.append('logo',archivo,archivo.name); await firstValueFrom(this.http.post(`/api/setup/brand/logo?variant=${oscuro?'oscuro':'claro'}`,data)); }
+  async restablecerLogo(oscuro: boolean): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/brand/logo?variant=${oscuro?'oscuro':'claro'}`)); }
+  async probarModeloActivo():Promise<SaludoDeIA>{return firstValueFrom(this.http.post<SaludoDeIA>('/api/setup/ai/models/active/test',{}));}
 
   /** Sella la instalación: es lo que hace que el asistente no vuelva a aparecer. */
   async terminar(): Promise<EstadoDeInstalacion> {

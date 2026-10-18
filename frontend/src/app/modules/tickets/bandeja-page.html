@@ -1,4 +1,7 @@
-<main class="mx-auto flex max-w-[88rem] flex-col gap-6">
+<main
+  #contenedor
+  class="mx-auto flex max-w-[88rem] flex-col gap-6 md:h-[calc(100dvh-5.5rem)] md:min-h-[19rem] md:gap-3 lg:h-[calc(100dvh-2rem)]"
+>
   <!--
     **El nombre del módulo, los filtros y «Nuevo ticket», en una sola fila** (decisión del responsable,
     2026-09-28): eran dos renglones —el título con su botón, y debajo la búsqueda con el resumen—, y
@@ -20,7 +23,12 @@
     cuáles— con su botón de quitarlos. Antes eran tres filas de filtros, y la de categorías se salía de
     la pantalla en cuanto el catálogo crecía.
   -->
-    <app-boton forma="secundario" [texto]="t().tickets.abrirBusqueda" (pulsado)="abrirBusqueda()" />
+    <app-boton
+      forma="secundario"
+      [compacto]="true"
+      [texto]="t().tickets.abrirBusqueda"
+      (pulsado)="abrirBusqueda()"
+    />
 
     @if (cuantosFiltros()) {
       <span class="text-sm text-apagado">
@@ -39,7 +47,12 @@
     }
 
     @if (puedeCrear()) {
-      <app-boton class="ml-auto" [texto]="t().tickets.nuevo" (pulsado)="irANuevo()" />
+      <app-boton
+        class="ml-auto"
+        [compacto]="true"
+        [texto]="t().tickets.nuevo"
+        (pulsado)="irANuevo()"
+      />
     }
   </div>
 
@@ -47,7 +60,12 @@
     <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
   }
 
-  <section class="rounded-lg border border-borde bg-superficie">
+  <section
+    #contenedorLista
+    class="overflow-x-auto rounded-lg border border-borde bg-superficie pb-4 md:min-h-60 md:flex-1 md:overflow-auto"
+    tabindex="0"
+    [attr.aria-label]="titulo()"
+  >
     @if (cargando()) {
       <p class="px-4 py-6 text-sm text-apagado">{{ t().tickets.cargando }}</p>
     } @else if (!pagina().tickets.length) {
@@ -67,7 +85,10 @@
         }
       </div>
     } @else if (esAncha()) {
-      <table class="w-full border-collapse text-sm">
+      <table
+        class="w-full table-fixed border-collapse text-sm"
+        [style.min-width]="muestraPersonas() ? '80rem' : '68rem'"
+      >
         <caption class="sr-only">
           {{
             titulo()
@@ -76,37 +97,62 @@
 
         <thead>
           <tr class="border-b border-borde text-left text-xs uppercase text-apagado">
-            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaNumero }}</th>
-            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaAsunto }}</th>
-            <!--
-              Los dos campos que redacta el motor de IA van en medio, entre el asunto y el estado: son
-              lo que se lee para saber de qué va el ticket sin abrirlo (docs/interfaz-y-experiencia.md,
-              sección 3.3).
-            -->
-            <th scope="col" class="hidden px-4 py-2 font-medium lg:table-cell">
-              {{ t().tickets.columnaMotivo }}
+            <th
+              scope="col"
+              class="sticky top-0 left-0 z-30 w-[9rem] bg-superficie px-2 py-2 font-medium whitespace-nowrap"
+            >
+              {{ t().tickets.columnaNumero }}
+              <span
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-y-0 right-0 w-px bg-borde"
+              ></span>
             </th>
-            <th scope="col" class="hidden px-4 py-2 font-medium lg:table-cell">
-              {{ t().tickets.columnaUltimaAccion }}
+            <th
+              scope="col"
+              class="sticky top-0 z-20 w-[6.5rem] bg-superficie px-2 py-2 text-center font-medium"
+            >
+              {{ t().tickets.prioridad }}
             </th>
-            <!--
-              **La clasificación tiene su columna** (decisión 86): la categoría y las etiquetas se leen
-              juntas, que es lo que son —cómo está clasificado el ticket—, y el número se queda solo.
-            -->
-            <th scope="col" class="px-4 py-2 font-medium">
+            <th
+              scope="col"
+              class="sticky top-0 z-20 w-[7.5rem] bg-superficie px-2 py-2 text-center font-medium"
+            >
+              {{ t().tickets.columnaEstado }}
+            </th>
+            <th scope="col" class="sticky top-0 z-20 w-[15%] bg-superficie px-2 py-2 font-medium">
+              {{ t().tickets.columnaAsunto }}
+            </th>
+            <th scope="col" class="sticky top-0 z-20 w-[11rem] bg-superficie px-2 py-2 font-medium">
               {{ t().tickets.columnaClasificacion }}
             </th>
-            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaEstado }}</th>
-            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.prioridad }}</th>
-            <th scope="col" class="hidden px-4 py-2 font-medium xl:table-cell">
-              {{ t().tickets.columnaSolicitante }}
+            <th scope="col" class="sticky top-0 z-20 w-[17%] bg-superficie px-2 py-2 font-medium">
+              {{ t().tickets.summary }}
             </th>
-            <th scope="col" class="hidden px-4 py-2 font-medium xl:table-cell">
-              {{ t().tickets.columnaResponsable }}
+            <th scope="col" class="sticky top-0 z-20 w-[15%] bg-superficie px-2 py-2 font-medium">
+              {{ t().tickets.columnaUltimaAccion }}
             </th>
-            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaActualizado }}</th>
-            <th scope="col" class="px-4 py-2 font-medium">
-              <span class="sr-only">{{ t().tickets.verTicket }}</span>
+            @if (muestraPersonas()) {
+              <th
+                scope="col"
+                class="sticky top-0 z-20 w-[9rem] bg-superficie px-2 py-2 font-medium"
+              >
+                {{ t().tickets.columnaSolicitante }}
+              </th>
+              <th
+                scope="col"
+                class="sticky top-0 z-20 w-[9rem] bg-superficie px-2 py-2 font-medium"
+              >
+                {{ t().tickets.columnaResponsable }}
+              </th>
+            }
+            <th scope="col" class="sticky top-0 z-20 w-[8rem] bg-superficie px-2 py-2 font-medium">
+              {{ t().tickets.columnaActualizado }}
+            </th>
+            <th
+              scope="col"
+              class="sticky top-0 z-20 w-px bg-superficie px-2 py-2 text-left font-medium whitespace-nowrap"
+            >
+              {{ t().tickets.columnaAccion }}
             </th>
           </tr>
         </thead>
@@ -114,58 +160,21 @@
         <tbody>
           @for (ticket of pagina().tickets; track ticket.number) {
             <tr class="border-b border-borde align-top last:border-0">
-              <!-- **El número solo** (decisión 86): los chips de la clasificación ya no van aquí. -->
-              <td class="px-4 py-3">
+              <td class="sticky left-0 z-10 bg-superficie px-2 py-3 whitespace-nowrap">
                 <a
                   [routerLink]="['/tickets', ticket.number]"
                   class="font-medium text-primario underline"
+                  (click)="conservarAlAbrir()"
                 >
                   {{ ticket.number }}
                 </a>
+                <span
+                  aria-hidden="true"
+                  class="pointer-events-none absolute inset-y-0 right-0 w-px bg-borde"
+                ></span>
               </td>
 
-              <td class="px-4 py-3 text-texto">{{ ticket.subject }}</td>
-
-              <!-- **Recortados a dos líneas**: son un resumen para barrer la lista, y el texto entero
-                   se lee en la ficha. -->
-              <td class="hidden px-4 py-3 text-apagado lg:table-cell">
-                <span class="line-clamp-2 max-w-[18rem]">{{ motivo(ticket) }}</span>
-              </td>
-
-              <td class="hidden px-4 py-3 text-apagado lg:table-cell">
-                <span class="line-clamp-2 max-w-[18rem]">{{ ultimaAccion(ticket) }}</span>
-              </td>
-
-              <!--
-                **La categoría y las etiquetas, juntas** (decisión 86): los mismos chips que antes iban
-                debajo del número, con **un tope de ancho** para que un nombre largo no ensanche la tabla
-                y la saque de la pantalla.
-              -->
-              <td class="px-4 py-3">
-                <div class="flex max-w-56 flex-wrap items-center gap-1">
-                  @if (ticket.category; as categoria) {
-                    <span
-                      class="inline-flex max-w-full items-center truncate rounded border border-borde-fuerte bg-superficie-suave px-1.5 py-0.5 text-xs text-texto"
-                    >
-                      {{ categoria.name }}
-                    </span>
-                  }
-
-                  @for (etiqueta of ticket.tags ?? []; track etiqueta) {
-                    <span
-                      class="inline-flex max-w-full items-center truncate rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
-                    >
-                      {{ etiqueta }}
-                    </span>
-                  }
-                </div>
-              </td>
-
-              <td class="px-4 py-3">
-                <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
-              </td>
-
-              <td class="px-4 py-3">
+              <td class="px-2 py-3 text-center">
                 <span
                   class="inline-flex items-center gap-1 rounded border border-borde-fuerte px-2 py-1 text-xs font-medium text-texto"
                 >
@@ -174,17 +183,127 @@
                 </span>
               </td>
 
-              <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ solicitante(ticket) }}</td>
+              <td class="px-2 py-3 text-center">
+                <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
+              </td>
 
-              <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ responsable(ticket) }}</td>
+              <td class="px-2 py-3 text-texto">
+                <div
+                  class="relative"
+                  tabindex="0"
+                  (mouseenter)="evaluarTooltip(ticket.number + ':subject', asuntoVisible)"
+                  (mouseleave)="cerrarTooltip(ticket.number + ':subject')"
+                  (focus)="evaluarTooltip(ticket.number + ':subject', asuntoVisible)"
+                  (blur)="cerrarTooltip(ticket.number + ':subject')"
+                >
+                  <span #asuntoVisible class="line-clamp-2">{{ ticket.subject }}</span>
+                  @if (tooltipVisible(ticket.number + ':subject')) {
+                    <span
+                      role="tooltip"
+                      class="pointer-events-none absolute left-0 top-full z-40 mt-1 w-64 rounded border border-borde bg-superficie p-2 text-xs normal-case text-texto shadow-lg"
+                      >{{ ticket.subject }}</span
+                    >
+                  }
+                </div>
+              </td>
 
-              <td class="px-4 py-3 text-apagado">{{ actualizado(ticket) }}</td>
+              <td class="px-2 py-3">
+                <div class="flex max-h-14 max-w-44 flex-wrap items-center gap-1 overflow-visible">
+                  @if (ticket.category; as categoria) {
+                    <span
+                      class="inline-flex max-w-20 items-center truncate rounded border border-borde-fuerte bg-superficie-suave px-1.5 py-0.5 text-xs text-texto"
+                    >
+                      {{ categoria.name }}
+                    </span>
+                  }
 
-              <td class="px-4 py-3">
-                <div class="flex flex-wrap gap-2">
+                  @for (etiqueta of etiquetasVisibles(ticket); track etiqueta) {
+                    <span
+                      class="inline-flex max-w-20 items-center truncate rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                    >
+                      {{ etiqueta }}
+                    </span>
+                  }
+                  @if (etiquetasOcultas(ticket); as ocultas) {
+                    @if (ocultas.length) {
+                      <span
+                        class="group relative inline-flex"
+                        tabindex="0"
+                        [attr.aria-label]="ocultas.join(', ')"
+                      >
+                        <span class="rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                          >+{{ ocultas.length }}</span
+                        >
+                        <span
+                          role="tooltip"
+                          class="pointer-events-none invisible absolute left-0 top-full z-20 mt-1 w-max max-w-64 rounded border border-borde bg-superficie p-2 text-xs text-texto shadow-lg group-hover:visible group-focus:visible"
+                          >{{ ocultas.join(', ') }}</span
+                        >
+                      </span>
+                    }
+                  }
+                </div>
+              </td>
+
+              <td class="px-2 py-3 text-apagado">
+                <div
+                  class="relative"
+                  tabindex="0"
+                  (mouseenter)="evaluarTooltip(ticket.number + ':summary', summaryVisible)"
+                  (mouseleave)="cerrarTooltip(ticket.number + ':summary')"
+                  (focus)="evaluarTooltip(ticket.number + ':summary', summaryVisible)"
+                  (blur)="cerrarTooltip(ticket.number + ':summary')"
+                >
+                  <span #summaryVisible class="line-clamp-2">{{ summary(ticket) }}</span>
+                  @if (tooltipVisible(ticket.number + ':summary')) {
+                    <span
+                      role="tooltip"
+                      class="pointer-events-none absolute left-0 top-full z-40 mt-1 w-72 rounded border border-borde bg-superficie p-2 text-xs normal-case text-texto shadow-lg"
+                      >{{ summary(ticket) }}</span
+                    >
+                  }
+                </div>
+              </td>
+
+              <td class="px-2 py-3 text-apagado">
+                <div
+                  class="relative"
+                  tabindex="0"
+                  (mouseenter)="evaluarTooltip(ticket.number + ':last-action', ultimaAccionVisible)"
+                  (mouseleave)="cerrarTooltip(ticket.number + ':last-action')"
+                  (focus)="evaluarTooltip(ticket.number + ':last-action', ultimaAccionVisible)"
+                  (blur)="cerrarTooltip(ticket.number + ':last-action')"
+                >
+                  <span #ultimaAccionVisible class="line-clamp-2">{{ ultimaAccion(ticket) }}</span>
+                  @if (tooltipVisible(ticket.number + ':last-action')) {
+                    <span
+                      role="tooltip"
+                      class="pointer-events-none absolute right-0 top-full z-40 mt-1 w-72 rounded border border-borde bg-superficie p-2 text-xs normal-case text-texto shadow-lg"
+                      >{{ ultimaAccion(ticket) }}</span
+                    >
+                  }
+                </div>
+              </td>
+              @if (muestraPersonas()) {
+                <td class="px-2 py-3 text-apagado">
+                  <span class="line-clamp-2">{{ solicitante(ticket) }}</span>
+                </td>
+                <td class="px-2 py-3 text-apagado">
+                  <span class="line-clamp-2">{{ responsable(ticket) }}</span>
+                </td>
+              }
+
+              <td class="px-2 py-3 text-apagado">
+                <span class="block whitespace-nowrap">{{ fechaActualizada(ticket) }}</span>
+                <span class="block whitespace-nowrap">{{ horaActualizada(ticket) }}</span>
+              </td>
+
+              <td class="px-2 py-3 text-center">
+                <div class="flex justify-center">
                   <a
                     [routerLink]="['/tickets', ticket.number]"
                     class="inline-flex min-h-9 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+                    (click)="conservarAlAbrir()"
                   >
                     {{ t().tickets.verTicket }}
                   </a>
@@ -202,19 +321,23 @@
               <a
                 [routerLink]="['/tickets', ticket.number]"
                 class="font-medium text-primario underline"
+                (click)="conservarAlAbrir()"
               >
                 {{ ticket.number }}
               </a>
-              <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
               <span
                 class="inline-flex items-center gap-1 rounded border border-borde-fuerte px-2 py-1 text-xs font-medium text-texto"
               >
                 <span aria-hidden="true">{{ iconoDePrioridad(ticket.priority ?? 'medium') }}</span
                 >{{ prioridad(ticket) }}
               </span>
+              <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
             </div>
 
-            <!-- En las tarjetas del móvil van los mismos chips, debajo del número (sección 3.3). -->
+            <p class="line-clamp-2 text-sm text-texto" [attr.title]="ticket.subject">
+              {{ ticket.subject }}
+            </p>
+
             <div class="flex flex-wrap items-center gap-1">
               @if (ticket.category; as categoria) {
                 <span
@@ -224,21 +347,31 @@
                 </span>
               }
 
-              @for (etiqueta of ticket.tags ?? []; track etiqueta) {
+              @for (etiqueta of etiquetasVisibles(ticket); track etiqueta) {
                 <span
                   class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
                 >
                   {{ etiqueta }}
                 </span>
               }
+              @if (etiquetasOcultas(ticket); as ocultas) {
+                @if (ocultas.length) {
+                  <span
+                    tabindex="0"
+                    [attr.title]="ocultas.join(', ')"
+                    [attr.aria-label]="ocultas.join(', ')"
+                    class="rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                    >+{{ ocultas.length }}</span
+                  >
+                }
+              }
             </div>
 
-            <p class="text-sm text-texto">{{ ticket.subject }}</p>
-
-            <!-- En móvil es donde más se agradece saber de qué va un ticket sin abrirlo. -->
             <p class="flex flex-col gap-1 text-sm text-texto">
-              <span>{{ t().tickets.columnaMotivo }}: {{ motivo(ticket) }}</span>
-              <span class="text-apagado">
+              <span class="line-clamp-2" [attr.title]="summary(ticket)"
+                >{{ t().tickets.summary }}: {{ summary(ticket) }}</span
+              >
+              <span class="line-clamp-2 text-apagado" [attr.title]="ultimaAccion(ticket)">
                 {{ t().tickets.columnaUltimaAccion }}: {{ ultimaAccion(ticket) }}
               </span>
             </p>
@@ -246,13 +379,17 @@
             <p class="flex flex-col gap-1 text-xs text-apagado">
               <span>{{ t().tickets.columnaSolicitante }}: {{ solicitante(ticket) }}</span>
               <span>{{ t().tickets.columnaResponsable }}: {{ responsable(ticket) }}</span>
-              <span>{{ actualizado(ticket) }}</span>
+              <span
+                >{{ t().tickets.columnaActualizado }}: {{ fechaActualizada(ticket) }} ·
+                {{ horaActualizada(ticket) }}</span
+              >
             </p>
 
             <div class="flex flex-wrap gap-2">
               <a
                 [routerLink]="['/tickets', ticket.number]"
                 class="inline-flex min-h-11 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto"
+                (click)="conservarAlAbrir()"
               >
                 {{ t().tickets.verTicket }}
               </a>
@@ -262,32 +399,26 @@
       </ul>
     }
 
-    @if (!cargando() && pagina().total > 0) {
+    @if (!cargando() && pagina().total > 0 && hayMas()) {
       <div
-        class="flex flex-wrap items-center justify-between gap-3 border-t border-borde px-4 py-3"
+        #marcadorDeCarga
+        class="flex min-h-16 items-center justify-center border-t border-borde px-4 py-3"
       >
-        <p class="text-sm text-apagado">
-          {{ pagina().total }} {{ t().tickets.total }} · {{ t().tickets.pagina }}
-          {{ filtros().page }} /
-          {{ paginas() }}
-        </p>
-
-        <div class="flex gap-2">
-          <app-boton
-            forma="secundario"
-            [texto]="t().tickets.anterior"
-            [deshabilitado]="filtros().page <= 1 || cargando()"
-            (pulsado)="irAPagina(filtros().page - 1)"
-          />
-          <app-boton
-            forma="secundario"
-            [texto]="t().tickets.siguiente"
-            [deshabilitado]="filtros().page >= paginas() || cargando()"
-            (pulsado)="irAPagina(filtros().page + 1)"
-          />
-        </div>
+        @if (cargandoMas()) {
+          <p class="text-sm text-apagado" role="status">{{ t().tickets.cargaMas }}</p>
+        } @else if (errorCargaMas(); as error) {
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <p class="text-sm text-peligro">{{ error }}</p>
+            <app-boton
+              forma="secundario"
+              [texto]="t().tickets.reintentarCarga"
+              (pulsado)="reintentarCarga()"
+            />
+          </div>
+        }
       </div>
     }
+    <p class="sr-only" aria-live="polite">{{ anuncioCarga() }}</p>
   </section>
   <!--
     **El modal de la búsqueda**: todos los criterios en un sitio (decisión del responsable, 2026-09-27).
@@ -328,7 +459,7 @@
       <label class="flex flex-col gap-1 text-sm font-medium text-texto">
         {{ t().tickets.orden }}
         <select
-          class="min-h-11 rounded-md border border-borde-fuerte bg-superficie px-3 text-texto"
+          class="h-[42px] rounded-md border border-borde-fuerte bg-superficie px-3 py-2 text-texto"
           [value]="borrador().order"
           (change)="borrador.update((f) => ({ ...f, order: $any($event.target).value }))"
         >

@@ -6,48 +6,37 @@ import (
 	"catalina-support/backend/shared/auth"
 )
 
-var writingTones = map[string]bool{
-	"professional": true,
-	"friendly":     true,
-	"brief":        true,
-	"empathetic":   true,
-	"technical":    true,
-}
-
 // ImproveDraft autoriza el editor, obtiene el destinatario desde la base y delega únicamente el
 // contexto mínimo. No persiste ni el borrador ni el resultado.
-func (s *Service) ImproveDraft(number, editor, draft, tone string, actor auth.Identity) (string, error) {
+func (s *Service) ImproveDraft(number, editor, draft, previousSuggestion string, actor auth.Identity) (WritingSuggestion, error) {
 	if !actor.Can(auth.RoleSoporte, auth.RoleDesarrollo) {
-		return "", ErrForbidden
+		return WritingSuggestion{}, ErrForbidden
 	}
 	borrador := strings.TrimSpace(draft)
 	if borrador == "" {
-		return "", ErrWritingDraftRequired
-	}
-	if !writingTones[tone] {
-		return "", ErrWritingToneInvalid
+		return WritingSuggestion{}, ErrWritingDraftRequired
 	}
 	if editor != "description" && editor != "comment" {
-		return "", ErrWritingEditorInvalid
+		return WritingSuggestion{}, ErrWritingEditorInvalid
 	}
 	if s.writing == nil || s.accounts == nil || s.language == nil {
-		return "", ErrWritingUnavailable
+		return WritingSuggestion{}, ErrWritingUnavailable
 	}
 
 	principal, interno, _, err := s.porNumero(number)
 	if err != nil {
-		return "", err
+		return WritingSuggestion{}, err
 	}
 	detalle, err := s.ticketDe(number, actor)
 	if err != nil {
-		return "", err
+		return WritingSuggestion{}, err
 	}
 	if editor == "description" {
 		if interno || !puedeEditar(actor, detalle) {
-			return "", ErrForbidden
+			return WritingSuggestion{}, ErrForbidden
 		}
 	} else if !puedeComentar(actor, detalle) {
-		return "", ErrForbidden
+		return WritingSuggestion{}, ErrForbidden
 	}
 
 	destinatarioID := principal.RequesterID
@@ -55,19 +44,21 @@ func (s *Service) ImproveDraft(number, editor, draft, tone string, actor auth.Id
 	if interno {
 		internoDB, err := s.tickets.InternalByNumber(strings.TrimSpace(number))
 		if err != nil {
-			return "", traducirTicket(err)
+			return WritingSuggestion{}, traducirTicket(err)
 		}
 		destinatarioID = internoDB.CreatedByID
 		tipo = "internal"
 	}
 	destinatario, err := s.accounts.ByID(destinatarioID)
 	if err != nil {
-		return "", err
+		return WritingSuggestion{}, err
 	}
 	idioma, err := s.language.Language()
 	if err != nil {
-		return "", err
+		return WritingSuggestion{}, err
 	}
 
-	return s.writing.ImproveDraft(borrador, tone, destinatario.FullName(), tipo, idioma)
+	return s.writing.ImproveDraft(
+		borrador, strings.TrimSpace(previousSuggestion), destinatario.FullName(), tipo, idioma,
+	)
 }
