@@ -108,6 +108,7 @@ type HistoryEntry struct {
 	ID               int64  `gorm:"primaryKey"`
 	TicketID         *int64 `gorm:"column:ticket_id"`
 	InternalTicketID *int64 `gorm:"column:internal_ticket_id"`
+	CommentID        *int64 `gorm:"column:comment_id"`
 	// Nulo cuando lo hizo el sistema.
 	ActorID   *int64    `gorm:"column:actor_id"`
 	Event     string    `gorm:"column:event"`

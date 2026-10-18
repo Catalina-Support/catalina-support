@@ -31,7 +31,9 @@ type modelSpec struct {
 type progress struct {
 	Downloaded int64
 	Running    bool
+	Phase      string
 	Err        string
+	Cancel     context.CancelFunc
 }
 type modelView struct {
 	ID              string `json:"id"`
@@ -47,6 +49,8 @@ type modelView struct {
 	Healthy         bool   `json:"healthy"`
 	Downloading     bool   `json:"downloading"`
 	DownloadedBytes int64  `json:"downloadedBytes"`
+	Phase           string `json:"phase"`
+	Partial         bool   `json:"partial"`
 	Error           string `json:"error,omitempty"`
 }
 
@@ -99,7 +103,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /models", m.auth(m.list))
 	mux.HandleFunc("POST /models/{id}/download", m.auth(m.download))
+	mux.HandleFunc("DELETE /models/{id}/download", m.auth(m.cancelDownload))
+	mux.HandleFunc("DELETE /models/{id}/partial", m.auth(m.removePartial))
 	mux.HandleFunc("POST /models/{id}/activate", m.auth(m.activate))
+	mux.HandleFunc("POST /models/{id}/deactivate", m.auth(m.deactivate))
 	mux.HandleFunc("DELETE /models/{id}", m.auth(m.remove))
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
 	if err := http.ListenAndServe(":8081", mux); err != nil {
@@ -157,18 +164,33 @@ func (m *manager) list(w http.ResponseWriter, _ *http.Request) {
 	views := make([]modelView, 0, len(catalog))
 	for _, s := range catalog {
 		p := m.progress[s.ID]
-		v := modelView{ID: s.ID, Name: s.Name, Version: s.Version, License: s.License, Source: s.Source, Checksum: checksums(s), DownloadBytes: total(s), RAMBytes: s.RAM, Installed: m.installed(s), Active: m.active == s.ID, Healthy: m.active == s.ID && m.healthy}
+		v := modelView{ID: s.ID, Name: s.Name, Version: s.Version, License: s.License, Source: s.Source, Checksum: checksums(s), DownloadBytes: total(s), RAMBytes: s.RAM, Installed: m.installed(s), Active: m.active == s.ID, Healthy: m.active == s.ID && m.healthy, Phase: "idle", Partial: m.hasPartial(s)}
 		if v.Active && m.lastError != "" {
 			v.Error = m.lastError
 		}
 		if p != nil {
 			v.Downloading = p.Running
 			v.DownloadedBytes = p.Downloaded
+			v.Phase = p.Phase
 			v.Error = p.Err
+		}
+		if v.Active && v.Healthy {
+			v.Phase = "active"
+		}
+		if v.Installed && v.Phase == "idle" {
+			v.Phase = "installed"
 		}
 		views = append(views, v)
 	}
 	_ = json.NewEncoder(w).Encode(map[string]any{"models": views, "diskAvailableBytes": diskAvailable(m.models)})
+}
+func (m *manager) hasPartial(s modelSpec) bool {
+	for _, f := range s.Files {
+		if _, err := os.Stat(filepath.Join(m.dir(s), f.Name+".partial")); err == nil {
+			return true
+		}
+	}
+	return false
 }
 func checksums(s modelSpec) string {
 	v := []string{}
@@ -219,6 +241,13 @@ func (m *manager) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.mu.Lock()
+	for _, running := range m.progress {
+		if running != nil && running.Running {
+			m.mu.Unlock()
+			http.Error(w, "another download is running", http.StatusConflict)
+			return
+		}
+	}
 	if p := m.progress[s.ID]; p != nil && p.Running {
 		m.mu.Unlock()
 		w.WriteHeader(202)
@@ -229,38 +258,53 @@ func (m *manager) download(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "insufficient disk", 422)
 		return
 	}
-	p := &progress{Running: true}
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &progress{Running: true, Phase: "downloading", Cancel: cancel}
 	m.progress[s.ID] = p
 	m.mu.Unlock()
-	go m.fetch(*s, p)
+	go m.fetch(ctx, *s, p)
 	w.WriteHeader(202)
 }
-func (m *manager) fetch(s modelSpec, p *progress) {
+func (m *manager) fetch(ctx context.Context, s modelSpec, p *progress) {
 	err := os.MkdirAll(m.dir(s), 0755)
 	var completed int64
 	for _, f := range s.Files {
 		if err == nil {
-			err = m.fetchFile(s, f, p, completed)
+			err = m.fetchFile(ctx, s, f, p, completed)
 			if err == nil {
 				completed += f.Size
 			}
 		}
 	}
+	if err == nil {
+		m.mu.Lock()
+		p.Phase = "activating"
+		m.mu.Unlock()
+		err = m.switchModel(s)
+	}
 	m.mu.Lock()
 	p.Running = false
+	p.Cancel = nil
 	if err != nil {
-		p.Err = err.Error()
+		p.Phase = "error"
+		if !errors.Is(err, context.Canceled) {
+			p.Err = err.Error()
+		} else {
+			p.Phase = "cancelled"
+		}
+	} else {
+		p.Phase = "active"
 	}
 	m.mu.Unlock()
 }
-func (m *manager) fetchFile(s modelSpec, f fileSpec, p *progress, completed int64) error {
+func (m *manager) fetchFile(ctx context.Context, s modelSpec, f fileSpec, p *progress, completed int64) error {
 	dest := filepath.Join(m.dir(s), f.Name)
 	partial := dest + ".partial"
 	var offset int64
 	if st, e := os.Stat(partial); e == nil {
 		offset = st.Size()
 	}
-	req, _ := http.NewRequest(http.MethodGet, f.URL, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, f.URL, nil)
 	if offset > 0 {
 		req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
 	}
@@ -292,6 +336,9 @@ func (m *manager) fetchFile(s modelSpec, f fileSpec, p *progress, completed int6
 	if closeErr != nil {
 		return closeErr
 	}
+	m.mu.Lock()
+	p.Phase = "validating"
+	m.mu.Unlock()
 	if e = validate(partial, f); e != nil {
 		// Un archivo completo que no pasa formato o checksum no sirve para reanudar: conservarlo
 		// convertiría cada nuevo intento en el mismo fallo.
@@ -299,6 +346,48 @@ func (m *manager) fetchFile(s modelSpec, f fileSpec, p *progress, completed int6
 		return e
 	}
 	return os.Rename(partial, dest)
+}
+
+func (m *manager) cancelDownload(w http.ResponseWriter, r *http.Request) {
+	s := find(r.PathValue("id"))
+	if s == nil {
+		http.NotFound(w, r)
+		return
+	}
+	m.mu.Lock()
+	p := m.progress[s.ID]
+	if p == nil || !p.Running || p.Cancel == nil {
+		m.mu.Unlock()
+		http.Error(w, "download is not running", http.StatusConflict)
+		return
+	}
+	cancel := p.Cancel
+	m.mu.Unlock()
+	cancel()
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (m *manager) removePartial(w http.ResponseWriter, r *http.Request) {
+	s := find(r.PathValue("id"))
+	if s == nil {
+		http.NotFound(w, r)
+		return
+	}
+	m.mu.Lock()
+	p := m.progress[s.ID]
+	running := p != nil && p.Running
+	m.mu.Unlock()
+	if running {
+		http.Error(w, "download is running", http.StatusConflict)
+		return
+	}
+	for _, f := range s.Files {
+		_ = os.Remove(filepath.Join(m.dir(*s), f.Name+".partial"))
+	}
+	m.mu.Lock()
+	delete(m.progress, s.ID)
+	m.mu.Unlock()
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func downloadClient() *http.Client {
@@ -378,6 +467,33 @@ func (m *manager) activate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(204)
+}
+
+func (m *manager) deactivate(w http.ResponseWriter, r *http.Request) {
+	s := find(r.PathValue("id"))
+	if s == nil {
+		http.NotFound(w, r)
+		return
+	}
+	m.activationMu.Lock()
+	defer m.activationMu.Unlock()
+	m.mu.Lock()
+	active := m.active
+	m.mu.Unlock()
+	if active != s.ID {
+		http.Error(w, "model is not active", http.StatusConflict)
+		return
+	}
+	m.stopProcess()
+	m.mu.Lock()
+	m.active = ""
+	m.lastError = ""
+	m.mu.Unlock()
+	if err := os.Remove(filepath.Join(m.models, "active")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func processRSS(cmd *exec.Cmd) int64 {

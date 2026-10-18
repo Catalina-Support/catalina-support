@@ -12,10 +12,11 @@ import (
 
 // repoDePrueba es el doble del repositorio: devuelve lo que se le diga y no toca ninguna base.
 type repoDePrueba struct {
-	instalacion repositories.InstallationSettings
-	directorio  repositories.DirectorySettings
-	keycloak    repositories.KeycloakSettings
-	ia          repositories.AISettings
+	instalacion              repositories.InstallationSettings
+	directorio               repositories.DirectorySettings
+	keycloak                 repositories.KeycloakSettings
+	ia                       repositories.AISettings
+	actualizacionInstalacion map[string]any
 }
 
 func (r *repoDePrueba) Installation() (repositories.InstallationSettings, error) {
@@ -36,11 +37,17 @@ func (r *repoDePrueba) Keycloak() (repositories.KeycloakSettings, error) {
 
 func (r *repoDePrueba) AI() (repositories.AISettings, error) { return r.ia, nil }
 
-func (r *repoDePrueba) UpdateInstallation(map[string]any, *int64) error { return nil }
-func (r *repoDePrueba) UpdateDirectory(map[string]any, *int64) error    { return nil }
-func (r *repoDePrueba) UpdateKeycloak(map[string]any, *int64) error     { return nil }
-func (r *repoDePrueba) UpdateTickets(map[string]any, *int64) error      { return nil }
-func (r *repoDePrueba) UpdateAI(map[string]any, *int64) error           { return nil }
+func (r *repoDePrueba) UpdateInstallation(cambios map[string]any, _ *int64) error {
+	r.actualizacionInstalacion = cambios
+	if color, ok := cambios["primary_color"].(string); ok {
+		r.instalacion.PrimaryColor = color
+	}
+	return nil
+}
+func (r *repoDePrueba) UpdateDirectory(map[string]any, *int64) error { return nil }
+func (r *repoDePrueba) UpdateKeycloak(map[string]any, *int64) error  { return nil }
+func (r *repoDePrueba) UpdateTickets(map[string]any, *int64) error   { return nil }
+func (r *repoDePrueba) UpdateAI(map[string]any, *int64) error        { return nil }
 
 func TestTerminarInstalacionExigeLosCincoPasosSinReprobarIA(t *testing.T) {
 	probada := time.Now()
@@ -136,6 +143,27 @@ func servicioDePrueba(t *testing.T) (*Service, *repoDePrueba) {
 func sellada() *repoDePrueba {
 	cuando := time.Now()
 	return &repoDePrueba{instalacion: repositories.InstallationSettings{InstalledAt: &cuando}}
+}
+
+func TestGuardarPasoDeLaInstalacionGuardaElColorPrimario(t *testing.T) {
+	servicio, repo := servicioDePrueba(t)
+
+	_, err := servicio.GuardarPasoDeInstalacion(1, PasoDeInstalacion{
+		Name: "Mesa", Language: "es", PrimaryColor: "#A1B2C3",
+	})
+	if err != nil {
+		t.Fatalf("no se pudo guardar el primer paso: %v", err)
+	}
+	if repo.actualizacionInstalacion["primary_color"] != "#a1b2c3" {
+		t.Fatalf("el color no se normalizo ni guardo: %+v", repo.actualizacionInstalacion)
+	}
+
+	_, err = servicio.GuardarPasoDeInstalacion(1, PasoDeInstalacion{
+		Name: "Mesa", Language: "es", PrimaryColor: "azul",
+	})
+	if !errors.Is(err, ErrPrimaryColorInvalid) {
+		t.Fatalf("un color invalido debe devolver %v y devolvio %v", ErrPrimaryColorInvalid, err)
+	}
 }
 
 func TestEstadoDeInstalacionUsaCorreoInicialSoloSiEstaVacio(t *testing.T) {

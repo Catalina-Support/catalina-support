@@ -61,6 +61,18 @@ const MARCA = {
   logoVersion: '',
 };
 
+const CATALOGO = {
+  diskAvailableBytes: 1024,
+  models: [
+    {
+      id: 'qwen2.5-1.5b-instruct', name: 'Qwen 1.5B', downloadBytes: 512, ramBytes: 1024,
+      checksum: 'abc', source: 'https://example.com/model', license: 'Apache-2.0', licenseUrl: '',
+      installed: true, partial: false, downloading: false, downloadedBytes: 512,
+      phase: 'active', active: true, healthy: true, error: '',
+    },
+  ],
+};
+
 describe('SettingsPage: la región horaria y la dirección pública', () => {
   let http: HttpTestingController;
 
@@ -94,6 +106,8 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     const fixture = TestBed.createComponent(SettingsPage);
     fixture.detectChanges();
     http.expectOne('/api/settings').flush(semilla);
+    await esperar();
+    http.expectOne('/api/settings/ai/models').flush(CATALOGO);
     await esperar();
     fixture.detectChanges();
     return fixture;
@@ -285,5 +299,31 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent as string).toContain('#123456');
+  });
+
+  it('refresca sin ocultar el catálogo ni permitir dos peticiones simultáneas', async () => {
+    const fixture = await montar();
+    expect(fixture.nativeElement.textContent as string).toContain('Qwen 1.5B');
+
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('button')).find((candidato) =>
+      (candidato as HTMLButtonElement).textContent?.includes('Refrescar catálogo'),
+    ) as HTMLButtonElement;
+    boton.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string).toContain('Qwen 1.5B');
+    expect(boton.disabled).toBe(true);
+    expect(boton.textContent).toContain('Refrescando');
+    const solicitud = http.expectOne('/api/settings/ai/models');
+    boton.click();
+    http.expectNone('/api/settings/ai/models');
+
+    solicitud.flush({
+      ...CATALOGO,
+      diskAvailableBytes: 2048,
+    });
+    await esperar();
+    fixture.detectChanges();
+    expect(boton.disabled).toBe(false);
   });
 });

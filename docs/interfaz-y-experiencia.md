@@ -1,7 +1,118 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-16
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 40 distingue el
+> rótulo visible de `en espera` según quien consulta el ticket: el Usuario leerá `Waiting for you` /
+> `Esperándote`, mientras Soporte, Desarrollo y el Administrador leerán `Waiting` / `Esperando`.
+> La diferencia se aplicará en toda la interfaz, sin cambiar el valor técnico, la API, la base de
+> datos ni los correos. El responsable eligió 1A–4A en el repaso previo; no quedan decisiones
+> abiertas. Pasaron 76 pruebas focalizadas, las fronteras del frontend y la compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 39 convierte la tabla
+> de las bandejas en el área desplazable que ocupa el alto restante, fija verticalmente sus
+> encabezados, repara el separador de Ticket y elimina los tooltips duplicados. El responsable eligió
+> 1A–13A. Como hallazgos, la sección 37 prohibía fijar verticalmente el encabezado y la sección 36.2
+> combinaba el tooltip propio con `title`; ambos contratos quedaron corregidos. Pasaron nueve pruebas
+> focalizadas, las fronteras y la compilación. El navegador verificó PC, tableta y móvil, scroll en
+> ambos ejes, carga 20→27, restauración interna, ayuda única sólo al truncar y los ocho temas.
+> **Corrección de compatibilidad del 2026-10-16:** Action/Acción declara `text-left` directamente en
+> su `th`; depender de la herencia de la fila permitía que Firefox aplicara su alineación nativa.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 38 sustituye la
+> paginación visible de las bandejas por carga progresiva con scroll, acorta el estado inglés del
+> usuario a `Waiting` y alinea a la izquierda el encabezado Action/Acción. El responsable eligió
+> 1A–10A y no quedaron decisiones abiertas. Pasaron siete pruebas focalizadas y la compilación del
+> frontend. El navegador confirmó 20 elementos iniciales y 27 tras llegar al final, sin paginación,
+> en PC, tableta y móvil; también confirmó `Waiting`, las dos alineaciones y la restauración de los
+> 27 elementos y de la posición al volver desde el detalle.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 37 mantiene
+> visible la columna Ticket durante el desplazamiento horizontal de las tablas amplia e intermedia.
+> El responsable eligió 1A–7A: sólo se fija Ticket, únicamente en el eje horizontal, con su ancho
+> actual, fondo opaco del tema y borde derecho; se comprobarán los ocho temas. Durante la preparación
+> se detectó que la sección 36 impedía el desplazamiento que esta decisión necesita. El responsable
+> corrigió el contrato con 1A–3A: desde 768 px se conserva una tabla con desplazamiento nativo, sin
+> aviso adicional, y sólo por debajo se cambia a tarjetas. No quedan decisiones abiertas. La prueba
+> específica y la compilación pasaron. En navegador, la
+> tabla aparece a 768 px y las tarjetas a 767 px; al desplazar 165.5 px, la segunda columna se movió
+> pero Ticket conservó exactamente su posición. Los ocho temas mostraron fondo opaco y borde de 1 px.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 36 hace
+> visible el encabezado de la última columna de las bandejas de PC. La comprobación real confirmó
+> que «Abrir» sí vive dentro de un `td`, pero su `th` estaba oculto visualmente y por eso parecía
+> quedar fuera de la tabla. El responsable eligió 1B, 2A, 3A, 4A, 5A, 6A, 7A–10A y, en el repaso
+> integral de esta tabla, 1A–12A, 13B+13C, 14A–24A. Corrigió expresamente el orden de las columnas.
+> No quedaron decisiones abiertas. Pasaron la prueba específica y la compilación del frontend; el
+> navegador confirmó once columnas en ancho amplio, nueve en intermedio y tarjetas antes de que
+> aparezca desplazamiento horizontal.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 35 cambia
+> Motivo/Reason por Resumen/Summary en todas las vistas, elimina los dos botones de reintento y deja
+> estados discretos sólo en la ficha. El responsable eligió 1A–20B y no quedan decisiones abiertas.
+> La interfaz quedó sin acciones manuales, presenta `—` sin resultado vigente y reserva el estado
+> discreto para la ficha. Pasaron las 231 pruebas del frontend, sus fronteras y la compilación.
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-15.** La sección 34
+> iguala todos los desplegables a los 42 px reales del conmutador Main/Both/Internal. El responsable
+> eligió 1A–5A: altura fija y global, sin modificar el conmutador ni la configuración de recarga del
+> entorno. Pasaron las 232 pruebas del frontend y la compilación; un navegador limpio midió 42 px,
+> fuente de 14 px y padding de 12 × 8 px. No quedan decisiones abiertas.
+>
+> **Ajuste implementado y verificado el 2026-10-15, con aprobación explícita del responsable.** La
+> sección 33 registra que los 52 px se comprobaron correctamente en un navegador limpio, pero
+> resultaron demasiado grandes. El responsable eligió 1A, 2A y 3A: todos los desplegables usan ahora
+> 48 px, con el padding y la tipografía actuales. Pasaron las 232 pruebas del frontend, la
+> compilación y la medición en una pestaña nueva; no quedan decisiones abiertas.
+>
+> **Corrección implementada y verificada el 2026-10-15, con aprobación explícita del responsable.**
+> La sección 32 registra que los 44 px de la sección 31 sí llegaron al navegador, pero aún se
+> percibían demasiado delgados. El responsable eligió 1A, 2A y 3A: todos los desplegables usan
+> ahora 52 px y conservan la tipografía actual. Pasaron las 232 pruebas del frontend, la compilación
+> y la medición real; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-15, con aprobación explícita del responsable.** La sección
+> 31 alinea la altura y el espaciado de todos los desplegables con los campos de texto y los botones.
+> El responsable eligió 1A–5A; pasaron las 232 pruebas del frontend, la compilación y la revisión
+> real en PC y móvil. No quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-15, con aprobación explícita del responsable.** La sección 30 hace visibles la calidad de
+> las propuestas y los errores de cada resumen sin perder borradores durante el refresco. El
+> responsable cerró 1A–15A, con 8B, y corrigió la propuesta retirando dos ayudas redundantes del
+> editor y del panel de revisión; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 29 sustituye el modal y sus cinco
+> tonalidades por generación profesional inmediata y revisión inline independiente en cada editor.
+> El responsable cerró 1A–15A con 3B, 6B, 7A, 10B y 11B; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 28 corrige el espacio interno
+> que la vista doble todavía reserva para una ficha oculta y hace que cada conversación use por
+> completo su mitad y habilita la comparación desde 1152 px. El responsable eligió 1A–6A, 7B y
+> 8B; el repaso está cerrado sin decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 27 da desplazamiento y ancho independientes a los dos tickets de la vista doble, sin estrecharlos
+> en pantallas pequeñas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 26 hace visible el catálogo local desde que se abre la pantalla y convierte su botón en una
+> actualización sin salto visual.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 25 elimina las confirmaciones nativas del navegador y añade al paso 1 el selector completo de tema
+> y el control institucional de color, reutilizando los componentes y reglas existentes.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 24 convierte cada ficha de
+> modelo en el único punto de activación o desactivación, lleva el saludo a un toast que identifica
+> el modelo y convierte la propia vista previa del logo en el control de carga. También enmienda la
+> política general de toast: todos admiten cierre manual y duran como máximo diez segundos.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 23 corrige el catálogo local que
+> hoy sólo muestra «Descargando», bloquea el avance prematuro del asistente, añade la prueba manual
+> fechada y lleva los dos logos al primer paso. El comportamiento se cerró con el responsable antes
+> de escribir esta propuesta.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 22 define selección, chip accesible,
 > edición en el lugar, filtro múltiple y orden de prioridades en PC y móvil. No se modifica código
@@ -616,7 +727,7 @@ lenguaje llano:
 | --- | --- |
 | `nuevo` | Recibido |
 | `en progreso` | En curso |
-| `en espera` | Esperamos tu respuesta |
+| `en espera` | Esperándote |
 | `escalado` | En curso *(el usuario no tiene por qué saber que ha pasado a Desarrollo)* |
 | `resuelto` | Resuelto |
 | `cerrado` | Cerrado |
@@ -746,7 +857,7 @@ Lo que hace un usuario es **crear un ticket y responder**. Todo lo demás sobra.
 - **Crear**: asunto, descripción y adjuntos. Tres campos, ninguno con jerga. Si se puede arrastrar
   una captura sobre la ventana, mejor que buscarla.
 - **Seguir**: la conversación, con sus comentarios y los de Soporte. Cuando Soporte le pide algo, el
-  estado lo dice —«Esperamos tu respuesta»— y el correo se lo ha avisado.
+  estado lo dice —«Esperándote»— y el correo se lo ha avisado.
 - **Cerrar y reabrir**: las dos, en el **desplegable de acciones** del ticket, y la de cerrar pregunta
   antes (`docs/usuarios-y-permisos.md`: cierra también el usuario).
 - **Lo que no ve**: notas internas (no existen), el ticket interno, la lista de usuarios, nada de
@@ -1382,8 +1493,8 @@ Se añade un componente compartido de **toast** para los resultados transitorios
 - queda fijo en la ventana, arriba a la derecha en PC y con el ancho disponible, dejando margen, en
   móvil;
 - sólo se muestra uno a la vez y el resultado más reciente sustituye al anterior;
-- éxito e información desaparecen a los **5 segundos**;
-- error y atención permanecen hasta que la persona los cierre o una acción posterior los sustituya;
+- todas las formas desaparecen a los **10 segundos como máximo**;
+- todas pueden cerrarse antes o ser sustituidas por una acción posterior;
 - todos incluyen un botón de cierre con nombre accesible traducido;
 - éxito e información se anuncian como estado; error y atención se anuncian como alerta, sin mover
   el foco ni desplazar el contenido;
@@ -1421,8 +1532,7 @@ mensajes de las demás pantallas y un servicio global de notificaciones para tod
 1. Probar una conexión desde una tarjeta o paso inferior muestra su éxito o error dentro de la parte
    visible de la ventana, sin desplazarla al principio.
 2. Guardar, subir, restaurar y avanzar muestran sus resultados por el mismo componente.
-3. Éxito e información desaparecen después de 5 segundos; error y atención continúan hasta cerrarse
-   o ser sustituidos.
+3. Todas las formas desaparecen después de 10 segundos como máximo y pueden cerrarse antes.
 4. Un segundo resultado sustituye al primero y reinicia el temporizador que corresponda.
 5. El botón de cierre funciona con teclado, tiene nombre accesible en español e inglés y el mensaje
    conserva el anuncio semántico adecuado.
@@ -1434,7 +1544,7 @@ mensajes de las demás pantallas y un servicio global de notificaciones para tod
 
 El responsable confirmó el 2026-10-06 proponer el componente compartido para `/settings` y
 `/setup`: fijo arriba a la derecha en PC y adaptado al ancho móvil, un mensaje a la vez, éxito con
-cierre automático a los 5 segundos, errores persistentes, cierre manual y avisos de contexto todavía
+cierre automático a los 10 segundos para todas las formas, cierre manual y avisos de contexto todavía
 integrados en la página.
 
 ### 15.7 Registro del repaso
@@ -1443,8 +1553,8 @@ El responsable confirmó el 2026-10-06 que:
 
 1. todos los resultados transitorios descritos de `/settings` y `/setup` usan el toast;
 2. no hay cola: el resultado nuevo sustituye al anterior;
-3. sólo éxito e información desaparecen automáticamente después de 5 segundos; error y atención
-   permanecen hasta cerrarse o ser sustituidos.
+3. todas las formas desaparecen automáticamente después de 10 segundos como máximo y también
+   pueden cerrarse o ser sustituidas antes.
 
 El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente los tres
 documentos con «Apruebo» el 2026-10-06. La implementación respeta el alcance aprobado.
@@ -1689,11 +1799,10 @@ eligió 1A, 2A y 3A y confirmó mantener la obligatoriedad; no quedan decisiones
 ## 21. Implementación: «Código fuente y licencia»
 
 La pantalla de entrada muestra en su pie un enlace **«Código fuente y licencia»**, junto a la
-versión sin competir con el formulario. La zona inferior del menú muestra el mismo enlace cerca de
-la versión y de salir. En modo plegado se oculta junto con el resto del texto auxiliar y vuelve al
-desplegar el menú; no añade otro icono a la barra. En móvil queda dentro del cajón.
+versión sin competir con el formulario. El menú lateral no lo repite: su zona inferior conserva
+sólo la cuenta, el tema, el idioma, salir y la versión.
 
-Las dos ubicaciones leen `license` y `sourceUrl` de la marca pública. El enlace abre la fuente
+La entrada lee `license` y `sourceUrl` de la marca pública. El enlace abre la fuente
 correspondiente en otra pestaña con las protecciones habituales. Una compilación de desarrollo lo
 indicará en el texto asociado a la versión. Si un backend anterior no entrega una URL válida, el
 control no aparecerá. No se codifica una URL alternativa en el frontend.
@@ -1703,11 +1812,9 @@ móvil. No añade una pantalla legal, una ventana modal ni un control administra
 la política de marca viven en `docs/proyecto-abierto.md`; el contrato, en
 `docs/modules/settings.md`, sección 14.
 
-La verificación del 2026-10-10 pasó las 227 pruebas del frontend, incluidas las 14 de marca. El
-recorrido aislado de `marca.spec.ts` pasó sus 12 casos en PC y móvil: comprobó el destino y la
-licencia en la entrada y el menú, además de versión, tema, logo y color. El menú plegado ocultó el
-enlace conforme a 39A y volvió a ofrecerlo al desplegarse. Los contenedores, la red y los volúmenes
-del entorno desechable se retiraron al terminar.
+La verificación original del 2026-10-10 cubrió las dos ubicaciones. El ajuste textual del
+2026-10-15 retiró la repetición del menú por petición del responsable y conservó el enlace en la
+entrada; `marca.spec.ts` comprueba ahora expresamente ambas condiciones.
 
 ## 22. Prioridad visible y operable
 
@@ -1726,3 +1833,729 @@ horizontal.
 El historial escribe las etiquetas traducidas anterior y nueva, el autor y la fecha. Si falla el
 correo crítico, un toast persistente de atención confirma que la prioridad quedó guardada y que el
 aviso no salió; no ofrece guardar de nuevo ni afirma que la operación falló completa.
+
+## 23. Progreso, prueba local y logos en `/setup`
+
+La ficha del modelo muestra una barra nativa accesible, porcentaje y `descargado / total`. Se
+actualiza sin pulsar «Ver y actualizar el catálogo» mientras exista una fase transitoria y deja de
+consultar al terminar o abandonar la pantalla. El texto nombra descarga, validación, activación y
+prueba; ningún estado depende sólo del color. En móvil la barra ocupa el ancho y las acciones se
+apilan.
+
+Sólo se inicia una descarga. Durante ella aparecen **Cancelar** y la explicación de que el parcial se
+conserva. Después aparecen **Reanudar** y **Eliminar descarga parcial**. El modelo instalado inactivo
+ofrece **Eliminar modelo** tras confirmación; el activo no lo ofrece. Un fallo de activación conserva
+la ficha y añade **Reintentar activación**.
+
+En `/setup`, **Siguiente** está deshabilitado hasta que el modelo seleccionado figure activo y
+saludable. Junto al botón se dice si falta descargar, validar, activar o probar. No se usa el error
+genérico del motor como validación de una acción que la propia pantalla dejó ejecutar antes de
+tiempo.
+
+El activo saludable ofrece **¡Pruébame!** o **Try me!**. Mientras trabaja conserva el botón con su
+estado accesible. Después enseña dentro de la ficha el saludo del modelo y, por separado, la fecha,
+hora y zona IANA que el servidor le suministró. El resultado no usa toast porque debe poder leerse y
+compararse; desaparece al repetir, cambiar de activo o salir. El error ocupa el mismo lugar y permite
+reintentar.
+
+El paso 1 coloca, después de idioma y nombre, las dos tarjetas de logo claro y oscuro que ya existen
+en Configuración. Cada una enseña vista previa, estado de fábrica o propio, subir y restaurar. La
+vista previa y el logo del encabezado cambian al guardar. Ninguna variante es obligatoria.
+
+Las pruebas de componente y Playwright cubren textos completos en ambos idiomas, teclado, anuncios
+accesibles, PC, móvil, recarga, cancelación, reanudación, fondo, error, borrado, saludo fechado y los
+dos logos. Los toasts generales continúan reservados para resultados breves; progreso, saludo y
+errores operativos permanecen en su ficha.
+
+## 24. Acciones directas en fichas, saludo visible y carga desde el logo
+
+### 24.1 Hallazgos
+
+La implementación actual obliga a volver al selector situado antes del catálogo para escoger el
+modelo, aunque cada ficha ya contiene sus demás acciones y estados. El saludo de prueba queda dentro
+de una ficha larga y puede pasar inadvertido. En los logos, un control nativo separado enseña el
+nombre del archivo y no deja claro que la vista previa es el lugar que se reemplaza.
+
+La política vigente de la sección 15 tampoco coincide con la nueva decisión: éxito e información
+duran cinco segundos, mientras error y atención pueden permanecer indefinidamente.
+
+### 24.2 Modelos
+
+Desaparece el selector superior del modelo local en `/setup` y `/settings`. Cada ficha instalada
+incluye su propio botón **Activar** o **Desactivar** y un indicador textual de si está activa. La ficha
+es la única fuente de selección y mantiene visibles descarga, progreso, salud, prueba y eliminación.
+
+Se permite desactivar el único modelo activo. El motor queda sin modelo; `/setup` deshabilita
+**Siguiente** y explica que falta activar uno, mientras `/settings` muestra esa condición sin impedir
+administrar el resto. Desactivar no borra el archivo, por lo que puede volver a activarse desde la
+misma ficha. El modelo activo sigue sin ofrecer eliminación.
+
+### 24.3 Saludo y toast
+
+**¡Pruébame!** / **Try me!** muestra el resultado mediante el toast compartido. El mensaje identifica
+el nombre del modelo que respondió y contiene sólo su saludo. La fecha y hora suministradas ya forman
+parte del saludo generado, por lo que no se repiten, y la zona IANA no se presenta. El resultado
+anterior deja de ocupar espacio dentro de la ficha.
+
+La política común de todo `app-toast` pasa a ser: cierre manual siempre disponible y desaparición
+automática a los **10 segundos como máximo**, incluidas las formas de error y atención. Un resultado
+nuevo continúa sustituyendo al anterior y reinicia el temporizador. Los avisos persistentes que
+describen un estado siguen dentro de su sección y no se convierten en toast.
+
+### 24.4 Logos
+
+La vista previa de cada logo claro u oscuro es un botón accesible. Pulsarla abre el selector de
+archivo; al elegir uno válido, se guarda y la imagen se actualiza. El control de archivo queda
+oculto visualmente y no se enseña ruta ni nombre del archivo. Se conserva una acción separada para
+volver al logo de fábrica y se indica con texto accesible qué variante se reemplazará.
+
+### 24.5 Pruebas y alcance
+
+Las pruebas de componente y navegador cubren teclado y lector de pantalla, activación y
+desactivación desde cada ficha, ausencia del selector superior, bloqueo de **Siguiente**, toast del
+saludo con nombre del modelo, cierre y límite de diez segundos para las cuatro formas, y carga de
+ambos logos pulsando su vista previa en PC y móvil.
+
+No cambia el catálogo 1.5B/3B/7B, la exclusión de descargas, las licencias, los límites de archivo,
+las modalidades externas ni producción. El responsable eligió 1A, 2A y corrigió 3A a un máximo de
+diez segundos cerrable para todos los toast. No quedan decisiones abiertas.
+
+La implementación pasó las 227 pruebas del frontend y la compilación de producción. En el navegador
+real se verificaron las fichas sin selector superior, desactivación y reactivación, bloqueo de
+**Siguiente**, atribución del saludo sin repetir el reloj ni mostrar la zona, desaparición del toast a los diez
+segundos y controles accesibles de logo sin nombre ni ruta de archivo.
+
+## 25. Confirmaciones temáticas y apariencia en el paso 1
+
+### 25.1 Hallazgos
+
+Las cuatro confirmaciones de eliminación del administrador local de modelos usan `confirm()` del
+navegador. Esa ventana pertenece al sistema, no recibe las variables del tema y en un tema oscuro
+aparece blanca. Es la única confirmación de producto que todavía evita el componente propio.
+
+El primer paso permite decidir idioma, nombre y logos, pero no presenta el selector de los ocho
+temas ni el color institucional que ya existen en el armazón y en Configuración. La instalación se
+puede personalizar, pero no ver completa mientras se configura.
+
+### 25.2 Un solo diálogo para todas las confirmaciones
+
+Toda confirmación de la aplicación usa `app-dialogo`, nunca `confirm()` del navegador. La regla
+incluye las cuatro eliminaciones actuales de modelo instalado o descarga parcial en `/setup` y
+`/settings`, y cualquier confirmación posterior. El diálogo hereda las variables del tema activo,
+usa el botón peligroso para confirmar y el secundario para cancelar, atrapa el foco, devuelve el foco
+al disparador y cierra con Escape. El texto continúa traducido y especifica qué recurso se elimina.
+
+### 25.3 Tema y color en el paso 1
+
+Junto al selector de idioma aparece el mismo selector completo del armazón: ocho temas agrupados en
+claros y oscuros. Cambia la interfaz inmediatamente y guarda la preferencia en el navegador mediante
+`ThemeService`; no se añade una preferencia a la instalación ni una opción «Automático».
+
+El mismo bloque incorpora el control de color institucional de Configuración: selector libre, valor
+hexadecimal y vista previa resuelta por el backend. El cambio se ve antes de guardar. Nombre, idioma
+y color se guardan juntos al pulsar **Siguiente**. Cambiar de tema conserva el color elegido; sólo los
+dos temas de fábrica usan ese acento, mientras los seis temas fijos mantienen su paleta.
+
+### 25.4 Pruebas y alcance
+
+Las pruebas cubren ausencia de `confirm()`, apertura, cancelación y confirmación del diálogo en los
+ocho temas; foco, Escape y textos ES/EN; selección y memoria de los ocho temas; vista previa y
+persistencia del color al avanzar; conservación del color al cambiar de tema; y presentación en PC
+y móvil.
+
+No cambian las ocho paletas, la derivación accesible del color, los límites de logo, el catálogo de
+modelos, los permisos ni producción. El responsable eligió 1A, 2A y 3A para confirmaciones y tema, y
+1A, 2A y 3A para el color. No quedan decisiones abiertas.
+
+La implementación sustituye las cuatro llamadas nativas existentes y deja cero `confirm()` de
+producto. Las 227 pruebas del frontend y la compilación de producción pasan. En navegador real se
+verificaron memoria del tema tras recargar, presentación a 390 px, diálogo en tema oscuro, cierre
+con Escape y devolución del foco al disparador, sin ejecutar el borrado.
+
+## 26. Catálogo local siempre visible
+
+### 26.1 Hallazgo
+
+En `/setup` y `/settings`, el encabezado **Modelos locales** aparece antes de consultar el catálogo,
+pero sus fichas permanecen ocultas hasta pulsar **Ver y refrescar el catálogo**. La acción mezcla dos
+responsabilidades: revelar contenido que debe estar disponible desde el inicio y actualizarlo.
+
+### 26.2 Carga y refresco
+
+Al abrir el paso de IA de `/setup`, la tarjeta de IA de `/settings` o al cambiar a modalidad local,
+la pantalla consulta automáticamente el catálogo. Las fichas, el espacio disponible y sus estados
+se presentan sin una acción previa de la persona.
+
+El botón pasa a llamarse **Refrescar catálogo** / **Refresh catalog**. Al pulsarlo vuelve a consultar
+el estado real, muestra **Refrescando…** / **Refreshing…**, queda temporalmente deshabilitado y
+conserva visibles las fichas actuales hasta recibir la respuesta. Una respuesta correcta sustituye
+los datos en el sitio; un error conserva el catálogo anterior y se comunica mediante el toast común.
+
+### 26.3 Pruebas y alcance
+
+Las pruebas cubren carga automática, cambio a modalidad local, refresco manual sin ocultar fichas,
+bloqueo de doble pulsación, error conservando datos y presentación en PC y móvil, en `/setup` y
+`/settings`.
+
+No cambia el catálogo 1.5B/3B/7B, las descargas, activación, licencias, API, permisos ni producción.
+El responsable eligió 1A, 2A y 3A. No quedan decisiones abiertas.
+
+La implementación pasó las 228 pruebas del frontend y la compilación de producción. El navegador
+real confirmó en `/setup` que las tres fichas ya están presentes al entrar al paso 5 y continúan
+visibles después de pulsar **Refresh catalog**.
+
+## 27. Dos paneles de ticket independientes
+
+### 27.1 Hallazgos
+
+La vista **Los dos** coloca principal e interno dentro del mismo flujo vertical. El desplazamiento
+pertenece a la página, por lo que mover una conversación mueve también la otra y se pierde la
+referencia entre eventos. Además, el detalle conserva el máximo global de 88 rem aunque haya ancho
+disponible alrededor, dejando una franja sin utilizar en pantallas grandes.
+
+En anchos inferiores al punto de dos columnas, la implementación actual puede apilar ambos tickets,
+aunque la regla documentada ya pedía ver uno por vez. Se corrige el desajuste de forma explícita.
+
+### 27.2 PC: altura y desplazamiento propios
+
+En PC, **Los dos** ocupa todo el ancho útil del área de contenido y lo divide en dos columnas iguales.
+La cabecera general —volver, números, estado y conmutador— permanece visible. Debajo, cada ticket
+ocupa la altura restante de la ventana y crea su propia región de desplazamiento vertical. La rueda,
+el gesto, Page Up/Page Down y las barras actúan únicamente sobre la columna que tiene el puntero o
+el foco.
+
+Cada panel conserva su cabecera y su formulario de comentario dentro del contenido desplazable. El
+editor aparece al final de su conversación; no queda fijo ni reduce permanentemente el área de
+lectura. Las columnas no son redimensionables y parten el espacio 50/50.
+
+### 27.3 Anchos estrechos
+
+En móvil y tableta vertical no se apilan ambos paneles. El conmutador muestra Principal o Interno,
+uno por vez, usando el ancho completo. La opción **Los dos** sólo produce las dos columnas cuando el
+ancho permite compararlas; al entrar o estrechar la ventana se conserva el ticket del papel o el
+último lado individual elegido.
+
+Las vistas individuales mantienen su ancho y desplazamiento actuales. El cambio de ancho completo y
+scroll interno pertenece únicamente a la comparación en PC.
+
+### 27.4 Pruebas y alcance
+
+Las pruebas de componente y navegador cubren scroll independiente sin mover la columna vecina,
+cabecera general visible, columnas iguales sin franja desaprovechada, editores al final de cada
+flujo, teclado, PC ancho y una sola vista en móvil y tableta vertical.
+
+No cambian contenido, permisos, estados, acciones, API, modelo de datos ni producción. El responsable
+eligió 1A, 2A, 3A y 4A. No quedan decisiones abiertas.
+
+La implementación pasó las 228 pruebas del frontend y la compilación de producción. En navegador
+real, a 1800 px, ambos paneles midieron 728 px, el desplazamiento del principal no movió el interno
+y la cabecera común conservó su posición. A 900 px desapareció la opción **Los dos** y quedó un
+único ticket a ancho completo.
+
+## 28. Contenido a todo el ancho de cada panel
+
+### 28.1 Hallazgo
+
+La sección 27 ensanchó correctamente el contenedor exterior y repartió el área útil en dos mitades,
+pero cada `app-ticket-vista` conserva por dentro la cuadrícula `2fr 1fr` de la vista individual. En
+**Los dos**, la ficha de la columna derecha se oculta por decisión anterior, aunque su fracción sigue
+reservándose. Por eso la conversación ocupa sólo dos tercios de cada mitad y quedan vacíos amplios
+entre ambos tickets y a la derecha. La documentación decía que los paneles aprovechaban el ancho,
+pero no registraba esta reserva interna; se reporta el desajuste antes de corregirlo.
+
+### 28.2 Disposición aprobable
+
+Cuando `soloLaConversacion` está activo, la cuadrícula interna tendrá una sola columna que ocupa el
+100% del panel. Cabecera, asunto, motivo, descripción, comentarios, historial y editor de comentario
+participan del mismo flujo ancho; no se añade un máximo intermedio ni una columna fantasma.
+
+La separación entre principal e interno continúa en 24 px. El cambio se limita a **Los dos**: las
+formas individuales mantienen su cuadrícula actual de conversación y ficha, sus anchos y su
+comportamiento. Tampoco cambia el scroll independiente incorporado en la sección 27.
+
+Las previsualizaciones de imágenes y videos conservan el límite de 480 × 360: el espacio nuevo no
+las agranda artificialmente. El editor ocupa el nuevo ancho, pero mantiene su altura actual.
+
+La comparación pasa de 1280 a 1152 px. Desde ese ancho aparecen **Los dos** y sus dos mitades; por
+debajo sigue mostrándose un ticket por vez. El cambio permite usar la comparación en portátiles
+pequeños sin llevarla hasta el ancho típico de una tableta vertical.
+
+### 28.3 Pruebas y alcance
+
+Las pruebas de componente comprobarán que `soloLaConversacion` selecciona una columna completa y
+que una vista individual conserva `2fr 1fr`. El navegador verificará en PC que mensajes y editores
+llegan al ancho útil de cada mitad, que sólo queda el espacio de 24 px entre paneles y que no aparece
+scroll horizontal. Se repetirá la comprobación de scroll independiente y se probarán los límites de
+1151 y 1152 px, además de una vista a 900 px.
+
+No cambian textos, contenido, permisos, estados, acciones, API, modelo de datos ni producción. El
+responsable eligió 1A, 2A, 3A, 4A, 5A, 6A, 7B y 8B. No quedan decisiones abiertas.
+
+La implementación pasó las 229 pruebas del frontend y la compilación de producción. En navegador
+real, a 1800 px, cada panel midió 728 px y su contenido 720 px, sin desbordamiento horizontal. A
+1152 px se mostraron dos paneles de 404 px con 396 px de contenido; a 1151 px desapareció **Los
+dos** y quedó una sola vista. El scroll independiente y las vistas individuales se conservaron.
+
+## 29. Implementación: «Mejorar con IA» sin modal
+
+### 29.1 Generación inmediata
+
+El botón **Mejorar con IA** continúa junto a cada editor autorizado y exige texto. Al pulsarlo inicia
+la solicitud en ese lugar, muestra actividad y usa siempre tono profesional. No abre modal, no pide
+confirmación previa y no muestra selector de tonalidad. El aviso sobre tratamiento por motores
+externos permanece únicamente en Configuración, conforme a la aceptación administrativa vigente.
+
+Descripción y comentario administran estados independientes: cada uno puede conservar su propia
+propuesta sin expulsar la del otro. Durante la espera el editor continúa disponible.
+
+### 29.2 Panel de revisión
+
+La respuesta aparece bajo el editor que la solicitó, en una región con título accesible. Es texto
+plano de sólo lectura, visible y seleccionable; no se añade botón **Copiar**. Sus acciones son
+**Usar propuesta** y **Conservar original**. La primera reemplaza el borrador local y cierra el
+panel; la segunda descarta la salida, oculta el panel y deja el original intacto.
+
+Con una propuesta vigente, el botón pasa a **Generar otra propuesta**. La nueva solicitud parte del
+borrador actual y pide una paráfrasis profesional diferente de la última propuesta. Sólo se conserva
+la salida más reciente.
+
+Si la persona modifica el borrador después de iniciar la solicitud, ambos textos permanecen, pero
+la propuesta se marca como desactualizada y **Usar propuesta** queda deshabilitado. Puede copiarse
+por selección, conservarse el original o generarse otra propuesta desde el borrador nuevo. Así una
+respuesta tardía nunca sobrescribe escritura reciente.
+
+### 29.3 Errores, accesibilidad y pruebas
+
+Un error no abre panel ni altera el borrador: usa el toast común, cerrable y con máximo de diez
+segundos, y devuelve el botón a su estado inicial. La carga y el resultado se anuncian; el foco no
+salta al aparecer el panel y las acciones pueden partirse en móvil sin desbordamiento horizontal.
+
+Las pruebas cubren descripción y comentario independientes, carga, resultado seleccionable,
+aplicación, descarte, borrador obsoleto, regeneración distinta, error por toast, PC y móvil, ambos
+idiomas y ausencia del control por permisos o configuración. Se retiran las pruebas del modal y las
+cinco tonalidades. No se añade persistencia, guardado automático ni confirmación adicional.
+
+La implementación pasó las 230 pruebas del frontend y la compilación de producción. El recorrido
+real con Soporte confirmó generación inline sin modal ni tonos, región accesible, descarte sin tocar
+el borrador y bloqueo de **Usar propuesta** cuando el texto cambia. No se publicó ningún comentario
+durante la verificación.
+
+## 30. Implementación: calidad visible y refresco sin pérdida
+
+### 30.1 Motivo y última acción
+
+Durante una regeneración, cada bloque conserva el resumen anterior con una indicación accesible de
+que está desactualizado y muestra actividad sin reemplazarlo por un marcador. Si falla, aparece un
+mensaje específico de **Motivo** o **Última acción** y un botón **Reintentar** en ese mismo bloque.
+Cuando nunca hubo texto válido, el error ocupa su lugar; no se muestra `...`, `—` ni una respuesta
+inválida como contenido exitoso.
+
+El sondeo y los reintentos actualizan esos dos bloques en sitio. No vacían campos, no cierran
+editores ni retiran propuestas de IA. El foco y la selección permanecen donde estaban.
+
+### 30.2 Advertencia de propuesta imperfecta
+
+Una propuesta que sigue sin alcanzar la calidad mínima después del reintento aparece en el panel
+inline con una advertencia persistente. Continúa visible, seleccionable y puede aplicarse por
+decisión expresa; **Usar propuesta** no queda bloqueado por esta advertencia. El panel distingue esa
+calidad insuficiente del estado obsoleto por cambio del borrador, que sí impide aplicarla hasta
+regenerar.
+
+La advertencia no usa toast porque debe permanecer junto al texto que califica. Los errores de red o
+del motor continúan usando el toast común. Las pruebas cubren lectura accesible, teclado, PC, móvil,
+ambos idiomas, textos largos, borrador intacto y diferencia visual entre advertencia, obsolescencia
+y error.
+
+### 30.3 Textos redundantes que desaparecen
+
+El editor de comentarios no muestra la ayuda permanente que enumera formato, arrastre, pegado,
+selección de archivos y comentario compuesto sólo por adjuntos; los controles y las tres puertas de
+adjuntos continúan iguales y resultan suficientes por sí mismos. Se retiran el texto inglés
+**“With formatting, and with the files inside: drag them here, paste them with Ctrl+V or look for
+them. A comment can carry only files.”** y su equivalente en español.
+
+Una propuesta válida tampoco muestra el estado neutro **“The proposal is ready to review.”** ni su
+equivalente en español: el título, el texto y las acciones ya explican el estado. Se conservan los
+mensajes que sí cambian una decisión —carga, borrador obsoleto, calidad insuficiente y error— y sus
+anuncios accesibles no dependen de esa frase visible.
+
+La verificación real del 2026-10-15 usó `CS-2026-0027`: mostró los dos resúmenes completos, mantuvo
+literalmente el borrador de comentario y su propuesta durante un reintento de **Motivo**, enseñó
+la advertencia inline cuando la segunda propuesta siguió siendo demasiado parecida y conservó
+**Usar propuesta** habilitado. El menú lateral dejó de repetir el enlace «Código fuente y licencia»;
+la entrada continúa mostrándolo.
+
+## 31. Desplegables con la misma presencia que los demás controles
+
+### 31.1 Hallazgo
+
+El componente compartido de selector tiene hoy una altura mínima de 36 px y menos espaciado
+interior que los campos de texto y los botones, que usan 44 px. Aunque varios selectores nativos ya
+alcanzan 44 px, la diferencia del componente común hace que las listas se vean más delgadas y sin
+armonía con el resto del formulario. El documento no fijaba una altura común para este control; se
+registra el desajuste antes de cambiarlo.
+
+### 31.2 Regla visual aplicada
+
+Todos los desplegables de la aplicación, tanto el componente compartido como los `select` nativos,
+tienen una altura mínima de **44 px** y el mismo espaciado interior horizontal y vertical de los
+campos de texto: 12 px a los lados y 8 px arriba y abajo. La regla se aplica en formularios,
+filtros, tablas, diálogos, configuración, asistente y menú lateral.
+
+No hay una variante compacta: PC, tableta y móvil usan la misma altura. Se conservan el ancho,
+tipografía, colores, borde, foco, icono, opciones y comportamiento actuales; este cambio no altera
+el contenido ni el número de elementos que muestra cada lista.
+
+### 31.3 Pruebas y alcance
+
+Las pruebas de componente comprueban la altura y el espaciado del selector compartido. La revisión
+del frontend confirmó que no quedan selectores nativos por debajo de 44 px y el navegador verificó una
+muestra de formularios, filtros y menú lateral en PC y móvil, con sus temas claro y oscuro.
+
+No cambian textos, datos, permisos, navegación, API, modelo de datos ni producción. El responsable
+eligió 1A, 2A, 3A, 4A y 5A. No quedan decisiones abiertas.
+
+La implementación pasó las 232 pruebas del frontend y la compilación de producción. En navegador
+real, los ocho desplegables visibles de Configuración midieron 44 px y mostraron 8 px de espaciado
+vertical y 12 px horizontal, tanto a 1440 × 900 como a 390 × 844. La comprobación incluyó tema,
+idioma, método de entrada, reparto, avisos e IA, y se repitió con los temas claro y oscuro.
+
+## 32. Corrección: desplegables de 52 px
+
+### 32.1 Hallazgo posterior
+
+La implementación de la sección 31 está presente: los controles se midieron en 44 px después de
+recargar y ya no usan los 36 px anteriores. Sin embargo, la revisión visual del responsable en el
+detalle del ticket mostró que **Asignar a**, el estado y **Tema** siguen percibiéndose demasiado
+delgados respecto de los demás controles. La reducción de la captura acentuaba esa impresión, pero
+la medida aplicada tampoco resuelve la presencia visual buscada.
+
+### 32.2 Corrección aplicada
+
+Todos los desplegables pasan a una altura mínima de **52 px**. La medida se aplica al componente
+compartido y a cualquier `select` nativo, sin excepciones para formularios, diálogos, filtros, tablas,
+asistente, Configuración o menú lateral. PC, tableta y móvil usan la misma altura.
+
+Se conserva la tipografía `text-sm`, junto con los colores, bordes, foco, icono, ancho, opciones y
+comportamiento actuales. El espaciado puede crecer sólo lo necesario para centrar el contenido dentro
+de los 52 px; no se agranda el texto ni se introduce una variante compacta.
+
+### 32.3 Pruebas y alcance
+
+La prueba del componente exige 52 px y comprueba que la tipografía continúa en `text-sm`. La
+revisión de código cubre los selectores nativos. El navegador mide los controles servidos realmente,
+sin depender de una captura redimensionada.
+
+No cambian textos, datos, permisos, navegación, API, modelo de datos ni producción. El responsable
+eligió 1A, 2A y 3A. No quedan decisiones abiertas.
+
+La implementación pasó las 232 pruebas del frontend y la compilación de producción. Una pestaña
+nueva contra el servidor de desarrollo midió el selector de tema en **52 px**, con fuente de 14 px
+y 8 px de espaciado vertical. El servidor ya había reconstruido automáticamente; no fue necesario
+reiniciar los contenedores.
+
+## 33. Ajuste final de desplegables a 48 px
+
+### 33.1 Hallazgo visual
+
+Los 52 px de la sección 32 se cargaron y midieron correctamente en un navegador distinto. La
+primera pestaña conservaba el estilo anterior en caché, por lo que no era un fallo del contenedor ni
+de la reconstrucción. Una vez visto el cambio real, el responsable determinó que 52 px ocupan
+demasiado espacio.
+
+### 33.2 Ajuste aplicado
+
+Todos los desplegables tienen una altura mínima de **48 px**, como punto medio entre los 44 px que
+se percibían delgados y los 52 px sobredimensionados. La medida continúa siendo global: componente
+compartido y `select` nativos, formularios, diálogos, filtros, tablas, cabeceras, asistente,
+Configuración y menú lateral, en PC, tableta y móvil.
+
+Se conservan `text-sm`, los 12 px de espaciado horizontal y los 8 px verticales, además de colores,
+bordes, foco, icono, ancho, opciones y comportamiento. No se crea una variante compacta.
+
+### 33.3 Pruebas y alcance
+
+La prueba del componente exige 48 px y conserva las aserciones de tipografía y padding. La
+revisión cubre también el selector nativo, y un navegador limpio mide el resultado servido para
+evitar confundir caché con la versión vigente.
+
+No cambian textos, datos, permisos, navegación, API, modelo de datos ni producción. El responsable
+eligió 1A, 2A y 3A. No quedan decisiones abiertas.
+
+La implementación pasó las 232 pruebas del frontend y la compilación de producción. Una pestaña
+nueva midió el selector servido en **48 px**, con fuente de 14 px, 12 px de espaciado horizontal y
+8 px vertical. El frontend se reconstruyó automáticamente y no fue necesario reiniciar contenedores.
+
+## 34. Desplegables iguales al conmutador segmentado
+
+### 34.1 Medida de referencia
+
+El conmutador Main/Both/Internal combina botones de 36 px, 2 px de padding exterior por lado y un
+borde de 1 px por lado: su altura exterior es **42 px**. Los desplegables de 48 px aprobados en la
+sección 33 quedan 6 px por encima y se ven desalineados cuando ambos controles comparten cabecera.
+
+### 34.2 Normalización aplicada
+
+Todos los desplegables usan una altura **fija de 42 px**, igual a la altura exterior del conmutador.
+La regla es global y alcanza el componente compartido y los `select` nativos en formularios,
+diálogos, filtros, tablas, cabeceras, asistente, Configuración y menú lateral, en PC, tableta y
+móvil. El conmutador no cambia.
+
+Se conservan `text-sm`, los 12 px de espaciado horizontal y los 8 px verticales, además de colores,
+bordes, foco, icono, ancho, opciones y comportamiento. No existe variante compacta ni crecimiento
+automático por contexto.
+
+### 34.3 Pruebas y alcance
+
+La prueba del componente exige una altura fija de 42 px y conserva las aserciones de tipografía y
+padding. La revisión cubrió también el único selector nativo. Un navegador limpio midió el
+desplegable compartido en **42 px**, con fuente de 14 px, padding horizontal de 12 px y vertical de
+8 px; coincide con los 42 px exteriores derivados del conmutador Main/Both/Internal.
+
+La implementación pasó las 232 pruebas del frontend y la compilación de producción.
+
+No cambian textos, datos, permisos, navegación, API, modelo de datos, conmutadores ni producción. El
+responsable eligió 1A, 2A y 3A. No quedan decisiones abiertas.
+
+## 35. Implementación: Summary automático y sin botones
+
+Las listas de PC, las tarjetas móviles y la ficha sustituyen **Reason/Motivo** por
+**Summary/Resumen**. Last action/Última acción conserva su nombre. La tarjeta de la ficha mantiene
+los dos textos, pero elimina **Try Reason again**, **Try Last action again** y sus equivalentes en
+español. No aparece ninguna acción sustitutiva: ambos campos son resultados automáticos del ticket.
+
+Sólo la ficha comunica `Generating…/Generando…` o un error breve junto al campo afectado. Conserva
+la disposición y no usa toast para un proceso de fondo. En listas y tarjetas móviles, un resultado
+no vigente se representa únicamente con `—`; no se añaden chips, iconos ni mensajes repetidos. El
+lector de pantalla recibe el nombre nuevo y el estado cuando éste existe.
+
+Las pruebas recorren ambos idiomas, PC y móvil, estado listo, pendiente y error, ausencia de todos
+los botones y consistencia del rótulo en ficha, tabla y tarjeta. No cambian permisos, navegación,
+tema, layout ni controles ajenos a insights.
+
+## 36. Tabla resumen de tickets ordenada y legible
+
+### 36.1 Hallazgo reproducido
+
+En la bandeja de escritorio, el enlace **Open/Abrir** está técnicamente dentro de la tabla y ocupa
+la undécima celda de cada fila. Sin embargo, el encabezado de esa columna existe sólo para lectores
+de pantalla mediante `sr-only`. La captura y la medición en 1440 × 900 confirmaron que la tabla
+termina exactamente después de esa celda, pero la ausencia de un rótulo visible hace que el botón
+parezca colocado fuera de la tabla resumen.
+
+### 36.2 Columnas y orden acordados
+
+La tabla amplia conserva las once columnas, pero las ordena por la secuencia de lectura operativa:
+
+1. **Ticket**;
+2. **Priority/Prioridad**;
+3. **State/Estado**;
+4. **Subject/Asunto**;
+5. **Classification/Clasificación**;
+6. **Summary/Resumen**;
+7. **Last action/Última acción**;
+8. **Requested by/Solicitante**;
+9. **Assignee/Responsable**;
+10. **Update date/Fecha actualización**;
+11. **Action/Acción**.
+
+Summary recibe el mayor espacio flexible; después, Subject y Last action. Subject, Summary y Last
+action ocupan como máximo dos líneas con puntos suspensivos y exponen el texto completo mediante la
+ayuda nativa al pasar el cursor. Las filas crecen sólo hasta lo que requieren esos dos renglones y
+todo el contenido se alinea arriba.
+
+**Ticket** permanece siempre en una sola línea, sin truncado y con ancho suficiente para el número.
+Priority y State ajustan su ancho al chip más largo y centran tanto encabezado como contenido.
+Requested by y Assignee admiten hasta dos líneas y muestran `—` cuando no existe valor. Update date
+usa una línea para la fecha y otra para la hora dentro de una columna compacta.
+
+Classification conserva categoría y etiquetas juntas. Muestra como máximo dos líneas de chips; si
+hay más etiquetas de las que caben, un indicador enfocable `+N` informa cuántas quedan ocultas. Al
+pasar el cursor o enfocarlo enumera sus nombres; su nombre accesible también los enumera. No deja
+crecer la fila sin límite.
+
+La ayuda de Subject, Summary y Last action con el texto completo se abre tanto al pasar el cursor
+como al enfocar la celda mediante teclado; el truncado no convierte esa información en exclusiva
+del ratón.
+
+### 36.3 Action visible y compacta
+
+La última columna muestra el encabezado visible **Action** en inglés y **Acción** en español. El
+encabezado se alinea a la izquierda, como los demás títulos; los botones permanecen centrados dentro
+de sus celdas. La columna usa únicamente el ancho mínimo necesario
+para el botón y su espaciado; no recibe un ancho fijo ni roba espacio adicional a asunto, Summary o
+Last action.
+
+El botón continúa diciendo **Open/Abrir** y conserva su enlace, foco, tamaño y permisos. El número
+del ticket sigue siendo un enlace independiente. La fila completa no se vuelve pulsable, para no
+abrir un ticket al seleccionar texto o interactuar con otro contenido.
+
+El encabezado se mantiene en una sola línea y no ofrece ordenación: describe una acción, no un dato
+ordenable.
+
+### 36.4 Ancho intermedio y móvil
+
+En ancho intermedio se ocultan primero Requested by y Assignee. Permanecen visibles:
+
+`Ticket · Priority · State · Subject · Classification · Summary · Last action · Update date · Action`.
+
+Cuando esas nueve columnas dejan de caber con legibilidad, la tabla permite desplazamiento horizontal
+nativo y conserva sus medidas; no comprime los controles. Sólo por debajo de 768 px pasa a tarjetas.
+El ancho real disponible sigue decidiendo si aparecen las once columnas o la variante intermedia,
+por lo que responde también a abrir o plegar el menú lateral y no sólo a la ventana.
+
+La tarjeta móvil adopta el mismo orden conceptual: Ticket, Priority, State, Subject,
+Classification, Summary, Last action, Requested by, Assignee, Update date y Open. El botón
+**Open/Abrir** permanece al final. Las personas ausentes muestran `—` también en la tarjeta.
+
+### 36.5 Pruebas y alcance
+
+Las pruebas comprueban ambos idiomas; orden y cantidad de columnas; Ticket sin salto; prioridad y
+estado centrados, encabezado Action a la izquierda y su botón centrado; textos de dos líneas con contenido completo accesible; chips limitados y
+contador `+N`; guiones para personas ausentes; fecha y hora en dos líneas; encabezado Action
+visible, no ordenable y compacto; las nueve columnas intermedias; salto oportuno a tarjetas; y el
+orden móvil. El navegador recorrerá escritorio amplio, ancho intermedio y móvil en inglés y español.
+Priority y Update date conservan únicamente la ordenación que ya ofrece la bandeja; cambiar su
+posición no añade encabezados interactivos ni duplica los controles de orden existentes.
+
+No cambian datos, API, permisos, navegación, contenido de los resúmenes, filtros, orden de los
+tickets, temas ni producción. Sí cambia el orden visual de las columnas y el punto responsive en el
+que la tabla cede su lugar a las tarjetas, conforme a esta propuesta.
+
+## 37. Ticket fijo durante el desplazamiento horizontal
+
+En cualquier presentación que todavía use tabla —amplia o intermedia—, la primera columna,
+**Ticket**, permanece visible al desplazar el contenido horizontalmente. Así, cada dato conserva la
+referencia inequívoca al ticket de su fila. No se fija Priority ni Action y la fila completa sigue
+sin ser un enlace.
+
+Las celdas del cuerpo se fijan exclusivamente en horizontal. Desde la sección 39, el encabezado
+Ticket es la esquina fija de los dos ejes y permanece también en el borde superior al bajar por una
+lista larga. La columna conserva exactamente el ancho acordado en la sección 36; no gana espacio ni
+obliga a truncar el número, que continúa en una sola línea.
+
+Tanto el `th` como los `td` de Ticket usan el fondo completamente opaco de la superficie del tema,
+un nivel de apilamiento suficiente y un borde derecho. El contenido desplazado nunca se transparenta
+ni se dibuja por encima del número. El borde señala dónde termina la zona fija sin introducir una
+sombra nueva.
+
+Desde 768 px la tabla permanece disponible aunque su contenido sea más ancho que el contenedor y
+ofrece desplazamiento horizontal nativo. No se añade degradado, texto ni icono para anunciarlo: el
+propio contenido parcialmente visible indica que continúa. Por debajo de 768 px se usan tarjetas,
+que no necesitan fijación ni desplazamiento lateral.
+
+Las tarjetas no cambian: no tienen desplazamiento horizontal ni una columna que fijar. Tampoco
+cambian datos, rutas, permisos, orden, filtros, paginación o comportamiento del enlace del número.
+
+Las pruebas cubren tabla amplia e intermedia, desplazamiento horizontal real, número siempre visible,
+encabezado fijo verticalmente, fondo opaco, separador derecho, foco y activación del enlace. La
+comprobación visual recorre los ocho temas para confirmar que el fondo y el borde usan sus variables
+y mantienen contraste.
+
+## 38. Carga progresiva de las bandejas
+
+Las cuatro bandejas dejan de mostrar el total, `Page/Página`, `Previous/Anterior` y `Next/Siguiente`.
+La primera respuesta trae 20 tickets. Cuando la persona se acerca al final de la tabla o de las
+tarjetas, un marcador no visible solicita automáticamente el bloque siguiente antes de que alcance
+el último ticket.
+
+Mientras llega ese bloque, los tickets ya visibles permanecen disponibles y un indicador discreto
+al pie informa que se está cargando. Cada bloque recibido se añade en el orden entregado por el
+backend, sin sustituir ni duplicar los anteriores. Una región viva accesible anuncia cuántos tickets
+nuevos se incorporaron. Cuando no queda otra página, la lista termina sin mensaje adicional.
+
+Si la carga progresiva falla, todo lo ya cargado se conserva. Al pie aparece el error con una acción
+**Retry/Reintentar**; no hay reintento automático ni bloqueo de la lista. Un único bloque puede estar
+en curso: varios cruces del marcador no producen solicitudes paralelas.
+
+Cambiar búsqueda, filtros, vista u orden cancela la continuidad anterior, vacía sus resultados,
+vuelve al inicio y solicita el primer bloque del nuevo criterio. El mismo comportamiento se usa en
+tabla y tarjetas, en PC, tablet y móvil.
+
+Al abrir un ticket y volver con el historial del navegador durante la misma sesión de navegación,
+la bandeja recupera sus criterios, los bloques acumulados y la posición vertical. Esa memoria es
+efímera: recargar o cerrar la pestaña vuelve a empezar por el primer bloque. Ir a otra bandeja no
+mezcla sus resultados con la actual.
+
+La etiqueta inglesa del estado `en espera` se presenta según el papel conforme a la sección 40. En
+la tabla, **Action/Acción** se alinea a la izquierda como los demás encabezados; el botón Open/Abrir
+continúa centrado en su celda.
+
+Las pruebas cubren anexado sin duplicados, exclusión de solicitudes concurrentes, fin silencioso,
+fallo y reintento, reinicio al cambiar criterios, anuncio accesible, tabla y tarjetas, restauración
+al volver, descarte tras recarga, ambos idiomas, el texto `Waiting` y las dos alineaciones distintas
+de encabezado y botón. La comprobación de navegador recorre PC, tablet y móvil.
+
+## 39. Tabla de altura disponible y encabezado fijo
+
+Desde 768 px, la cabecera de la bandeja —título, búsqueda, resumen de filtros y **New ticket/Nuevo
+ticket**— permanece fuera del desplazamiento. La tabla ocupa todo el alto restante de la vista, con
+un mínimo de 240 px, y su propio contenedor administra los desplazamientos vertical y horizontal.
+Después de la última fila conserva 16 px de espacio interior para que el contenido no termine pegado
+al borde. Por debajo de 768 px las tarjetas mantienen el desplazamiento normal de la página.
+
+La fila de títulos permanece fija en el borde superior del contenedor mientras se recorren los
+tickets. Conserva su fondo, tipografía y borde inferior actuales, con superficie opaca y el nivel de
+apilamiento necesario; no añade sombra. La celda de encabezado **Ticket** queda fija en ambos ejes y
+se dibuja por encima tanto de las demás cabeceras como de las celdas desplazadas.
+
+El separador derecho de la columna Ticket deja de depender del borde de la celda fija: una línea de
+1 px, independiente y superpuesta en su extremo derecho, conserva el color del tema y permanece
+visible durante todo el desplazamiento horizontal. No se aumenta su grosor ni se introduce sombra.
+
+Subject, Summary, Last action y el contador `+N` conservan una única ayuda propia, accesible con
+cursor y teclado. Se elimina el atributo `title` que duplicaba esa ayuda. El tooltip se muestra sólo
+cuando el contenido está realmente truncado; al enfocarlo con teclado permanece visible mientras
+conserva el foco y se cierra al moverlo. El texto completo sigue disponible sin depender del ratón.
+
+La carga progresiva observa el final del área desplazable interna y solicita el siguiente bloque al
+acercarse, con la misma anticipación, exclusión de solicitudes y recuperación ante errores de la
+sección 38. La barra horizontal pertenece al contenedor y permanece en su borde inferior, sin exigir
+llegar a la última fila para desplazar las columnas.
+
+Las pruebas cubren cálculo del alto restante y mínimo de 240 px, 16 px inferiores, tabla frente a
+tarjetas, scroll vertical y horizontal combinados, encabezados fijos, esquina Ticket en ambos ejes,
+separador persistente, ausencia de `title`, tooltip sólo con desbordamiento, foco y cierre, y carga
+progresiva dentro del nuevo contenedor. La comprobación real recorre PC, tableta y móvil, y confirma
+los ocho temas para el fondo, los bordes y el separador.
+
+## 40. Estado `en espera` según quien lo consulta
+
+El valor técnico continúa siendo `en espera`. Su rótulo visible depende del papel de la persona que
+mira el ticket:
+
+| Papel | Inglés | Español |
+| --- | --- | --- |
+| Usuario | `Waiting for you` | `Esperándote` |
+| Soporte | `Waiting` | `Esperando` |
+| Desarrollo | `Waiting` | `Esperando` |
+| Administrador | `Waiting` | `Esperando` |
+
+La distinción se aplica de forma coherente en toda la interfaz: tabla de bandeja, tarjetas móviles,
+cabecera y ficha del ticket, historial y filtros que se muestran a cada papel. El Usuario sólo ve el
+ticket principal; no se introduce una variante para el interno.
+
+Los selectores con los que Soporte o Desarrollo cambian el estado conservan el rótulo operativo
+`Waiting` / `Esperando`. No intentan nombrar allí a la persona esperada: el contexto y el texto que
+se solicita al ejecutar la transición ya explican si se espera al Usuario o a Soporte.
+
+Quedan fuera de alcance el valor técnico `en espera`, los contratos de API, la base de datos, las
+reglas de transición, los permisos y los textos de correo. No se añade una preferencia personal ni
+se persiste una nueva traducción.
+
+Las pruebas deben cubrir los cuatro papeles en ambos idiomas y comprobar la etiqueta en bandeja,
+tarjeta, ficha, historial y filtros. También deben confirmar que el selector técnico usa
+`Waiting` / `Esperando` y que el backend continúa recibiendo `en espera`.
+
+### 40.1 Registro del repaso
+
+El responsable decidió el 2026-10-16:
+
+1. aplicar la diferencia en toda la interfaz;
+2. tratar al Administrador como papel técnico;
+3. conservar el rótulo operativo en los selectores de estado;
+4. limitar el cambio a la interfaz, sin modificar API, base de datos ni correos.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
+el 2026-10-16. La implementación respeta el alcance aprobado; pasaron 76 pruebas focalizadas, las
+fronteras del frontend y la compilación.

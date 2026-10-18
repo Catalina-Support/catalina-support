@@ -9,8 +9,8 @@ import (
 )
 
 // Las pruebas del repositorio van **contra la base de datos de verdad**, porque lo que hay que
-// comprobar aquí es el SQL: que volver a pedir un campo reescribe su misma fila en vez de fallar o
-// acumular, que la lista se lee en bloque y que la puesta al día deja fuera lo que está en `error`.
+// comprobar aquí es el SQL: que volver a pedir un campo reescribe su misma fila sin perder el texto
+// anterior, que la lista se lee en bloque y que la puesta al día deja fuera lo que está en `error`.
 //
 // Todo se hace **dentro de una transacción que se deshace al terminar**, así que no queda nada en la
 // base, y sin base de datos a mano las pruebas **se saltan**: `go test ./...` tiene que seguir
@@ -25,11 +25,11 @@ const (
 func TestMarcarPendienteCreaLaFilaYLaReescribeSiSeVuelveAPedir(t *testing.T) {
 	repositorio := repositorioDePrueba(t)
 
-	if err := repositorio.MarcarPendiente(numeroDePrueba, KindMotivo); err != nil {
+	if err := repositorio.MarcarPendiente(numeroDePrueba, KindSummary); err != nil {
 		t.Fatalf("MarcarPendiente falló: %v", err)
 	}
 
-	fila := leerFila(t, repositorio, numeroDePrueba, KindMotivo)
+	fila := leerFila(t, repositorio, numeroDePrueba, KindSummary)
 	if fila.State != StatePendiente {
 		t.Errorf("el estado es %q y se esperaba %q", fila.State, StatePendiente)
 	}
@@ -44,30 +44,81 @@ func TestMarcarPendienteCreaLaFilaYLaReescribeSiSeVuelveAPedir(t *testing.T) {
 	}
 
 	// Se escribe el resumen y se le suman intentos, y después se vuelve a pedir: la petición nueva
-	// **reescribe la misma fila** y deja el texto viejo fuera (docs/modules/ai.md, sección 4).
-	if err := repositorio.GuardarResultado(numeroDePrueba, KindMotivo, "Uno", "One", "modelo", time.Now()); err != nil {
+	// **reescribe la misma fila** pero conserva el texto viejo mientras se genera el nuevo.
+	if err := repositorio.GuardarResultado(numeroDePrueba, KindSummary, "Uno", "One", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
-	if err := repositorio.SubirIntentos(numeroDePrueba, KindMotivo); err != nil {
+	if err := repositorio.SubirIntentos(numeroDePrueba, KindSummary); err != nil {
 		t.Fatalf("SubirIntentos falló: %v", err)
 	}
-	if err := repositorio.MarcarPendiente(numeroDePrueba, KindMotivo); err != nil {
+	if err := repositorio.MarcarPendiente(numeroDePrueba, KindSummary); err != nil {
 		t.Fatalf("MarcarPendiente falló: %v", err)
 	}
 
-	fila = leerFila(t, repositorio, numeroDePrueba, KindMotivo)
+	fila = leerFila(t, repositorio, numeroDePrueba, KindSummary)
 	if fila.State != StatePendiente {
 		t.Errorf("el estado es %q y se esperaba %q", fila.State, StatePendiente)
 	}
 	if fila.Attempts != 0 {
 		t.Errorf("los intentos son %d y volver a pedirlo los pone a cero", fila.Attempts)
 	}
-	if fila.TextEs != nil || fila.TextEn != nil || fila.Model != nil || fila.GeneratedAt != nil {
-		t.Error("el resumen viejo tiene que quedar fuera: cuenta una historia que ya no es la del ticket")
+	if texto(fila.TextEs) != "Uno" || texto(fila.TextEn) != "One" || texto(fila.Model) != "modelo" || fila.GeneratedAt == nil {
+		t.Error("el resumen anterior debe seguir visible mientras llega el nuevo")
 	}
 
 	if filas := contarFilas(t, repositorio, numeroDePrueba); filas != 1 {
 		t.Errorf("hay %d filas de ese ticket y tiene que haber una por campo: el campo se reescribe", filas)
+	}
+}
+
+func TestUnaGeneracionAntiguaNoPuedeSobrescribirLaVigente(t *testing.T) {
+	repositorio := repositorioDePrueba(t)
+
+	primera, err := repositorio.MarcarPendienteConGeneracion(numeroDePrueba, KindSummary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	segunda, err := repositorio.MarcarPendienteConGeneracion(numeroDePrueba, KindSummary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if segunda <= primera {
+		t.Fatalf("la revisión no avanzó: primera=%d segunda=%d", primera, segunda)
+	}
+
+	guardado, err := repositorio.GuardarResultadoSiVigente(numeroDePrueba, KindSummary, primera, "Viejo", "Old", "modelo", time.Now())
+	if err != nil || guardado {
+		t.Fatalf("la revisión antigua pudo guardar: guardado=%v err=%v", guardado, err)
+	}
+	guardado, err = repositorio.GuardarResultadoSiVigente(numeroDePrueba, KindSummary, segunda, "Nuevo", "New", "modelo", time.Now())
+	if err != nil || !guardado {
+		t.Fatalf("la revisión vigente no guardó: guardado=%v err=%v", guardado, err)
+	}
+
+	fila := leerFila(t, repositorio, numeroDePrueba, KindSummary)
+	if texto(fila.TextEs) != "Nuevo" || fila.Generation != segunda {
+		t.Fatalf("quedó un resultado incorrecto: %+v", fila)
+	}
+}
+
+func TestLaRecuperacionEsUnicaEInvalidaElTrabajoFallido(t *testing.T) {
+	repositorio := repositorioDePrueba(t)
+	generacion, err := repositorio.MarcarPendienteConGeneracion(numeroDePrueba, KindSummary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	noAntes := time.Now().Add(time.Minute)
+	nueva, preparada, err := repositorio.PrepararRecuperacion(numeroDePrueba, KindSummary, generacion, noAntes)
+	if err != nil || !preparada || nueva <= generacion {
+		t.Fatalf("no se preparó la recuperación: nueva=%d preparada=%v err=%v", nueva, preparada, err)
+	}
+	if _, repetida, err := repositorio.PrepararRecuperacion(numeroDePrueba, KindSummary, nueva, noAntes); err != nil || repetida {
+		t.Fatalf("se permitió un segundo ciclo: preparada=%v err=%v", repetida, err)
+	}
+
+	fila := leerFila(t, repositorio, numeroDePrueba, KindSummary)
+	if fila.RecoveryCount != 1 || fila.RetryAt == nil || fila.Generation != nueva {
+		t.Fatalf("la recuperación no quedó persistida: %+v", fila)
 	}
 }
 
@@ -96,6 +147,9 @@ func TestGuardarResultadoGuardaLasDosRedaccionesYElModelo(t *testing.T) {
 	if fila.ErrorKey != nil {
 		t.Errorf("un resumen listo no lleva clave de error, y lleva %q", texto(fila.ErrorKey))
 	}
+	if fila.ContextVersion != SummaryContextVersion {
+		t.Errorf("la versión del contexto es %d y se esperaba %d", fila.ContextVersion, SummaryContextVersion)
+	}
 }
 
 func TestMarcarErrorYSinMotorGuardanSuClaveYNoLaConfunden(t *testing.T) {
@@ -103,43 +157,59 @@ func TestMarcarErrorYSinMotorGuardanSuClaveYNoLaConfunden(t *testing.T) {
 
 	// Los dos fallos son distintos y se guardan distintos: uno es culpa del modelo y el otro de que el
 	// contenedor no está (docs/modules/ai.md, decisión 8).
-	if err := repositorio.MarcarError(numeroDePrueba, KindMotivo, "ai.invalid"); err != nil {
+	if err := repositorio.MarcarError(numeroDePrueba, KindSummary, "ai.invalid"); err != nil {
 		t.Fatalf("MarcarError falló: %v", err)
 	}
-	if err := repositorio.MarcarSinMotor(otroNumero, KindMotivo, "ai.unavailable"); err != nil {
+	if err := repositorio.MarcarSinMotor(otroNumero, KindSummary, "ai.unavailable"); err != nil {
 		t.Fatalf("MarcarSinMotor falló: %v", err)
 	}
 
-	enError := leerFila(t, repositorio, numeroDePrueba, KindMotivo)
+	enError := leerFila(t, repositorio, numeroDePrueba, KindSummary)
 	if enError.State != StateError || texto(enError.ErrorKey) != "ai.invalid" {
 		t.Errorf("el campo quedó en %q con la clave %q", enError.State, texto(enError.ErrorKey))
 	}
 
-	sinMotor := leerFila(t, repositorio, otroNumero, KindMotivo)
+	sinMotor := leerFila(t, repositorio, otroNumero, KindSummary)
 	if sinMotor.State != StateSinMotor || texto(sinMotor.ErrorKey) != "ai.unavailable" {
 		t.Errorf("el campo quedó en %q con la clave %q", sinMotor.State, texto(sinMotor.ErrorKey))
+	}
+}
+
+func TestMarcarErrorConservaElUltimoResumenValido(t *testing.T) {
+	repositorio := repositorioDePrueba(t)
+	generado := time.Now().Truncate(time.Millisecond)
+	if err := repositorio.GuardarResultado(numeroDePrueba, KindSummary, "Resumen anterior", "Previous summary", "modelo", generado); err != nil {
+		t.Fatal(err)
+	}
+	if err := repositorio.MarcarError(numeroDePrueba, KindSummary, "ai.invalid"); err != nil {
+		t.Fatal(err)
+	}
+
+	fila := leerFila(t, repositorio, numeroDePrueba, KindSummary)
+	if fila.State != StateError || texto(fila.TextEs) != "Resumen anterior" || texto(fila.TextEn) != "Previous summary" {
+		t.Fatalf("el fallo debe conservar el resultado anterior: %+v", fila)
 	}
 }
 
 func TestSubirIntentosSumaUnoYNoReVientaSinFila(t *testing.T) {
 	repositorio := repositorioDePrueba(t)
 
-	if err := repositorio.MarcarPendiente(numeroDePrueba, KindMotivo); err != nil {
+	if err := repositorio.MarcarPendiente(numeroDePrueba, KindSummary); err != nil {
 		t.Fatalf("MarcarPendiente falló: %v", err)
 	}
 
 	for i := 0; i < 3; i++ {
-		if err := repositorio.SubirIntentos(numeroDePrueba, KindMotivo); err != nil {
+		if err := repositorio.SubirIntentos(numeroDePrueba, KindSummary); err != nil {
 			t.Fatalf("SubirIntentos falló: %v", err)
 		}
 	}
 
-	if intentos := leerFila(t, repositorio, numeroDePrueba, KindMotivo).Attempts; intentos != 3 {
+	if intentos := leerFila(t, repositorio, numeroDePrueba, KindSummary).Attempts; intentos != 3 {
 		t.Errorf("el contador de intentos quedó en %d y se esperaba 3", intentos)
 	}
 
 	// Un campo del que no hay fila no puede inventarse una: el contador va con la fila.
-	if err := repositorio.SubirIntentos(vecinoNumero, KindMotivo); err != nil {
+	if err := repositorio.SubirIntentos(vecinoNumero, KindSummary); err != nil {
 		t.Fatalf("SubirIntentos sin fila devolvió un error: %v", err)
 	}
 	if filas := contarFilas(t, repositorio, vecinoNumero); filas != 0 {
@@ -150,17 +220,17 @@ func TestSubirIntentosSumaUnoYNoReVientaSinFila(t *testing.T) {
 func TestPorNumerosTraeVariosTicketsDeUnaVez(t *testing.T) {
 	repositorio := repositorioDePrueba(t)
 
-	if err := repositorio.GuardarResultado(numeroDePrueba, KindMotivo, "Uno", "One", "modelo", time.Now()); err != nil {
+	if err := repositorio.GuardarResultado(numeroDePrueba, KindSummary, "Uno", "One", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
 	if err := repositorio.GuardarResultado(numeroDePrueba, KindUltimaAccion, "Dos", "Two", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
-	if err := repositorio.GuardarResultado(otroNumero, KindMotivo, "Tres", "Three", "modelo", time.Now()); err != nil {
+	if err := repositorio.GuardarResultado(otroNumero, KindSummary, "Tres", "Three", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
 	// El vecino no se pide: no puede salir en la respuesta.
-	if err := repositorio.GuardarResultado(vecinoNumero, KindMotivo, "Cuatro", "Four", "modelo", time.Now()); err != nil {
+	if err := repositorio.GuardarResultado(vecinoNumero, KindSummary, "Cuatro", "Four", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
 
@@ -189,30 +259,30 @@ func TestPendientesDejaFueraLoQueEstaEnErrorYLoQueAgotoSusIntentos(t *testing.T)
 	repositorio := repositorioDePrueba(t)
 
 	// Lo que se retoma: lo que quedó a medias y lo que no agotó sus intentos.
-	if err := repositorio.MarcarPendiente(numeroDePrueba, KindMotivo); err != nil {
+	if err := repositorio.MarcarPendiente(numeroDePrueba, KindSummary); err != nil {
 		t.Fatalf("MarcarPendiente falló: %v", err)
 	}
-	if err := repositorio.MarcarSinMotor(otroNumero, KindMotivo, "ai.unavailable"); err != nil {
+	if err := repositorio.MarcarSinMotor(otroNumero, KindSummary, "ai.unavailable"); err != nil {
 		t.Fatalf("MarcarSinMotor falló: %v", err)
 	}
-	if err := repositorio.SubirIntentos(otroNumero, KindMotivo); err != nil {
+	if err := repositorio.SubirIntentos(otroNumero, KindSummary); err != nil {
 		t.Fatalf("SubirIntentos falló: %v", err)
 	}
 
 	// Lo que no se retoma: una respuesta que no valía, un motor caído que ya agotó sus intentos y un
 	// resumen ya escrito.
-	if err := repositorio.MarcarError(vecinoNumero, KindMotivo, "ai.invalid"); err != nil {
+	if err := repositorio.MarcarError(vecinoNumero, KindSummary, "ai.invalid"); err != nil {
 		t.Fatalf("MarcarError falló: %v", err)
 	}
-	if err := repositorio.MarcarSinMotor("PRUEBA-AI-0004", KindMotivo, "ai.unavailable"); err != nil {
+	if err := repositorio.MarcarSinMotor("PRUEBA-AI-0004", KindSummary, "ai.unavailable"); err != nil {
 		t.Fatalf("MarcarSinMotor falló: %v", err)
 	}
 	for i := 0; i < 3; i++ {
-		if err := repositorio.SubirIntentos("PRUEBA-AI-0004", KindMotivo); err != nil {
+		if err := repositorio.SubirIntentos("PRUEBA-AI-0004", KindSummary); err != nil {
 			t.Fatalf("SubirIntentos falló: %v", err)
 		}
 	}
-	if err := repositorio.GuardarResultado("PRUEBA-AI-0005", KindMotivo, "Cinco", "Five", "modelo", time.Now()); err != nil {
+	if err := repositorio.GuardarResultado("PRUEBA-AI-0005", KindSummary, "Cinco", "Five", "modelo", time.Now()); err != nil {
 		t.Fatalf("GuardarResultado falló: %v", err)
 	}
 

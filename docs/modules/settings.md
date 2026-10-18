@@ -1,7 +1,24 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-14
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 19 separa la carga automática del catálogo local de su actualización manual y conserva los datos
+> mientras se refrescan.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 18 amplía el paso 1 con el color institucional y exige que las confirmaciones de modelos usen el
+> diálogo compartido y temático.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 17 añade contratos paralelos de
+> desactivación local, atribuye el saludo al modelo y simplifica la carga de logos sin exponer el
+> nombre del archivo.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 16 define los contratos
+> paralelos de `/setup` y `/settings` para progreso, cancelación, activación, prueba y borrado de
+> modelos, y permite administrar los dos logos durante el primer arranque sin rebajar el candado del
+> sello.
 >
 > **Enmienda implementada y verificada el 2026-10-13: ausencia sin falso error.** Las cinco filas
 > únicas conservan `settings.notFound` si falta su migración, pero la consulta ya no registra esa
@@ -826,16 +843,15 @@ orden de las tarjetas.
 El responsable confirmó el 2026-10-06 incluir en la propuesta `/settings` y `/setup`, y distinguir
 los resultados transitorios de los avisos permanentes. El repaso común quedó cerrado en
 `docs/interfaz-y-experiencia.md`, sección 15.7: todos los resultados descritos usan el toast, no hay
-cola y sólo éxito e información desaparecen automáticamente. No quedan decisiones abiertas ni
+cola y todas las formas desaparecen automáticamente en diez segundos como máximo. No quedan decisiones abiertas ni
 decisiones propias del backend.
 
 ### 11.4 Implementación y verificación
 
 `settings-page` muestra su señal general mediante `app-toast`; los avisos condicionales de las
 tarjetas continúan como `app-aviso`. Las peticiones, los textos y el manejo de errores no cambiaron.
-Las 220 pruebas unitarias y la compilación pasan. Playwright comprobó en PC y móvil que el fallo del
-motor de IA permanece fijo dentro de la ventana después de cinco segundos y desaparece al pulsar
-**Cerrar**.
+La política original quedó sustituida en la sección 17: cualquier forma permanece el tiempo
+suficiente para leerse, admite **Cerrar** y desaparece automáticamente a los diez segundos.
 
 ## 12. Implementación: idioma global e IA obligatoria
 
@@ -972,3 +988,92 @@ Las lecturas de instalación, tickets, directorio, Keycloak e IA consultan como 
 distinguen cero filas mediante `RowsAffected`. Conservan `ErrSettingsNotFound`, que los servicios
 traducen a la clave pública existente. Un error de conexión, SQL o escaneo sigue propagándose; no se
 modificó el logger global, la API ni las cinco tablas.
+
+## 16. Contratos del asistente para marca y modelos
+
+`/api/setup/ai/models/**` y `/api/settings/ai/models/**` exponen las mismas operaciones: catálogo con
+fase y progreso, iniciar o reanudar, cancelar, eliminar parcial, reintentar activación, probar el
+activo y eliminar un instalado inactivo. La primera familia conserva el sello nulo como único
+candado y responde `409 setup.alreadyInstalled` después; la segunda exige Administrador. La
+aceptación de licencia conserva actor, versión y checksum.
+
+La petición de descarga registra que el elegido debe activarse y probarse. El servicio coordina el
+trabajo aunque desaparezca la petición del navegador. El catálogo distingue el estado operativo de
+la configuración probada; no presenta como utilizable un archivo sólo descargado. La prueba manual
+resuelve `now` mediante el reloj del servicio y la zona de `installation_settings`, llama al motor
+con contenido artificial y responde saludo, instante y zona sin guardar el texto.
+
+El activo no se puede eliminar. Un parcial y un modelo instalado son recursos distintos: cancelar
+conserva el primero, eliminar parcial lo retira y eliminar modelo sólo acepta uno inactivo. Los
+errores públicos diferencian descarga concurrente, estado incompatible, modelo activo y fallo de la
+prueba, sin devolver cuerpos del administrador interno.
+
+El paso 1 añade `POST` y `DELETE` de logo bajo `/api/setup/brand/logo`, con variante clara u oscura,
+`multipart`, validaciones actuales y candado del sello. Reutiliza el servicio de marca; no crea otra
+tabla ni otra carpeta. La marca pública cambia de versión al guardar o restaurar para que el
+encabezado vuelva a pedir la imagen.
+
+Las pruebas cubren contratos idénticos, autorización o sello, estados incompatibles, reloj y zona
+inyectados, ausencia de datos personales, validación del logo y actualización de versión. No cambia
+la persistencia de la instalación ni la API autenticada de logos existente.
+
+## 17. Desactivar, atribuir la prueba y cargar desde la vista previa
+
+Las familias `/api/setup/ai/models/**` y `/api/settings/ai/models/**` añaden una operación paralela
+para desactivar el modelo local activo. La primera conserva el candado del sello y la segunda exige
+Administrador. Sólo acepta el identificador activo; no borra el instalado ni modifica modelos
+externos. El catálogo posterior no contiene ningún modelo activo hasta activar otro.
+
+La respuesta de prueba manual amplía el contrato con `modelId` y `modelName`, además de saludo,
+instante y zona. `/setup` usa la ausencia de activo saludable para bloquear **Siguiente**. La
+configuración local deja de depender de un selector separado: activar una ficha actualiza la
+configuración efectiva y desactivarla deja el motor local sin selección utilizable.
+
+La carga y restauración de logos conservan las APIs, formatos, tamaño y permisos actuales. Sólo
+cambia su presentación: la vista previa dispara el `multipart`, el nombre del archivo no forma parte
+de la interfaz y la marca pública sigue actualizando su versión al terminar.
+
+Las pruebas cubren permisos o sello, desactivación y reactivación, rechazo del modelo incorrecto,
+contrato atribuido del saludo y regresión de carga/restauración de ambas variantes. No cambia el
+modelo de datos ni se añade persistencia.
+
+La suite completa del backend pasa y el frontend compila con sus 227 pruebas. El navegador confirmó
+el contrato público sin selector superior, la desactivación y reactivación, el saludo atribuido y
+los dos controles de archivo ocultos detrás de sus vistas previas accesibles.
+
+## 18. Color inicial y confirmaciones integradas
+
+`POST /api/setup/installation` acepta `primaryColor` junto con `name` y `language`. Aplica la misma
+normalización, validación `#rrggbb`, derivación de contraste y actualización de marca pública que
+Configuración. La respuesta de `/api/setup` devuelve el color guardado para reconstruir el paso al
+reanudar. La vista previa reutiliza el endpoint actual y permanece sin efectos persistentes.
+
+El tema no forma parte del contrato ni de la base: continúa en `ThemeService` y almacenamiento del
+navegador. Los seis temas fijos no consumen el color institucional; los dos de fábrica sí lo hacen.
+
+Las confirmaciones de eliminación no crean API nueva ni cambian códigos HTTP. Sólo sustituyen
+`confirm()` por `app-dialogo` antes de llamar a los contratos existentes. Las pruebas cubren la
+validación y persistencia del color bajo el sello, la respuesta reanudable y la ausencia de llamadas
+de borrado al cancelar.
+
+El servicio normaliza el hexadecimal a minúsculas, rechaza valores inválidos y devuelve el color en
+el estado reanudable. Las pruebas de settings, las 227 pruebas del frontend y la compilación pasan;
+el recorrido en navegador canceló mediante Escape sin emitir la petición destructiva.
+
+## 19. Consulta automática del catálogo local
+
+`/setup` y `/settings` consumen los contratos existentes del catálogo al mostrar la administración
+local, no después de una acción explícita. No se añade endpoint ni cambia la respuesta: el ajuste es
+de ciclo de vida y presentación del frontend.
+
+La actualización manual conserva en memoria la última respuesta visible hasta completar la nueva.
+El botón no dispara dos consultas simultáneas y un fallo no borra datos válidos ya conocidos. La
+consulta automática sigue los mismos candados actuales: sello nulo en `/setup` y Administrador en
+`/settings`.
+
+Las pruebas cubren una consulta automática por entrada, actualización manual, exclusión de doble
+petición y conservación del catálogo ante error. No cambia persistencia, permisos ni contratos.
+
+La prueba de componente atiende la consulta automática, comprueba que la ficha permanece durante la
+actualización y que el botón deshabilitado no abre una segunda petición. La suite queda en 228 casos
+aprobados y el frontend compila para producción.

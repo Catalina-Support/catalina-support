@@ -81,7 +81,7 @@ export interface Ticket {
   /** Las **etiquetas** del caso, ya normalizadas: minúsculas y con guiones (`red-wifi`). */
   readonly tags?: readonly string[];
   /** El motivo del escalado. Sólo en los internos. */
-  readonly reason?: string;
+  readonly escalationReason?: string;
   /** El número del principal, en los internos. */
   readonly parent?: string;
   /** El número del interno, en los principales que lo tienen. */
@@ -97,7 +97,7 @@ export interface Ticket {
   readonly updatedAt: string;
 
   /**
-   * Los dos campos que redacta el motor de IA: el **motivo** y la **última acción**
+   * Los dos campos que redacta el motor de IA: **Summary** y **Last action**
    * (`docs/modules/ai.md`). Viajan siempre, aunque estén vacíos: el estado dice si se están
    * escribiendo, si el motor no está o si fallaron.
    */
@@ -117,9 +117,9 @@ export interface Observador {
   readonly createdAt?: string;
 }
 
-/** Los dos resúmenes de un ticket. */
+/** Los dos insights de un ticket. */
 export interface Insights {
-  readonly motivo: Resumen;
+  readonly summary: Resumen;
   readonly ultimaAccion: Resumen;
 }
 
@@ -255,7 +255,6 @@ export const TIPO_PRINCIPAL = 'principal';
 export const TIPO_INTERNO = 'interno';
 
 export type EditorDeRedaccion = 'description' | 'comment';
-export type TonoDeRedaccion = 'professional' | 'friendly' | 'brief' | 'empathetic' | 'technical';
 
 /**
  * El único servicio del módulo `tickets` del frontend.
@@ -273,7 +272,10 @@ export class TicketsService {
 
   /** La bandeja, con sus filtros y su paginación. */
   listar(filtros: FiltrosDeBandeja): Promise<PaginaDeTickets> {
-    let parametros = new HttpParams().set('page', String(filtros.page));
+    let parametros = new HttpParams()
+      .set('page', String(filtros.page))
+      // La pantalla carga bloques pequeños y estables al acercarse al final de lo ya visible.
+      .set('perPage', '20');
 
     if (filtros.type) {
       parametros = parametros.set('type', filtros.type);
@@ -311,30 +313,21 @@ export class TicketsService {
     return firstValueFrom(this.http.get<PaginaDeTickets>('/api/tickets', { params: parametros }));
   }
 
-  /**
-   * Vuelve a pedirle al motor los dos resúmenes del ticket.
-   *
-   * Va al módulo `tickets` y no a `ai`: la pantalla sólo puede hablar con su propia API
-   * (`docs/modules/ai.md`, sección 5).
-   */
-  regenerarResumenes(numero: string): Promise<{ ticket: Ticket }> {
-    return firstValueFrom(
-      this.http.post<{ ticket: Ticket }>(`/api/tickets/${numero}/insights`, {}),
-    );
-  }
-
   mejorarRedaccion(
     numero: string,
     editor: EditorDeRedaccion,
     draft: string,
-    tone: TonoDeRedaccion,
-  ): Promise<{ text: string }> {
+    previousSuggestion?: string,
+  ): Promise<{ text: string; qualityWarning: boolean }> {
     return firstValueFrom(
-      this.http.post<{ text: string }>(`/api/tickets/${numero}/writing/improve`, {
-        editor,
-        draft,
-        tone,
-      }),
+      this.http.post<{ text: string; qualityWarning: boolean }>(
+        `/api/tickets/${numero}/writing/improve`,
+        {
+          editor,
+          draft,
+          ...(previousSuggestion ? { previousSuggestion } : {}),
+        },
+      ),
     );
   }
 
@@ -379,9 +372,12 @@ export class TicketsService {
     priority: Prioridad,
   ): Promise<{ ticket: Ticket; warning?: string }> {
     return firstValueFrom(
-      this.http.patch<{ ticket: Ticket; warning?: string }>(`/api/tickets/${numero}/actions/priority`, {
-        priority,
-      }),
+      this.http.patch<{ ticket: Ticket; warning?: string }>(
+        `/api/tickets/${numero}/actions/priority`,
+        {
+          priority,
+        },
+      ),
     );
   }
 
@@ -547,10 +543,10 @@ export class TicketsService {
     );
   }
 
-  /** Escala a Desarrollo. El motivo es obligatorio. */
-  escalar(numero: string, reason: string): Promise<{ ticket: Ticket }> {
+  /** Escala a Desarrollo. La razón de escalado es obligatoria. */
+  escalar(numero: string, escalationReason: string): Promise<{ ticket: Ticket }> {
     return firstValueFrom(
-      this.http.post<{ ticket: Ticket }>(`/api/tickets/${numero}/escalate`, { reason }),
+      this.http.post<{ ticket: Ticket }>(`/api/tickets/${numero}/escalate`, { escalationReason }),
     );
   }
 

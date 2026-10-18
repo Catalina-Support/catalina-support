@@ -61,7 +61,7 @@ interface GrupoSelector {
         [attr.aria-describedby]="ayuda() ? identificador() + '-ayuda' : null"
         (change)="elegir($event)"
         [class]="
-          'rounded-md border border-borde-fuerte bg-superficie px-2 py-1.5 text-sm text-texto min-h-9' +
+          'h-[42px] rounded-md border border-borde-fuerte bg-superficie px-3 py-2 text-sm text-texto' +
           (anchoCompleto() ? ' w-full' : '')
         "
       >

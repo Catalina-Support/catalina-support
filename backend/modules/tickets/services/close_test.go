@@ -117,6 +117,13 @@ func TestCerrarConComentarioLoGuardaEnLaConversacion(t *testing.T) {
 	if comentario.Author == nil || comentario.Author.ID != soporte1.ID {
 		t.Fatalf("el comentario quedó sin autor o con otro: %+v", comentario.Author)
 	}
+	var comentarioVinculado *int64
+	if err := tx.Raw(`SELECT comment_id FROM ticket_history WHERE ticket_id = (SELECT id FROM tickets WHERE number = ?) AND event = 'cerrado' ORDER BY created_at DESC LIMIT 1`, numero).Scan(&comentarioVinculado).Error; err != nil {
+		t.Fatalf("no se pudo leer el vínculo del cierre: %v", err)
+	}
+	if comentarioVinculado == nil || *comentarioVinculado != comentario.ID {
+		t.Fatalf("el cierre no quedó vinculado a su comentario: historia=%v comentario=%d", comentarioVinculado, comentario.ID)
+	}
 }
 
 // TestCerrarComoSolicitante: **el propio solicitante cierra su ticket por el mismo camino** y con la

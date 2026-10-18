@@ -15,19 +15,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"catalina-support/backend/modules/ai/repositories"
 
 	"github.com/juanky-estevez/go-logs"
 )
 
-// Tipo es el campo que se le pide al motor. **Uno por llamada**: el «Motivo» y la «Última acción» son
+// Tipo es el campo que se le pide al motor. **Uno por llamada**: el «Summary» y la «Última acción» son
 // encargos distintos y son dos peticiones (docs/modules/ai.md, decisión 7).
 type Tipo string
 
 const (
-	// Motivo es de qué va el ticket.
-	Motivo Tipo = "motivo"
+	// Summary es de qué va el ticket.
+	Summary Tipo = "summary"
 	// UltimaAccion es qué fue lo último que pasó.
 	UltimaAccion Tipo = "ultima_accion"
 )
@@ -83,7 +84,7 @@ type Resumen struct {
 
 // DosResumenes son los dos campos de un ticket.
 type DosResumenes struct {
-	Motivo       Resumen
+	Summary      Resumen
 	UltimaAccion Resumen
 }
 
@@ -147,10 +148,13 @@ const (
 	intentosMotor = 3
 	// El idioma se valida aparte: local y servidor propio reciben un único reintento reforzado, y un
 	// proveedor de pago ninguno.
-	intentosRespuesta = 3
+	intentosRespuesta = 2
 
 	// La espera entre intentos del motor caído, que crece con cada uno: 2 s, 4 s.
 	esperaBaseDeFabrica = 2 * time.Second
+	// La recuperación es otro ciclo, no otro intento inmediato. Diez segundos permiten que un motor
+	// saturado termine el encargo anterior sin convertir el módulo en un sondeo periódico.
+	esperaRecuperacionDeFabrica = 10 * time.Second
 
 	// El tiempo del chequeo de «¿está el motor?»: preguntarlo no puede dejar colgada una pantalla.
 	esperaDelChequeo = 3 * time.Second
@@ -218,7 +222,8 @@ type Service struct {
 
 	// esperaBase es la espera entre intentos del motor caído. Está aquí, y no en una constante, para
 	// que las pruebas no tengan que esperar segundos de verdad.
-	esperaBase time.Duration
+	esperaBase         time.Duration
+	esperaRecuperacion time.Duration
 
 	now func() time.Time
 }
@@ -237,16 +242,17 @@ func nuevoServicio(repositorio Store, ajustes Ajustes) *Service {
 	ctx, apagar := context.WithCancel(context.Background())
 
 	servicio := &Service{
-		store:      repositorio,
-		ajustes:    ajustes,
-		motor:      nuevoMotor(ajustes.Espera),
-		cola:       make(map[string]trabajo),
-		aviso:      make(chan struct{}, 1),
-		parar:      make(chan struct{}),
-		ctx:        ctx,
-		apagar:     apagar,
-		esperaBase: esperaBaseDeFabrica,
-		now:        time.Now,
+		store:              repositorio,
+		ajustes:            ajustes,
+		motor:              nuevoMotor(ajustes.Espera),
+		cola:               make(map[string]trabajo),
+		aviso:              make(chan struct{}, 1),
+		parar:              make(chan struct{}),
+		ctx:                ctx,
+		apagar:             apagar,
+		esperaBase:         esperaBaseDeFabrica,
+		esperaRecuperacion: esperaRecuperacionDeFabrica,
+		now:                time.Now,
 	}
 
 	for i := 0; i < trabajadores; i++ {
@@ -306,7 +312,7 @@ func (s *Service) Pedir(entrada Entrada) {
 	if entrada.Numero == "" {
 		return
 	}
-	if entrada.Tipo != Motivo && entrada.Tipo != UltimaAccion {
+	if entrada.Tipo != Summary && entrada.Tipo != UltimaAccion {
 		logs.LogWarning("el módulo ai recibió un campo que no conoce: " + string(entrada.Tipo))
 		return
 	}
@@ -316,20 +322,31 @@ func (s *Service) Pedir(entrada Entrada) {
 		return
 	}
 
-	// **Sin motor configurado no se encola nada**: el campo queda dicho en la base y la aplicación
-	// entera sigue funcionando. Es una escritura local, no una espera al motor (decisión 2).
-	if !s.ajustesDeAhora().Configurado() {
-		s.apuntarFallo(entrada.Numero, entrada.Tipo, EstadoSinMotor, ClaveSinMotor)
+	// El `pendiente` se apunta **antes** de encolar: si el backend se apaga entre las dos cosas, la
+	// fila queda dicha para que la puesta al día del arranque la recoja (decisión 10).
+	generacion, err := s.marcarPendiente(entrada.Numero, entrada.Tipo)
+	if err != nil {
+		logs.LogError("no se pudo apuntar el resumen pendiente del ticket " + entrada.Numero + ": " + err.Error())
 		return
 	}
 
-	// El `pendiente` se apunta **antes** de encolar: si el backend se apaga entre las dos cosas, la
-	// fila queda dicha para que la puesta al día del arranque la recoja (decisión 10).
-	if err := s.store.MarcarPendiente(entrada.Numero, string(entrada.Tipo)); err != nil {
-		logs.LogError("no se pudo apuntar el resumen pendiente del ticket " + entrada.Numero + ": " + err.Error())
+	// Sin motor configurado la revisión queda fallida, pero el ticket sigue funcionando. Una
+	// configuración posterior y el barrido de recuperación podrán recogerla una sola vez.
+	if !s.ajustesDeAhora().Configurado() {
+		s.fallarORecuperar(trabajo{numero: entrada.Numero, tipo: entrada.Tipo, texto: entrada.Texto, generacion: generacion}, EstadoSinMotor, ClaveSinMotor)
+		return
 	}
 
-	s.encolar(trabajo{numero: entrada.Numero, tipo: entrada.Tipo, texto: entrada.Texto})
+	s.encolar(trabajo{numero: entrada.Numero, tipo: entrada.Tipo, texto: entrada.Texto, generacion: generacion})
+}
+
+func (s *Service) marcarPendiente(numero string, tipo Tipo) (int64, error) {
+	if versionado, ok := s.store.(interface {
+		MarcarPendienteConGeneracion(string, string) (int64, error)
+	}); ok {
+		return versionado.MarcarPendienteConGeneracion(numero, string(tipo))
+	}
+	return 0, s.store.MarcarPendiente(numero, string(tipo))
 }
 
 // De devuelve lo que hay de esos tickets, **en bloque**: una consulta por página y no una por fila
@@ -373,10 +390,18 @@ func (s *Service) De(numeros []string) (map[string]DosResumenes, error) {
 		if fila.GeneratedAt != nil {
 			resumen.GeneradoEn = *fila.GeneratedAt
 		}
+		// Un resultado anterior no se presenta como vigente durante una regeneración ni después de un
+		// fallo. La fila puede conservarlo para diagnóstico, pero el contrato entrega texto sólo en
+		// estado listo y la interfaz representa lo demás con un guion.
+		if resumen.Estado != EstadoListo {
+			resumen.Text = ""
+			resumen.Es = ""
+			resumen.En = ""
+		}
 
 		switch Tipo(fila.Kind) {
-		case Motivo:
-			dos.Motivo = resumen
+		case Summary:
+			dos.Summary = resumen
 		case UltimaAccion:
 			dos.UltimaAccion = resumen
 		}
@@ -390,15 +415,66 @@ func (s *Service) De(numeros []string) (map[string]DosResumenes, error) {
 // Retomar es la puesta al día del arranque: la cola vive en memoria y se pierde al reiniciar, así que
 // lo que quedó a medias se vuelve a pedir (docs/modules/ai.md, decisión 10).
 //
-// **No toca el estado ni el contador de intentos**: lo que estaba en `error` no vuelve a entrar —para
-// eso está «Regenerar»—, y reiniciar el backend no puede ser la forma de saltarse el tope de
-// intentos de un motor que no contesta.
+// Los pendientes continúan su revisión. Los errores anteriores al contrato de recuperación reciben
+// un único ciclo adicional persistido; reiniciar no puede reiniciar ese límite.
 func (s *Service) Retomar() {
 	ajustes := s.ajustesDeAhora()
 	if !ajustes.Configurado() {
 		logs.LogInfo("el motor de IA no está configurado: no hay nada que retomar")
 		return
 	}
+	if s.fuente == nil {
+		logs.LogWarning("no hay quién vuelva a armar el contexto de los resúmenes pendientes")
+		return
+	}
+	encolados := make(map[string]bool)
+
+	// Un lote por arranque incluye también tickets que aún no tenían fila. Cada clase conserva su
+	// propia versión: esta enmienda regenera Summary sin volver a generar Last action ya vigente.
+	if fuenteCompleta, okFuente := s.fuente.(interface{ NumerosParaRegenerarInsights() ([]string, error) }); okFuente {
+		if versiones, okStore := s.store.(interface {
+			NumerosConInsightVigente(string, int) ([]string, error)
+		}); okStore {
+			todos, errorTodos := fuenteCompleta.NumerosParaRegenerarInsights()
+			if errorTodos != nil {
+				logs.LogError("no se pudo enumerar los tickets para regenerar sus insights")
+			} else {
+				clases := []struct {
+					tipo    Tipo
+					version int
+				}{{Summary, repositories.SummaryContextVersion}, {UltimaAccion, repositories.LastActionContextVersion}}
+				for _, clase := range clases {
+					vigentes, errorVigentes := versiones.NumerosConInsightVigente(string(clase.tipo), clase.version)
+					if errorVigentes != nil {
+						logs.LogError("no se pudo preparar la regeneración de " + string(clase.tipo))
+						continue
+					}
+					ya := make(map[string]bool, len(vigentes))
+					for _, numero := range vigentes {
+						ya[numero] = true
+					}
+					pedidosVersion := 0
+					for _, numero := range todos {
+						if ya[numero] || pedidosVersion >= 200 {
+							continue
+						}
+						texto, errorTexto := s.fuente.TextoParaElMotor(numero)
+						generacion, errorPendiente := s.marcarPendiente(numero, clase.tipo)
+						if errorTexto != nil || errorPendiente != nil {
+							continue
+						}
+						s.encolar(trabajo{numero: numero, tipo: clase.tipo, texto: texto, generacion: generacion})
+						encolados[numero+"\x00"+string(clase.tipo)] = true
+						pedidosVersion++
+					}
+					if pedidosVersion > 0 {
+						logs.LogInfo("puesta al día de contexto: se encolaron " + strconv.Itoa(pedidosVersion) + " campos " + string(clase.tipo))
+					}
+				}
+			}
+		}
+	}
+
 	pendientes, err := s.store.Pendientes(intentosMotor)
 	if err != nil {
 		logs.LogError("no se pudieron leer los resúmenes que quedaron a medias: " + err.Error())
@@ -406,30 +482,58 @@ func (s *Service) Retomar() {
 	}
 	if len(pendientes) == 0 {
 		logs.LogInfo("no hay resúmenes a medias que retomar")
-		return
-	}
-
-	if s.fuente == nil {
-		logs.LogWarning(
-			"quedaron resúmenes a medias y no hay quién vuelva a armar su texto: se quedarán " +
-				"pendientes hasta el próximo movimiento del ticket",
-		)
-		return
 	}
 
 	pedidos := 0
 	for _, fila := range pendientes {
+		if encolados[fila.TicketNumber+"\x00"+fila.Kind] {
+			continue
+		}
 		texto, err := s.fuente.TextoParaElMotor(fila.TicketNumber)
 		if err != nil {
 			logs.LogWarning("no se pudo armar el texto del ticket " + fila.TicketNumber + " para retomar su resumen")
 			continue
 		}
 
-		s.encolar(trabajo{numero: fila.TicketNumber, tipo: Tipo(fila.Kind), texto: texto})
+		trabajoRetomado := trabajo{numero: fila.TicketNumber, tipo: Tipo(fila.Kind), texto: texto, generacion: fila.Generation, recuperacion: fila.RecoveryCount > 0, noAntes: tiempoDeReintento(fila)}
+		if trabajoRetomado.noAntes.IsZero() {
+			s.encolar(trabajoRetomado)
+		} else {
+			s.programar(trabajoRetomado)
+		}
 		pedidos++
 	}
 
+	// Una sola puesta al día recoge los errores del contrato anterior. `recovery_count` hace que el
+	// barrido sea idempotente incluso si el backend se reinicia a mitad.
+	if recuperables, ok := s.store.(interface {
+		ErroresParaRecuperar(int) ([]repositories.AIInsight, error)
+		PrepararRecuperacion(string, string, int64, time.Time) (int64, bool, error)
+	}); ok {
+		filas, errorFilas := recuperables.ErroresParaRecuperar(200)
+		if errorFilas != nil {
+			logs.LogError("no se pudieron leer los resúmenes fallidos para recuperarlos")
+		} else {
+			for _, fila := range filas {
+				noAntes := s.now().Add(s.esperaRecuperacion)
+				nueva, preparada, errorPreparar := recuperables.PrepararRecuperacion(fila.TicketNumber, fila.Kind, fila.Generation, noAntes)
+				if errorPreparar != nil || !preparada {
+					continue
+				}
+				s.programar(trabajo{numero: fila.TicketNumber, tipo: Tipo(fila.Kind), generacion: nueva, recuperacion: true, noAntes: noAntes})
+				pedidos++
+			}
+		}
+	}
+
 	logs.LogInfo("puesta al día del motor de IA: se vuelven a pedir " + strconv.Itoa(pedidos) + " resúmenes")
+}
+
+func tiempoDeReintento(fila repositories.AIInsight) time.Time {
+	if fila.RetryAt != nil {
+		return *fila.RetryAt
+	}
+	return time.Time{}
 }
 
 // Disponible dice si hay motor configurado **y responde**.
@@ -477,57 +581,105 @@ func (s *Service) Traducir(texto, idioma string) (string, error) {
 
 // MejorarRedaccion revisa un borrador ya autorizado por el módulo que conoce el ticket. No guarda
 // entrada ni salida: devuelve texto plano para que la persona lo revise antes de decidir si lo usa.
-func (s *Service) MejorarRedaccion(borrador, tono, destinatario, tipo, idioma string) (string, error) {
+type ResultadoRedaccion struct {
+	Texto               string
+	CalidadInsuficiente bool
+}
+
+func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, tipo, idioma string) (ResultadoRedaccion, error) {
 	ajustes := s.ajustesDeAhora()
 	if !ajustes.Configurado() {
-		return "", ErrSinMotor
+		return ResultadoRedaccion{}, ErrSinMotor
 	}
 	ajustes.Language = idioma
 	ajustes.Palabras = 2000
-
-	tonalidades := map[string]string{
-		"professional": "professional",
-		"friendly":     "friendly and approachable",
-		"brief":        "brief and direct",
-		"empathetic":   "empathetic and respectful",
-		"technical":    "precise and technical",
-	}
-	if idioma == "es" {
-		tonalidades = map[string]string{"professional": "profesional", "friendly": "amable y cercano", "brief": "breve y directo", "empathetic": "empático y respetuoso", "technical": "preciso y técnico"}
-	}
-	estilo, ok := tonalidades[tono]
-	if !ok {
-		return "", ErrRespuestaInvalida
-	}
 
 	clase := "main support ticket"
 	if tipo == "internal" {
 		clase = "internal ticket between Support and Development"
 	}
-	sistema := "Improve the supplied support message. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations."
-	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario + "\nTicket type: " + clase + "\nTone: " + estilo
+	sistema := "Improve the supplied support message in a professional tone. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations."
+	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario + "\nTicket type: " + clase
+	if propuestaAnterior != "" {
+		prompt += "\n\nPrevious proposal to avoid:\n" + propuestaAnterior + "\n\nWrite a clearly different paraphrase of the draft. Keep the draft as the source of truth; do not paraphrase the previous proposal."
+	}
 	if idioma == "es" {
 		clase = "ticket principal de soporte"
 		if tipo == "internal" {
 			clase = "ticket interno entre Soporte y Desarrollo"
 		}
-		sistema = "Mejora el mensaje de soporte proporcionado. Corrige la ortografía y la claridad, conservando cada hecho, nombre, número y detalle técnico. No inventes información. Usa el nombre del destinatario sólo si resulta natural. Devuelve texto plano sin Markdown, HTML, menciones ni explicaciones."
-		prompt = "Borrador:\n" + borrador + "\n\nNombre del destinatario: " + destinatario + "\nTipo de ticket: " + clase + "\nTono: " + estilo
+		sistema = "Mejora el mensaje de soporte proporcionado con tono profesional. Corrige la ortografía y la claridad, conservando cada hecho, nombre, número y detalle técnico. No inventes información. Usa el nombre del destinatario sólo si resulta natural. Devuelve texto plano sin Markdown, HTML, menciones ni explicaciones."
+		prompt = "Borrador:\n" + borrador + "\n\nNombre del destinatario: " + destinatario + "\nTipo de ticket: " + clase
+		if propuestaAnterior != "" {
+			prompt += "\n\nPropuesta anterior que debes evitar:\n" + propuestaAnterior + "\n\nRedacta una paráfrasis claramente distinta del borrador. Conserva el borrador como fuente de verdad; no parafrasees la propuesta anterior."
+		}
 	}
-	ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
-	defer cancelar()
-	mejorado, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{
-		sistema: sistema,
-		texto:   prompt,
+	for intento := 0; intento < 2; intento++ {
+		textoDelIntento := prompt
+		if intento == 1 {
+			textoDelIntento += "\n\nYour previous answer was too similar or not professionally written. Rewrite it with a clearly different sentence structure, correct capitalization and the same facts."
+			if idioma == "es" {
+				textoDelIntento += "\n\nLa respuesta anterior fue demasiado parecida o no estaba redactada profesionalmente. Reescríbela con una estructura claramente distinta, mayúsculas correctas y los mismos hechos."
+			}
+		}
+		ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
+		mejorado, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{sistema: sistema, texto: textoDelIntento})
+		cancelar()
+		if err != nil {
+			return ResultadoRedaccion{}, err
+		}
+		mejorado = strings.TrimSpace(mejorado)
+		if mejorado == "" {
+			return ResultadoRedaccion{}, ErrRespuestaInvalida
+		}
+		calidadBaja := !redaccionSuficientementeDistinta(borrador, propuestaAnterior, mejorado)
+		if !calidadBaja || intento == 1 {
+			return ResultadoRedaccion{Texto: mejorado, CalidadInsuficiente: calidadBaja}, nil
+		}
+	}
+	return ResultadoRedaccion{}, ErrRespuestaInvalida
+}
+
+func redaccionSuficientementeDistinta(borrador, anterior, propuesta string) bool {
+	runas := []rune(strings.TrimSpace(propuesta))
+	if len(runas) == 0 || !unicode.IsUpper(runas[0]) {
+		return false
+	}
+	candidata := palabrasRelevantes(propuesta)
+	if len(candidata) == 0 || similitudDePalabras(palabrasRelevantes(borrador), candidata) >= 0.85 {
+		return false
+	}
+	return anterior == "" || similitudDePalabras(palabrasRelevantes(anterior), candidata) < 0.85
+}
+
+func palabrasRelevantes(texto string) []string {
+	return strings.FieldsFunc(strings.ToLower(texto), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
-	if err != nil {
-		return "", err
+}
+
+func similitudDePalabras(a, b []string) float64 {
+	if len(a) == 0 && len(b) == 0 {
+		return 1
 	}
-	mejorado = strings.TrimSpace(mejorado)
-	if mejorado == "" {
-		return "", ErrRespuestaInvalida
+	conjuntoA, conjuntoB := map[string]struct{}{}, map[string]struct{}{}
+	for _, palabra := range a {
+		conjuntoA[palabra] = struct{}{}
 	}
-	return mejorado, nil
+	for _, palabra := range b {
+		conjuntoB[palabra] = struct{}{}
+	}
+	interseccion := 0
+	for palabra := range conjuntoA {
+		if _, hay := conjuntoB[palabra]; hay {
+			interseccion++
+		}
+	}
+	union := len(conjuntoA) + len(conjuntoB) - interseccion
+	if union == 0 {
+		return 1
+	}
+	return float64(interseccion) / float64(union)
 }
 
 func (s *Service) EsProveedorComercial() bool { return s.ajustesDeAhora().Mode == "provider" }
@@ -556,6 +708,11 @@ func (s *Service) ProbarConfiguracion(url, model, provider, authType, authHeader
 	ctx, cancel := context.WithTimeout(context.Background(), s.ajustes.Espera)
 	defer cancel()
 	return s.motor.probarConfiguracion(ctx, url, model, provider, authType, authHeader, credential, language)
+}
+func (s *Service) ProbarSaludo(url, model, language, current string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.ajustes.Espera)
+	defer cancel()
+	return s.motor.saludar(ctx, url, model, language, current)
 }
 
 // Parar apaga la cola: los trabajadores terminan lo que están haciendo y se van, y la llamada al

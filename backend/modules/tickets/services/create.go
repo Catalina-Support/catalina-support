@@ -182,7 +182,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, stri
 
 	// Y el motor de IA empieza a redactar **sin que nadie espere**: quien abre un ticket no puede
 	// quedarse mirando un contenedor (docs/modules/ai.md, decisión 2). Los dos campos nacen aquí.
-	s.pedirAlMotor(numero, TipoMotivo, TipoUltimaAccion)
+	s.pedirAlMotor(numero, TipoSummary, TipoUltimaAccion)
 
 	return Ticket{
 		ID:          ticket.ID,

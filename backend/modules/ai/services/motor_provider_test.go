@@ -119,6 +119,30 @@ func TestElDetectorAceptaTextoBreveOTecnicoAmbiguo(t *testing.T) {
 	}
 }
 
+func TestTextoSignificativoRechazaMarcadoresSinContenido(t *testing.T) {
+	for _, texto := range []string{"", "...", "—", "N/A", " / - _ "} {
+		if textoSignificativo(texto) {
+			t.Fatalf("%q no contiene un resumen significativo", texto)
+		}
+	}
+	for _, texto := range []string{"HTTP 500", "El usuario abrió el ticket."} {
+		if !textoSignificativo(texto) {
+			t.Fatalf("%q sí contiene información", texto)
+		}
+	}
+}
+
+func TestUltimaAccionUsaEjemploDeAperturaYElReintentoSeRefuerza(t *testing.T) {
+	primero := encargoDe(UltimaAccion, "Subject: Error\nConversation:\n- Ana (created)", 40, "en")
+	if !strings.Contains(primero.usuario, "The requester opened the ticket") {
+		t.Fatalf("el contrato no orienta el caso de apertura: %s", primero.usuario)
+	}
+	segundo := reforzarEncargo(primero, "en")
+	if segundo.usuario == primero.usuario || !strings.Contains(segundo.usuario, "previous answer was invalid") {
+		t.Fatalf("el reintento debe reforzar la instrucción: %s", segundo.usuario)
+	}
+}
+
 func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	var recibido string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,13 +158,13 @@ func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	})
 	defer servicio.Parar()
 
-	texto, err := servicio.MejorarRedaccion(
-		"hola ana ya puedes ingresar", "friendly", "Ana Pérez", "main", "es",
+	resultado, err := servicio.MejorarRedaccion(
+		"hola ana ya puedes ingresar", "", "Ana Pérez", "main", "es",
 	)
-	if err != nil || texto != "Hola, Ana. Ya puedes ingresar." {
-		t.Fatalf("resultado inesperado: texto=%q err=%v", texto, err)
+	if err != nil || resultado.Texto != "Hola, Ana. Ya puedes ingresar." {
+		t.Fatalf("resultado inesperado: texto=%q err=%v", resultado.Texto, err)
 	}
-	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "amable y cercano", "ticket principal de soporte"} {
+	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "tono profesional", "ticket principal de soporte"} {
 		if !strings.Contains(recibido, esperado) {
 			t.Fatalf("la petición no contiene %q: %s", esperado, recibido)
 		}
@@ -149,6 +173,64 @@ func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 		if strings.Contains(strings.ToLower(recibido), prohibido) {
 			t.Fatalf("la petición incluyó contexto no autorizado %q", prohibido)
 		}
+	}
+}
+
+func TestMejorarRedaccionRegeneraDesdeElBorradorYEvitandoSoloLaUltimaPropuesta(t *testing.T) {
+	var recibido string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, _ := io.ReadAll(r.Body)
+		recibido = string(data)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"Revisaremos el servidor y compartiremos el resultado mañana.\"}"}}]}`)
+	}))
+	defer server.Close()
+
+	servicio := nuevoServicio(nil, Ajustes{
+		URL: server.URL, Modelo: "modelo", Provider: "openai-compatible", Language: "es",
+		Palabras: 40, Contexto: 4096, Espera: time.Second,
+	})
+	defer servicio.Parar()
+
+	resultado, err := servicio.MejorarRedaccion(
+		"revisamos el servidor y mañana comunicamos el resultado",
+		"Mañana informaremos el resultado después de revisar el servidor.",
+		"Usuario Cuatro", "main", "es",
+	)
+	if err != nil || !strings.HasPrefix(resultado.Texto, "Revisaremos") {
+		t.Fatalf("resultado inesperado: texto=%q err=%v", resultado.Texto, err)
+	}
+	for _, esperado := range []string{
+		"revisamos el servidor y mañana comunicamos el resultado",
+		"Mañana informaremos el resultado después de revisar el servidor.",
+		"fuente de verdad",
+		"paráfrasis claramente distinta",
+	} {
+		if !strings.Contains(recibido, esperado) {
+			t.Fatalf("la regeneración no contiene %q: %s", esperado, recibido)
+		}
+	}
+}
+
+func TestMejorarRedaccionReintentaYAdvierteSiLaSegundaSigueSiendoPobre(t *testing.T) {
+	var llamadas atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		llamadas.Add(1)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"hola necesito datos\"}"}}]}`)
+	}))
+	defer server.Close()
+
+	servicio := nuevoServicio(nil, Ajustes{
+		URL: server.URL, Modelo: "modelo", Provider: "openai-compatible", Language: "es",
+		Palabras: 40, Contexto: 4096, Espera: time.Second,
+	})
+	defer servicio.Parar()
+
+	resultado, err := servicio.MejorarRedaccion("hola necesito datos", "", "Ana", "main", "es")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if llamadas.Load() != 2 || !resultado.CalidadInsuficiente {
+		t.Fatalf("se esperaban dos intentos y advertencia: llamadas=%d resultado=%+v", llamadas.Load(), resultado)
 	}
 }
 

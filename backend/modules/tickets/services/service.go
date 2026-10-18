@@ -14,10 +14,10 @@ import (
 // Las claves de error del módulo, con el código que les toca en el controlador
 // (docs/interfaz-y-experiencia.md, sección 8: los errores viajan como claves).
 var (
-	ErrTicketNotFound  = errors.New("tickets.notFound")
-	ErrSubjectRequired = errors.New("tickets.subject.required")
-	ErrBodyRequired    = errors.New("tickets.description.required")
-	ErrReasonRequired  = errors.New("tickets.reason.required")
+	ErrTicketNotFound           = errors.New("tickets.notFound")
+	ErrSubjectRequired          = errors.New("tickets.subject.required")
+	ErrBodyRequired             = errors.New("tickets.description.required")
+	ErrEscalationReasonRequired = errors.New("tickets.escalationReason.required")
 	// ErrCommentRequired: un comentario **editado** se queda sin texto. Al escribir uno nuevo el texto
 	// puede ir vacío —un comentario puede ser sólo un adjunto—, pero dejar en blanco uno que ya se
 	// escribió no es lo mismo, y para eso está borrarlo (docs/modules/tickets.md, decisión 42).
@@ -55,7 +55,6 @@ var (
 	ErrAttachmentInvalid    = errors.New("tickets.attachment.invalid")
 	ErrWritingDraftRequired = errors.New("tickets.writing.draft.required")
 	ErrWritingEditorInvalid = errors.New("tickets.writing.editor.invalid")
-	ErrWritingToneInvalid   = errors.New("tickets.writing.tone.invalid")
 	ErrWritingUnavailable   = errors.New("tickets.writing.unavailable")
 	ErrWritingInvalid       = errors.New("tickets.writing.invalid")
 	ErrAttachmentMissing    = errors.New("tickets.attachment.notFound")
@@ -172,7 +171,12 @@ type GlobalLanguage interface {
 // los datos del caso; el motor sólo recibe el contexto mínimo ya autorizado.
 type WritingAssistant interface {
 	Configured() bool
-	ImproveDraft(draft, tone, recipient, ticketType, language string) (string, error)
+	ImproveDraft(draft, previousSuggestion, recipient, ticketType, language string) (WritingSuggestion, error)
+}
+
+type WritingSuggestion struct {
+	Text           string
+	QualityWarning bool
 }
 
 type Capabilities struct {
@@ -218,8 +222,8 @@ type Ticket struct {
 	Category *Category
 	Tags     []string
 
-	// Reason es el motivo del escalado. Sólo en los internos.
-	Reason string
+	// EscalationReason es el motivo del escalado. Sólo en los internos.
+	EscalationReason string
 	// Parent es el número del principal, en los internos.
 	Parent string
 	// Child es el número del interno, en los principales que lo tienen.

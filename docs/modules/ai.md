@@ -1,7 +1,47 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-16
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-16.** La sección 22 parte de dos fallos
+> del recorrido integral: una Última acción antigua pudo sobrescribir a la reciente y dos campos
+> agotaron sus intentos sin recuperación autónoma. El responsable eligió 2A, 3A y 4A. La revisión
+> vigente se protege en base, existe un solo ciclo diferido y el barrido tomó una vez los errores de
+> `CS-2026-0029`; el modelo volvió a fallar y quedaron terminales, sin bucle. Pasaron las pruebas de
+> IA y repositorio real. La suite backend conserva únicamente el fallo previo y ajeno de prioridad
+> desde un interno; no vuelven botones manuales ni sondeo periódico.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 21 separa
+> un `summary` estable del problema original de `lastAction`, elimina la regeneración manual y
+> migra el contrato afectado a nombres técnicos ingleses. El responsable eligió 1A–20B, corrigió
+> 5A a «Summary/Resumen», corrigió 11A para exigir inglés en lo técnico y eligió 12B para
+> `escalationReason`. No quedan decisiones abiertas; no se modifica código antes de aprobar los
+> cuatro documentos coordinados. La migración se aplicó sólo en desarrollo; pasaron las pruebas
+> específicas de IA y tickets, las 231 pruebas del frontend y su compilación. La suite completa del
+> backend conserva el fallo previo de prioridad desde un interno, ajeno a esta enmienda.
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-15.** La sección 20 parte del fallo
+> reproducido en `INT-CS-2026-0016`, donde «Última acción» copiaba el motivo aunque el historial
+> terminaba en cierre. El contexto funcional incluye principal e interno, fija el evento objetivo,
+> valida actor y acción y dispone de respaldo determinista. El responsable eligió 1A–14A y aprobó
+> explícitamente los tres documentos coordinados; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-15, con aprobación explícita del responsable.** La sección 19 corrige la aceptación de
+> resúmenes vacíos de significado, protege los textos anteriores y mide la calidad de las
+> paráfrasis profesionales. El responsable cerró 1A–15A, con 8B; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 18 fija la mejora de redacción
+> en tono profesional, retira las tonalidades del contrato y permite pedir una paráfrasis distinta
+> usando únicamente la propuesta anterior como texto a evitar. El responsable eligió 1A–15A con
+> 3B, 6B, 7A, 10B y 11B; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 17 añade desactivación explícita
+> sin borrar el modelo y hace que la prueba manual identifique el modelo que produjo el saludo.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 16 completa el administrador
+> local con una descarga exclusiva cancelable, fases persistentes, activación automática y una
+> prueba manual del modelo activo mediante un saludo fechado. No cambia el catálogo ni los textos
+> reales que consume el módulo.
 >
 > **Hallazgo corregido e implementación verificada el 2026-10-13: cumplimiento del idioma global.** El recorrido
 > público del bloque 8 obtuvo un «Motivo» en español con una instalación inglesa, aunque la fila
@@ -789,3 +829,338 @@ masiva, cuotas, métricas de costo, cambios de catálogo y producción. El respo
 ### 15.6 Implementación y verificación
 
 El backend usa `whatlanggo` 1.0.1 dentro de `ai` y acepta una respuesta ambigua cuando el detector no la considera fiable. Una discrepancia fiable activa una segunda generación únicamente en `local` y `remote`; `provider` devuelve `ai.invalid` tras la primera. Los resúmenes locales abandonaron el contrato bilingüe antiguo y usan el mismo contrato global que los demás adaptadores. Las pruebas focalizadas y la suite completa del backend, incluido `go vet`, pasaron el 2026-10-13.
+
+## 16. Ciclo observable del modelo local
+
+El administrador acepta una sola descarga global. Conserva el parcial al cancelar y publica para
+cada modelo los bytes, el total y una fase estable: `idle`, `downloading`, `validating`, `activating`,
+`testing`, `active` o `error`. Reanudar reutiliza el parcial; borrarlo es una acción distinta. La
+intención de activar queda en el servidor, de modo que cerrar el navegador no corta descarga,
+validación, arranque ni prueba.
+
+Tras validar el GGUF, el administrador activa automáticamente el modelo pedido. Salud y generación
+artificial siguen siendo requisitos distintos. Un fallo posterior a la descarga conserva el archivo
+y permite repetir la activación; nunca borra un modelo válido como consecuencia de un fallo de RAM,
+arranque o respuesta. Sólo se elimina un instalado inactivo, y sólo hay un activo.
+
+La prueba manual recibe de `settings` idioma, instante y zona IANA ya resueltos. Genera un saludo
+artificial que debe incluir la fecha y hora suministradas. Devuelve texto, instante y zona, no los
+persiste y no recibe contexto de tickets. Un fallo manual no cambia la configuración activa.
+
+Las pruebas simulan avance, exclusión mutua, cancelación, reanudación, eliminación del parcial,
+continuación sin cliente, todas las fases, activación fallida y reintentada, y saludo con reloj
+inyectado. No descargan modelos ni llaman proveedores reales. No cambian catálogo, prompts de
+tickets, cola, privacidad, costos ni modalidades externas.
+
+## 17. Desactivación e identidad del saludo
+
+El administrador local admite desactivar el modelo activo sin eliminar su GGUF. Detiene el proceso,
+limpia la selección activa y publica todas las fichas como inactivas; después puede activarse
+cualquiera de los modelos instalados. La operación es idempotente para el modelo indicado y no
+interfiere con una descarga en curso. No existe desactivación para las modalidades remota o de
+proveedor mediante este contrato del catálogo local.
+
+La prueba manual devuelve además el identificador y el nombre de catálogo del modelo que respondió.
+Esos datos salen del estado activo que el administrador comprobó, no de texto producido por el
+modelo. El saludo continúa sin persistirse y sin recibir datos de tickets o personas.
+
+Las pruebas cubren detener el activo, quedar sin proceso, reactivarlo, rechazar un identificador que
+no sea el activo y atribuir el saludo al modelo comprobado. No cambian catálogo, archivos instalados,
+descarga, validación ni activación automática posterior a una descarga.
+
+Las pruebas del administrador y todo el backend pasan. El recorrido real detuvo el 1.5B, publicó las
+dos fichas instaladas como inactivas, dejó el asistente bloqueado y volvió a arrancar el mismo modelo
+saludable; la prueba manual atribuyó correctamente su respuesta.
+
+## 18. Implementación: redacción profesional y paráfrasis distinta
+
+### 18.1 Contrato corregido
+
+El contrato anterior recibía cinco tonalidades. Se retiraron
+`friendly`, `brief`, `empathetic` y `technical`, y también se retira `tone` de la petición pública.
+Toda mejora usa `professional`, decidido por el servidor; un cliente no puede sustituirlo.
+
+La primera solicitud entrega `editor` y `text`. Una regeneración puede añadir
+`previousSuggestion`, que contiene únicamente la última propuesta mostrada para ese mismo borrador.
+El backend usa el borrador original actual como fuente de verdad y ordena producir una paráfrasis
+profesional que conserve nombres, números, idioma y detalles, pero cuya redacción sea claramente
+distinta de `previousSuggestion`. No encadena la propuesta como nueva fuente ni envía propuestas
+anteriores a la última, para evitar deriva y limitar el contexto.
+
+El nombre contextual y el tipo de ticket siguen resolviéndose en el servidor. No se añaden asunto,
+conversación, adjuntos, historial ni persistencia. El resultado continúa siendo texto plano.
+
+### 18.2 Errores y pruebas
+
+Un fallo devuelve la misma clave estable y no cambia el borrador. La interfaz decide comunicarlo
+mediante su toast común y puede volver a solicitar la operación desde el estado inicial.
+
+Las pruebas cubren ausencia de `tone`, tono profesional en el prompt, primera propuesta sin
+referencia, regeneración con el borrador como fuente y sólo la última propuesta como texto a evitar,
+respuesta distinta, permisos, límites y errores. No cambian motor, modalidad, autorización, plazo,
+idioma global ni política de datos externos. El responsable eligió 7A, 14A y 15A; no quedan
+decisiones abiertas.
+
+La implementación eliminó `tone` del DTO público y del servicio de tickets, fijó el tono
+profesional en el prompt del motor y añadió `previousSuggestion` sólo para regenerar. Pasaron las
+pruebas afectadas de `ai/services` y `tickets/controllers`; la suite completa del backend conserva
+un fallo ajeno y reproducible en `TestDesarrolloCambiaLaPrioridadDesdeElInterno`, que devuelve
+`tickets.notFound` y pertenece al flujo de prioridades, no a la redacción asistida.
+
+## 19. Implementación: respuestas significativas y paráfrasis verificables
+
+### 19.1 Hallazgos reproducidos antes de intervenir
+
+El recorrido real con `CS-2026-0026` encontró un desajuste entre documentación y código: el motor
+devolvió `...` para **Última acción**, el backend lo guardó como `listo` y la interfaz lo presentó
+como un resumen válido. Crear, editar y reintentar manualmente reprodujeron el mismo resultado. La
+validación actual sólo exige texto no vacío y el detector de idioma acepta como ambiguo lo que no
+puede identificar; por eso una respuesta formada sólo por puntuación atraviesa ambas puertas. El
+ejemplo literal `{"text":"..."}` del prompt facilita además que un modelo pequeño copie el marcador.
+
+En la mejora de comentarios, la primera salida sólo tradujo y puso en minúscula el borrador; la
+segunda cambió una única palabra. Ambas se aceptaron como profesionales y distintas. También se
+comprobó que el reintento de resúmenes reconstruye la ficha y pierde el borrador y la propuesta
+locales. Estos tres comportamientos contradicen las secciones 15 y 18 vigentes y se reportan antes
+de tocar código.
+
+### 19.2 Resúmenes válidos y conservación del anterior
+
+Un resumen sólo es válido si, después de normalizar espacios, contiene letras o números
+significativos. Se rechazan vacío, sólo puntuación y marcadores de ausencia como `...`, `—` y
+`N/A`. Los ejemplos del prompt usan una frase real y nunca un marcador que pueda copiarse como
+respuesta.
+
+La primera respuesta inválida se reintenta una vez con una instrucción reforzada. Si la segunda
+también falla, la fila queda en error con una clave específica del campo. Cuando ya existía un texto
+válido, éste se conserva y se marca como desactualizado en vez de sustituirse o borrarse. En un
+ticket nuevo, **Última acción** debe decir que la persona abrió el ticket y describió el problema.
+Los nombres propios se copian literalmente en cualquier idioma: `Usuario Uno` no puede convertirse
+en `User Uno`.
+
+El motor local reprodujo el marcador inválido incluso con el reintento reforzado durante la
+verificación de `CS-2026-0027`. Para ese único caso reconocible —una conversación cuyo único evento
+es la apertura— el segundo fallo usa una frase determinista en el idioma global que dice que el
+ticket fue abierto y se describió el problema. No se aplica a tickets con comentarios o movimientos;
+en ellos una segunda respuesta inválida conserva el texto anterior y deja el campo en error.
+
+### 19.3 Calidad de la redacción asistida
+
+La salida de **Mejorar con IA** debe conservar idioma, nombres, números y hechos, comenzar con una
+redacción correcta y transformar de forma apreciable el borrador incluso si ya estaba bien escrito.
+La regeneración se compara también con la propuesta anterior mediante un criterio determinista y
+proporcional: palabras relevantes cambiadas y límite de similitud, con tolerancia específica para
+textos muy breves. No basta cambiar puntuación, mayúsculas o una sola palabra incidental.
+
+Una salida de baja calidad se reintenta una vez. Si vuelve a incumplir, se entrega como propuesta
+seleccionable y utilizable —decisión 8B—, pero acompañada de una advertencia estable; nunca se
+presenta silenciosamente como una mejora verificada. El borrador sigue siendo la fuente de verdad y
+la propuesta anterior continúa siendo sólo el texto a evitar.
+
+### 19.4 Pruebas y alcance
+
+Las pruebas cubren marcadores, puntuación, reintento, error por campo, conservación del texto
+anterior, nombres propios, apertura del ticket, similitud proporcional, textos breves, segunda
+salida de baja calidad y modalidades local, servidor y proveedor. No cambian permisos, catálogo,
+modelos, persistencia histórica, idioma global ni política de datos externos.
+
+El recorrido real del 2026-10-15 comprobó creación, edición, reintento individual, rechazo de
+`...`, fallback de apertura, dos propuestas y advertencia por similitud. Pasaron las pruebas de
+`ai/services`, `ai/repositories`, controladores de tickets y las 231 pruebas del frontend.
+
+## 20. Implementación: razón estable y última acción verificable
+
+### 20.1 Hallazgo reproducido
+
+En `INT-CS-2026-0016`, la ficha mostró como **Razón** y **Última acción** el mismo texto: «El aviso
+de caducidad no existe: hay que añadirlo al módulo de acceso». La base confirmó que la única fila de
+IA, `ultima_accion`, quedó `listo` con ese texto, aunque el historial del interno termina con
+`resuelto` y después `cerrado`. El valor de **Razón** no era otro resumen de IA: en un interno es el
+motivo de escalado inmutable, como corresponde.
+
+Hay tres causas coordinadas. El contexto del interno publica por error el estado del principal; el
+motivo de escalado aparece como descripción, motivo y detalle de creación, mientras los movimientos
+finales carecen de detalle; y la validación sólo exige texto significativo e idioma, sin comprobar
+que la salida represente el último evento ni que sea distinta de la razón. El resultado contradice
+la decisión 4: la última acción debe recalcularse con cada movimiento y contar lo último que pasó.
+
+### 20.2 Contexto completo y estructurado
+
+Cada encargo recibe un sobre con el **ticket objetivo** y su pareja vinculada. Incluye todo el
+contenido funcional disponible: números, asunto, descripción, motivo de escalado, estados, prioridad,
+categoría, etiquetas, solicitante, creador, responsables, observadores, comentarios, historial,
+fechas y nombres de adjuntos de principal e interno. No incluye binarios, contenido extraído de
+adjuntos, credenciales, identificadores internos ni metadatos técnicos.
+
+El sobre separa expresamente datos base, conversación cronológica y **hecho objetivo**. Para
+**Última acción**, el hecho objetivo es el último evento del ticket mostrado, no el último evento de
+su pareja. Lleva tipo de evento, estado anterior y nuevo, instante, nombre visible exacto del actor
+—o «el sistema»— y, cuando existe, el comentario vinculado a ese movimiento. La pareja aporta
+contexto, pero nunca sustituye ese hecho.
+
+Para **Razón**, el contexto completo sirve para comprender nombres y referencias, pero la instrucción
+se limita al problema y la necesidad originales. No incorpora asignaciones, cierres ni resultados
+posteriores. En el interno, la razón continúa siendo el motivo de escalado guardado y no se genera
+otra fila de IA.
+
+### 20.3 Presupuesto y privacidad
+
+Si el texto excede la ventana admitida, nunca se recortan los datos base del objetivo, el último
+evento ni su comentario vinculado. Después se conservan los datos base de la pareja y la cronología
+más reciente de ambos; se retiran primero los elementos más antiguos. El recorte mantiene rótulos y
+orden, y no mezcla una frase parcial con otra.
+
+El motor local conserva todo en el servidor. En servidor propio o proveedor se reutiliza la
+aceptación administrativa vigente, cuya explicación debe indicar que el contenido funcional de los
+dos tickets vinculados puede salir de la instalación. No se añade una segunda aceptación ni cambia
+la modalidad configurada.
+
+### 20.4 Generación híbrida y validación
+
+La IA redacta una frase natural a partir del hecho objetivo y su comentario, por ejemplo: «Soporte
+Uno cerró el ticket porque solucionó el incidente». El backend comprueba de forma determinista que
+la salida conserva el nombre del actor y representa la clase de acción y el estado final esperados.
+También rechaza una respuesta idéntica o materialmente equivalente a la razón cuando ésta no es el
+hecho objetivo.
+
+Una salida inválida se reintenta una vez con el hecho obligatorio reforzado. Si vuelve a fallar, el
+campo queda correcto mediante un respaldo determinista: actor visible + acción localizada + una
+versión segura y acotada del comentario vinculado. Sin comentario, termina después de la acción.
+El respaldo se aplica igualmente si el motor está caído; una acción explícita no depende de que la
+IA esté disponible para poder contarse. Cuando lo último es un comentario independiente, la IA lo
+resume y conserva el comportamiento de error vigente si no logra una salida válida.
+
+La validación de idioma continúa siendo obligatoria: una fila marcada `en` no puede guardar una
+frase claramente española. Los nombres propios se conservan literalmente y no se traducen.
+
+### 20.5 Regeneración persistente y pruebas
+
+Todas las filas existentes de `ultima_accion` con una versión de contexto anterior se ponen en una
+cola de fondo acotada e idempotente. La versión queda persistida junto al resultado; reiniciar
+continúa lo pendiente y no vuelve a regenerar lo ya actualizado. El arranque y el uso normal de
+tickets no esperan al motor. Las razones existentes no se regeneran en este barrido.
+
+Las pruebas cubren principal e interno, estado correcto del objetivo, contexto de la pareja, cierre
+con y sin comentario, comentario como último hecho, actor humano y sistema, equivalencia con la
+razón, reintento, respaldo, idioma, límite de contexto, proveedor con aceptación y regeneración
+reanudable de todas las últimas acciones. El navegador verifica el caso reproducido y otro donde el
+comentario de cierre explica el resultado. No cambian permisos, catálogo, modelo activo, interfaz,
+producción ni la etiqueta `v1.0.0`.
+
+La migración se aplicó sólo al entorno de desarrollo. Las pruebas nuevas de `ai/services`,
+`ai/repositories` y contexto de tickets pasan, al igual que `go vet`, las 232 pruebas del frontend y
+su compilación. La suite de tickets conserva únicamente el fallo previo y ajeno de prioridad desde
+un interno, ya registrado. El barrido de fondo regeneró el caso real como: «Soporte Uno closed the
+ticket after resolving the issue of adding the expiration warning to the access module», distinto
+del motivo y coherente con el idioma global inglés y el cierre visible.
+
+## 21. Implementación: Summary estable y generación sin acciones manuales
+
+### 21.1 Dos campos sin solapamiento
+
+**Summary/Resumen** explica brevemente el problema original. En el principal usa únicamente título
+y descripción; se genera al crear el ticket y vuelve a generarse sólo cuando cambia uno de esos dos
+textos. Comentarios, categoría, etiquetas, prioridad, responsables y estados no lo alteran. En el
+interno, la IA resume únicamente `escalationReason`; se genera al escalar y se regeneraría si en el
+futuro se permite editar ese texto. Así permanece estable y no compite con **Last action/Última
+acción**, que continúa actualizándose con cada movimiento del ticket objetivo.
+
+El nombre visible cambia en toda la interfaz a **Summary** en inglés y **Resumen** en español. En el
+alcance técnico afectado se usan nombres ingleses: el tipo persistido pasa de `motivo` a `summary`,
+los modelos y DTO usan `summary`, y el motivo de escalado pasa de `reason` a
+`escalationReason`. Esta decisión corrige expresamente la opción inicial 11A: no se introduce
+`resumen` como identificador técnico. No es una traducción general de todos los identificadores
+históricos del repositorio; sólo evita añadir o conservar nombres españoles en este contrato.
+
+### 21.2 Recuperación automática y finita
+
+La interfaz no ofrece acciones para regenerar Summary ni Last action. Se eliminan los botones, el
+endpoint de reintento manual y sus capacidades asociadas. Cada trabajo conserva los intentos
+automáticos acotados vigentes. Al agotarlos no existe sondeo infinito ni consumo periódico: el
+campo se vuelve a solicitar en el siguiente cambio que normalmente dispare ese campo.
+
+Mientras se genera o si falla, la ficha muestra un estado discreto propio del campo. Las listas y
+tarjetas no muestran estados adicionales. Si no hay un resultado vigente, enseñan `—`; una
+regeneración fallida tampoco expone el texto anterior como si fuera actual. El ticket y sus demás
+acciones nunca esperan al motor.
+
+### 21.3 Migración y regeneración
+
+La migración abierta cambia las filas `ai_insights.kind = 'motivo'` a `summary` sin mantener alias.
+Después se regeneran en segundo plano todos los Summary existentes, incluidos los internos, en
+cualquier modalidad configurada. El responsable acepta expresamente que un proveedor externo puede
+generar costo durante ese barrido. La cola es acotada, idempotente y reanudable; producción, dominio
+y etiqueta continúan fuera de alcance.
+
+Si una fila no logra regenerarse, su presentación pasa a `—` y conserva el estado de error hasta el
+próximo cambio pertinente; no se restaura por un botón ni por un bucle periódico. Las pruebas cubren
+fuentes estables, exclusión de movimientos, principal e interno, migración sin compatibilidad,
+proveedor, reinicio, límites de intentos y ausencia de contratos manuales.
+
+## 22. Implementación: resultados ordenados y recuperación automática finita
+
+### 22.1 Hallazgos reproducidos
+
+En el recorrido real del 2026-10-16, `CS-2026-0028` llegó a resuelto y después cerrado, pero Última
+acción terminó mostrando un movimiento anterior provocado por su interno. La cola sustituye un
+trabajo mientras éste espera, pero lo retira del mapa antes de llamar al motor. Si durante esa
+llamada entra una petición nueva para el mismo ticket y campo, ambas pueden terminar y la antigua
+puede guardar al final, sobrescribiendo la revisión correcta.
+
+En `CS-2026-0029`, Summary y Última acción terminaron en error y la interfaz mostró **Could not
+summarize**. El comportamiento coincide con el contrato vigente —intentos acotados y ningún botón
+manual—, pero deja un resultado fallido indefinidamente si no ocurre otra acción que vuelva a pedir
+ese campo. Para Summary estable, ni siquiera un movimiento ordinario lo recupera.
+
+### 22.2 Revisión vigente por ticket y campo
+
+Cada petición de generación recibe una revisión monotónica por `ticket + kind`. Marcar el campo
+pendiente y asignar la revisión forman una única escritura persistente. El trabajo transporta esa
+revisión y todas sus escrituras finales —resultado, error y contador atribuible— se condicionan a
+que siga siendo la vigente. Si llega una petición posterior mientras el motor atiende la anterior,
+la anterior puede terminar, pero su salida se descarta y nunca cambia el estado visible.
+
+La revisión es interna y usa nombres técnicos ingleses; no sale en el DTO ni añade elementos a la
+interfaz. Al reiniciar, la fuente reconstruye sólo la revisión vigente. Se conserva una única espera
+por ticket y campo y no se paralizan entre sí tickets distintos ni Summary y Last action.
+
+### 22.3 Recuperación diferida y finita
+
+Agotar los intentos inmediatos programa una única recuperación diferida para la revisión vigente.
+La pausa evita insistir sobre un motor momentáneamente saturado; al vencer, el contexto se reconstruye
+desde el ticket actual y comienza un nuevo ciclo acotado. Si existe una petición funcional más nueva,
+ésta invalida la recuperación pendiente. Si el ciclo diferido también falla, el campo queda en error
+terminal hasta que una creación o actualización pertinente produzca una revisión nueva.
+
+La recuperación se persiste para sobrevivir al reinicio, se retoma sin duplicados y no constituye
+un sondeo periódico. No vuelven el endpoint ni los botones manuales. Durante la espera la ficha
+muestra el estado de generación ya existente; si se agota el segundo ciclo muestra el error discreto
+y las listas continúan usando `—`. El ticket nunca espera al motor.
+
+La política se aplica a motor local, servidor propio y proveedor externo. Como máximo añade un
+segundo ciclo automático por revisión; el límite queda explícito para contener tiempo y costo. Los
+respaldos deterministas de Última acción siguen resolviendo los eventos que ya pueden expresarse de
+forma segura sin otra llamada.
+
+### 22.4 Recuperación única de errores existentes
+
+Al desplegar esta corrección, las filas que ya estén en `error` o `sin_motor` y hayan agotado su ciclo
+anterior reciben una sola revisión nueva, con contexto reconstruido. El barrido es persistente,
+idempotente y reanudable: registra su versión de recuperación, no vuelve a tomar una fila ya migrada
+y no bloquea el arranque. Incluye Summary y Last action de principal e interno y respeta la modalidad
+de IA configurada.
+
+Si esa revisión también agota la recuperación diferida queda en error terminal bajo la regla nueva.
+No se toca producción, dominio ni etiqueta `v1.0.0`; el barrido se verifica únicamente en el entorno
+autorizado de desarrollo y en una instalación desechable.
+
+### 22.5 Pruebas y fuera de alcance
+
+Las pruebas fuerzan dos respuestas concurrentes del mismo campo y demuestran que la antigua no puede
+guardar resultado ni error después de la nueva. Cubren revisión persistida, reconstrucción tras
+reinicio, recuperación diferida, invalidación por una petición posterior, límite terminal, proveedor,
+barrido idempotente de errores existentes y ausencia de botones o endpoints manuales. El navegador
+repite los casos de cierre y error observados en los tres tickets de auditoría.
+
+No cambian el contenido ni las fuentes de Summary y Last action, sus permisos, idioma, privacidad,
+modelo activo, catálogo, mejora de comentarios ni transiciones de tickets.

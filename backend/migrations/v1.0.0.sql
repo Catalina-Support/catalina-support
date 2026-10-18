@@ -740,6 +740,9 @@ CREATE TABLE IF NOT EXISTS ticket_history (
     from_state         text,
     to_state           text,
     detail             text,
+    -- Cuando el movimiento lleva comentario, esta relación dice cuál lo explica. No se deduce por
+    -- cercanía de fechas: ambos nacen en la misma transacción.
+    comment_id         bigint REFERENCES ticket_comments (id) ON DELETE SET NULL,
     created_at         timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT ticket_history_one_target CHECK (
         (ticket_id IS NOT NULL AND internal_ticket_id IS NULL)
@@ -934,7 +937,7 @@ CREATE TABLE IF NOT EXISTS ai_insights (
     -- arranque; `generated_at` queda nulo hasta que hay texto.
     requested_at  timestamptz NOT NULL DEFAULT now(),
     generated_at  timestamptz,
-    CONSTRAINT ai_insights_kind_check CHECK (kind IN ('motivo', 'ultima_accion')),
+    CONSTRAINT ai_insights_kind_check CHECK (kind IN ('summary', 'ultima_accion')),
     CONSTRAINT ai_insights_state_check CHECK (state IN ('pendiente', 'listo', 'error', 'sin_motor')),
     CONSTRAINT ai_insights_attempts_check CHECK (attempts >= 0),
     -- **Una fila por ticket y por campo**, y la base lo garantiza: el campo se reescribe en cada
@@ -954,6 +957,20 @@ CREATE INDEX IF NOT EXISTS ai_insights_ticket_number_idx ON ai_insights (ticket_
 ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS text text;
 ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS language text;
 ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS provider text;
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS context_version integer NOT NULL DEFAULT 1;
+-- `generation` impide que una respuesta antigua sobrescriba una petición más reciente. La
+-- recuperación automática tiene un solo ciclo adicional y queda persistida para sobrevivir al
+-- reinicio sin convertirse en un sondeo infinito (docs/modules/ai.md, sección 22).
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS generation bigint NOT NULL DEFAULT 0;
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS recovery_count integer NOT NULL DEFAULT 0;
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS retry_at timestamptz;
+UPDATE ai_insights SET generation = 1 WHERE generation = 0;
+ALTER TABLE ai_insights DROP CONSTRAINT IF EXISTS ai_insights_recovery_count_check;
+ALTER TABLE ai_insights ADD CONSTRAINT ai_insights_recovery_count_check CHECK (recovery_count BETWEEN 0 AND 1);
+ALTER TABLE ticket_history ADD COLUMN IF NOT EXISTS comment_id bigint REFERENCES ticket_comments (id) ON DELETE SET NULL;
+ALTER TABLE ai_insights DROP CONSTRAINT IF EXISTS ai_insights_kind_check;
+UPDATE ai_insights SET kind = 'summary', context_version = 1 WHERE kind = 'motivo';
+ALTER TABLE ai_insights ADD CONSTRAINT ai_insights_kind_check CHECK (kind IN ('summary', 'ultima_accion'));
 
 -- ============================================================================
 -- tickets — puesta al día: las categorías y las etiquetas

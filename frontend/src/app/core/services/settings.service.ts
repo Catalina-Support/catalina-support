@@ -118,11 +118,13 @@ export interface ModeloLocalDeIA {
   readonly source: string; readonly checksum: string; readonly downloadBytes: number;
   readonly ramBytes: number; readonly installed: boolean; readonly active: boolean; readonly healthy?: boolean;
   readonly downloading: boolean; readonly downloadedBytes: number; readonly error?: string;
+  readonly phase: string; readonly partial: boolean;
 }
 export interface CatalogoLocalDeIA {
   readonly models: readonly ModeloLocalDeIA[];
   readonly diskAvailableBytes: number;
 }
+export interface SaludoDeIA { readonly greeting:string; readonly current:string; readonly timeZone:string; readonly modelId:string; readonly modelName:string; }
 
 export interface BorradorDeIdioma {
   readonly key: string; readonly sourceLanguage: string; readonly targetLanguage: string;
@@ -221,7 +223,13 @@ export class SettingsService {
   async activarModelo(id: string): Promise<void> {
     await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/activate`, {}));
   }
+  async desactivarModelo(id: string): Promise<void> {
+    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/deactivate`, {}));
+  }
   async eliminarModelo(id: string): Promise<void> {
     await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}`));
   }
+  async cancelarDescarga(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/download`)); }
+  async eliminarParcial(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/partial`)); }
+  async probarModeloActivo():Promise<SaludoDeIA>{return firstValueFrom(this.http.post<SaludoDeIA>('/api/settings/ai/models/active/test',{}));}
 }
