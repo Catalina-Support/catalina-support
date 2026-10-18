@@ -11,10 +11,12 @@ import {
   entrar,
   elegirEstado,
   entrarComo,
+  BUZON,
   FABRICA,
   salir,
   tokenDe,
   tokenDeFabrica,
+  vaciarBuzon,
 } from '../ayudas';
 
 /**
@@ -65,6 +67,7 @@ async function ticketDePrueba(
   token: string,
   asunto: string,
   descripcion = 'Creado por las pruebas de interfaz.',
+  priority: 'low' | 'medium' | 'high' | 'critical' = 'medium',
 ): Promise<{ numero: string; asunto: string }> {
   const unico = `${asunto} ${Date.now().toString(36)}`;
 
@@ -81,7 +84,7 @@ async function ticketDePrueba(
 
   const respuesta = await request.post('/api/tickets', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { subject: unico, description: descripcion, categoryId: categoria.id },
+    data: { subject: unico, description: descripcion, categoryId: categoria.id, priority },
   });
 
   expect(respuesta.status(), await respuesta.text()).toBe(201);
@@ -98,6 +101,7 @@ async function detalleDe(
 ): Promise<{
   ticket: {
     number: string;
+    priority?: 'low' | 'medium' | 'high' | 'critical';
     /** Los dos campos del motor de IA, con su estado y el idioma global (`docs/modules/ai.md`). */
     insights?: {
       motivo: { state: string; text?: string; language?: string };
@@ -106,6 +110,7 @@ async function detalleDe(
   };
   comments: { id: number; body: string }[];
   attachments: { id: number; filename: string; commentId?: number | null }[];
+  history?: { event: string; fromState?: string; toState?: string }[];
 }> {
   const respuesta = await request.get(`/api/tickets/${numero}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -233,6 +238,86 @@ test.describe('El recorrido de un ticket', () => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se pueden crear cuentas');
   });
 
+  test('la prioridad se corrige, queda en la URL, conserva historial y avisa una sola vez', async ({
+    page,
+    request,
+  }) => {
+    const solicitante = await crearCuentaLista(request, { name: 'Alicia', lastName: 'Prioridad' });
+    const soporte = await crearCuentaLista(request, {
+      role: 'soporte',
+      name: 'Bruno',
+      lastName: 'Prioridad',
+    });
+    const tokenSolicitante = await tokenDe(request, solicitante.email);
+    const tokenSoporte = await tokenDe(request, soporte.email);
+    const { numero } = await ticketDePrueba(
+      request,
+      tokenSolicitante,
+      'Prioridad operativa',
+      '<p>Este caso permite comprobar los cuatro niveles.</p>',
+      'low',
+    );
+
+    await vaciarBuzon(request);
+    await entrarComo(page, soporte.email);
+    await page.goto(`/tickets/${numero}`);
+    await expect(page.getByText('Baja', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Cambiar la prioridad' }).click();
+    await page.locator(`#prioridad-${numero}`).selectOption('critical');
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+    await expect(page.getByText('Crítica', { exact: true })).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        const respuesta = await request.get(`${BUZON}/api/v1/messages?limit=50`);
+        const cuerpo = (await respuesta.json()) as {
+          messages: { Subject: string; To: { Address: string }[] }[];
+        };
+        return cuerpo.messages.filter(
+          (mensaje) =>
+            mensaje.Subject.endsWith(numero) &&
+            mensaje.To.some((destino) => destino.Address === soporte.email),
+        );
+      })
+      .toHaveLength(1);
+
+    for (const priority of ['low', 'critical'] as const) {
+      const cambio = await request.patch(`/api/tickets/${numero}/actions/priority`, {
+        headers: { Authorization: `Bearer ${tokenSoporte}` },
+        data: { priority },
+      });
+      expect(cambio.status(), await cambio.text()).toBe(200);
+    }
+
+    const ficha = await detalleDe(request, tokenSolicitante, numero);
+    expect(ficha.ticket.priority).toBe('critical');
+    expect(ficha.history?.filter((entrada) => entrada.event === 'prioridad')).toHaveLength(3);
+
+    const despues = await request.get(`${BUZON}/api/v1/messages?limit=50`);
+    const correos = (await despues.json()) as {
+      messages: { Subject: string; To: { Address: string }[] }[];
+    };
+    expect(
+      correos.messages.filter(
+        (mensaje) =>
+          mensaje.Subject.endsWith(numero) &&
+          mensaje.To.some((destino) => destino.Address === soporte.email),
+      ),
+    ).toHaveLength(1);
+
+    await page.goto('/tickets/main?priority=critical&priority=high&order=updated');
+    await expect(page).toHaveURL(/priority=critical&priority=high&order=updated/);
+    await buscarEnLaLista(page, numero);
+    await expect(page.getByRole('link', { name: numero })).toBeVisible();
+    await page.reload();
+    await expect(page).toHaveURL(/priority=critical&priority=high&order=updated/);
+
+    await entrarComo(page, solicitante.email);
+    await page.goto(`/tickets/${numero}`);
+    await expect(page.getByText('Crítica', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cambiar la prioridad' })).toHaveCount(0);
+  });
+
   test('Soporte revisa una mejora de IA antes de aplicarla y el usuario no recibe el botón', async ({
     page,
     request,
@@ -323,6 +408,11 @@ test.describe('El recorrido de un ticket', () => {
     // crea el ticket. Se elige «General», que es la que trae la migración y siempre está.
     await page.getByLabel('Categoría').selectOption({ label: 'General' });
 
+    // La prioridad nace en el alta, con Media como valor de fábrica, y el usuario puede proponerla.
+    const prioridad = page.getByLabel('Prioridad');
+    await expect(prioridad).toHaveValue('medium');
+    await prioridad.selectOption('high');
+
     // Un adjunto de verdad, por el campo de archivo: es el camino que sigue una persona. **Va dentro
     // del texto**, en el sitio donde está el cursor (docs/modules/tickets.md, sección 2.3).
     await page.locator('input[type=file]').setInputFiles({
@@ -344,6 +434,8 @@ test.describe('El recorrido de un ticket', () => {
     // Al crearlo se va al ticket, que es lo que quiere ver quien acaba de abrirlo.
     await expect(page).toHaveURL(/\/tickets\/[A-Z0-9-]+$/);
     const numero = await numeroEnPantalla(page);
+    await expect(page.getByText('Alta', { exact: true })).toBeVisible();
+    expect((await detalleDe(request, await tokenDe(request, ana.email, ana.password), numero)).ticket.priority).toBe('high');
 
     // El estado que lee el usuario no es el del backend: es lenguaje llano.
     await expect(page.getByText('Recibido').first()).toBeVisible();
@@ -1703,6 +1795,7 @@ test.describe('Los resúmenes del motor de IA', () => {
       'Última acción',
       'Clasificación',
       'Estado',
+      'Prioridad',
       'Solicitante',
       'Responsable',
       'Fecha actualización',

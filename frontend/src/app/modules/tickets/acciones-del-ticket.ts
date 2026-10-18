@@ -70,7 +70,7 @@ export function accionesDisponibles(contexto: ContextoDeAcciones): readonly Acci
   if (
     interno
       ? (esDesarrollo && estado === 'nuevo') || (esSoporte && estado === 'en espera')
-      : esSoporte && estado === 'nuevo'
+      : esSoporte && (estado === 'nuevo' || estado === 'en espera')
   ) {
     acciones.push('empezar');
   }

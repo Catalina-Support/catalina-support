@@ -18,6 +18,13 @@ const (
 	StateCerrado    = "cerrado"
 )
 
+const (
+	PriorityLow      = "low"
+	PriorityMedium   = "medium"
+	PriorityHigh     = "high"
+	PriorityCritical = "critical"
+)
+
 // Los estados que admite cada tipo de ticket (docs/modules/tickets.md, sección 2.4).
 var (
 	EstadosDelPrincipal = []string{StateNuevo, StateEnProgreso, StateEnEspera, StateEscalado, StateResuelto, StateCerrado}
@@ -51,7 +58,9 @@ type Filtros struct {
 	CategoryID *int64
 	// Tag limita a los tickets que llevan esa etiqueta, ya normalizada. También en un interno la
 	// etiqueta es la del principal (decisión 67).
-	Tag string
+	Tag        string
+	Priorities []string
+	Order      string
 	// Page y PerPage son la paginación.
 	Page    int
 	PerPage int
@@ -71,6 +80,7 @@ type CreateTicketInput struct {
 	Subject     string
 	Description string
 	State       string
+	Priority    string
 	CategoryID  int64
 	RequesterID int64
 	CreatedByID int64
@@ -127,6 +137,7 @@ func (r *TicketRepository) CreateTicket(tx *gorm.DB, entrada CreateTicketInput) 
 		Subject:     entrada.Subject,
 		Description: entrada.Description,
 		State:       entrada.State,
+		Priority:    entrada.Priority,
 		CategoryID:  entrada.CategoryID,
 		RequesterID: entrada.RequesterID,
 		CreatedByID: entrada.CreatedByID,
@@ -261,9 +272,13 @@ func (r *TicketRepository) List(filtros Filtros) ([]Ticket, int64, error) {
 	// **Lo que lleva más tiempo esperando, primero**, y lo cerrado al final: un ticket cerrado no
 	// estorba a lo que hay que atender (docs/interfaz-y-experiencia.md, sección 3.3).
 	var tickets []Ticket
-	err := conFiltrosDeTicket(r.db.Model(&Ticket{}), filtros).
-		Order("CASE WHEN state = 'cerrado' THEN 1 ELSE 0 END ASC").
-		Order("updated_at ASC").
+	consulta := conFiltrosDeTicket(r.db.Model(&Ticket{}), filtros)
+	if filtros.Order == "updated" {
+		consulta = consulta.Order("updated_at DESC")
+	} else {
+		consulta = consulta.Order("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END ASC").Order("created_at ASC").Order("id ASC")
+	}
+	err := consulta.
 		Limit(filtros.PerPage).
 		Offset((filtros.Page - 1) * filtros.PerPage).
 		Find(&tickets).Error
@@ -282,10 +297,13 @@ func (r *TicketRepository) ListInternals(filtros Filtros) ([]InternalTicket, int
 	}
 
 	var internos []InternalTicket
-	err := conFiltrosDeInterno(r.db.Model(&InternalTicket{}), filtros).
-		Select("internal_tickets.*").
-		Order("CASE WHEN internal_tickets.state = 'cerrado' THEN 1 ELSE 0 END ASC").
-		Order("internal_tickets.updated_at ASC").
+	consulta := conFiltrosDeInterno(r.db.Model(&InternalTicket{}), filtros).Select("internal_tickets.*")
+	if filtros.Order == "updated" {
+		consulta = consulta.Order("internal_tickets.updated_at DESC")
+	} else {
+		consulta = consulta.Order("CASE tickets.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END ASC").Order("tickets.created_at ASC").Order("internal_tickets.id ASC")
+	}
+	err := consulta.
 		Limit(filtros.PerPage).
 		Offset((filtros.Page - 1) * filtros.PerPage).
 		Find(&internos).Error
@@ -332,6 +350,9 @@ func (r *TicketRepository) UltimaAsignacion(internos bool) (map[int64]time.Time,
 
 // conFiltrosDeTicket aplica lo que la lista de principales entiende por filtrar.
 func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
+	if len(filtros.Priorities) > 0 {
+		consulta = consulta.Where("priority IN ?", filtros.Priorities)
+	}
 	if filtros.State != "" {
 		consulta = consulta.Where("state = ?", filtros.State)
 	}
@@ -433,6 +454,9 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 // (docs/modules/tickets.md, sección 2.3), y la descripción del principal no se mira en esta consulta.
 func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 	consulta = consulta.Joins("JOIN tickets ON tickets.id = internal_tickets.ticket_id")
+	if len(filtros.Priorities) > 0 {
+		consulta = consulta.Where("tickets.priority IN ?", filtros.Priorities)
+	}
 
 	if filtros.State != "" {
 		consulta = consulta.Where("internal_tickets.state = ?", filtros.State)

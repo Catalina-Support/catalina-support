@@ -61,14 +61,18 @@ export function etiquetaDeEstado(textos: Textos, estado: string, esUsuario: bool
 }
 
 /** Los chips del estado: todos, y los que le tocan a ese tipo de ticket. */
-export function opcionesDeEstado(textos: Textos, interno: boolean): readonly OpcionConmutador[] {
+export function opcionesDeEstado(
+  textos: Textos,
+  interno: boolean,
+  esUsuario: boolean,
+): readonly OpcionConmutador[] {
   const estados = interno ? ESTADOS_DEL_INTERNO : ESTADOS_DEL_PRINCIPAL;
 
   return [
     { valor: '', etiqueta: textos.tickets.todosLosEstados },
     ...estados.map((estado) => ({
       valor: estado,
-      etiqueta: etiquetaDeEstado(textos, estado, false),
+      etiqueta: etiquetaDeEstado(textos, estado, esUsuario),
     })),
   ];
 }
@@ -151,9 +155,9 @@ export function nombreDe(persona: { name: string; lastName: string } | undefined
  * El texto de uno de los dos resúmenes del motor de IA. Conserva el idioma con el que fue escrito:
  * cambiar el idioma global no borra ni oculta información ya generada.
  *
- * **La pantalla nunca enseña una clave ni un hueco mudo**: si el motor está escribiendo, si no está o
- * si falló, se dice con palabras (`docs/modules/ai.md`, decisiones 2 y 8). Un resumen vacío dice
- * «—», que es lo que se enseña cuando todavía no hay nada que contar.
+ * El contenido sólo aparece cuando pertenece a la versión vigente y está listo. Mientras se genera,
+ * si el motor no está disponible o si agotó sus reintentos se presenta «—»; el detalle muestra el
+ * estado por separado y las listas permanecen limpias.
  */
 export function textoDelResumen(
   resumen: Resumen | undefined,
@@ -164,18 +168,11 @@ export function textoDelResumen(
     return textos.tickets.resumenVacio;
   }
 
-  switch (resumen.state) {
-    case 'pendiente':
-      return textos.tickets.resumenPendiente;
-    case 'sin_motor':
-      return textos.tickets.resumenSinMotor;
-    case 'error':
-      return textos.tickets.resumenError;
-    case 'listo':
-      return (resumen.text ?? '').trim() || textos.tickets.resumenVacio;
-    default:
-      return textos.tickets.resumenVacio;
+  if (resumen.state !== 'listo') {
+    return textos.tickets.resumenVacio;
   }
+
+  return (resumen.text ?? '').trim() || textos.tickets.resumenVacio;
 }
 
 /**

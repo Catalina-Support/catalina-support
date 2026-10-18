@@ -23,13 +23,15 @@ var (
 
 // Ticket es un ticket principal.
 type Ticket struct {
-	ID          int64  `gorm:"primaryKey"`
-	Number      string `gorm:"column:number"`
-	NumberYear  int    `gorm:"column:number_year"`
-	NumberSeq   int    `gorm:"column:number_seq"`
-	Subject     string `gorm:"column:subject"`
-	Description string `gorm:"column:description"`
-	State       string `gorm:"column:state"`
+	ID                 int64      `gorm:"primaryKey"`
+	Number             string     `gorm:"column:number"`
+	NumberYear         int        `gorm:"column:number_year"`
+	NumberSeq          int        `gorm:"column:number_seq"`
+	Subject            string     `gorm:"column:subject"`
+	Description        string     `gorm:"column:description"`
+	State              string     `gorm:"column:state"`
+	Priority           string     `gorm:"column:priority"`
+	CriticalNotifiedAt *time.Time `gorm:"column:critical_notified_at"`
 	// La categoría del ticket: obligatoria y una sola, y la garantiza la base con `NOT NULL` y clave
 	// ajena (docs/modules/tickets.md, decisión 65).
 	CategoryID  int64 `gorm:"column:category_id"`
@@ -106,6 +108,7 @@ type HistoryEntry struct {
 	ID               int64  `gorm:"primaryKey"`
 	TicketID         *int64 `gorm:"column:ticket_id"`
 	InternalTicketID *int64 `gorm:"column:internal_ticket_id"`
+	CommentID        *int64 `gorm:"column:comment_id"`
 	// Nulo cuando lo hizo el sistema.
 	ActorID   *int64    `gorm:"column:actor_id"`
 	Event     string    `gorm:"column:event"`

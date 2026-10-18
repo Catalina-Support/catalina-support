@@ -1,7 +1,12 @@
 # Usuarios y permisos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección final añade los permisos de prioridad
+> acordados: el Usuario propone al crear; Soporte corrige en el principal; Desarrollo corrige el
+> valor compartido sólo desde un interno al que tenga acceso; el Administrador conserva lectura.
+> El responsable la aprobó explícitamente.
 >
 > **Enmienda implementada y verificada el 2026-10-08.** Únicamente Soporte y Desarrollo pueden
 > mejorar con IA los borradores de los editores que ya tienen permitidos. El backend lo exige y la
@@ -405,3 +410,15 @@ No permite ver un ticket, conversación o campo que la cuenta no pudiera consult
 lo comprueba en cada solicitud y responde 403 cuando falla; el frontend sólo evita ofrecer una acción
 que será rechazada. La cuenta de fábrica conserva las capacidades del Administrador y no obtiene
 este permiso operativo.
+
+## Prioridad del ticket
+
+| Acción | Usuario | Soporte | Desarrollo | Administrador |
+| --- | --- | --- | --- | --- |
+| Proponer prioridad al crear | Sí | Sí, al crear en nombre de un Usuario | No | No |
+| Cambiar prioridad de un ticket abierto | No | Sí | Sí, si accede a su interno | No |
+| Ver prioridad e historial | Sus tickets | Sí | Sí, en los tickets a los que accede | Sí, sólo lectura |
+
+El cambio de Desarrollo modifica el mismo campo del principal. El Usuario ve el valor vigente y el
+historial con prioridad anterior, nueva, autor y fecha, incluido el nombre real de quien lo cambió.
+Cerrar congela la prioridad para todos los papeles.

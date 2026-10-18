@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { TranslationService } from '../i18n/translation.service';
@@ -19,6 +19,7 @@ import { Campo } from '../../shared/components/campo';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
 import { Toast } from '../../shared/components/toast';
+import { Dialogo } from '../../shared/components/dialogo';
 import { claveDelError, memoriaDelError } from '../../shared/errores';
 import { interpolar } from '../../shared/textos';
 
@@ -97,10 +98,10 @@ function paraBuscar(texto: string): string {
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink, Aviso, Boton, Campo, Selector, Tarjeta, Toast],
+  imports: [RouterLink, Aviso, Boton, Campo, Dialogo, Selector, Tarjeta, Toast],
   templateUrl: './settings-page.html',
 })
-export class SettingsPage {
+export class SettingsPage implements OnDestroy {
   protected readonly interpolar = interpolar;
   private readonly ajustes = inject(SettingsService);
   private readonly textos = inject(TranslationService);
@@ -139,8 +140,6 @@ export class SettingsPage {
   protected readonly colorResuelto = signal<Marca['colors'] | null>(null);
 
   /** El archivo elegido para cada hueco, antes de subirlo. */
-  protected readonly archivoClaro = signal<File | null>(null);
-  protected readonly archivoOscuro = signal<File | null>(null);
 
   protected readonly cambioDeColorPendiente = computed(
     () =>
@@ -241,7 +240,10 @@ export class SettingsPage {
   protected readonly iaPrivacidad = signal(false);
   protected readonly iaCredencialPuesta = signal(false);
   protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly refrescandoCatalogo = signal(false);
   protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
+  protected readonly confirmacionModelo = signal<{ id: string; parcial: boolean } | null>(null);
+  private refrescoIA: ReturnType<typeof setInterval> | null = null;
 
   /** Las zonas que se ofrecen: las del navegador, o la lista corta si no las sabe dar. */
   protected readonly zonas = signal<readonly string[]>(zonasDelNavegador());
@@ -401,37 +403,17 @@ export class SettingsPage {
       : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
-  /** Elige un archivo para un hueco. No se sube hasta que se pide: primero se ve el nombre. */
+  /** Elige un archivo desde la vista previa y lo guarda inmediatamente. */
   protected elegirArchivo(oscuro: boolean, evento: Event): void {
     const entrada = evento.target as HTMLInputElement;
     const archivo = entrada.files?.[0] ?? null;
-
-    if (oscuro) {
-      this.archivoOscuro.set(archivo);
-    } else {
-      this.archivoClaro.set(archivo);
-    }
-
-    this.mensaje.set(null);
-  }
-
-  /** Sube el archivo elegido a su hueco. */
-  protected async subir(oscuro: boolean): Promise<void> {
-    const archivo = oscuro ? this.archivoOscuro() : this.archivoClaro();
     if (!archivo) {
       return;
     }
-
-    await this.pedir(
+    void this.pedir(
       () => this.marca.subirLogo(oscuro, archivo),
       this.t().configuracion.logoSubido,
-      () => {
-        if (oscuro) {
-          this.archivoOscuro.set(null);
-        } else {
-          this.archivoClaro.set(null);
-        }
-      },
+      () => { entrada.value = ''; },
     );
   }
 
@@ -520,7 +502,7 @@ export class SettingsPage {
         this.ajustes.guardar({
           ...configuracion,
           name: this.nombreElegido().trim(),
-          // El idioma sólo cambia mediante la aplicación atómica de las once plantillas.
+          // El idioma sólo cambia mediante la aplicación atómica de las doce plantillas.
           language: configuracion.language,
         }),
       this.t().configuracion.instalacionGuardada,
@@ -799,6 +781,7 @@ export class SettingsPage {
       this.iaModelo.set('qwen2.5-1.5b-instruct');
       this.iaAutenticacion.set('none');
       this.iaPrivacidad.set(false);
+      void this.cargarCatalogoIA();
     } else {
       this.iaDireccion.set('');
       this.iaAutenticacion.set('bearer');
@@ -816,10 +799,29 @@ export class SettingsPage {
   ]; }
   protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
   protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
-  protected async cargarCatalogoIA(): Promise<void> { await this.accionIA(async()=>{this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
-  protected async descargarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.descargarModelo(id,this.licenciasAceptadas().has(id));this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async cargarCatalogoIA(): Promise<void> {
+    if (this.refrescandoCatalogo()) return;
+    this.refrescandoCatalogo.set(true);
+    this.mensaje.set(null);
+    try {
+      await this.refrescarCatalogo();
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.refrescandoCatalogo.set(false);
+    }
+  }
+  protected async descargarModelo(id: string): Promise<void> { await this.accionIA(async()=>{this.iaModelo.set(id);await this.ajustes.descargarModelo(id,this.licenciasAceptadas().has(id));await this.refrescarCatalogo();}); }
   protected async activarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
-  protected async eliminarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.eliminarModelo(id);this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async desactivarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.desactivarModelo(id);this.iaModelo.set('');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected pedirEliminarModelo(id: string): void { this.confirmacionModelo.set({ id, parcial: false }); }
+  protected async cancelarDescarga(id:string):Promise<void>{await this.accionIA(async()=>{await this.ajustes.cancelarDescarga(id);await this.refrescarCatalogo();});}
+  protected pedirEliminarParcial(id:string):void{this.confirmacionModelo.set({id,parcial:true});}
+  protected async confirmarEliminacion():Promise<void>{const pendiente=this.confirmacionModelo();if(!pendiente)return;this.confirmacionModelo.set(null);await this.accionIA(async()=>{if(pendiente.parcial){await this.ajustes.eliminarParcial(pendiente.id);await this.refrescarCatalogo();}else{await this.ajustes.eliminarModelo(pendiente.id);this.catalogoIA.set(await this.ajustes.modelosLocales());}});}
+  protected async probarModeloActivo():Promise<void>{await this.accionIA(async()=>{const saludo=await this.ajustes.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting})});});}
+  protected progreso(modelo:{downloadedBytes:number;downloadBytes:number}):number{return modelo.downloadBytes>0?Math.min(100,Math.round(modelo.downloadedBytes*100/modelo.downloadBytes)):0;}
+  private async refrescarCatalogo():Promise<void>{const c=await this.ajustes.modelosLocales();this.catalogoIA.set(c);const activo=c.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=c.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
+  ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
   private async accionIA(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
 
   /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
@@ -895,6 +897,9 @@ export class SettingsPage {
       this.ponerIA(configuracion);
       if (configuracion.ai?.mode) {
         this.ponerConfiguracionDeIA(configuracion.ai);
+      }
+      if (this.iaModo() === 'local') {
+        await this.cargarCatalogoIA();
       }
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });

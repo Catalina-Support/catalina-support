@@ -1,7 +1,26 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-14
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 15 muestra automáticamente el catálogo del paso 5 y reserva su botón para refrescar sin ocultar
+> las fichas existentes.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 14 añade tema y color institucional al primer paso y sustituye las confirmaciones de modelos por
+> el diálogo temático.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** El paso 1 abre la carga al pulsar cada logo
+> sin mostrar el archivo elegido; el paso 5 administra la activación desde las fichas y permite
+> quedar temporalmente sin modelo, manteniendo bloqueado **Siguiente**.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** El paso 1 incorpora los dos huecos
+> opcionales del logo y el paso 5 hace visible el progreso real de la descarga, permite cancelarla y
+> reanudarla, activa y prueba automáticamente el modelo elegido y no deja avanzar hasta que esté
+> activo y saludable. El responsable decidió además probar manualmente el modelo con un saludo que
+> incluya la fecha y hora de la zona de la instalación, y administrar en `/setup` los modelos
+> inactivos descargados. La sección 12 registra el hallazgo, el alcance cerrado y la verificación.
 >
 > **Implementado y verificado el 2026-10-07.** `/setup` exige los cinco pasos en el orden aprobado,
 > prueba y activa la IA antes de sellar, muestra una sola confirmación de privacidad y posible costo
@@ -307,7 +326,7 @@ idioma inicial, la persistencia ni el resumen final.
 1. El resultado de las pruebas de los pasos 2 y 4 se ve en la ventana actual en PC y móvil.
 2. Un fallo al avanzar se muestra sin llevar la ventana al principio y permanece hasta cerrarse o
    ser sustituido.
-3. Un éxito desaparece a los 5 segundos y puede cerrarse antes.
+3. Cualquier toast desaparece a los 10 segundos como máximo y puede cerrarse antes.
 4. Los avisos de contexto siguen dentro del paso al cambiar de idioma o de ancho de pantalla.
 5. Las pruebas del asistente comprueban una conexión correcta, una fallida, el cierre manual y la
    posición fija del toast.
@@ -367,3 +386,120 @@ Correo permanece en el paso 4 e IA ocupa el paso 5. En el repaso final del mismo
 activación guardada permita sellar aunque el motor caiga después, una sola confirmación conjunta de
 privacidad y costo para proveedores externos, y reanudar las descargas locales incompletas. No
 quedan decisiones abiertas.
+
+## 12. Marca y administración visible de modelos
+
+### 12.1 Hallazgos
+
+La implementación no cumple dos afirmaciones vigentes. El catálogo entrega `downloadedBytes`, pero
+`/setup` y `/settings` sólo consultan una vez y enseñan «Descargando» sin barra, cantidad ni avance.
+Tampoco existe la cancelación que promete `docs/interfaz-y-experiencia.md`. Además, el paso 5 deja
+pulsar **Siguiente** durante una descarga y entonces intenta probar un motor que todavía no está
+listo, por lo que muestra el error genérico de motor inaccesible. Se reportan antes de tocar código.
+
+El paso 1 sólo pide idioma y nombre. Los logos se pueden cargar después desde Configuración, aunque
+forman parte de la misma identidad inicial. El responsable pidió llevar sus dos huecos al paso 1.
+
+### 12.2 Paso 1: dos logos opcionales
+
+Después del idioma y el nombre aparecen los huecos **Claro** y **Oscuro**, con la misma vista previa,
+validación, reemplazo, caída al otro hueco y vuelta al archivo de fábrica que Configuración. Los dos
+son opcionales y nunca bloquean **Siguiente**. Cada archivo se guarda al subirlo, el encabezado adopta
+la marca inmediatamente y recargar conserva lo guardado.
+
+Las rutas viven bajo `/api/setup/**`, sólo funcionan con el sello nulo y después responden `409
+setup.alreadyInstalled`. Conservan PNG, JPEG, WebP y SVG, el máximo de 1 MB y 2000 píxeles de lado.
+
+### 12.3 Paso 5: descarga y activación
+
+Sólo hay una descarga a la vez. La ficha muestra barra, porcentaje y bytes descargados y totales,
+actualizados automáticamente. **Cancelar** detiene la transferencia y conserva el parcial;
+**Reanudar** continúa desde él. Otra acción permite eliminar definitivamente un parcial. Cerrar o
+recargar el navegador no detiene el trabajo que ya quedó encargado al servidor.
+
+Al completar el archivo elegido, el servidor valida tamaño, cabecera y checksum, lo activa, espera
+salud y ejecuta la prueba automática vigente. La ficha distingue descarga, validación, activación,
+prueba, activo y error. Un fallo conserva el modelo instalado, explica la etapa y ofrece
+**Reintentar activación**. **Siguiente** permanece deshabilitado hasta que el elegido esté activo y
+saludable y dice qué falta, en vez de provocar una prueba prematura.
+
+Los modelos instalados inactivos se pueden eliminar con confirmación. El activo no ofrece esa
+acción: primero se activa otro. La misma regla vale en `/settings`.
+
+### 12.4 «¡Pruébame!» / “Try me!”
+
+El modelo activo y saludable ofrece un botón **¡Pruébame!** en español y **Try me!** en inglés. El
+backend toma el instante actual, lo expresa en la zona IANA de la instalación y se lo entrega al
+modelo para que salude en el idioma global e incluya esa fecha y hora. No se confía en que el modelo
+conozca el reloj ni se envían tickets, personas o archivos.
+
+La ficha conserva el saludo, el instante autoritativo y la zona hasta repetir la prueba, cambiar de
+modelo o abandonar la pantalla. Un fallo se queda dentro de la ficha, no desactiva el modelo y
+permite reintentar. Esta prueba manual no sustituye la prueba automática que habilita **Siguiente**.
+
+### 12.5 Alcance y cierre
+
+Se conserva el catálogo 1.5B/3B/7B, una sola descarga simultánea, un solo modelo activo y los
+permisos existentes. No entran modelos personalizados, producción, el dominio ni la etiqueta
+`v1.0.0`.
+
+Las pruebas cubren servicios, controladores y componentes, y un recorrido desechable en PC y móvil:
+progreso, cancelación, recarga, reanudación, trabajo en segundo plano, activación, fallo y reintento,
+saludo con zona e instante, borrado seguro y ambos logos. El repaso del responsable cerró todas las
+decisiones: progreso completo y cancelación; activo y saludable para avanzar; activación automática
+en segundo plano; una descarga; fallo conservado; logos inmediatos y opcionales; borrado sólo de
+inactivos; y saludo visible dentro de la ficha. No quedan decisiones abiertas.
+
+## 13. Logos pulsables y control desde las fichas
+
+En el paso 1, pulsar la vista previa clara u oscura abre el selector correspondiente. El archivo se
+guarda inmediatamente y sólo se ve el logo actualizado: no se presenta su ruta ni su nombre. El
+control conserva nombre accesible, foco visible y operación con teclado; restaurar sigue siendo una
+acción separada.
+
+En el paso 5 desaparece el selector superior del modelo local. Cada modelo instalado muestra su
+estado y **Activar** o **Desactivar** en la propia ficha. Se permite dejar el motor sin activo, pero
+en ese estado **Siguiente** permanece bloqueado y explica que hace falta activar un modelo saludable.
+El saludo manual se presenta por toast, atribuido al nombre del modelo, durante un máximo de diez
+segundos y con cierre manual. No repite la fecha y hora que ya dice el modelo ni enseña la zona.
+
+Las pruebas recorren ambos logos y los estados sin activo, activo y saludable en PC y móvil. No
+cambian los cinco pasos, el sello, los límites de logo, el catálogo ni la prueba automática.
+
+## 14. Apariencia inicial y confirmaciones propias
+
+El paso 1 reúne nombre, idioma, tema, color institucional y los dos logos. Idioma y tema aparecen
+juntos; el tema ofrece las ocho opciones existentes y cambia en vivo mediante la preferencia local
+del navegador. Debajo, el color usa el control y la vista previa de Configuración. El color elegido
+se conserva al cambiar de tema y viaja junto con nombre e idioma cuando se pulsa **Siguiente**.
+
+El contrato del paso 1 añade `primaryColor`. La vista previa usa el contrato existente de resolución
+del color sin persistir; guardar reutiliza la misma validación hexadecimal y actualiza la marca
+pública. Recargar conserva el color ya guardado, mientras el tema sigue siendo una elección de ese
+navegador y no una columna nueva.
+
+Eliminar un modelo o un parcial abre `app-dialogo`, presentado con el tema visible. Cancelar, Escape
+o cerrar no ejecutan la petición; confirmar usa el botón peligroso y conserva las reglas actuales de
+borrado.
+
+Las pruebas verifican los ocho temas, color y vista previa, persistencia al avanzar, recarga, diálogo
+en temas claro y oscuro, teclado, PC y móvil. No cambia el orden ni el número de pasos.
+
+El recorrido real confirmó el catálogo completo de ocho temas, la persistencia local de la elección,
+la vista previa resuelta del color y el diseño móvil a 390 px. Avanzar guardó el color junto con el
+nombre y el idioma; el diálogo de borrado se abrió y cerró con Escape sin eliminar el modelo.
+
+## 15. Catálogo visible al entrar al paso 5
+
+Entrar al paso 5 con modalidad local solicita inmediatamente el catálogo y presenta sus tres fichas.
+Volver de otra modalidad a **En este servidor** hace lo mismo, sin exigir una pulsación adicional.
+
+El botón se llama **Refrescar catálogo** / **Refresh catalog** y sólo repite la consulta. Mientras
+trabaja conserva el catálogo anterior, muestra su estado de trabajo y evita peticiones duplicadas.
+Si falla, mantiene las fichas conocidas y muestra el error mediante el toast compartido.
+
+Las pruebas verifican entrada directa, regreso a local, refresco exitoso y fallido, PC y móvil. No
+cambian el quinto paso, el sello, la API ni la administración de cada modelo.
+
+El recorrido real avanzó desde el paso 1 con los valores guardados y encontró las tres fichas ya
+cargadas en el paso 5. El refresco manual terminó en el sitio sin ocultarlas ni alterar modelos.

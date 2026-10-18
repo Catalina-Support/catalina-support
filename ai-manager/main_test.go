@@ -41,7 +41,7 @@ func TestFetchFileResumesAndValidatesGGUF(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := &manager{models: root, progress: map[string]*progress{}}
-	if err := m.fetchFile(spec, spec.Files[0], &progress{}, 0); err != nil {
+	if err := m.fetchFile(context.Background(), spec, spec.Files[0], &progress{}, 0); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, spec.ID, "test.gguf")); err != nil {
@@ -73,7 +73,7 @@ func TestCorruptCompletePartialIsRemoved(t *testing.T) {
 	spec := modelSpec{ID: "test", Files: []fileSpec{{Name: "bad.gguf", URL: server.URL, SHA256: "wrong", Size: int64(len(content))}}}
 	_ = os.MkdirAll(filepath.Join(root, spec.ID), 0755)
 	m := &manager{models: root, progress: map[string]*progress{}}
-	if err := m.fetchFile(spec, spec.Files[0], &progress{}, 0); err == nil {
+	if err := m.fetchFile(context.Background(), spec, spec.Files[0], &progress{}, 0); err == nil {
 		t.Fatal("se esperaba fallo de checksum")
 	}
 	if _, err := os.Stat(filepath.Join(root, spec.ID, "bad.gguf.partial")); !os.IsNotExist(err) {
@@ -93,7 +93,7 @@ func TestDownloadStopsAfterFiveRedirects(t *testing.T) {
 	spec := modelSpec{ID: "test", Files: []fileSpec{{Name: "x", URL: server.URL + "/0", Size: 4}}}
 	_ = os.MkdirAll(filepath.Join(root, spec.ID), 0755)
 	m := &manager{models: root, progress: map[string]*progress{}}
-	if err := m.fetchFile(spec, spec.Files[0], &progress{}, 0); err == nil || !strings.Contains(err.Error(), "too many redirects") {
+	if err := m.fetchFile(context.Background(), spec, spec.Files[0], &progress{}, 0); err == nil || !strings.Contains(err.Error(), "too many redirects") {
 		t.Fatalf("se esperaba límite de redirecciones y llegó %v", err)
 	}
 }
@@ -238,4 +238,31 @@ func TestFailedSwitchRestoresHealthyPreviousModel(t *testing.T) {
 		t.Fatalf("no se restauró: activo=%q sano=%v", active, healthy)
 	}
 	m.stopProcess()
+}
+
+func TestDeactivateStopsActiveModelAndRemovesMarker(t *testing.T) {
+	root := t.TempDir()
+	m := newManager(root, "token")
+	m.command = func(modelSpec) *exec.Cmd { return exec.Command("sh", "-c", "sleep 60") }
+	m.health = func(context.Context) error { return nil }
+	spec := catalog[0]
+	if err := m.activateModel(spec); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/models/"+spec.ID+"/deactivate", nil)
+	req.SetPathValue("id", spec.ID)
+	response := httptest.NewRecorder()
+	m.deactivate(response, req)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("estado=%d cuerpo=%q", response.Code, response.Body.String())
+	}
+	m.mu.Lock()
+	active, process, healthy := m.active, m.process, m.healthy
+	m.mu.Unlock()
+	if active != "" || process != nil || healthy {
+		t.Fatalf("activo=%q proceso=%v sano=%v", active, process, healthy)
+	}
+	if _, err := os.Stat(filepath.Join(root, "active")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("el marcador activo debía desaparecer: %v", err)
+	}
 }

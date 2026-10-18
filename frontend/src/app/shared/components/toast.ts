@@ -5,8 +5,8 @@ import { Aviso, type MensajeDePantalla } from './aviso';
 /**
  * Un resultado transitorio que permanece visible aunque la acción ocurra al final de una pantalla.
  *
- * Sólo éxito e información se retiran solos. Los fallos necesitan que quien los lee pueda conservar
- * el texto mientras corrige lo que pasó (`docs/interfaz-y-experiencia.md`, sección 15).
+ * Todos los resultados admiten cierre manual y desaparecen como máximo a los diez segundos
+ * (`docs/interfaz-y-experiencia.md`, secciones 15 y 24).
  */
 @Component({
   selector: 'app-toast',
@@ -30,14 +30,10 @@ export class Toast {
   readonly cerrado = output<void>();
 
   constructor() {
-    /** Cada mensaje nuevo sustituye al anterior y, si corresponde, estrena sus cinco segundos. */
+    /** Cada mensaje nuevo sustituye al anterior y estrena sus diez segundos. */
     effect((limpiar) => {
-      const forma = this.mensaje().forma;
-      if (forma !== 'exito' && forma !== 'informacion') {
-        return;
-      }
-
-      const temporizador = window.setTimeout(() => this.cerrar(), 5_000);
+      this.mensaje();
+      const temporizador = window.setTimeout(() => this.cerrar(), 10_000);
       limpiar(() => window.clearTimeout(temporizador));
     });
   }

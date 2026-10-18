@@ -35,6 +35,7 @@ import {
 import { Estado } from '../../shared/components/estado';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
+import { Toast } from '../../shared/components/toast';
 import { claveDelError } from '../../shared/errores';
 import {
   AccionesDelTicket,
@@ -61,8 +62,10 @@ import {
   type Comentario,
   type DetalleDeTicket,
   type EntradaDeHistorial,
+  type Insights,
   type Observador,
   type Persona,
+  type Prioridad,
   type Resumen,
 } from './tickets.service';
 
@@ -158,6 +161,7 @@ interface Pendiente {
     MejorarRedaccion,
     Selector,
     Tarjeta,
+    Toast,
   ],
   templateUrl: './ticket-vista.html',
 })
@@ -207,8 +211,6 @@ export class TicketVista implements OnDestroy {
 
   /** Y el del comentario que se está editando: sólo se edita uno a la vez. */
   private readonly elDeLaEdicion = viewChild<EditorConAdjuntos>('elDeLaEdicion');
-  private readonly modalDeRedaccion = viewChild<MejorarRedaccion>('modalDeRedaccion');
-  private readonly destinoDeRedaccion = signal<'description' | 'comment' | 'editedComment'>('comment');
 
   /**
    * **Los archivos que no han subido**, con el comentario al que iban.
@@ -223,6 +225,8 @@ export class TicketVista implements OnDestroy {
 
   protected readonly trabajando = signal(false);
   protected readonly mensaje = signal<MensajeDePantalla | null>(null);
+  protected readonly toastPrioridad = signal<MensajeDePantalla | null>(null);
+  private readonly resumenesLocales = signal<Insights | undefined>(undefined);
 
   protected readonly editando = signal<number | null>(null);
   protected readonly textoEditado = signal('');
@@ -263,6 +267,8 @@ export class TicketVista implements OnDestroy {
    * sigue siendo lo que tiene el ticket.
    */
   protected readonly categoriaElegida = signal('');
+  protected readonly prioridadElegida = signal<Prioridad>('medium');
+  protected readonly editandoPrioridad = signal(false);
 
   /**
    * Si está abierto el **modal de etiquetas** (decisión 82), que es donde se marcan y desmarcan todas
@@ -334,6 +340,8 @@ export class TicketVista implements OnDestroy {
     effect(() => {
       const ticket = this.detalle().ticket;
       this.categoriaElegida.set(ticket.category ? String(ticket.category.id) : '');
+      this.prioridadElegida.set(ticket.priority ?? 'medium');
+      this.resumenesLocales.set(ticket.insights);
     });
 
     // **El motor escribe en segundo plano: la ficha se vuelve a leer sola mientras quede algo
@@ -359,7 +367,10 @@ export class TicketVista implements OnDestroy {
     });
   }
 
-  protected readonly ticket = computed(() => this.detalle().ticket);
+  protected readonly ticket = computed(() => ({
+    ...this.detalle().ticket,
+    insights: this.resumenesLocales() ?? this.detalle().ticket.insights,
+  }));
   protected readonly papel = computed(() => this.sesion.usuario()?.role ?? '');
   protected readonly esUsuario = computed(() => this.papel() === 'usuario');
   protected readonly esSoporte = computed(() => this.papel() === 'soporte');
@@ -441,23 +452,26 @@ export class TicketVista implements OnDestroy {
     return this.textos.textos();
   }
 
-  /**
-   * El **motivo**: lo que redactó el motor, o —si es un interno— **el motivo del escalado**, que es
-   * suyo y no se genera (docs/modules/ai.md, decisión 5).
-   */
-  protected motivo(): string {
-    const ticket = this.ticket();
-
-    if (ticket.internal && ticket.reason) {
-      return ticket.reason;
-    }
-
-    return textoDelResumen(ticket.insights?.motivo, this.textos.idioma(), this.t());
+  /** Summary estable del planteamiento original, generado tanto en principal como en interno. */
+  protected summary(): string {
+    return textoDelResumen(this.ticket().insights?.summary, this.textos.idioma(), this.t());
   }
 
   /** Y la **última acción**, que siempre redacta el motor. */
   protected ultimaAccion(): string {
     return textoDelResumen(this.ticket().insights?.ultimaAccion, this.textos.idioma(), this.t());
+  }
+
+  protected estadoDelResumen(resumen: Resumen | undefined): string {
+    if (resumen?.state === 'pendiente') {
+      return this.t().tickets.resumenPendiente;
+    }
+    if (resumen?.state === 'error' || resumen?.state === 'sin_motor') {
+      return resumen.state === 'sin_motor'
+        ? this.t().tickets.resumenSinMotor
+        : this.t().tickets.resumenError;
+    }
+    return '';
   }
 
   /**
@@ -561,23 +575,6 @@ export class TicketVista implements OnDestroy {
     });
   }
 
-  /** Quién puede volver a pedir los resúmenes: Soporte y Desarrollo, que son los que lo trabajan. */
-  protected puedeRegenerar(): boolean {
-    return !this.soloLectura() && (this.esSoporte() || this.esDesarrollo());
-  }
-
-  /** Volver a pedirle al motor los dos campos. */
-  protected async regenerar(): Promise<void> {
-    await this.actuar(async () => {
-      await this.tickets.regenerarResumenes(this.ticket().number);
-
-      // **La espera no se arranca aquí**: la enciende el efecto que mira la ficha en cuanto llega con
-      // algún campo en «pendiente», y así vale igual para regenerar que para comentar o mover el
-      // ticket (quinta enmienda del 2026-09-29, punto 5).
-      return { forma: 'exito', texto: this.t().tickets.resumenesPedidos };
-    });
-  }
-
   /**
    * **Los resúmenes del motor se refrescan solos** (quinta enmienda del 2026-09-29, punto 5).
    *
@@ -590,7 +587,7 @@ export class TicketVista implements OnDestroy {
   private readonly resumenesPendientes = computed(() => {
     const insights = this.ticket().insights;
 
-    return this.estaPendiente(insights?.motivo) || this.estaPendiente(insights?.ultimaAccion);
+    return this.estaPendiente(insights?.summary) || this.estaPendiente(insights?.ultimaAccion);
   });
 
   /** La fecha de la última actualización con la que se empezó a esperar: si cambia, es otro cálculo. */
@@ -613,12 +610,16 @@ export class TicketVista implements OnDestroy {
       return;
     }
 
-    this.temporizadorDelMotor = setTimeout(() => {
+    this.temporizadorDelMotor = setTimeout(async () => {
       this.temporizadorDelMotor = null;
       this.intentosDelMotor += 1;
-      // El `cambio` pide la ficha al padre; el efecto vuelve a entrar con el detalle nuevo y, si
-      // sigue pendiente, programa la siguiente. Si ya está listo, para.
-      this.cambio.emit();
+      try {
+        const detalle = await this.tickets.ficha(this.ticket().number);
+        this.resumenesLocales.set(detalle.ticket.insights);
+      } catch {
+        // Una lectura fallida no borra el resumen anterior ni el borrador; queda otro intento.
+      }
+      if (this.resumenesPendientes()) this.programarLaRelecturaDelMotor();
     }, CADA_RECARGA_DEL_MOTOR);
   }
 
@@ -662,23 +663,20 @@ export class TicketVista implements OnDestroy {
     return this.detalle().capabilities?.aiWriting === true;
   }
 
-  protected abrirMejora(
-    destino: 'description' | 'comment' | 'editedComment',
-    editor: EditorConAdjuntos | undefined,
-  ): void {
-    const texto = editor?.textoPlano() ?? '';
-    if (!texto) return;
-    this.destinoDeRedaccion.set(destino);
-    this.modalDeRedaccion()?.abrirCon(texto, destino === 'description' ? 'description' : 'comment');
+  protected aplicarMejoraDescripcion(texto: string): void {
+    this.descripcionEditada.set(textoComoHtml(texto));
   }
 
-  protected aplicarMejora(texto: string): void {
-    const html = textoComoHtml(texto);
-    switch (this.destinoDeRedaccion()) {
-      case 'description': this.descripcionEditada.set(html); break;
-      case 'editedComment': this.textoEditado.set(html); break;
-      default: this.comentario.set(html);
-    }
+  protected aplicarMejoraEdicion(texto: string): void {
+    this.textoEditado.set(textoComoHtml(texto));
+  }
+
+  protected aplicarMejoraComentario(texto: string): void {
+    this.comentario.set(textoComoHtml(texto));
+  }
+
+  protected mostrarErrorDeRedaccion(texto: string): void {
+    this.toastPrioridad.set({ forma: 'error', texto });
   }
 
   /**
@@ -704,7 +702,7 @@ export class TicketVista implements OnDestroy {
       return false;
     }
 
-    return this.ticket().internal ? this.esSoporte() || this.esDesarrollo() : this.esSoporte();
+    return this.ticket().internal ? this.esDesarrollo() : this.esSoporte();
   }
 
   protected puedeTocarComentario(comentario: Comentario): boolean {
@@ -751,6 +749,21 @@ export class TicketVista implements OnDestroy {
     return etiquetaDeEstado(this.t(), estado, this.esUsuario());
   }
 
+  protected opcionesDePrioridad(): readonly OpcionSelector[] {
+    const p = this.t().tickets;
+    return [
+      { valor: 'low', etiqueta: `↓ ${p.prioridadBaja}`, grupo: p.prioridad },
+      { valor: 'medium', etiqueta: `• ${p.prioridadMedia}`, grupo: p.prioridad },
+      { valor: 'high', etiqueta: `↑ ${p.prioridadAlta}`, grupo: p.prioridad },
+      { valor: 'critical', etiqueta: `! ${p.prioridadCritica}`, grupo: p.prioridad },
+    ];
+  }
+
+  protected puedeCambiarPrioridad(): boolean {
+    if (this.soloLectura() || this.ticket().state === 'cerrado') return false;
+    return this.ticket().internal ? this.esSoporte() || this.esDesarrollo() : this.esSoporte();
+  }
+
   protected cuando(iso: string): string {
     return fechaHora(iso, this.idioma(), this.marca.zonaHoraria());
   }
@@ -785,13 +798,32 @@ export class TicketVista implements OnDestroy {
       reabierto: textos.historial.reabierto,
       observador: textos.historial.observador,
       observador_anadido: textos.historial.observador_anadido,
+      prioridad: textos.historial.prioridad,
     };
 
     return interpolar(frases[entrada.event] ?? textos.historial.creado, {
       quien,
       detalle: entrada.detail ?? '',
       estado: this.estado(entrada.toState ?? ''),
+      desde: this.etiquetaDePrioridad(entrada.fromState),
+      hasta: this.etiquetaDePrioridad(entrada.toState),
     });
+  }
+
+  private etiquetaDePrioridad(valor?: string): string {
+    const t = this.t().tickets;
+    return (
+      (
+        {
+          low: t.prioridadBaja,
+          medium: t.prioridadMedia,
+          high: t.prioridadAlta,
+          critical: t.prioridadCritica,
+        } as Record<string, string>
+      )[valor ?? ''] ??
+      valor ??
+      ''
+    );
   }
 
   /** El texto de un comentario, ya pintado con formato y con sus adjuntos en su sitio. */
@@ -1200,6 +1232,35 @@ export class TicketVista implements OnDestroy {
     await this.actuar(async () => {
       await this.tickets.editar(this.ticket().number, { categoryId: categoria });
       return { forma: 'exito', texto: this.t().tickets.categoriaCambiada };
+    });
+  }
+
+  protected abrirPrioridad(): void {
+    this.prioridadElegida.set(this.ticket().priority ?? 'medium');
+    this.editandoPrioridad.set(true);
+  }
+
+  protected cancelarPrioridad(): void {
+    this.prioridadElegida.set(this.ticket().priority ?? 'medium');
+    this.editandoPrioridad.set(false);
+  }
+
+  protected async guardarPrioridad(): Promise<void> {
+    await this.actuar(async () => {
+      const respuesta = await this.tickets.cambiarPrioridad(
+        this.ticket().number,
+        this.prioridadElegida(),
+      );
+      this.editandoPrioridad.set(false);
+      if (respuesta.warning) {
+        this.toastPrioridad.set({
+          forma: 'atencion',
+          texto: this.t().tickets.prioridadAvisoFallido,
+        });
+      }
+      return respuesta.warning
+        ? null
+        : { forma: 'exito', texto: this.t().tickets.prioridadGuardada };
     });
   }
 

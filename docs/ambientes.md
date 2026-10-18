@@ -1,7 +1,23 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-17
+>
+> **Enmienda implementada y verificada el 2026-10-17: guía pública y demo alojada.** La sección 25
+> delimita cómo el README resume desarrollo y producción y presenta `demo.catalina-support.com`.
+> Se verificaron los Compose de desarrollo y de IA; producción conserva deliberadamente su
+> requisito de `config/env/prod.env` no versionado. No se desplegó ni modificó ningún entorno
+> público.
+>
+> **Aclaración aprobada y verificada el 2026-10-15.** La sección 24
+> registra que desarrollo ya usa `ng serve` con volumen, recarga en vivo y respuestas `no-cache`.
+> Los logs confirmaron detección, reconstrucción y aviso a clientes; el responsable eligió 4A y 5A:
+> no duplicar opciones predeterminadas ni añadir polling. La recarga forzada queda como recuperación
+> de una pestaña desconectada. No se modificó la configuración del entorno.
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 23 incorpora a las tres capas de prueba
+> la prioridad, su orden estable y el aviso crítico no bloqueante. Producción permanece fuera. No se
+> modifica producción. El responsable la aprobó explícitamente.
 >
 > **Cuarta pasada pública completada, 2026-10-13.** La sección 22 registra que los cuatro entornos
 > documentados se levantaron desde el `main` público, completaron el recorrido aprobado y fueron
@@ -1206,3 +1222,65 @@ La revisión final de logs quedó vacía para errores de SQL, ausencias esperada
 fatales. La limpieza bajó los cuatro proyectos por sus archivos Compose y eliminó sus volúmenes y
 redes. No se usó una poda global. Los recursos detenidos de producción se preservaron y no se
 ejecutaron `prod-build.sh`, la migración de producción, nginx, el dominio ni la etiqueta 1.0.0.
+
+## 23. Verificación de prioridades
+
+Backend cubre validación, autorización, transacción, aviso único, ticket cerrado y fallo SMTP contra
+PostgreSQL. Frontend cubre selector, chip accesible, edición, URL y toast de fallo. Playwright
+recorre creación, corrección por Soporte, lectura del Usuario, bandejas y Mailpit en PC y móvil; los
+permisos de Desarrollo sobre el interno y la conservación ante SMTP interrumpido se comprueban en
+backend. La suite de fronteras debe continuar limpia.
+
+La migración `v1.0.0.sql` se aplica dos veces sobre una base nueva. El seeder también se repite y
+conserva su carácter opcional e idempotente. No se ejecuta producción, no se abre el dominio y no se
+crea la etiqueta de versión.
+
+La verificación del 2026-10-14 ejecutó la suite backend completa, 228 pruebas del frontend y su
+compilación, además del recorrido E2E en PC y móvil. La pasada completa tuvo 181 casos aprobados y
+38 omisiones previstas; una recarga en vivo durante la revisión interrumpió un caso ajeno de
+Configuración, que después pasó aislado en una instancia recién creada. El recorrido focalizado de
+prioridades comprobó creación, edición, historial, URL recargable, lectura del Usuario y aviso único.
+La migración se reaplicó dos veces sin cambios y el seeder dos veces sin duplicados; quedaron 25
+tickets de ejemplo —2 críticos, 6 altos, 11 medios y 6 bajos— y 24 plantillas.
+
+## 24. Recarga del frontend en desarrollo
+
+El servicio `frontend` monta `./frontend` en `/app` y ejecuta `ng serve` con la configuración de
+desarrollo. La recarga en vivo y las actualizaciones HMR cuando aplican son comportamientos
+predeterminados del servidor de Angular; no se duplican como banderas en `dev.yml`. Tampoco se
+habilita polling: el observador actual detecta los cambios del volumen correctamente.
+
+La comprobación del 2026-10-15 observó en los logs **Changes detected**, reconstrucción completa y
+**Page reload sent to client(s)**. Tanto `/` como `styles.css` respondieron `Cache-Control: no-cache`,
+y el proyecto no registra Service Worker. Esto confirma que reiniciar contenedores no forma parte del
+flujo normal para cambios de componentes o utilidades Tailwind ya disponibles.
+
+Una pestaña que estuvo suspendida o perdió la conexión con el servidor de desarrollo puede no recibir
+el aviso de recarga. En ese caso se usa la recarga forzada del navegador o se abre una pestaña nueva.
+Reiniciar `frontend` se reserva para cambios de dependencias o configuración de Tailwind, conforme a
+la regla ya documentada en la sección 7. No se añaden cachés, sondeos ni procesos nuevos.
+
+## 25. Guía del README y demostración alojada
+
+El README bilingüe conservará como camino local principal la instalación vacía mediante `/setup` y
+presentará el seeder como opción separada para explorar datos de ejemplo. Los comandos y valores
+proceden de este documento y de los archivos Compose vigentes; la reescritura no cambia contenedores,
+puertos, migraciones ni configuración.
+
+La guía corta de producción enlazará este runbook y enumerará, sin reemplazarlo: HTTPS, secretos no
+versionados, almacenamiento persistente, correo saliente real, copias verificadas, migración manual,
+construcción/publicación y comprobaciones de salud. Declarará que los datos de ejemplo nunca se
+aplican en producción. Los hallazgos y límites ya registrados en la sección 4 siguen vigentes; una
+portada más amigable no los convierte en capacidad implementada ni autoriza ejecutar producción.
+
+`demo.catalina-support.com` se documentará como un tercer destino público sólo a efectos de uso, no
+como un nuevo entorno administrado por este repositorio. Usa las once cuentas locales de ejemplo,
+excluye `admin` de las credenciales publicadas y pierde periódicamente los cambios. La restauración
+se realizará mediante un script privado del servidor: ese script, su calendario, secretos y
+operación quedan fuera del repositorio. Tampoco se promete disponibilidad continua.
+
+Después de la aprobación se restauró el desarrollo local con el seeder existente —operación
+destructiva ya documentada— y se comprobaron el nombre Catalina Support, los dos logos de fábrica y
+el color institucional `#1d4ed8`. La evidencia pública consta de una vista doble sin datos sensibles
+y una segunda captura del mismo ticket donde se leen `Summary`, `Last action` e `Improve with AI`.
+No se usó ni alteró producción o la demo pública para obtenerlas.

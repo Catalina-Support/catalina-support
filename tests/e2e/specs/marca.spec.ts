@@ -121,8 +121,8 @@ test.describe('La marca', () => {
 
     const enElMenu = page.getByText(esperada, { exact: true });
     await expect(enElMenu).toBeVisible();
-    const fuenteEnMenu = page.getByRole('link', { name: /Código fuente y licencia/ });
-    await expect(fuenteEnMenu).toHaveAttribute('href', marca.sourceUrl!);
+    // El enlace se conserva en la entrada, pero no se repite en el menú lateral.
+    await expect(page.getByRole('link', { name: /Código fuente y licencia/ })).toHaveCount(0);
 
     // **Alineada a la derecha**: empieza más a la derecha que el botón de salir, y acaba dentro del
     // menú. Es lo que la distingue de un control más.

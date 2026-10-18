@@ -1,7 +1,11 @@
 # Flujos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-07
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 14 incorpora el aviso único a todo
+> Soporte activo cuando un ticket llega por primera vez a prioridad crítica. No se modifica código
+> antes de implementarla. El responsable la aprobó explícitamente.
 >
 > **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: todos los correos de
 > los recorridos usan el idioma global vigente al enviarse. Los grupos de destinatarios se forman
@@ -285,3 +289,14 @@ Un cambio global sólo entra en vigor después de confirmar las once traduccione
 recorrido puede mandar una mezcla de idiomas. El responsable lo confirmó el 2026-10-06. El repaso
 confirmó que una sesión abierta adopta el cambio en su siguiente petición y que ningún flujo conserva
 un idioma personal. La regla se implementó y verificó el 2026-10-07.
+
+## 14. Primera llegada a prioridad crítica
+
+Crear un ticket crítico o cambiar uno abierto desde baja, media o alta a crítica genera un único
+aviso durante toda la vida del principal. Lo reciben todas las cuentas activas de Soporte. Bajar la
+prioridad y volver a crítica no repite el envío; guardar crítica sobre crítica tampoco.
+
+Primero se guardan prioridad e historial y después se intenta enviar. Si el correo falla, la API
+confirma el cambio y además comunica el fallo del aviso para que la persona no crea que se envió.
+No hay reintento automático ni cola nueva. Este aviso no asigna, escala, cambia estado ni altera los
+avisos existentes.

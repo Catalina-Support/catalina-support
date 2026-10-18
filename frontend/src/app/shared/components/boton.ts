@@ -69,6 +69,8 @@ export class Boton {
   readonly tipo = input<'button' | 'submit'>('button');
   readonly forma = input<'principal' | 'secundario' | 'peligro' | 'exito'>('principal');
   readonly ancho = input(false);
+  /** Variante de 42 px para cabeceras compactas de tablas; el resto conserva los 44 px táctiles. */
+  readonly compacto = input(false);
   readonly trabajando = input(false);
   readonly deshabilitado = input(false);
 
@@ -77,7 +79,7 @@ export class Boton {
   protected clases(): string {
     const base =
       'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ' +
-      'disabled:cursor-not-allowed disabled:opacity-60 min-h-11';
+      'disabled:cursor-not-allowed disabled:opacity-60';
 
     const formas: Record<string, string> = {
       principal: 'bg-primario text-primario-texto hover:brightness-110',
@@ -90,6 +92,7 @@ export class Boton {
 
     return [
       base,
+      this.compacto() ? 'h-[42px]' : 'min-h-11',
       formas[this.forma()],
       this.ancho() ? 'w-full' : '',
       // Un botón de sólo icono no lleva el relleno de lado del que lleva texto: se queda cuadrado.

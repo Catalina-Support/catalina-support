@@ -160,7 +160,7 @@ func (s *Service) Update(number string, entrada UpdateInput, actor auth.Identity
 
 	// Al editar el texto cambian las dos cosas que redacta el motor: de qué va el ticket —el motivo— y
 	// qué fue lo último que pasó —la edición— (docs/modules/ai.md, decisiones 4 y 7).
-	s.pedirAlMotor(number, TipoMotivo, TipoUltimaAccion)
+	s.pedirAlMotor(number, TipoSummary, TipoUltimaAccion)
 
 	actualizado, err := s.detalleDePrincipal(ticket, actor)
 	if err != nil {
@@ -511,14 +511,17 @@ func (s *Service) prepararComentarioDelMovimiento(to, comment string, actor auth
 //
 // `anteriores` va vacío porque es un comentario nuevo: todas sus menciones son nuevas y quien se
 // etiqueta pasa a observar el ticket, como en cualquier comentario (decisión 63).
-func (s *Service) comentarioDelMovimiento(tx *gorm.DB, destino repositories.Destino, texto string, actor auth.Identity, descripcion string, menciones []int64) error {
+func (s *Service) comentarioDelMovimiento(tx *gorm.DB, destino repositories.Destino, texto string, actor auth.Identity, descripcion string, menciones []int64) (*int64, error) {
 	if texto == "" {
-		return nil
+		return nil, nil
 	}
 
-	_, err := s.escribirComentarioEnTx(tx, destino, texto, actor, descripcion, nil, menciones)
+	creado, err := s.escribirComentarioEnTx(tx, destino, texto, actor, descripcion, nil, menciones)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return &creado.ID, nil
 }
 
 // mover hace el cambio de estado y sus efectos, todo en una transacción: **el estado, el comentario del
@@ -548,11 +551,12 @@ func (s *Service) mover(principal repositories.Ticket, internoActual repositorie
 
 			// El comentario va antes que la entrada del historial para que en la línea de tiempo se lea
 			// primero el porqué y después el cierre.
-			if err := s.comentarioDelMovimiento(tx, repositories.DestinoDeInterno(interno.ID), comentario, actor, "", menciones); err != nil {
+			comentarioID, err := s.comentarioDelMovimiento(tx, repositories.DestinoDeInterno(interno.ID), comentario, actor, "", menciones)
+			if err != nil {
 				return err
 			}
 
-			if err := s.historialDeEstado(tx, repositories.DestinoDeInterno(interno.ID), &actor.ID, desde, to); err != nil {
+			if err := s.historialDeEstado(tx, repositories.DestinoDeInterno(interno.ID), &actor.ID, desde, to, comentarioID); err != nil {
 				return err
 			}
 
@@ -580,11 +584,12 @@ func (s *Service) mover(principal repositories.Ticket, internoActual repositorie
 
 		// La descripción del principal cuenta como un cuerpo de su hilo, como en un comentario normal:
 		// el reajuste de observadores la necesita (decisión 63).
-		if err := s.comentarioDelMovimiento(tx, repositories.DestinoDePrincipal(principal.ID), comentario, actor, principal.Description, menciones); err != nil {
+		comentarioID, err := s.comentarioDelMovimiento(tx, repositories.DestinoDePrincipal(principal.ID), comentario, actor, principal.Description, menciones)
+		if err != nil {
 			return err
 		}
 
-		return s.historialDeEstado(tx, repositories.DestinoDePrincipal(principal.ID), &actor.ID, desde, to)
+		return s.historialDeEstado(tx, repositories.DestinoDePrincipal(principal.ID), &actor.ID, desde, to, comentarioID)
 	})
 }
 
@@ -647,7 +652,7 @@ func (s *Service) Escalate(number, motivo string, actor auth.Identity) (Ticket, 
 
 	razon := strings.TrimSpace(motivo)
 	if razon == "" {
-		return Ticket{}, ErrReasonRequired
+		return Ticket{}, ErrEscalationReasonRequired
 	}
 
 	principal, err := s.tickets.ByNumber(number)
@@ -753,11 +758,15 @@ func (s *Service) Escalate(number, motivo string, actor auth.Identity) (Ticket, 
 
 	s.avisarEscalado(numero, principal, razon, interno)
 
-	// Escalar mueve **dos** tickets: el principal queda escalado y nace —o se reabre— el interno. La
-	// última acción se pide para los dos. **El motivo del interno no se pide**: en un interno el motivo
-	// es el del escalado, que ya está escrito (docs/modules/ai.md, decisión 5).
+	// Escalar mueve **dos** tickets: Last action se pide para ambos. El Summary estable del interno se
+	// genera únicamente al crearlo a partir de escalationReason; un re-escalado añade un comentario
+	// y no cambia esa fuente original.
 	s.pedirAlMotor(principal.Number, TipoUltimaAccion)
-	s.pedirAlMotor(interno.Number, TipoUltimaAccion)
+	if hay {
+		s.pedirAlMotor(interno.Number, TipoUltimaAccion)
+	} else {
+		s.pedirAlMotor(interno.Number, TipoSummary, TipoUltimaAccion)
+	}
 
 	return s.ticketDe(number, actor)
 }
@@ -916,7 +925,7 @@ func (s *Service) puedeMoverInterno(actor auth.Identity, desde, to string) bool 
 }
 
 // historialDeEstado apunta un cambio de estado. Si no cambia nada, no apunta nada.
-func (s *Service) historialDeEstado(tx *gorm.DB, destino repositories.Destino, actorID *int64, desde, to string) error {
+func (s *Service) historialDeEstado(tx *gorm.DB, destino repositories.Destino, actorID *int64, desde, to string, comentarioID ...*int64) error {
 	if desde == to {
 		return nil
 	}
@@ -933,7 +942,11 @@ func (s *Service) historialDeEstado(tx *gorm.DB, destino repositories.Destino, a
 		}
 	}
 
-	return s.conversation.AddHistory(tx, repositories.Anotar(destino, actorID, evento, desde, to, ""))
+	entrada := repositories.Anotar(destino, actorID, evento, desde, to, "")
+	if len(comentarioID) > 0 {
+		entrada.CommentID = comentarioID[0]
+	}
+	return s.conversation.AddHistory(tx, entrada)
 }
 
 // estadoValido dice si ese estado existe para ese tipo de ticket.

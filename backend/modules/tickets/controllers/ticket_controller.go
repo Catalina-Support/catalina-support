@@ -48,7 +48,9 @@ func (c *TicketController) List(w http.ResponseWriter, r *http.Request) {
 		View: strings.TrimSpace(consulta.Get("view")),
 		// `category` es el identificador de la categoría y `tag` una etiqueta: los dos chips de filtro
 		// (decisión 68). La etiqueta se normaliza en el servicio, que es quien conoce la regla.
-		Tag: strings.TrimSpace(consulta.Get("tag")),
+		Tag:        strings.TrimSpace(consulta.Get("tag")),
+		Priorities: consulta["priority"],
+		Order:      strings.TrimSpace(consulta.Get("order")),
 	}
 
 	// `category` se filtra por identificador, que es lo que manda el chip. Un valor que no es un
@@ -81,21 +83,6 @@ func (c *TicketController) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewTicketsResponse(resultado))
 }
 
-// Insights vuelve a pedirle al motor de IA el motivo y la última acción de un ticket.
-//
-// Es el botón «Regenerar» de la ficha, y el endpoint es de **este** módulo y no de `ai`: la pantalla de
-// tickets sólo puede hablar con su propia API, y es este módulo quien decide a quién se lo pide
-// (docs/modules/ai.md, sección 5).
-func (c *TicketController) Insights(w http.ResponseWriter, r *http.Request) {
-	ticket, err := c.service.PedirResumenes(r.PathValue("number"), auth.MustFromContext(r.Context()))
-	if err != nil {
-		c.fail(w, err)
-		return
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket)})
-}
-
 // ImproveWriting mejora un borrador sin guardarlo. El servicio valida papel, ticket y editor antes
 // de entregar al motor el contexto mínimo.
 func (c *TicketController) ImproveWriting(w http.ResponseWriter, r *http.Request) {
@@ -107,15 +94,15 @@ func (c *TicketController) ImproveWriting(w http.ResponseWriter, r *http.Request
 		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
 		return
 	}
-	texto, err := c.service.ImproveDraft(
-		r.PathValue("number"), entrada.Editor, entrada.Draft, entrada.Tone,
+	propuesta, err := c.service.ImproveDraft(
+		r.PathValue("number"), entrada.Editor, entrada.Draft, entrada.PreviousSuggestion,
 		auth.MustFromContext(r.Context()),
 	)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, dtos.ImproveWritingResponse{Text: texto})
+	httpx.WriteJSON(w, http.StatusOK, dtos.ImproveWritingResponse{Text: propuesta.Text, QualityWarning: propuesta.QualityWarning})
 }
 
 // Create da de alta un ticket principal.
@@ -126,20 +113,36 @@ func (c *TicketController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := c.service.Create(services.CreateInput{
+	ticket, aviso, err := c.service.Create(services.CreateInput{
 		Subject:        entrada.Subject,
 		Description:    entrada.Description,
 		CategoryID:     entrada.CategoryID,
 		Tags:           entrada.Tags,
 		RequesterID:    entrada.RequesterID,
 		RequesterEmail: entrada.RequesterEmail,
+		Priority:       entrada.Priority,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket)})
+	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket), Warning: aviso})
+}
+
+// Priority cambia la prioridad compartida por el principal y su ticket interno.
+func (c *TicketController) Priority(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.PriorityRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	ticket, aviso, err := c.service.ChangePriority(r.PathValue("number"), entrada.Priority, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket), Warning: aviso})
 }
 
 // Assignees devuelve quién puede ser responsable de cada tipo de ticket.
@@ -443,7 +446,7 @@ func (c *TicketController) Escalate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := c.service.Escalate(r.PathValue("number"), entrada.Reason, auth.MustFromContext(r.Context()))
+	ticket, err := c.service.Escalate(r.PathValue("number"), entrada.EscalationReason, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -692,7 +695,7 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 	case errors.Is(err, services.ErrBodyRequired):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.description.required")
 	case errors.Is(err, services.ErrWritingDraftRequired), errors.Is(err, services.ErrWritingEditorInvalid),
-		errors.Is(err, services.ErrWritingToneInvalid), errors.Is(err, services.ErrWritingInvalid):
+		errors.Is(err, services.ErrWritingInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, services.ErrWritingUnavailable):
 		httpx.WriteError(w, http.StatusServiceUnavailable, err.Error())
@@ -700,8 +703,8 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		// El texto trae HTML que no está en la lista blanca: se dice cuál es el problema y no se guarda
 		// nada, en vez de limpiarlo por su cuenta (docs/modules/tickets.md, sección 2.3).
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.body.notAllowed")
-	case errors.Is(err, services.ErrReasonRequired):
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.reason.required")
+	case errors.Is(err, services.ErrEscalationReasonRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.escalationReason.required")
 	case errors.Is(err, services.ErrMentionNotAllowed):
 		// Etiquetar es de Soporte y Desarrollo, y sólo a técnicos y desarrolladores activos: una
 		// mención que no vale rechaza el cuerpo entero, como el saneador (decisión 59).
@@ -710,6 +713,8 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.comment.required")
 	case errors.Is(err, services.ErrStateUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.state.unknown")
+	case errors.Is(err, services.ErrPriorityUnknown):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.priority.unknown")
 	case errors.Is(err, services.ErrCierreSinComentario):
 		// **Un ticket no se cierra sin decir por qué** (decisión 81): lo exige el servidor, no la
 		// pantalla, y se contesta con la clave que el frontend ya traduce.

@@ -189,6 +189,24 @@ func TestLasPruebasDelAsistenteValidanComoAlGuardar(t *testing.T) {
 	}
 }
 
+func TestGuardarInstalacionRechazaColorInvalidoConSuClavePublica(t *testing.T) {
+	servicio := services.NewService(&repoDePrueba{}, t.TempDir())
+	controlador := NewSetupController(servicio)
+	respuesta := httptest.NewRecorder()
+
+	controlador.SaveInstallation(respuesta, peticionDePrueba(
+		"/api/setup/installation",
+		`{"name":"Mesa","language":"es","primaryColor":"azul"}`,
+	))
+
+	if respuesta.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("el código es %d y se esperaba 422", respuesta.Code)
+	}
+	if clave := claveDeLaRespuesta(t, respuesta); clave != "settings.primaryColor.invalid" {
+		t.Fatalf("la clave es %q y se esperaba settings.primaryColor.invalid", clave)
+	}
+}
+
 // Con datos buenos, la prueba llama **a la prueba del módulo** y contesta lo mismo que Configuración.
 func TestLasPruebasDelAsistenteLlamanALaPrueba(t *testing.T) {
 	t.Run("la entrada", func(t *testing.T) {

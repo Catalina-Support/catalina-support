@@ -13,6 +13,14 @@ import (
 	"catalina-support/backend/shared/auth"
 )
 
+type AIGreeting struct {
+	Greeting  string `json:"greeting"`
+	Current   string `json:"current"`
+	TimeZone  string `json:"timeZone"`
+	ModelID   string `json:"modelId"`
+	ModelName string `json:"modelName"`
+}
+
 var (
 	ErrAIManagerUnavailable = errors.New("settings.ai.managerUnavailable")
 	ErrAILicenseRequired    = errors.New("settings.ai.licenseRequired")
@@ -39,6 +47,8 @@ type AIModel struct {
 	Healthy         bool   `json:"healthy"`
 	Downloading     bool   `json:"downloading"`
 	DownloadedBytes int64  `json:"downloadedBytes"`
+	Phase           string `json:"phase"`
+	Partial         bool   `json:"partial"`
 	Error           string `json:"error,omitempty"`
 }
 type AIModelCatalog struct {
@@ -88,10 +98,73 @@ func (s *Service) DownloadAIModel(id string, accepted bool, actor *auth.Identity
 	return s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/download?acceptLicense=true", bytes.NewReader(nil), nil)
 }
 func (s *Service) ActivateAIModel(id string) error {
-	return s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/activate", bytes.NewReader(nil), nil)
+	if err := s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/activate", bytes.NewReader(nil), nil); err != nil {
+		return err
+	}
+	if repo, ok := s.repo.(aiRepository); ok {
+		now := s.now()
+		if err := repo.UpdateAI(map[string]any{"mode": "local", "provider": "local", "base_url": "http://ai:8080", "model": id, "auth_type": "none", "auth_header": "", "tested_at": now}, nil); err != nil {
+			return traducir(err)
+		}
+	}
+	return nil
+}
+func (s *Service) DeactivateAIModel(id string) error {
+	if err := s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/deactivate", bytes.NewReader(nil), nil); err != nil {
+		return err
+	}
+	if repo, ok := s.repo.(aiRepository); ok {
+		if err := repo.UpdateAI(map[string]any{"model": "", "tested_at": nil}, nil); err != nil {
+			return traducir(err)
+		}
+	}
+	return nil
 }
 func (s *Service) DeleteAIModel(id string) error {
 	return s.aiManager(http.MethodDelete, "/models/"+url.PathEscape(id), nil, nil)
+}
+func (s *Service) CancelAIModelDownload(id string) error {
+	return s.aiManager(http.MethodDelete, "/models/"+url.PathEscape(id)+"/download", nil, nil)
+}
+func (s *Service) DeleteAIModelPartial(id string) error {
+	return s.aiManager(http.MethodDelete, "/models/"+url.PathEscape(id)+"/partial", nil, nil)
+}
+func (s *Service) TestActiveAIModel() (AIGreeting, error) {
+	if s.ia == nil {
+		return AIGreeting{}, ErrAIManagerUnavailable
+	}
+	catalog, err := s.AIModels()
+	if err != nil {
+		return AIGreeting{}, err
+	}
+	model := ""
+	modelName := ""
+	for _, item := range catalog.Models {
+		if item.Active && item.Healthy {
+			model = item.ID
+			modelName = item.Name
+			break
+		}
+	}
+	if model == "" {
+		return AIGreeting{}, ErrAIManagerUnavailable
+	}
+	installation, err := s.repo.Installation()
+	if err != nil {
+		return AIGreeting{}, traducir(err)
+	}
+	zone := zonaHorariaDe(installation.TimeZone)
+	location, err := time.LoadLocation(zone)
+	if err != nil {
+		location = time.UTC
+		zone = "UTC"
+	}
+	current := s.now().In(location).Format("2006-01-02 15:04:05")
+	greeting, err := s.ia.ProbarSaludo("http://ai:8080", model, installation.Language, current)
+	if err != nil {
+		return AIGreeting{}, ErrAIManagerUnavailable
+	}
+	return AIGreeting{Greeting: greeting, Current: current, TimeZone: zone, ModelID: model, ModelName: modelName}, nil
 }
 func (s *Service) aiManager(method, path string, body io.Reader, out any) error {
 	if s.aiManagerURL == "" || s.aiManagerToken == "" {
@@ -103,7 +176,7 @@ func (s *Service) aiManager(method, path string, body io.Reader, out any) error 
 	}
 	req.Header.Set("Authorization", "Bearer "+s.aiManagerToken)
 	timeout := 10 * time.Second
-	if strings.HasSuffix(path, "/activate") {
+	if strings.HasSuffix(path, "/activate") || strings.HasSuffix(path, "/deactivate") {
 		timeout = 310 * time.Second
 	}
 	client := http.Client{Timeout: timeout}

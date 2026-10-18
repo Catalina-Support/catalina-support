@@ -1,7 +1,13 @@
 # Proyecto abierto, contribuciones y marca
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-17
+>
+> **Octava enmienda implementada y verificada el 2026-10-17: portada pública, sitio y
+> sostenimiento.** La sección 17 define la portada bilingüe del repositorio, el enlace al sitio
+> oficial, la demostración pública y la invitación a apoyar el proyecto en Ko-fi. Se publicaron
+> `README.md`, `README.es.md` y dos capturas reales complementarias. No se modificaron la demo, el
+> sitio externo, producción ni el script privado de restauración.
 >
 > **Séptima enmienda implementada y verificada el 2026-10-13: reglas para un único mantenedor.** La sección 16 separa `main` y `dev`, conserva PR y las protecciones técnicas, y fija cero aprobaciones mientras sólo exista un mantenedor. El responsable eligió 1A, 2A y 3A, cerró el repaso con 1A–4A y aprobó explícitamente el documento. Los rulesets se leyeron de nuevo y el PR `#7` se integró normalmente, sin bypass administrativo.
 >
@@ -123,9 +129,9 @@ escrita. La política permitirá referencias veraces en artículos, comparativas
 
 ## 5. Atribución visible y fuente correspondiente
 
-La pantalla de entrada y la zona inferior del menú mostrarán **«Código fuente y licencia»**. Será un
-enlace discreto y accesible, separado de las acciones principales. Llevará al repositorio y
-explicará `AGPL-3.0-only`.
+La pantalla de entrada muestra **«Código fuente y licencia»** como enlace discreto y accesible,
+separado de las acciones principales. Lleva al repositorio y explica `AGPL-3.0-only`. Desde el
+2026-10-15 no se repite en la zona inferior del menú lateral, por corrección textual del responsable.
 
 La marca pública que ya entrega el backend añadirá `license` y `sourceUrl`, de modo que ambas vistas
 usen la misma fuente. Para una versión publicada, `sourceUrl` apuntará a la etiqueta que corresponda
@@ -567,3 +573,73 @@ etapa de mantenedor único, rulesets separados y conservación completa de check
 el repaso eligió 1A, 2A, 3A y 4A: aplicación inmediata, bypass administrativo sólo para emergencias,
 una nueva propuesta para exigir revisión en `main` al llegar otro mantenedor y `dev` sin aprobación
 obligatoria. No quedan decisiones abiertas.
+
+## 17. Portada bilingüe, demostración pública y apoyo al proyecto
+
+### 17.1 Objetivo y jerarquía de la portada
+
+El `README.md` será la portada pública en inglés y enlazará, desde el comienzo, a una traducción
+completa en `README.es.md`. Ambos archivos tendrán el mismo alcance y se actualizarán juntos cuando
+cambien capacidades o instrucciones. La lectura empezará con una explicación breve y amable del
+producto y tres acciones visibles: **probar la demo**, **instalar Catalina Support** y **apoyar su
+desarrollo en Ko-fi**.
+
+La portada invitará a usar el software antes de entrar en el detalle técnico. Explicará el flujo de
+dos niveles y presentará la IA como una ayuda local o configurable que resume tickets y mejora
+borradores, sin atribuirle decisiones autónomas. Una captura real mostrará a la vez el ticket
+principal y el interno, con `Summary` y `Last action` visibles. La captura se tomará después de
+restaurar los datos locales de ejemplo, usando logo y colores de fábrica y sin datos sensibles.
+
+### 17.2 Sitio oficial, demo y credenciales compartidas
+
+La portada enlazará directamente a [catalina-support.com](https://catalina-support.com) como sitio
+oficial y a [demo.catalina-support.com](https://demo.catalina-support.com) mediante **Try the live
+demo**. El sitio se desarrolla en otro repositorio: este trabajo no crea ni publica sus fuentes y no
+lo marca como futuro o incompleto. El README sigue siendo autosuficiente para evaluar e instalar el
+proyecto aunque el sitio externo no esté disponible.
+
+La demo se presenta como un entorno público compartido, sin garantía de disponibilidad ni
+permanencia. Advierte expresamente que no se introduzcan datos personales, confidenciales o de
+producción ni se suban archivos sensibles. Publica en una sección secundaria las once cuentas
+locales del seeder y su contraseña común, agrupadas por Usuario, Soporte y Desarrollo; **no publica
+ni ofrece la cuenta `admin`**. Un recorrido corto propone crear como Usuario, atender y escalar como
+Soporte y resolver como Desarrollo.
+
+Los datos de la demo se restaurarán periódicamente mediante una operación del servidor. El README
+sólo explica que los cambios pueden desaparecer: el script, su implementación, su frecuencia y la
+infraestructura que lo ejecuta quedan fuera de este repositorio y de esta propuesta.
+
+### 17.3 Instalación y documentación vinculada
+
+El camino local principal sigue siendo una instalación vacía que pasa por `/setup`; el seeder queda
+como recorrido rápido opcional. El README conservará requisitos, comandos copiables, direcciones,
+valores locales, cuentas, parada, reanudación y diagnóstico, pero ordenados como una guía progresiva.
+
+La sección **Production deployment** será breve pero operativa. Exigirá HTTPS, secretos propios,
+persistencia, correo real, copias, migración manual y ausencia absoluta de seeders; remitirá al
+runbook detallado en `docs/ambientes.md`. No ocultará las limitaciones o hallazgos vigentes de ese
+runbook ni ejecutará producción como parte de esta revisión.
+
+Toda referencia a un archivo Markdown o legal se escribirá como enlace. Se enlazarán los archivos
+que existen: `LICENSE`, `THIRD_PARTY_NOTICES.md`, `SECURITY.md`, `CONTRIBUTING.md`,
+`CODE_OF_CONDUCT.md` y el índice `docs/README.md`. No se inventan documentos ausentes.
+
+### 17.4 Sostenimiento, alcance y decisiones
+
+La invitación inicial será discreta y la sección final **Support the project** dirá: “If Catalina
+Support saves you time, consider supporting its development on Ko-fi”, enlazando a
+[ko-fi.com/juanky1990](https://ko-fi.com/juanky1990). No condiciona funciones, soporte ni licencia a
+una donación.
+
+El responsable eligió 1A–5A; 6A, 7A, 9A y 10A; corrigió 8A para publicar las once cuentas locales
+salvo `admin`; eligió 11A, 13A–15A y corrigió 12A para enlazar inmediatamente el sitio sin marcarlo
+como futuro; eligió 16A–20A; y cerró el repaso con 21A, 23A–25A y 22C. Por tanto, la portada no
+mostrará un aviso sobre el estado previo a 1.0, aunque la guía de producción conservará únicamente
+afirmaciones comprobables y las cautelas técnicas vigentes.
+
+La implementación documental se limitó a `README.md`, el nuevo `README.es.md`, dos capturas
+versionadas y las actualizaciones de coherencia de estos documentos. La vista doble real no incluye
+el panel lateral de resultados de IA; para no falsear la interfaz se publicaron dos evidencias
+complementarias: la vista principal/interna y el detalle del mismo ticket con `Summary`, `Last
+action` e `Improve with AI`. No se modificó código de producto, permisos, seeders, despliegue, DNS,
+demo, sitio externo, script de restauración, producción ni etiqueta de versión.

@@ -35,6 +35,7 @@ type ProberDeIA interface {
 	// la prueba es de **lo que hay en pantalla**, y no de lo que esté guardado.
 	Probar(url string) error
 	ProbarConfiguracion(url, model, provider, authType, authHeader, credential, language string) error
+	ProbarSaludo(url, model, language, current string) (string, error)
 }
 
 // ProberDeCorreo es lo que este módulo necesita para **probar el correo saliente sin mandar ningún
@@ -68,6 +69,7 @@ type EstadoDeInstalacion struct {
 	AIRequired   bool
 	Name         string
 	Language     string
+	PrimaryColor string
 	EntryMethod  string
 	TimeZone     string
 	PublicAppURL string
@@ -94,8 +96,9 @@ type EstadoDeInstalacion struct {
 // como está.
 type PasoDeInstalacion struct {
 	// Paso 1: la instalación.
-	Name     string
-	Language string
+	Name         string
+	Language     string
+	PrimaryColor string
 	// Paso 2: cómo se entra.
 	EntryMethod string
 	Directory   DirectoryInput
@@ -150,6 +153,7 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 		Installed:     instalacion.InstalledAt != nil,
 		Name:          nombreDeLaInstalacion(instalacion.InstallationName),
 		Language:      instalacion.Language,
+		PrimaryColor:  colorDeInstalacion(instalacion.PrimaryColor),
 		EntryMethod:   instalacion.EntryMethod,
 		TimeZone:      zonaHorariaDe(instalacion.TimeZone),
 		PublicAppURL:  direccionPublicaDe(instalacion.PublicAppURL),
@@ -188,6 +192,14 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 	}
 
 	return estado, nil
+}
+
+func colorDeInstalacion(color string) string {
+	color = strings.ToLower(strings.TrimSpace(color))
+	if !colorPattern.MatchString(color) {
+		return colorInstitucionalDeFabrica
+	}
+	return color
 }
 
 // SetProberDeIA fija quién dice si el motor de IA responde. Lo llama el cableado.
@@ -419,10 +431,15 @@ func (s *Service) guardarPasoDeLaInstalacion(entrada PasoDeInstalacion) error {
 	if !contiene(languages, entrada.Language) {
 		return ErrLanguageUnknown
 	}
+	color := strings.ToLower(strings.TrimSpace(entrada.PrimaryColor))
+	if !colorPattern.MatchString(color) {
+		return ErrPrimaryColorInvalid
+	}
 
 	return traducir(s.repo.UpdateInstallation(map[string]any{
 		"installation_name": nombre,
 		"language":          entrada.Language,
+		"primary_color":     color,
 	}, nil))
 }
 
