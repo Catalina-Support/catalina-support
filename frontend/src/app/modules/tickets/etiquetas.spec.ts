@@ -1,4 +1,5 @@
 import { ES } from '../../core/i18n/es';
+import { EN } from '../../core/i18n/en';
 import {
   ESTADOS_DEL_INTERNO,
   ESTADOS_DEL_PRINCIPAL,
@@ -25,13 +26,16 @@ describe('las etiquetas del módulo tickets', () => {
     // (docs/interfaz-y-experiencia.md, sección 3.5).
     expect(etiquetaDeEstado(ES, 'nuevo', true)).toBe('Recibido');
     expect(etiquetaDeEstado(ES, 'escalado', true)).toBe('En curso');
-    expect(etiquetaDeEstado(ES, 'en espera', true)).toBe('Esperamos tu respuesta');
+    expect(etiquetaDeEstado(ES, 'en espera', true)).toBe('Esperándote');
+    expect(etiquetaDeEstado(EN, 'en espera', true)).toBe('Waiting for you');
     expect(etiquetaDeEstado(ES, 'escalado', true)).not.toContain('escal');
   });
 
   it('quien trabaja con tickets ve el estado de verdad', () => {
     expect(etiquetaDeEstado(ES, 'escalado', false)).toBe('Escalado');
     expect(etiquetaDeEstado(ES, 'en progreso', false)).toBe('En progreso');
+    expect(etiquetaDeEstado(ES, 'en espera', false)).toBe('Esperando');
+    expect(etiquetaDeEstado(EN, 'en espera', false)).toBe('Waiting');
   });
 
   it('un estado que no conocemos se enseña tal cual, en vez de desaparecer', () => {
@@ -45,13 +49,16 @@ describe('las etiquetas del módulo tickets', () => {
   });
 
   it('los chips del estado llevan «todos» delante y los del tipo de ticket', () => {
-    const delPrincipal = opcionesDeEstado(ES, false);
+    const delPrincipal = opcionesDeEstado(ES, false, false);
 
     expect(delPrincipal[0].valor).toBe('');
     expect(delPrincipal.map((opcion) => opcion.valor)).toContain('escalado');
 
-    const delInterno = opcionesDeEstado(ES, true);
+    const delInterno = opcionesDeEstado(ES, true, false);
     expect(delInterno.map((opcion) => opcion.valor)).not.toContain('escalado');
+
+    const delUsuario = opcionesDeEstado(ES, false, true);
+    expect(delUsuario.find((opcion) => opcion.valor === 'en espera')?.etiqueta).toBe('Esperándote');
   });
 
   it('sólo se previsualizan las imágenes y los PDF: lo demás se descarga', () => {
@@ -136,8 +143,8 @@ describe('las frases y las fechas', () => {
 });
 
 describe('el texto de un resumen del motor de IA', () => {
-  // La pantalla **nunca enseña una clave ni un hueco mudo**: cada estado se dice con palabras
-  // (docs/modules/ai.md). El texto viaja una sola vez y declara el idioma global con el que se creó.
+  // El contenido se enseña sólo cuando la versión vigente está lista. Los estados se explican
+  // aparte en la ficha; en las listas y en el hueco del texto se conserva un «—» limpio.
   const listo = { state: 'listo', text: 'No puede entrar', language: 'es' };
 
   it('con el resumen escrito en el idioma global, se lee; uno anterior no se muestra', () => {
@@ -145,15 +152,13 @@ describe('el texto de un resumen del motor de IA', () => {
     expect(textoDelResumen(listo, 'en', ES)).toBe('No puede entrar');
   });
 
-  it('mientras el motor escribe, lo dice', () => {
-    expect(textoDelResumen({ state: 'pendiente' }, 'es', ES)).toBe('Generando…');
+  it('mientras el motor escribe, todavía no presenta contenido', () => {
+    expect(textoDelResumen({ state: 'pendiente' }, 'es', ES)).toBe('—');
   });
 
-  it('sin motor, lo dice; y si falló, también', () => {
-    expect(textoDelResumen({ state: 'sin_motor' }, 'es', ES)).toBe('Sin motor de IA');
-    expect(textoDelResumen({ state: 'error', errorKey: 'ai.invalid' }, 'es', ES)).toBe(
-      'No se pudo resumir',
-    );
+  it('sin motor o después de un fallo sustituye el contenido por un guion', () => {
+    expect(textoDelResumen({ state: 'sin_motor' }, 'es', ES)).toBe('—');
+    expect(textoDelResumen({ state: 'error', errorKey: 'ai.invalid' }, 'es', ES)).toBe('—');
   });
 
   it('un ticket que nunca ha pedido resumen, y uno con el texto vacío, dicen «—»', () => {

@@ -32,6 +32,29 @@ func recortar(texto string) string {
 	return corte
 }
 
+// recortarJerarquizado conserva el encabezado estructurado y los datos base del ticket objetivo,
+// además del final reciente. Así un contexto largo no pierde ni el hecho obligatorio ni lo último
+// de la cronología; sólo desaparece primero la conversación antigua del centro.
+func recortarJerarquizado(texto string) string {
+	texto = strings.TrimSpace(texto)
+	letras := []rune(texto)
+	if len(letras) <= MaxTexto {
+		return texto
+	}
+
+	const prefijo = 2200
+	principio := string(letras[:prefijo])
+	if corte := strings.LastIndex(principio, "\n"); corte > 0 {
+		principio = principio[:corte]
+	}
+	restantes := MaxTexto - len([]rune(principio))
+	final := string(letras[len(letras)-restantes:])
+	if corte := strings.Index(final, "\n"); corte >= 0 {
+		final = final[corte+1:]
+	}
+	return strings.TrimSpace(principio) + "\n[OLDER_TIMELINE_TRUNCATED]\n" + strings.TrimSpace(final)
+}
+
 // recortarPalabras corta una redacción al tope de palabras.
 //
 // El tope se le pide al motor en el encargo, pero **no se fía**: un modelo pequeño se pasa, y un

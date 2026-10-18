@@ -13,9 +13,10 @@ import {
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Icono } from '../../shared/components/icono';
 import { Tarjeta } from '../../shared/components/tarjeta';
+import { Toast } from '../../shared/components/toast';
 import { claveDelError } from '../../shared/errores';
 import { interpolar, opcionesDeCategoria } from './etiquetas';
-import { TicketsService, type Categoria } from './tickets.service';
+import { TicketsService, type Categoria, type Prioridad } from './tickets.service';
 
 /**
  * El alta de un ticket: **asunto, categoría y descripción, con los adjuntos dentro**.
@@ -43,7 +44,7 @@ import { TicketsService, type Categoria } from './tickets.service';
  */
 @Component({
   selector: 'app-nuevo-ticket-page',
-  imports: [RouterLink, Aviso, Boton, Campo, EditorConAdjuntos, Selector, Tarjeta, Icono],
+  imports: [RouterLink, Aviso, Boton, Campo, EditorConAdjuntos, Selector, Tarjeta, Icono, Toast],
   templateUrl: './nuevo-ticket-page.html',
 })
 export class NuevoTicketPage implements OnInit {
@@ -55,6 +56,7 @@ export class NuevoTicketPage implements OnInit {
   protected readonly asunto = signal('');
   protected readonly descripcion = signal('');
   protected readonly solicitante = signal('');
+  protected readonly prioridad = signal<Prioridad>('medium');
 
   /** El catálogo y la categoría elegida. La categoría es obligatoria. */
   protected readonly categorias = signal<readonly Categoria[]>([]);
@@ -66,6 +68,7 @@ export class NuevoTicketPage implements OnInit {
 
   protected readonly trabajando = signal(false);
   protected readonly mensaje = signal<MensajeDePantalla | null>(null);
+  protected readonly toast = signal<MensajeDePantalla | null>(null);
 
   /** El número del ticket recién creado, cuando los adjuntos no han subido todos. */
   protected readonly creado = signal('');
@@ -134,6 +137,16 @@ export class NuevoTicketPage implements OnInit {
     });
   }
 
+  protected opcionesDePrioridad(): readonly OpcionSelector[] {
+    const p = this.t().tickets;
+    return [
+      { valor: 'low', etiqueta: p.prioridadBaja, grupo: p.prioridad },
+      { valor: 'medium', etiqueta: p.prioridadMedia, grupo: p.prioridad },
+      { valor: 'high', etiqueta: p.prioridadAlta, grupo: p.prioridad },
+      { valor: 'critical', etiqueta: p.prioridadCritica, grupo: p.prioridad },
+    ];
+  }
+
   // ------------------------------------------------------------------ el alta
 
   /**
@@ -174,6 +187,7 @@ export class NuevoTicketPage implements OnInit {
       const respuesta = await this.tickets.crear({
         subject: asunto,
         description: descripcion,
+        priority: this.prioridad(),
         categoryId: categoria,
         requesterEmail: this.puedeElegirSolicitante() ? this.solicitante().trim() : undefined,
       });
@@ -189,6 +203,12 @@ export class NuevoTicketPage implements OnInit {
           forma: 'atencion',
           texto: `${interpolar(this.t().tickets.creadoConAdjuntos, { numero })} ${fallidos.join(', ')}`,
         });
+        return;
+      }
+
+      if (respuesta.warning) {
+        this.creado.set(numero);
+        this.toast.set({ forma: 'atencion', texto: this.t().tickets.prioridadAvisoFallido });
         return;
       }
 

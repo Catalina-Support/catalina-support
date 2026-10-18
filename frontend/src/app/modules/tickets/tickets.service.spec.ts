@@ -81,6 +81,31 @@ describe('TicketsService', () => {
     await expect(peticion).resolves.toEqual({ tickets: [], total: 0, page: 1, perPage: 20 });
   });
 
+  it('manda varias prioridades, el orden, y cambia prioridad por su ruta', async () => {
+    const lista = tickets.listar({
+      type: '',
+      state: '',
+      q: '',
+      page: 1,
+      priorities: ['critical', 'high'],
+      order: 'updated',
+    });
+    const pidiendo = http.expectOne((request) => request.url === '/api/tickets');
+    expect(pidiendo.request.params.getAll('priority')).toEqual(['critical', 'high']);
+    expect(pidiendo.request.params.get('order')).toBe('updated');
+    pidiendo.flush({ tickets: [], total: 0, page: 1, perPage: 25 });
+    await lista;
+
+    const cambio = tickets.cambiarPrioridad('INT-CS-2026-0001', 'critical');
+    const guardar = http.expectOne({
+      url: '/api/tickets/INT-CS-2026-0001/actions/priority',
+      method: 'PATCH',
+    });
+    expect(guardar.request.body).toEqual({ priority: 'critical' });
+    guardar.flush({ ticket: { ...TICKET, priority: 'critical' } });
+    await expect(cambio).resolves.toEqual({ ticket: { ...TICKET, priority: 'critical' } });
+  });
+
   it('«lo mío» viaja como `mine=1`, y sólo cuando se pide', async () => {
     // Es lo que hace que la bandeja sea la de cada uno (`docs/modules/tickets.md`, decisión 51): lo
     // asignado, lo abierto por quien mira y aquello donde ha comentado.
@@ -120,33 +145,27 @@ describe('TicketsService', () => {
     await expect(peticion).resolves.toEqual({ tickets: [], total: 0, page: 1, perPage: 20 });
   });
 
-  it('volver a resumir va a la ruta de insights del propio ticket', async () => {
-    // El botón «Volver a resumir» habla con `tickets`, no con `ai`: la pantalla sólo puede llamar a
-    // su propia API (docs/modules/ai.md, sección 5).
-    const peticion = tickets.regenerarResumenes('CS-2026-0001');
-
-    const pidiendo = http.expectOne({
-      url: '/api/tickets/CS-2026-0001/insights',
-      method: 'POST',
-    });
-
-    pidiendo.flush({ ticket: TICKET });
-    await expect(peticion).resolves.toEqual({ ticket: TICKET });
-  });
-
-  it('mejorar un borrador usa la ruta modular del ticket y manda sólo editor, texto y tono', async () => {
+  it('mejorar un borrador manda sólo editor, texto y la última propuesta cuando existe', async () => {
     const peticion = tickets.mejorarRedaccion(
-      'CS-2026-0001', 'comment', 'Hola Ana, ya funciona.', 'friendly',
+      'CS-2026-0001',
+      'comment',
+      'Hola Ana, ya funciona.',
+      'Propuesta anterior',
     );
     const pidiendo = http.expectOne({
       url: '/api/tickets/CS-2026-0001/writing/improve',
       method: 'POST',
     });
     expect(pidiendo.request.body).toEqual({
-      editor: 'comment', draft: 'Hola Ana, ya funciona.', tone: 'friendly',
+      editor: 'comment',
+      draft: 'Hola Ana, ya funciona.',
+      previousSuggestion: 'Propuesta anterior',
     });
-    pidiendo.flush({ text: 'Hola, Ana. El servicio ya funciona.' });
-    await expect(peticion).resolves.toEqual({ text: 'Hola, Ana. El servicio ya funciona.' });
+    pidiendo.flush({ text: 'Hola, Ana. El servicio ya funciona.', qualityWarning: false });
+    await expect(peticion).resolves.toEqual({
+      text: 'Hola, Ana. El servicio ya funciona.',
+      qualityWarning: false,
+    });
   });
 
   it('cada acción va a su ruta, y el estado no va por el `PATCH`', async () => {
@@ -175,7 +194,7 @@ describe('TicketsService', () => {
 
     void tickets.escalar('CS-2026-0001', 'Probado y descartado.');
     const escalar = http.expectOne({ url: '/api/tickets/CS-2026-0001/escalate', method: 'POST' });
-    expect(escalar.request.body).toEqual({ reason: 'Probado y descartado.' });
+    expect(escalar.request.body).toEqual({ escalationReason: 'Probado y descartado.' });
     escalar.flush({ ticket: TICKET });
 
     void tickets.reabrir('CS-2026-0001');

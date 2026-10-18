@@ -1,7 +1,76 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-16
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-16.** La sección 27 corrige el hueco
+> comprobado en navegador que impedía a Soporte devolver un ticket principal de «Esperando» a
+> «En progreso». El responsable eligió 1A. Pasaron las 238 pruebas del frontend, sus fronteras y la
+> compilación; el navegador ejecutó la transición real en `CS-2026-0011` y confirmó el historial y
+> la regeneración de Última acción. No cambian permisos, correo ni las demás transiciones.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 26 adapta el consumo
+> incremental al nuevo contenedor desplazable de la tabla sin cambiar API, datos ni permisos. El
+> responsable eligió 1A–13A. Se coordina con `interfaz-y-experiencia.md` y corrige la prohibición
+> anterior de fijar verticalmente el encabezado. Pasaron nueve pruebas focalizadas, las fronteras y
+> la compilación; el navegador confirmó carga 20→27 y restauración del scroll interno.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-16.** La sección 25 define la carga
+> incremental de las cuatro bandejas sobre la paginación existente, sin cambiar la API. El
+> responsable eligió 1A–10A y no quedaron decisiones abiertas. Las pruebas cubren anexado sin
+> duplicados, error y reintento, texto y alineación; la compilación pasó. El navegador verificó la
+> secuencia real 20→27, el fin silencioso y la restauración al volver en la misma sesión.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 24 declara
+> fija la columna Ticket durante el desplazamiento horizontal de las variantes de tabla. El
+> responsable eligió 1A–7A y, tras detectar que el contrato anterior suprimía ese desplazamiento,
+> corrigió el umbral con 1A–3A: tabla desplazable desde 768 px y tarjetas sólo por debajo. Se
+> coordina con `interfaz-y-experiencia.md`, no cambia contratos del módulo y no deja decisiones
+> abiertas. Pasaron la prueba específica y la compilación; la comprobación real confirmó el umbral,
+> el desplazamiento por teclado, la posición fija y los ocho temas.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 23 hace
+> explícita la columna de apertura en la tabla de PC sin cambiar rutas, permisos ni respuesta del
+> módulo. El responsable eligió 1B, 2A, 3A, 4A, 5A, 6A, 7A–10A y, en el repaso integral de esta
+> tabla, 1A–12A, 13B+13C, 14A–24A. Corrigió expresamente el orden de las columnas. Se coordina con
+> `interfaz-y-experiencia.md` y no deja decisiones abiertas. Pasaron la prueba específica y la
+> compilación; la comprobación real cubrió tabla completa, tabla intermedia y tarjetas.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-15.** La sección 22 limita
+> Summary al planteamiento original, renombra `reason` a `escalationReason` y retira la ruta manual
+> de reintento. El responsable eligió 1A–20B con las correcciones de nombre técnico; se coordina con
+> `modules/ai.md`, `interfaz-y-experiencia.md` y `arquitectura.md`. No quedan decisiones abiertas y
+> la implementación al contrato aprobado. La migración se aplicó sólo en desarrollo; pasaron las
+> pruebas específicas de IA y tickets, las 231 pruebas del frontend y su compilación. La suite
+> completa del backend conserva el fallo previo de prioridad desde un interno, ajeno a este cambio.
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-15.** La sección 21 enlaza
+> explícitamente el comentario de un movimiento con su entrada de historial, construye el contexto
+> completo de principal e interno y garantiza que el estado objetivo sea el del ticket mostrado. Se
+> coordina con `modules/ai.md` y `arquitectura.md`; el responsable eligió 1A–14A, aprobó los tres
+> documentos y no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-15, con aprobación explícita del responsable.** La sección 20 conserva resúmenes anteriores
+> cuando falla una regeneración y evita que su refresco destruya trabajo local. El responsable cerró
+> 1A–15A, con 8B, y retiró las ayudas redundantes del editor y de la propuesta válida; no quedan
+> decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección 19 elimina las tonalidades y el
+> modal previo de «Mejorar con IA», manteniendo revisión local por editor antes de reemplazar el
+> borrador. El responsable cerró 1A–15A con 3B, 6B, 7A, 10B y 11B; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 18 elimina de la vista
+> simultánea la columna interna que continúa reservada aunque su ficha esté oculta y baja a 1152 px
+> el ancho de comparación. El responsable eligió 1A–6A, 7B y 8B; no quedan decisiones abiertas.
+>
+> **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
+> 17 corrige la vista simultánea del principal y el interno para que cada conversación tenga scroll
+> propio y use todo el ancho.
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 16 incorpora la prioridad compartida,
+> sus permisos, historial, filtros, orden y datos de ejemplo conforme a 1A–25A. Retira la prioridad
+> de la exclusión histórica de la sección 7. El responsable la aprobó explícitamente.
 >
 > **Segundo hallazgo de ruido corregido y verificado, 2026-10-13.** Aunque la ausencia del ticket interno ya
 > quedó corregida, el seeder mostró el mismo falso error al comprobar una categoría normalizada
@@ -1025,8 +1094,7 @@ crea la gente.
 - **Búsqueda de texto completo** con índices dedicados: se usa `ILIKE` hasta que duela.
 - **Exportar** tickets a CSV o PDF.
 - **Respuestas predefinidas** y plantillas.
-- **Campos personalizados** y prioridad. **Las categorías salieron de esta lista el 2026-09-27**: entraron
-  al aprobarse (sección 2.3.2), y esta línea se quedó diciendo lo contrario.
+- **Campos personalizados** distintos de categoría y prioridad.
 - **Tiempo real** (websockets) y contadores en vivo.
 - **SLA, métricas e informes.**
 - **Fusión y duplicado de tickets.**
@@ -1294,3 +1362,330 @@ Las búsquedas singulares de tickets, comentarios, adjuntos, categorías y nombr
 ahora `Find` y `RowsAffected`. La prueba con PostgreSQL real confirmó una categoría ausente sin
 evento de error y un fallo SQL real visible; las pruebas existentes conservaron los resultados de
 dominio. La suite backend completa y `go vet` pasaron el 2026-10-13.
+
+## 16. Prioridad de los tickets
+
+`tickets.priority` es obligatorio y admite únicamente `low`, `medium`, `high` y `critical`, con
+`medium` como valor predeterminado. La migración abierta `v1.0.0.sql` añade la columna de forma
+idempotente, completará cualquier fila previa con `medium` y aplicará la restricción. Aunque no hay
+tickets productivos que convertir, esta secuencia conserva la migración repetible.
+
+Crear acepta la prioridad propuesta por el Usuario o por Soporte cuando crea en su nombre. Una ruta
+del módulo permite cambiarla en tickets abiertos: Soporte desde el principal y Desarrollo sólo si
+puede acceder al interno. El cambio actualiza el principal dentro de una transacción y añade un
+evento de historial con valor anterior, nuevo, autor y fecha. Guardar el mismo valor no crea evento
+ni correo. Un ticket cerrado rechaza el cambio.
+
+Las respuestas de alta, lista y detalle incluyen la prioridad. El principal y el interno exponen el
+mismo valor; no se añade una columna al interno. Las listas aceptan varias prioridades como filtro y
+un orden explícito. El orden predeterminado es crítica, alta, media y baja; dentro del nivel, el
+más antiguo primero. Filtros y orden viven en la URL. No cambian búsqueda, estados, asignación,
+reparto ni resúmenes de IA.
+
+La primera llegada histórica a `critical`, incluida la creación, solicita el aviso definido en
+`docs/flujos.md`. Una marca persistente en el principal evita repetirlo aunque después se baje y se
+vuelva a subir. El envío ocurre después de guardar: un fallo SMTP se comunica al actor sin revertir
+prioridad ni historial.
+
+`v1.0.0_dev.sql` reparte los 25 tickets de forma realista: mayoría media, algunos bajos y altos y
+pocos críticos. Las pruebas cubren valores inválidos, valor predeterminado, permisos, ticket
+cerrado, historial, valor compartido, filtros combinados, orden estable y aviso único no bloqueante.
+
+### 16.1 Implementación y verificación
+
+La prioridad vive únicamente en el principal y se proyecta en el interno. `PATCH
+/api/tickets/{number}/actions/priority` aplica los permisos por tipo, bloquea tickets cerrados y
+registra el cambio en la línea de tiempo. La marca `critical_notified_at` se fija en la misma
+transacción que la primera llegada a crítica; el correo se intenta después del `COMMIT` y su fallo
+vuelve como aviso sin deshacer datos. La suite backend completa, las 228 pruebas del frontend, la
+compilación y el recorrido E2E focalizado pasaron el 2026-10-14.
+
+## 17. Disposición de la vista simultánea
+
+La forma `losdos` no altera datos ni contratos del módulo. En PC cambia su contenedor: ocupa todo el
+ancho disponible, usa dos columnas iguales y limita su altura al espacio restante bajo la cabecera
+del detalle. Cada instancia de `app-ticket-vista` es una región desplazable independiente y conserva
+su cabecera, línea de tiempo y editor en el mismo flujo.
+
+Principal e interno no sincronizan posición ni altura de contenido. Recargar datos conserva la forma
+elegida, pero no incorpora persistencia nueva para la posición de scroll. Las formas `principal` e
+`interno` continúan con el comportamiento actual.
+
+Por debajo del ancho de comparación se presenta un solo ticket. No se apilan dos conversaciones ni
+se reduce cada una a media pantalla; el conmutador sigue siendo la forma de pasar de principal a
+interno. Las pruebas verifican las dos regiones, el ancho 50/50, el scroll aislado y la regresión de
+las vistas individuales. No cambia API, permisos, historial ni comentarios.
+
+La implementación conserva la cabecera común fuera de las regiones desplazables y mantiene cada
+editor al final de su conversación. Pasaron las 228 pruebas del frontend y la compilación; el
+recorrido en navegador real verificó columnas iguales, scroll aislado y una sola vista a 900 px.
+
+## 18. Conversación completa dentro de cada mitad
+
+La forma `losdos` ya crea dos regiones exteriores iguales, pero cada instancia conserva la rejilla
+interna de la ficha individual. Como `soloLaConversacion` oculta los detalles laterales sin retirar
+su columna, cada conversación usa dos tercios de su región y deja el tercio restante vacío.
+
+Con `soloLaConversacion`, el componente usará una única columna al 100%. Todo lo que pertenece a la
+conversación —cabecera, asunto, motivo de escalado, descripción, comentarios, historial y editor—
+se ensancha junto. El espacio entre las dos instancias sigue siendo de 24 px y cada región conserva
+su desplazamiento propio. Las previsualizaciones conservan su tope de 480 × 360 y el editor sólo
+crece horizontalmente.
+
+Sin `soloLaConversacion`, el componente mantiene `2fr 1fr`: la vista individual no cambia y sigue
+mostrando conversación y ficha. Las pruebas distinguirán explícitamente ambos modos y el recorrido
+real comprobará aprovechamiento del ancho, ausencia de desbordamiento horizontal y scroll aislado.
+La forma `losdos` estará disponible desde 1152 px; a 1151 px o menos se mantiene una sola vista. No
+cambian contratos ni comportamiento del módulo.
+
+La plantilla aplica una columna completa únicamente con `soloLaConversacion`; sin esa entrada sigue
+usando `2fr 1fr`. Las 229 pruebas del frontend, la compilación y el recorrido real en 1800, 1152 y
+1151 px confirmaron el ancho completo, la ausencia de scroll horizontal y la regresión responsive.
+
+## 19. Implementación: mejora inmediata y revisión local
+
+`POST /api/tickets/{number}/writing/improve` deja de recibir `tone`. Recibe `editor`, `text` y,
+únicamente al pedir otra propuesta, `previousSuggestion`. El último campo debe corresponder a la
+propuesta visible de ese editor y no se persiste. `tickets` conserva autorización, límites, acceso
+al editor y resolución del nombre contextual antes de delegar en `ai`.
+
+Pulsar **Mejorar con IA** envía inmediatamente el borrador actual. La respuesta no escribe tablas,
+no guarda la descripción y no publica el comentario: permanece como propuesta local de sólo lectura
+para ese editor. Cada editor abierto conserva su propia propuesta; generar en descripción no
+descarta la de comentario ni viceversa.
+
+**Usar propuesta** reemplaza únicamente el borrador local y cierra la revisión. **Conservar
+original** descarta y oculta la propuesta sin tocar el borrador. No existe acción propia de copiar:
+el texto es seleccionable y se puede copiar con las capacidades normales del navegador. Guardar o
+publicar sigue siendo una acción separada.
+
+Si el borrador cambia mientras se genera o después de recibir el resultado, la propuesta permanece
+visible y seleccionable, pero **Usar propuesta** queda deshabilitado por obsoleta. **Generar otra
+propuesta** usa el borrador actual y entrega sólo la última salida como redacción a evitar. Un fallo
+no crea revisión ni modifica el editor; vuelve al estado inicial y se comunica mediante toast.
+
+Las pruebas cubren los DTO sin tono, propuesta independiente por editor, aplicación local, descarte,
+texto seleccionable, obsolescencia al editar, regeneración distinta, error por toast y ausencia de
+guardado automático. No cambian permisos, estados, historial, adjuntos ni transiciones.
+
+La implementación pasó las 230 pruebas del frontend y la compilación de producción. En navegador
+real, una cuenta de Soporte generó una propuesta directamente bajo el editor sin modal ni selector,
+la conservó seleccionable al cambiar el borrador, vio **Usar propuesta** deshabilitado por obsoleta
+y descartó la salida con **Conservar original** sin perder el texto ni publicar el comentario. Las
+pruebas afectadas del backend también pasan; la única falla de la suite completa sigue siendo el
+caso ajeno de prioridad descrito en `modules/ai.md`.
+
+## 20. Implementación: regeneración segura de resúmenes
+
+Crear un ticket solicita **Motivo** y **Última acción** como hasta ahora. Para la apertura, el texto
+de última acción incluye que la persona abrió el ticket y describió el problema. Editar asunto o
+descripción vuelve a pedir ambos campos; comentarios y transiciones conservan las reglas vigentes.
+
+Cada campo distingue texto vigente, texto anterior desactualizado, generación y error. Al pedir una
+nueva versión no se borra de inmediato la anterior: permanece disponible y se marca desactualizada
+hasta recibir una respuesta válida. Si los dos intentos fallan, el campo conserva ese texto y
+muestra su error propio. Sin texto anterior, presenta sólo el error. **Motivo** y **Última acción**
+tienen cada uno su acción **Reintentar**, sin obligar a regenerar el otro.
+
+La consulta periódica de resúmenes actualiza únicamente su estado y contenido. No reconstruye el
+editor de descripción, el de comentario, el comentario que se está editando ni sus componentes de
+redacción asistida. La misma regla se aplica al reintento manual: borradores, adjuntos locales y
+propuestas de IA sobreviven intactos. Guardar o publicar continúa siendo una acción separada.
+
+Las pruebas cubren creación, edición, actualización independiente de cada campo, conservación del
+anterior, errores específicos, reintentos y ausencia de pérdida local durante sondeo y acciones
+manuales. No cambian numeración, permisos, historial, correo, adjuntos ni transiciones del ticket.
+El editor conserva formato, pegado, arrastre, selección y comentarios compuestos sólo por archivos,
+pero deja de explicarlos en un párrafo permanente. La propuesta válida conserva título, contenido y
+acciones sin añadir un estado neutro que repita que ya está lista.
+
+El endpoint de reintento devuelve el estado `pendiente` recién persistido, no la copia del ticket
+leída antes de encolar. La pantalla sondea luego sólo la ficha para extraer sus `insights` y los
+mezcla en memoria; no emite la recarga completa del detalle. El recorrido de `CS-2026-0027`
+confirmó que el borrador y la propuesta inline sobrevivieron a un reintento de **Motivo**, y que una
+edición de descripción volvió a producir ambos campos con el contenido actualizado.
+
+## 21. Implementación: contexto enlazado para los resúmenes
+
+### 21.1 Evento y comentario como una unidad
+
+Cuando un movimiento lleva comentario, ambos se guardan en la misma transacción como hoy, y además
+la entrada de `ticket_history` referencia expresamente el `ticket_comment` creado. No se infiere la
+relación por cercanía de fechas ni se usa simplemente «el comentario anterior». Así un cierre puede
+entregarse a IA como una unidad verificable: quién cerró, de qué estado venía, a cuál llegó y qué
+explicación escribió.
+
+Los movimientos anteriores a esta relación siguen siendo legibles. Si no tienen vínculo persistido,
+la última acción usa el evento sin adjudicarle un comentario antiguo; el respaldo determinista dice
+actor y acción. Los datos de ejemplo que no incluyen comentario de cierre no inventan uno.
+
+### 21.2 Lectura coordinada del principal y el interno
+
+El constructor de contexto parte siempre del número solicitado. Si es interno, publica su estado,
+fechas, responsable, comentarios e historial —no el estado del principal— y añade después todos los
+datos funcionales del principal. Si es principal, hace lo inverso y añade el interno cuando existe.
+Ambos bloques se distinguen por número y tipo.
+
+El último evento objetivo se calcula sólo sobre la cronología del ticket solicitado. El servicio
+entrega aparte la cronología de la pareja para contexto. Incluye categoría, etiquetas, prioridad,
+solicitante, creador, responsables, observadores, nombres de adjuntos y fechas, además de asunto,
+descripción, motivo, comentarios e historial. La ausencia de interno es normal y no genera error.
+
+### 21.3 Persistencia, regeneración y alcance
+
+`ticket_history` incorpora una referencia opcional al comentario asociado. El servicio de movimiento
+recibe el identificador creado y lo guarda en la entrada de historial dentro de la misma transacción.
+La consulta de conversación expone esa relación al constructor de contexto sin cambiar la respuesta
+pública del ticket.
+
+La regeneración de `ultima_accion` se solicita en segundo plano para todos los tickets cuya versión
+de contexto sea anterior a la vigente. Es idempotente, reanudable y no bloquea el arranque. Los
+movimientos nuevos continúan solicitando únicamente los campos que ya les corresponden; **Razón**
+sólo cambia al crear o editar el problema original, y el motivo del interno permanece inmutable.
+
+Las pruebas de servicio y repositorio cubren atomicidad, vínculo correcto, evento sin comentario,
+principal sin interno, estados diferentes entre la pareja, orden cronológico y reconstrucción tras
+reinicio. No cambian transiciones, comentario obligatorio al cerrar, permisos, correo, numeración,
+DTO público ni interfaz.
+
+La prueba de cierre confirma que comentario e historial comparten el identificador dentro de la
+transacción; la prueba de contexto confirma que el interno cerrado toma su propio estado, actor y
+comentario vinculados. Las pruebas afectadas pasan. La suite completa conserva el fallo previo y
+ajeno de prioridad desde un interno, sin relación con el contexto o los resúmenes.
+
+## 22. Implementación: disparadores estables y contrato inglés de resúmenes
+
+Crear un principal solicita `summary` y `lastAction`. Editar su título o descripción vuelve a pedir
+`summary`; la edición conserva también el movimiento que actualiza `lastAction`. Ninguna otra
+acción solicita Summary. Crear el interno solicita su Summary a partir de `escalationReason` y su
+Last action; una futura edición de `escalationReason` volvería a solicitar ambos campos.
+
+El contrato público de insights cambia de `motivo` a `summary`. El campo del interno cambia de
+`reason` a `escalationReason` en DTO, servicios y frontend; la columna SQL ya existente
+`escalation_reason` conserva su nombre inglés. No se aceptan ni emiten alias anteriores porque la
+1.0.0 aún no está publicada. El endpoint que reintentaba un insight se elimina: tickets sólo pide
+generación como consecuencia de una creación o actualización válida.
+
+La lectura distingue resultado vigente, generación y error. En generación o error sin resultado
+vigente entrega texto vacío para que la interfaz muestre `—`; no presenta el resultado anterior
+como actual. Las pruebas cubren la matriz de disparadores, ambos tipos de ticket, JSON nuevo,
+rechazo de nombres anteriores, desaparición de la ruta manual y continuidad de borradores locales
+durante el sondeo automático.
+
+## 23. Contrato visible de la tabla resumen
+
+Las cuatro bandejas comparten el mismo orden amplio:
+
+`Ticket · Priority · State · Subject · Classification · Summary · Last action · Requested by · Assignee · Update date · Action`.
+
+No cambia el conjunto de datos ni su significado. Ticket no salta ni se trunca; Subject, Summary y
+Last action tienen dos líneas como máximo y permiten consultar el texto completo; Classification
+limita sus chips a dos líneas y resume el resto como `+N`; las personas admiten dos líneas y usan
+`—` si faltan; Update date separa fecha y hora. Priority y State se centran; el encabezado Action se
+alinea a la izquierda y su botón se centra. Las tres columnas ajustan su ancho al contenido.
+
+El texto completo truncado y las etiquetas reunidas en `+N` son accesibles con cursor y teclado.
+`+N` enumera las etiquetas ocultas también en su nombre accesible. El cambio a tarjetas depende del
+ancho real del contenedor, incluido el espacio que deja el menú lateral. No se incorporan nuevas
+formas de ordenar Priority ni Update date.
+
+Las bandejas de escritorio conservan una última columna para abrir el ticket. Su contrato visible
+es **Action/Acción** en la cabecera y **Open/Abrir** en cada fila. La cabecera se alinea a la izquierda
+y el contenido se centra; la columna se ajusta al ancho mínimo del botón en vez de reservar una
+medida fija.
+
+No se traslada la acción a la columna Ticket ni se elimina: el número y el botón siguen siendo dos
+enlaces explícitos al mismo detalle. Tampoco se convierte la fila completa en enlace. En las
+tarjetas móviles, el botón permanece al final como hoy.
+
+En ancho intermedio sólo salen Requested by y Assignee; las otras nueve columnas permanecen. Desde
+768 px la tabla conserva sus medidas y admite desplazamiento horizontal nativo. Sólo por debajo de
+ese umbral cambia a tarjetas, que muestran los mismos datos en el mismo orden conceptual y conservan
+Open/Abrir al final.
+
+El cambio es exclusivamente de presentación. No modifica endpoint, `routerLink`, autorización,
+consulta, paginación, filtros, orden, datos de Summary o Last action ni modelo persistente. Las
+pruebas del componente verifican orden, visibilidad responsive, límites, valores ausentes,
+encabezado en ambos idiomas, celda final y variante móvil; la comprobación de navegador cubre PC
+amplio, ancho intermedio y móvil y confirma que el botón se percibe como parte de la tabla.
+
+## 24. Identidad de fila durante el desplazamiento horizontal
+
+La columna **Ticket** es la referencia fija de cada fila en las tablas amplia e intermedia. Su
+encabezado y sus celdas permanecen en el borde inicial al desplazar horizontalmente las demás
+columnas. Conservan el ancho, el texto sin salto y el enlace existentes.
+
+La tabla existe desde 768 px y, si sus columnas superan el ancho disponible, usa el desplazamiento
+horizontal nativo del contenedor sin degradado ni aviso adicional. Sólo por debajo usa tarjetas.
+
+Las celdas Ticket del cuerpo se fijan sólo en horizontal; su encabezado se fija en ambos ejes según
+la sección 26. No incluye otra columna y no cambia la variante de tarjetas. La superficie opaca y el
+separador derecho proceden del tema para impedir que el contenido desplazado se vea detrás del
+número. No cambia API, autorización, navegación, datos ni orden.
+
+La prueba de interfaz verifica el comportamiento en los ocho temas y en los dos anchos de tabla,
+incluidos el foco y la activación del enlace.
+
+## 25. Consumo incremental de las listas
+
+El endpoint paginado y sus parámetros `page` y `perPage` no cambian. La pantalla solicita páginas de
+20 elementos en secuencia y las acumula para presentarlas como una sola lista. Sólo solicita la
+siguiente cuando existe según `total`, no hay otra solicitud en curso y el marcador cercano al final
+entra en el área visible. La respuesta se anexa respetando el orden del backend y evitando números
+de ticket repetidos.
+
+Un cambio de filtro, búsqueda, vista, tipo u orden crea una consulta nueva: descarta la acumulación,
+vuelve a `page=1` y lleva el scroll al inicio. Un error de una página posterior conserva las páginas
+anteriores y permite reintentar exactamente la fallida. La pantalla no presenta controles ni texto
+de paginación y no solicita páginas después de alcanzar el total.
+
+La memoria de navegación vive sólo en el frontend y sólo durante la sesión actual de la página. Por
+cada bandeja conserva consulta, tickets acumulados, siguiente página y posición vertical para
+restaurarlos cuando se vuelve desde el detalle. No usa almacenamiento persistente y se pierde al
+recargar o cerrar la pestaña. No cambia el contrato del backend, los permisos ni la respuesta JSON.
+
+La variante de tabla y la de tarjetas comparten esta lógica. El indicador, el error reintentable y
+el anuncio de cuántos elementos se añadieron son presentación; no generan notificaciones ni eventos
+del ticket.
+
+## 26. Carga incremental dentro de la tabla desplazable
+
+En las variantes de tabla, el contenedor de la lista pasa a ser la raíz visible de la carga
+incremental. El marcador del siguiente bloque se evalúa respecto de su scroll vertical interno y
+mantiene la anticipación existente. Alcanzarlo solicita exactamente la página posterior; varios
+cruces no crean solicitudes paralelas y el total continúa marcando el final silencioso.
+
+La tabla conserva la respuesta paginada existente, bloques de 20 y deduplicación por número. El
+nuevo alto disponible, los encabezados fijos, el separador y los tooltips son presentación y no
+alteran endpoint, parámetros, orden, filtros, autorización ni estructura JSON. En tarjetas, el
+marcador sigue observándose respecto del desplazamiento normal de la página.
+
+Al volver desde un detalle se restauran los bloques acumulados y la posición del contenedor que
+corresponda: scroll interno en tabla y scroll de página en tarjetas. La memoria permanece efímera y
+se descarta al recargar o cerrar la pestaña, como en la sección 25.
+
+Las pruebas verifican la raíz de observación en ambas variantes, carga anticipada, exclusión de
+concurrencia, restauración del desplazamiento correcto y continuidad de error/reintento. No cambia
+ningún contrato de backend.
+
+## 27. Implementación: retorno de Esperando a En progreso
+
+### 27.1 Hallazgo reproducido
+
+El recorrido integral del 2026-10-16 dejó un ticket principal en `en espera` y entró después como
+Soporte. El selector de estado sólo ofreció escalar, resolver o cerrar, aunque el contrato del
+módulo admite volver a `en progreso`. La causa está en la matriz visible del frontend: ofrece la
+acción de empezar a Desarrollo desde un interno nuevo y a Soporte desde un interno en espera, pero
+omite el mismo retorno de Soporte en el principal.
+
+### 27.2 Comportamiento implementado
+
+Cuando un ticket principal esté en `en espera`, Soporte verá **En progreso** y podrá efectuar esa
+transición. Conserva la confirmación y el mismo endpoint, historial, correo y regeneración de Última
+acción que ya corresponden al movimiento. El Usuario continúa sin cambiar estados;
+Desarrollo continúa sin operar el principal; el Administrador conserva sólo lectura.
+
+No se añaden estados ni rutas, y no cambia la traducción contextual de `en espera`: el Usuario sigue
+viendo **Waiting for you/Esperándote** y los equipos **Waiting/Esperando**. Las pruebas cubren la
+matriz de acciones del principal e interno, la ausencia de opciones no autorizadas y el recorrido
+real Esperando → En progreso con Soporte.

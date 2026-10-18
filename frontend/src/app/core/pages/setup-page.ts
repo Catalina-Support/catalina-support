@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { TranslationService } from '../i18n/translation.service';
@@ -13,12 +13,15 @@ import { Aviso, type FormaDeAviso } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
 import { Logo } from '../components/logo';
+import { Controles } from '../components/controles';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
 import { Toast } from '../../shared/components/toast';
+import { Dialogo } from '../../shared/components/dialogo';
 import { claveDelError, memoriaDelError } from '../../shared/errores';
 import { interpolar } from '../../shared/textos';
 import type { CatalogoLocalDeIA } from '../services/settings.service';
+import { BrandService, type Marca } from '../services/brand.service';
 
 /** Los cinco pasos del asistente, en orden. */
 type Paso = 1 | 2 | 3 | 4 | 5;
@@ -85,14 +88,16 @@ interface Mensaje {
  */
 @Component({
   selector: 'app-setup-page',
-  imports: [Aviso, Boton, Campo, Logo, Selector, Tarjeta, Toast],
+  imports: [Aviso, Boton, Campo, Controles, Dialogo, Logo, Selector, Tarjeta, Toast],
   templateUrl: './setup-page.html',
 })
-export class SetupPage {
+export class SetupPage implements OnDestroy {
   protected readonly interpolar = interpolar;
   private readonly setup = inject(SetupService);
   private readonly textos = inject(TranslationService);
   private readonly router = inject(Router);
+  private readonly marca = inject(BrandService);
+  private refrescoIA: ReturnType<typeof setInterval> | null = null;
 
   /** El paso que se está rellenando, y si ya se está en el resumen final. */
   protected readonly paso = signal<Paso>(1);
@@ -108,6 +113,9 @@ export class SetupPage {
   // --- Paso 1 · la instalación ---
   protected readonly nombre = signal('');
   protected readonly idioma = signal('en');
+  protected readonly colorElegido = signal('#1d4ed8');
+  protected readonly colorResuelto = signal<Marca['colors'] | null>(null);
+  protected readonly confirmacionModelo = signal<{ id: string; parcial: boolean } | null>(null);
 
   // --- Paso 2 · cómo se entra ---
   protected readonly metodo = signal('local');
@@ -153,7 +161,10 @@ export class SetupPage {
   protected readonly iaCredencial = signal('');
   protected readonly iaPrivacidad = signal(false);
   protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly refrescandoCatalogo = signal(false);
   protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
+  protected readonly logoClaro = signal<File | null>(null);
+  protected readonly logoOscuro = signal<File | null>(null);
 
   /** Las zonas que pasan el buscador. Sin texto se enseña la lista entera, dentro de su tope. */
   protected readonly zonasFiltradas = computed(() => {
@@ -294,6 +305,7 @@ export class SetupPage {
       this.iaModelo.set('qwen2.5-1.5b-instruct');
       this.iaAutenticacion.set('none');
       this.iaPrivacidad.set(false);
+      void this.cargarCatalogoIA();
     } else {
       this.iaDireccion.set('');
       this.iaAutenticacion.set('bearer');
@@ -327,10 +339,35 @@ export class SetupPage {
   }
   protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
   protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
-  protected async cargarCatalogoIA(): Promise<void> { await this.accionModelo(async()=>{this.catalogoIA.set(await this.setup.modelosLocales());}); }
-  protected async descargarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.descargarModelo(id,this.licenciasAceptadas().has(id));this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected async cargarCatalogoIA(): Promise<void> {
+    if (this.refrescandoCatalogo()) return;
+    this.refrescandoCatalogo.set(true);
+    this.mensaje.set(null);
+    try {
+      await this.refrescarCatalogo();
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.refrescandoCatalogo.set(false);
+    }
+  }
+  protected async descargarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{this.iaModelo.set(id);await this.setup.descargarModelo(id,this.licenciasAceptadas().has(id));await this.refrescarCatalogo();}); }
   protected async activarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.setup.modelosLocales());}); }
-  protected async eliminarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.eliminarModelo(id);this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected async desactivarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.desactivarModelo(id);this.iaModelo.set('');this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected pedirEliminarModelo(id: string): void { this.confirmacionModelo.set({ id, parcial: false }); }
+  protected async cancelarDescarga(id:string):Promise<void>{await this.accionModelo(async()=>{await this.setup.cancelarDescarga(id);await this.refrescarCatalogo();});}
+  protected pedirEliminarParcial(id:string):void{this.confirmacionModelo.set({id,parcial:true});}
+  protected async confirmarEliminacion():Promise<void>{const pendiente=this.confirmacionModelo();if(!pendiente)return;this.confirmacionModelo.set(null);await this.accionModelo(async()=>{if(pendiente.parcial){await this.setup.eliminarParcial(pendiente.id);await this.refrescarCatalogo();}else{await this.setup.eliminarModelo(pendiente.id);this.catalogoIA.set(await this.setup.modelosLocales());}});}
+  protected progreso(modelo:{downloadedBytes:number;downloadBytes:number}):number{return modelo.downloadBytes>0?Math.min(100,Math.round(modelo.downloadedBytes*100/modelo.downloadBytes)):0;}
+  protected modeloLocalListo():boolean{return !!this.catalogoIA()?.models.some(m=>m.active&&m.healthy);}
+  protected elegirLogo(oscuro:boolean,event:Event):void{const file=(event.target as HTMLInputElement).files?.[0]??null;oscuro?this.logoOscuro.set(file):this.logoClaro.set(file);if(file)void this.subirLogo(oscuro,file);}
+  private async subirLogo(oscuro:boolean,file:File):Promise<void>{await this.accionModelo(async()=>{await this.setup.subirLogo(oscuro,file);await this.marca.cargar();});}
+  protected async restaurarLogo(oscuro:boolean):Promise<void>{await this.accionModelo(async()=>{await this.setup.restablecerLogo(oscuro);await this.marca.cargar();});}
+  protected urlLogo(oscuro:boolean):string{return this.marca.urlDelLogo(oscuro);}
+  protected async previsualizarColor(valor:string):Promise<void>{this.colorElegido.set(valor);if(!/^#[0-9a-fA-F]{6}$/.test(valor)){this.colorResuelto.set(null);return;}try{const marca=await this.marca.previsualizarColor(valor);this.colorResuelto.set(marca.colors);this.aplicarVistaPrevia(marca.colors);}catch{this.colorResuelto.set(null);}}
+  protected async probarModeloActivo():Promise<void>{await this.accionModelo(async()=>{const saludo=await this.setup.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting})});});}
+  private async refrescarCatalogo():Promise<void>{const catalogo=await this.setup.modelosLocales();this.catalogoIA.set(catalogo);const activo=catalogo.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=catalogo.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
+  ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
   private async accionModelo(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
 
   /** La explicación del método elegido. */
@@ -387,7 +424,11 @@ export class SetupPage {
       return;
     }
 
-    this.paso.set((this.paso() + 1) as Paso);
+    const siguiente = (this.paso() + 1) as Paso;
+    this.paso.set(siguiente);
+    if (siguiente === 5 && this.iaModo() === 'local') {
+      void this.cargarCatalogoIA();
+    }
   }
 
   /** Vuelve atrás sin guardar: lo escrito se queda donde está. */
@@ -488,6 +529,7 @@ export class SetupPage {
         ? this.setup.guardarInstalacion({
             name: this.nombre().trim(),
             language: this.idioma(),
+            primaryColor: this.colorElegido(),
           })
         : paso === 2
           ? this.setup.guardarEntrada({
@@ -578,6 +620,8 @@ export class SetupPage {
     if (conservarEscrito) {
       this.nombre.set(estado.name);
       this.cambiarIdioma(estado.language || 'en');
+      this.colorElegido.set(estado.primaryColor || '#1d4ed8');
+      void this.previsualizarColor(this.colorElegido());
     }
 
     this.metodo.set(estado.entryMethod || 'local');
@@ -626,5 +670,13 @@ export class SetupPage {
       });
     }
     return this.textos.error(key);
+  }
+
+  private aplicarVistaPrevia(colors: Marca['colors']): void {
+    const raiz = document.documentElement.style;
+    raiz.setProperty('--institucional-claro', colors.light);
+    raiz.setProperty('--institucional-oscuro', colors.dark);
+    raiz.setProperty('--institucional-texto-claro', colors.onLight);
+    raiz.setProperty('--institucional-texto-oscuro', colors.onDark);
   }
 }

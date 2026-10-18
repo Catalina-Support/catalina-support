@@ -71,10 +71,10 @@
       </div>
     }
 
-    @if (ticket().reason) {
+    @if (ticket().escalationReason) {
       <p class="text-sm text-apagado">
-        <strong class="text-texto">{{ t().tickets.motivoDelEscalado }}:</strong>
-        {{ ticket().reason }}
+        <strong class="text-texto">{{ t().tickets.escalationReason }}:</strong>
+        {{ ticket().escalationReason }}
       </p>
     }
   </header>
@@ -83,7 +83,9 @@
     <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
   }
 
-  <div class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+  <div
+    [class]="soloLaConversacion() ? 'grid grid-cols-1 gap-4' : 'grid gap-4 lg:grid-cols-[2fr_1fr]'"
+  >
     <!-- ------------------------------------------------------- la conversación -->
     <section class="flex flex-col gap-4">
       <!--
@@ -128,15 +130,13 @@
           />
 
           @if (puedeMejorarConIA()) {
-            <div>
-              <app-boton
-                forma="secundario"
-                nombreDeIcono="ia"
-                [texto]="t().tickets.iaRedaccionAbrir"
-                [deshabilitado]="!elDeLaDescripcion.textoPlano()"
-                (pulsado)="abrirMejora('description', elDeLaDescripcion)"
-              />
-            </div>
+            <app-mejorar-redaccion
+              [numero]="ticket().number"
+              editor="description"
+              [borrador]="elDeLaDescripcion.textoPlano()"
+              (aplicado)="aplicarMejoraDescripcion($event)"
+              (fallido)="mostrarErrorDeRedaccion($event)"
+            />
           }
 
           <div class="flex flex-wrap gap-2">
@@ -232,15 +232,13 @@
               />
 
               @if (puedeMejorarConIA()) {
-                <div>
-                  <app-boton
-                    forma="secundario"
-                    nombreDeIcono="ia"
-                    [texto]="t().tickets.iaRedaccionAbrir"
-                    [deshabilitado]="!elDeLaEdicion.textoPlano()"
-                    (pulsado)="abrirMejora('editedComment', elDeLaEdicion)"
-                  />
-                </div>
+                <app-mejorar-redaccion
+                  [numero]="ticket().number"
+                  editor="comment"
+                  [borrador]="elDeLaEdicion.textoPlano()"
+                  (aplicado)="aplicarMejoraEdicion($event)"
+                  (fallido)="mostrarErrorDeRedaccion($event)"
+                />
               }
 
               <div class="flex flex-wrap gap-2">
@@ -310,7 +308,6 @@
             #elDelComentario
             [identificador]="'comentario-' + ticket().number"
             [etiqueta]="t().tickets.escribirComentario"
-            [ayuda]="t().tickets.comentarioAyuda"
             [textos]="textosDelEditor()"
             [direcciones]="direccionesPorNombre()"
             [personas]="personasParaEtiquetar()"
@@ -321,15 +318,13 @@
           />
 
           @if (puedeMejorarConIA()) {
-            <div>
-              <app-boton
-                forma="secundario"
-                nombreDeIcono="ia"
-                [texto]="t().tickets.iaRedaccionAbrir"
-                [deshabilitado]="!elDelComentario.textoPlano()"
-                (pulsado)="abrirMejora('comment', elDelComentario)"
-              />
-            </div>
+            <app-mejorar-redaccion
+              [numero]="ticket().number"
+              editor="comment"
+              [borrador]="elDelComentario.textoPlano()"
+              (aplicado)="aplicarMejoraComentario($event)"
+              (fallido)="mostrarErrorDeRedaccion($event)"
+            />
           }
 
           <!--
@@ -441,6 +436,54 @@
                   />
                 } @else {
                   {{ ticket().category?.name ?? '—' }}
+                }
+              </dd>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.prioridad }}:</dt>
+              <dd class="text-texto">
+                @if (puedeCambiarPrioridad() && editandoPrioridad()) {
+                  <app-selector
+                    [identificador]="'prioridad-' + ticket().number"
+                    [etiqueta]="t().tickets.prioridad"
+                    [etiquetaVisible]="false"
+                    [opciones]="opcionesDePrioridad()"
+                    [valor]="prioridadElegida()"
+                    (valorChange)="prioridadElegida.set($any($event))"
+                  />
+                  <span class="mt-2 flex flex-wrap gap-2">
+                    <app-boton
+                      [texto]="t().tickets.guardar"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="guardarPrioridad()"
+                    />
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.cancelar"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="cancelarPrioridad()"
+                    />
+                  </span>
+                } @else {
+                  {{
+                    prioridadElegida() === 'low'
+                      ? t().tickets.prioridadBaja
+                      : prioridadElegida() === 'high'
+                        ? t().tickets.prioridadAlta
+                        : prioridadElegida() === 'critical'
+                          ? t().tickets.prioridadCritica
+                          : t().tickets.prioridadMedia
+                  }}
+                  @if (puedeCambiarPrioridad()) {
+                    <app-boton
+                      forma="secundario"
+                      [soloIcono]="true"
+                      nombreDeIcono="editar"
+                      [etiqueta]="t().tickets.cambiarPrioridad"
+                      (pulsado)="abrirPrioridad()"
+                    />
+                  }
                 }
               </dd>
             </div>
@@ -620,25 +663,20 @@
         <app-tarjeta nivel="h2" [titulo]="t().tickets.resumenes">
           <div class="flex flex-col gap-4 text-sm">
             <div class="flex flex-col gap-1">
-              <span class="font-medium text-texto">{{ t().tickets.columnaMotivo }}</span>
-              <p class="text-texto">{{ motivo() }}</p>
+              <span class="font-medium text-texto">{{ t().tickets.summary }}</span>
+              <p class="text-texto">{{ summary() }}</p>
+              @if (estadoDelResumen(ticket().insights?.summary); as estado) {
+                <p class="text-xs text-aviso" role="status">{{ estado }}</p>
+              }
             </div>
 
             <div class="flex flex-col gap-1">
               <span class="font-medium text-texto">{{ t().tickets.columnaUltimaAccion }}</span>
               <p class="text-apagado">{{ ultimaAccion() }}</p>
+              @if (estadoDelResumen(ticket().insights?.ultimaAccion); as estado) {
+                <p class="text-xs text-aviso" role="status">{{ estado }}</p>
+              }
             </div>
-
-            @if (puedeRegenerar()) {
-              <div>
-                <app-boton
-                  forma="secundario"
-                  [texto]="trabajando() ? t().tickets.regenerando : t().tickets.regenerar"
-                  [deshabilitado]="trabajando()"
-                  (pulsado)="regenerar()"
-                />
-              </div>
-            }
           </div>
         </app-tarjeta>
 
@@ -694,14 +732,6 @@
         </div>
       </div>
     </app-dialogo>
-  }
-
-  @if (puedeMejorarConIA()) {
-    <app-mejorar-redaccion
-      #modalDeRedaccion
-      [numero]="ticket().number"
-      (aplicado)="aplicarMejora($event)"
-    />
   }
 
   <!--
@@ -787,3 +817,10 @@
     }
   </app-dialogo>
 </article>
+@if (toastPrioridad(); as toast) {
+  <app-toast
+    [mensaje]="toast"
+    [etiquetaCerrar]="t().comun.cerrar"
+    (cerrado)="toastPrioridad.set(null)"
+  />
+}

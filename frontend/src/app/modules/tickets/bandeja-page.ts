@@ -1,5 +1,17 @@
-import { Component, type OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  type OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { BrandService } from '../../core/services/brand.service';
@@ -29,11 +41,13 @@ import {
   type Categoria,
   type FiltrosDeBandeja,
   type PaginaDeTickets,
+  type Prioridad,
   type Ticket,
 } from './tickets.service';
 
-/** A partir de aquí la bandeja se pinta con la tabla: por debajo, con tarjetas (sección 7). */
+/** Anchos del contenido, no de la ventana: el menú lateral también consume espacio. */
 const ANCHO_DE_TABLA = 768;
+const ANCHO_DE_TABLA_COMPLETA = 1240;
 
 /**
  * Cuánto se espera entre relecturas y cuántas se hacen como mucho mientras el motor siga pendiente.
@@ -45,6 +59,15 @@ const ANCHO_DE_TABLA = 768;
  */
 const ESPERA_DEL_MOTOR = 8000;
 const INTENTOS_DEL_MOTOR = 8;
+
+interface EstadoDeNavegacion {
+  readonly filtros: FiltrosDeBandeja;
+  readonly pagina: PaginaDeTickets;
+  readonly scrollY: number;
+}
+
+/** Memoria efímera: desaparece al recargar la pestaña porque nunca sale del módulo. */
+const ESTADOS_DE_NAVEGACION = new Map<string, EstadoDeNavegacion>();
 
 /** Lo que se espera antes de buscar: escribir un número entero es una búsqueda, no seis. */
 
@@ -70,12 +93,13 @@ const INTENTOS_DEL_MOTOR = 8;
   imports: [RouterLink, Aviso, Boton, Campo, Conmutador, Dialogo, Estado],
   templateUrl: './bandeja-page.html',
 })
-export class BandejaPage implements OnInit, OnDestroy {
+export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly tickets = inject(TicketsService);
   private readonly textos = inject(TranslationService);
   private readonly marca = inject(BrandService);
   private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly pagina = signal<PaginaDeTickets>({
     tickets: [],
@@ -107,7 +131,11 @@ export class BandejaPage implements OnInit, OnDestroy {
   /** El catálogo, para el chip de categoría. Lo ven todos los que han entrado. */
   protected readonly categorias = signal<readonly Categoria[]>([]);
   protected readonly cargando = signal(true);
+  protected readonly cargandoMas = signal(false);
+  protected readonly errorCargaMas = signal<string | null>(null);
+  protected readonly anuncioCarga = signal('');
   protected readonly mensaje = signal<MensajeDePantalla | null>(null);
+  protected readonly tooltipAbierto = signal<string | null>(null);
 
   /** Las relecturas que lleva hechas la vigilancia del motor y la que tiene programada, si hay alguna. */
   private intentosDelMotor = 0;
@@ -119,8 +147,22 @@ export class BandejaPage implements OnInit, OnDestroy {
    */
   readonly listado = input<'mios' | 'principal' | 'interno'>('mios');
 
-  /** Tabla en PC y tarjetas en móvil: se elige con una consulta para que no existan las dos a la vez. */
+  private readonly contenedor = viewChild<ElementRef<HTMLElement>>('contenedor');
+  private readonly contenedorLista = viewChild<ElementRef<HTMLElement>>('contenedorLista');
+  private readonly marcadorDeCarga = viewChild<ElementRef<HTMLElement>>('marcadorDeCarga');
+  private observadorDeAncho: ResizeObserver | null = null;
+  private observadorDeCarga: IntersectionObserver | null = null;
+  /** Invalida respuestas tardías cuando la persona cambia los filtros mientras llega una página. */
+  private versionDeConsulta = 0;
+  private readonly consultaDeTabla = consultaDeAncho(ANCHO_DE_TABLA);
+  private readonly alCambiarAnchoDeTabla = (evento: MediaQueryListEvent) => {
+    this.esAncha.set(evento.matches);
+    if (evento.matches) setTimeout(() => this.llevarPaginaAlInicio(), 50);
+  };
+
+  /** Desde 768 px existe la tabla; por debajo sólo existen las tarjetas. */
   protected readonly esAncha = signal(esPantallaAncha(ANCHO_DE_TABLA));
+  protected readonly muestraPersonas = signal(true);
 
   protected readonly papel = computed(() => this.sesion.usuario()?.role ?? '');
   protected readonly esUsuario = computed(() => this.papel() === 'usuario');
@@ -143,9 +185,7 @@ export class BandejaPage implements OnInit, OnDestroy {
   /** Si la bandeja enseña internos, que es lo que decide los chips de estado y el nombre de las cosas. */
   protected readonly mirandoInternos = computed(() => this.filtros().type === TIPO_INTERNO);
 
-  protected readonly paginas = computed(() =>
-    Math.max(1, Math.ceil(this.pagina().total / (this.pagina().perPage || 1))),
-  );
+  protected readonly hayMas = computed(() => this.pagina().tickets.length < this.pagina().total);
 
   /** Si esta lista lleva el chip de tipo: «Mis tickets» de Soporte y Desarrollo, y la del Administrador. */
   /**
@@ -186,9 +226,43 @@ export class BandejaPage implements OnInit, OnDestroy {
   );
 
   constructor() {
-    consultaDeAncho(ANCHO_DE_TABLA)?.addEventListener('change', (evento) =>
-      this.esAncha.set(evento.matches),
+    effect(() => {
+      const marcador = this.marcadorDeCarga()?.nativeElement;
+      const hayMas = this.hayMas();
+      const raiz = this.esAncha() ? (this.contenedorLista()?.nativeElement ?? null) : null;
+      this.observadorDeCarga?.disconnect();
+      this.observadorDeCarga = null;
+
+      if (!marcador || !hayMas || typeof IntersectionObserver === 'undefined') return;
+      this.observadorDeCarga = new IntersectionObserver(
+        ([entrada]) => {
+          if (entrada.isIntersecting) void this.cargarMasTickets();
+        },
+        { root: raiz, rootMargin: '400px 0px' },
+      );
+      this.observadorDeCarga.observe(marcador);
+    });
+  }
+
+  ngAfterViewInit(): void {
+    this.consultaDeTabla?.addEventListener('change', this.alCambiarAnchoDeTabla);
+    if (this.esAncha()) setTimeout(() => this.llevarPaginaAlInicio(), 50);
+    const elemento = this.contenedor()?.nativeElement;
+    if (!elemento || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const actualizar = (ancho: number) => {
+      // JSDOM no calcula geometría: en las pruebas se conserva la tabla completa por defecto.
+      if (ancho <= 0) return;
+      this.muestraPersonas.set(ancho >= ANCHO_DE_TABLA_COMPLETA);
+    };
+
+    actualizar(elemento.getBoundingClientRect().width);
+    this.observadorDeAncho = new ResizeObserver(([entrada]) =>
+      actualizar(entrada.contentRect.width),
     );
+    this.observadorDeAncho.observe(elemento);
   }
 
   /**
@@ -200,13 +274,69 @@ export class BandejaPage implements OnInit, OnDestroy {
     // El tipo de ticket: el que fija la lista cuando es una del «todo», y si no el de siempre —el
     // usuario y Soporte, los principales; Desarrollo, los internos; el Administrador, los principales,
     // que puede cambiar con su chip—.
-    this.filtros.set({ ...FILTROS_VACIOS, ...this.vistaInicial(), type: this.tipoInicial() });
-    void this.cargar();
+    const consulta = this.route.snapshot.queryParamMap;
+    const priorities = consulta.getAll('priority').filter(esPrioridad);
+    const view =
+      consulta.get('view') === 'all' ? '' : (consulta.get('view') ?? this.vistaInicial().view);
+    this.filtros.set({
+      ...FILTROS_VACIOS,
+      ...this.vistaInicial(),
+      view,
+      type: consulta.get('type') === 'all' ? '' : (consulta.get('type') ?? this.tipoInicial(view)),
+      state: consulta.get('state') ?? '',
+      q: consulta.get('q') ?? '',
+      category: consulta.get('category') ?? '',
+      tag: consulta.get('tag') ?? '',
+      priorities,
+      order: consulta.get('order') === 'updated' ? 'updated' : 'priority',
+      page: 1,
+    });
+    const guardado = ESTADOS_DE_NAVEGACION.get(this.claveDeNavegacion());
+    if (guardado) {
+      ESTADOS_DE_NAVEGACION.delete(this.claveDeNavegacion());
+      this.filtros.set({ ...guardado.filtros });
+      this.pagina.set(guardado.pagina);
+      this.cargando.set(false);
+      this.vigilarElMotor();
+      // El enrutador restaura primero su propia posición (arriba); se aplica la memoria de esta
+      // bandeja justo después para que no la sobrescriba al terminar la navegación.
+      setTimeout(() => {
+        if (this.esAncha()) {
+          const lista = this.contenedorLista()?.nativeElement;
+          if (lista) lista.scrollTop = guardado.scrollY;
+        } else {
+          document.documentElement.scrollTop = guardado.scrollY;
+          document.body.scrollTop = guardado.scrollY;
+        }
+      }, 50);
+    } else {
+      void this.cargar();
+    }
     void this.cargarCategorias();
   }
 
   protected t() {
     return this.textos.textos();
+  }
+
+  protected evaluarTooltip(clave: string, contenido: HTMLElement): void {
+    const truncado =
+      contenido.scrollHeight > contenido.clientHeight + 1 ||
+      contenido.scrollWidth > contenido.clientWidth + 1;
+    this.tooltipAbierto.set(truncado ? clave : null);
+  }
+
+  protected cerrarTooltip(clave: string): void {
+    if (this.tooltipAbierto() === clave) this.tooltipAbierto.set(null);
+  }
+
+  protected tooltipVisible(clave: string): boolean {
+    return this.tooltipAbierto() === clave;
+  }
+
+  private llevarPaginaAlInicio(): void {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }
 
   /** El título de la pantalla, que es como se llama esta lista. */
@@ -226,7 +356,7 @@ export class BandejaPage implements OnInit, OnDestroy {
 
   /** Los chips del estado: los del tipo de ticket que se está mirando. */
   protected opcionesDeEstado(): readonly OpcionConmutador[] {
-    return opcionesDeEstado(this.t(), this.mirandoInternos());
+    return opcionesDeEstado(this.t(), this.mirandoInternos(), this.esUsuario());
   }
 
   /** El chip de tipo: lo lleva quien puede tener de los dos —Soporte, Desarrollo y el Administrador—. */
@@ -265,22 +395,12 @@ export class BandejaPage implements OnInit, OnDestroy {
   }
 
   protected responsable(ticket: Ticket): string {
-    return nombreDe(ticket.assignee) || this.t().tickets.sinResponsable;
+    return nombreDe(ticket.assignee) || '—';
   }
 
-  /**
-   * El motivo del ticket.
-   *
-   * **En un interno es el del escalado**, que ya está escrito y no se le pide al motor
-   * (`docs/modules/ai.md`, decisión 5); en un principal, lo que redactó el motor, en el idioma de
-   * quien mira.
-   */
-  protected motivo(ticket: Ticket): string {
-    if (ticket.internal && ticket.reason) {
-      return ticket.reason;
-    }
-
-    return textoDelResumen(ticket.insights?.motivo, this.textos.idioma(), this.t());
+  /** Summary estable del planteamiento original. */
+  protected summary(ticket: Ticket): string {
+    return textoDelResumen(ticket.insights?.summary, this.textos.idioma(), this.t());
   }
 
   /** Y la última acción. */
@@ -292,6 +412,51 @@ export class BandejaPage implements OnInit, OnDestroy {
     return fechaHora(ticket.updatedAt, this.textos.idioma(), this.marca.zonaHoraria());
   }
 
+  protected fechaActualizada(ticket: Ticket): string {
+    return this.actualizado(ticket).split(',')[0]?.trim() || '—';
+  }
+
+  protected horaActualizada(ticket: Ticket): string {
+    return this.actualizado(ticket).split(',').slice(1).join(',').trim();
+  }
+
+  protected etiquetasVisibles(ticket: Ticket): readonly string[] {
+    return (ticket.tags ?? []).slice(0, 2);
+  }
+
+  protected etiquetasOcultas(ticket: Ticket): readonly string[] {
+    return (ticket.tags ?? []).slice(2);
+  }
+
+  protected prioridad(ticket: Ticket): string {
+    const p = ticket.priority ?? 'medium';
+    return this.etiquetaDePrioridad(p);
+  }
+
+  protected iconoDePrioridad(prioridad: Prioridad): string {
+    return { low: '↓', medium: '•', high: '↑', critical: '!' }[prioridad];
+  }
+
+  protected etiquetaDePrioridad(prioridad: Prioridad): string {
+    const t = this.t().tickets;
+    return {
+      low: t.prioridadBaja,
+      medium: t.prioridadMedia,
+      high: t.prioridadAlta,
+      critical: t.prioridadCritica,
+    }[prioridad];
+  }
+
+  protected alternarPrioridad(prioridad: Prioridad, activa: boolean): void {
+    const actuales = this.borrador().priorities ?? [];
+    this.borrador.update((filtros) => ({
+      ...filtros,
+      priorities: activa
+        ? [...actuales, prioridad]
+        : actuales.filter((valor) => valor !== prioridad),
+    }));
+  }
+
   protected hayFiltros(): boolean {
     const filtros = this.filtros();
     return Boolean(
@@ -299,6 +464,7 @@ export class BandejaPage implements OnInit, OnDestroy {
       filtros.q ||
       filtros.category ||
       filtros.tag ||
+      filtros.priorities?.length ||
       (this.conChipDeTipo() && filtros.type !== this.tipoInicial()),
     );
   }
@@ -311,7 +477,7 @@ export class BandejaPage implements OnInit, OnDestroy {
       ...(clave === 'view' ? { type: this.tipoInicial(valor) } : {}),
       page: 1,
     }));
-    void this.cargar();
+    void this.reiniciarYCargar();
   }
 
   /** Abre el modal con lo que ya está filtrado, para corregirlo en vez de empezar de cero. */
@@ -329,7 +495,7 @@ export class BandejaPage implements OnInit, OnDestroy {
   protected aplicarBusqueda(): void {
     this.filtros.set({ ...this.borrador(), page: 1 });
     this.buscando.set(false);
-    void this.cargar();
+    void this.reiniciarYCargar();
   }
 
   /** Lo que se escribe en el modal: **no filtra todavía**, sólo rellena el borrador. */
@@ -393,6 +559,9 @@ export class BandejaPage implements OnInit, OnDestroy {
     if (filtros.tag) {
       puestos.push(this.t().tickets.filtroEtiqueta);
     }
+    if (filtros.priorities?.length) {
+      puestos.push(this.t().tickets.filtroPrioridad);
+    }
 
     return puestos;
   }
@@ -402,16 +571,15 @@ export class BandejaPage implements OnInit, OnDestroy {
     this.borrador.set({ ...FILTROS_VACIOS, type: this.tipoInicial() });
     this.filtros.set({ ...FILTROS_VACIOS, type: this.tipoInicial() });
     this.buscando.set(false);
-    void this.cargar();
+    void this.reiniciarYCargar();
   }
 
-  protected irAPagina(pagina: number): void {
-    if (pagina < 1 || pagina > this.paginas()) {
-      return;
-    }
+  protected reintentarCarga(): void {
+    void this.cargarMasTickets();
+  }
 
-    this.filtros.update((filtros) => ({ ...filtros, page: pagina }));
-    void this.cargar();
+  protected conservarAlAbrir(): void {
+    this.guardarEstadoDeNavegacion();
   }
 
   protected irANuevo(): void {
@@ -471,21 +639,94 @@ export class BandejaPage implements OnInit, OnDestroy {
   }
 
   private async cargar(): Promise<void> {
+    void this.sincronizarDireccion();
     await this.leerLaLista();
     this.vigilarElMotor();
   }
 
+  private async reiniciarYCargar(): Promise<void> {
+    this.versionDeConsulta += 1;
+    this.filtros.update((filtros) => ({ ...filtros, page: 1 }));
+    this.pagina.set({ tickets: [], total: 0, page: 1, perPage: 20 });
+    this.cargandoMas.set(false);
+    this.errorCargaMas.set(null);
+    this.anuncioCarga.set('');
+    if (this.esAncha()) {
+      const lista = this.contenedorLista()?.nativeElement;
+      if (lista) lista.scrollTop = 0;
+    } else {
+      this.llevarPaginaAlInicio();
+    }
+    await this.cargar();
+  }
+
+  private sincronizarDireccion(): Promise<boolean> {
+    const f = this.filtros();
+    return this.router.navigate([], {
+      relativeTo: this.route,
+      replaceUrl: true,
+      queryParams: {
+        type: this.conChipDeTipo() && f.type !== this.tipoInicial(f.view) ? f.type || 'all' : null,
+        state: f.state || null,
+        q: f.q || null,
+        category: f.category || null,
+        tag: f.tag || null,
+        view: this.conChipDeVista() && f.view !== this.vistaInicial().view ? f.view || 'all' : null,
+        priority: f.priorities?.length ? f.priorities : null,
+        order: f.order === 'updated' ? 'updated' : null,
+        page: null,
+      },
+    });
+  }
+
   /** La petición de la lista, sin tocar la vigilancia del motor: la comparten la carga y la relectura. */
   private async leerLaLista(): Promise<void> {
+    const version = this.versionDeConsulta;
     this.cargando.set(true);
 
     try {
-      this.pagina.set(await this.tickets.listar(this.filtrosDeLaLista()));
+      const pagina = await this.tickets.listar(this.filtrosDeLaLista());
+      if (version !== this.versionDeConsulta) return;
+      this.pagina.set(pagina);
     } catch (error) {
+      if (version !== this.versionDeConsulta) return;
       this.pagina.set({ tickets: [], total: 0, page: 1, perPage: 0 });
       this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
     } finally {
-      this.cargando.set(false);
+      if (version === this.versionDeConsulta) this.cargando.set(false);
+    }
+  }
+
+  private async cargarMasTickets(): Promise<void> {
+    if (this.cargando() || this.cargandoMas() || !this.hayMas()) return;
+
+    this.cargandoMas.set(true);
+    this.errorCargaMas.set(null);
+    const version = this.versionDeConsulta;
+    const paginaSiguiente = this.pagina().page + 1;
+
+    try {
+      const recibida = await this.tickets.listar({
+        ...this.filtrosDeLaLista(),
+        page: paginaSiguiente,
+      });
+      if (version !== this.versionDeConsulta) return;
+      const conocidos = new Set(this.pagina().tickets.map((ticket) => ticket.number));
+      const nuevos = recibida.tickets.filter((ticket) => !conocidos.has(ticket.number));
+      this.pagina.update((actual) => ({
+        ...recibida,
+        tickets: [...actual.tickets, ...nuevos],
+      }));
+      this.anuncioCarga.set(
+        interpolar(this.t().tickets.cargaMasAnuncio, { n: String(nuevos.length) }),
+      );
+      this.programarRelectura();
+    } catch {
+      if (version === this.versionDeConsulta) {
+        this.errorCargaMas.set(this.t().tickets.cargaMasError);
+      }
+    } finally {
+      if (version === this.versionDeConsulta) this.cargandoMas.set(false);
     }
   }
 
@@ -518,7 +759,7 @@ export class BandejaPage implements OnInit, OnDestroy {
     this.temporizadorDelMotor = setTimeout(() => {
       this.temporizadorDelMotor = null;
       this.intentosDelMotor += 1;
-      void this.leerLaLista().then(() => this.programarRelectura());
+      void this.refrescarListaCargada().then(() => this.programarRelectura());
     }, ESPERA_DEL_MOTOR);
   }
 
@@ -526,15 +767,54 @@ export class BandejaPage implements OnInit, OnDestroy {
   private hayResumenesPendientes(): boolean {
     return this.pagina().tickets.some(
       (ticket) =>
-        ticket.insights?.motivo.state === 'pendiente' ||
+        ticket.insights?.summary.state === 'pendiente' ||
         ticket.insights?.ultimaAccion.state === 'pendiente',
     );
   }
 
+  private async refrescarListaCargada(): Promise<void> {
+    const ultimaPagina = this.pagina().page;
+    const paginas: PaginaDeTickets[] = [];
+    try {
+      for (let page = 1; page <= ultimaPagina; page += 1) {
+        paginas.push(await this.tickets.listar({ ...this.filtrosDeLaLista(), page }));
+      }
+      const tickets = paginas.flatMap((pagina) => pagina.tickets);
+      const ultima = paginas.at(-1);
+      if (ultima) this.pagina.set({ ...ultima, tickets });
+    } catch {
+      // El refresco de IA no sustituye ni vacía lo que la persona ya está leyendo.
+    }
+  }
+
+  private claveDeNavegacion(): string {
+    const { page: _page, ...filtros } = this.filtros();
+    return `${this.listado()}:${JSON.stringify(filtros)}`;
+  }
+
+  private guardarEstadoDeNavegacion(): void {
+    const scrollY = this.esAncha()
+      ? (this.contenedorLista()?.nativeElement.scrollTop ?? 0)
+      : window.scrollY || document.documentElement.scrollTop;
+    ESTADOS_DE_NAVEGACION.set(this.claveDeNavegacion(), {
+      filtros: { ...this.filtros() },
+      pagina: this.pagina(),
+      scrollY,
+    });
+  }
+
   ngOnDestroy(): void {
+    this.observadorDeCarga?.disconnect();
+    this.consultaDeTabla?.removeEventListener('change', this.alCambiarAnchoDeTabla);
+    this.observadorDeAncho?.disconnect();
+    this.observadorDeAncho = null;
     if (this.temporizadorDelMotor !== null) {
       clearTimeout(this.temporizadorDelMotor);
       this.temporizadorDelMotor = null;
     }
   }
+}
+
+function esPrioridad(valor: string): valor is Prioridad {
+  return ['low', 'medium', 'high', 'critical'].includes(valor);
 }

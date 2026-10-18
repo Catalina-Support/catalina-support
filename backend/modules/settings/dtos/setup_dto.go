@@ -7,8 +7,9 @@ import "catalina-support/backend/modules/settings/services"
 // (docs/primer-arranque.md, sección 3).
 type SetupRequest struct {
 	// Paso 1: la instalación.
-	Name     string `json:"name"`
-	Language string `json:"language"`
+	Name         string `json:"name"`
+	Language     string `json:"language"`
+	PrimaryColor string `json:"primaryColor"`
 
 	// Paso 2: cómo se entra.
 	EntryMethod string       `json:"entryMethod"`
@@ -44,6 +45,7 @@ func NewSetupStep(entrada SetupRequest) services.PasoDeInstalacion {
 	return services.PasoDeInstalacion{
 		Name:         entrada.Name,
 		Language:     entrada.Language,
+		PrimaryColor: entrada.PrimaryColor,
 		EntryMethod:  entrada.EntryMethod,
 		Directory:    NewDirectoryInput(entrada.Directory),
 		Keycloak:     NewKeycloakInput(entrada.Keycloak),
@@ -71,6 +73,7 @@ type SetupResponse struct {
 	AIRequired   bool   `json:"aiRequired"`
 	Name         string `json:"name"`
 	Language     string `json:"language"`
+	PrimaryColor string `json:"primaryColor"`
 	EntryMethod  string `json:"entryMethod"`
 	TimeZone     string `json:"timeZone"`
 	PublicAppURL string `json:"publicAppUrl"`
@@ -103,6 +106,7 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 		AIRequired:   estado.AIRequired,
 		Name:         estado.Name,
 		Language:     estado.Language,
+		PrimaryColor: estado.PrimaryColor,
 		EntryMethod:  estado.EntryMethod,
 		TimeZone:     estado.TimeZone,
 		PublicAppURL: estado.PublicAppURL,

@@ -5,7 +5,7 @@ import { BrandService } from '../services/brand.service';
 import { ThemeService } from '../services/theme.service';
 
 /** Dónde se está enseñando el logo, que es lo que decide su tamaño (interfaz-y-experiencia, 6.4). */
-export type TamanoLogo = 'entrada' | 'menu' | 'cabecera';
+export type TamanoLogo = 'entrada' | 'menu' | 'menu-grande' | 'cabecera';
 
 /**
  * El logo de la instalación.
@@ -48,6 +48,10 @@ export class Logo {
       return `${base} h-10 w-10 p-1`;
     }
 
+    if (this.tamano() === 'menu-grande') {
+      return `${base} h-20 w-20 p-2`;
+    }
+
     // En el primer arranque acompaña al título y a su explicación: 80 px ocupan el mismo bloque
     // visual que esas tres líneas sin convertirlo en el logo protagonista de la pantalla de entrada.
     if (this.tamano() === 'cabecera') {
@@ -65,7 +69,7 @@ export class Logo {
   }
 
   protected imagen(): string {
-    return this.tamano() === 'menu' || this.tamano() === 'cabecera'
+    return this.tamano() === 'menu' || this.tamano() === 'menu-grande' || this.tamano() === 'cabecera'
       ? 'h-full w-full object-contain'
       : 'max-h-full max-w-full object-contain';
   }

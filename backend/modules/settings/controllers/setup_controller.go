@@ -7,6 +7,7 @@ import (
 
 	"catalina-support/backend/modules/settings/dtos"
 	"catalina-support/backend/modules/settings/services"
+	"catalina-support/backend/shared/auth"
 	"catalina-support/backend/shared/httpx"
 )
 
@@ -87,6 +88,20 @@ func (c *SetupController) ActivateAIModel(w http.ResponseWriter, r *http.Request
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+func (c *SetupController) DeactivateAIModel(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.DeactivateAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 func (c *SetupController) DeleteAIModel(w http.ResponseWriter, r *http.Request) {
 	if installed, err := c.service.EstáInstalada(); err != nil {
 		c.fail(w, err)
@@ -100,6 +115,89 @@ func (c *SetupController) DeleteAIModel(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) CancelAIModelDownload(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.CancelAIModelDownload(r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) DeleteAIModelPartial(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.DeleteAIModelPartial(r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) UploadLogo(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, services.MaxLogoBytes+1024)
+	file, _, err := r.FormFile("logo")
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+			return
+		}
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
+		return
+	}
+	defer file.Close()
+	if _, err = c.service.SaveLogo(r.URL.Query().Get("variant"), file, auth.Identity{Factory: true}); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) DeleteLogo(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.RemoveLogo(r.URL.Query().Get("variant"), auth.Identity{Factory: true}); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) TestActiveAIModel(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	out, err := c.service.TestActiveAIModel()
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // SaveInstallation guarda el primer paso: el nombre y el idioma.
@@ -211,6 +309,8 @@ func (c *SetupController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.name.tooLong")
 	case errors.Is(err, services.ErrLanguageUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.language.unknown")
+	case errors.Is(err, services.ErrPrimaryColorInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.primaryColor.invalid")
 	case errors.Is(err, services.ErrMethodUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.method.unknown")
 	case errors.Is(err, services.ErrMethodNotConfigured):

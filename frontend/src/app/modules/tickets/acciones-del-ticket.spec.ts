@@ -206,6 +206,12 @@ describe('AccionesDelTicket', () => {
     expect(estados(host)).not.toContain('en progreso');
   });
 
+  it('Soporte puede devolver un principal en espera a en progreso', () => {
+    const host = montar({ ...EN_PROGRESO, state: 'en espera' }, 'soporte').nativeElement as HTMLElement;
+
+    expect(estados(host)).toEqual(['en progreso', 'escalado', 'resuelto', 'cerrado']);
+  });
+
   it('Desarrollo, en un interno en marcha, ve los estados de su trabajo', () => {
     const host = montar(INTERNO, 'desarrollo').nativeElement as HTMLElement;
 
@@ -263,7 +269,7 @@ describe('AccionesDelTicket', () => {
     // (decisión 88). El único estado que pide texto es «Cerrado», con el comentario del cierre.
     const ventana = host.querySelector<HTMLDialogElement>('dialog');
     expect(ventana?.open).toBe(true);
-    expect(host.textContent).toContain('¿Pasar el ticket a «En espera»?');
+    expect(host.textContent).toContain('¿Pasar el ticket a «Esperando»?');
     expect(ventana?.querySelector('input, textarea')).toBeNull();
     expect(ventana?.textContent).toContain('El ticket queda esperando la respuesta del usuario');
   });
@@ -284,7 +290,7 @@ describe('AccionesDelTicket', () => {
 
     const peticion = http.expectOne('/api/tickets/CS-2026-0001/escalate');
     expect(peticion.request.method).toBe('POST');
-    expect(peticion.request.body).toEqual({ reason: 'Probado y descartado.' });
+    expect(peticion.request.body).toEqual({ escalationReason: 'Probado y descartado.' });
     peticion.flush({ ticket: { ...NUEVO, state: 'escalado' } });
 
     await esperar();

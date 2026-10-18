@@ -4,6 +4,7 @@ package services
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"catalina-support/backend/modules/tickets/repositories"
@@ -13,15 +14,16 @@ import (
 // Las claves de error del módulo, con el código que les toca en el controlador
 // (docs/interfaz-y-experiencia.md, sección 8: los errores viajan como claves).
 var (
-	ErrTicketNotFound  = errors.New("tickets.notFound")
-	ErrSubjectRequired = errors.New("tickets.subject.required")
-	ErrBodyRequired    = errors.New("tickets.description.required")
-	ErrReasonRequired  = errors.New("tickets.reason.required")
+	ErrTicketNotFound           = errors.New("tickets.notFound")
+	ErrSubjectRequired          = errors.New("tickets.subject.required")
+	ErrBodyRequired             = errors.New("tickets.description.required")
+	ErrEscalationReasonRequired = errors.New("tickets.escalationReason.required")
 	// ErrCommentRequired: un comentario **editado** se queda sin texto. Al escribir uno nuevo el texto
 	// puede ir vacío —un comentario puede ser sólo un adjunto—, pero dejar en blanco uno que ya se
 	// escribió no es lo mismo, y para eso está borrarlo (docs/modules/tickets.md, decisión 42).
 	ErrCommentRequired = errors.New("tickets.comment.required")
 	ErrStateUnknown    = errors.New("tickets.state.unknown")
+	ErrPriorityUnknown = errors.New("tickets.priority.unknown")
 	// ErrCierreSinComentario: **un ticket no se cierra sin decir por qué** (decisión 81). Cerrar —lo
 	// haga Soporte, Desarrollo o el propio solicitante— exige un comentario, y lo exige el servidor, no
 	// la pantalla: lo que no puede faltar lo garantiza el backend, como la categoría obligatoria.
@@ -53,7 +55,6 @@ var (
 	ErrAttachmentInvalid    = errors.New("tickets.attachment.invalid")
 	ErrWritingDraftRequired = errors.New("tickets.writing.draft.required")
 	ErrWritingEditorInvalid = errors.New("tickets.writing.editor.invalid")
-	ErrWritingToneInvalid   = errors.New("tickets.writing.tone.invalid")
 	ErrWritingUnavailable   = errors.New("tickets.writing.unavailable")
 	ErrWritingInvalid       = errors.New("tickets.writing.invalid")
 	ErrAttachmentMissing    = errors.New("tickets.attachment.notFound")
@@ -96,7 +97,8 @@ const (
 	CorreoTicketCerrado        = "ticket.closed"
 	// CorreoTicketEtiquetado es el aviso de que te han etiquetado: la plantilla número once
 	// (docs/modules/tickets.md, sección 5).
-	CorreoTicketEtiquetado = "ticket.mentioned"
+	CorreoTicketEtiquetado       = "ticket.mentioned"
+	CorreoTicketPrioridadCritica = "ticket.priorityCritical"
 )
 
 // Máximo de adjuntos y extensiones admitidas. La lista cerrada está en
@@ -148,6 +150,7 @@ type Accounts interface {
 // Mailer es lo que este módulo necesita del correo: mandar un aviso —en segundo plano— y armar la
 // dirección que va dentro, que es la misma base que la de los correos de cuenta.
 type Mailer interface {
+	Send(key, language string, to []string, data map[string]string) error
 	SendAsync(key, language string, to []string, data map[string]string)
 	Link(path string) string
 }
@@ -168,7 +171,12 @@ type GlobalLanguage interface {
 // los datos del caso; el motor sólo recibe el contexto mínimo ya autorizado.
 type WritingAssistant interface {
 	Configured() bool
-	ImproveDraft(draft, tone, recipient, ticketType, language string) (string, error)
+	ImproveDraft(draft, previousSuggestion, recipient, ticketType, language string) (WritingSuggestion, error)
+}
+
+type WritingSuggestion struct {
+	Text           string
+	QualityWarning bool
 }
 
 type Capabilities struct {
@@ -207,14 +215,15 @@ type Ticket struct {
 	Subject     string
 	Description string
 	State       string
+	Priority    string
 
 	// **La categoría y las etiquetas son del caso** (docs/modules/tickets.md, decisión 67): se guardan
 	// en el principal y **el interno las hereda al leerse**, como hereda el asunto.
 	Category *Category
 	Tags     []string
 
-	// Reason es el motivo del escalado. Sólo en los internos.
-	Reason string
+	// EscalationReason es el motivo del escalado. Sólo en los internos.
+	EscalationReason string
 	// Parent es el número del principal, en los internos.
 	Parent string
 	// Child es el número del interno, en los principales que lo tienen.
@@ -421,6 +430,31 @@ func NormalizarFiltros(filtros repositories.Filtros) repositories.Filtros {
 	if filtros.PerPage < 1 || filtros.PerPage > 100 {
 		filtros.PerPage = 25
 	}
+	validas := make([]string, 0, len(filtros.Priorities))
+	vistas := map[string]bool{}
+	for _, prioridad := range filtros.Priorities {
+		if normalizada, err := normalizarPrioridad(prioridad); err == nil && !vistas[normalizada] {
+			validas = append(validas, normalizada)
+			vistas[normalizada] = true
+		}
+	}
+	filtros.Priorities = validas
+	if filtros.Order != "updated" {
+		filtros.Order = "priority"
+	}
 
 	return filtros
+}
+
+func normalizarPrioridad(valor string) (string, error) {
+	prioridad := strings.ToLower(strings.TrimSpace(valor))
+	if prioridad == "" {
+		return repositories.PriorityMedium, nil
+	}
+	switch prioridad {
+	case repositories.PriorityLow, repositories.PriorityMedium, repositories.PriorityHigh, repositories.PriorityCritical:
+		return prioridad, nil
+	default:
+		return "", ErrPriorityUnknown
+	}
 }

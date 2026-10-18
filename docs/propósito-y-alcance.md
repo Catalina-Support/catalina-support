@@ -1,7 +1,12 @@
 # Propósito y alcance
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-25
+> **Última actualización:** 2026-10-14
+>
+> **Enmienda implementada para 1.0.0, 2026-10-14.** El responsable incorpora prioridades de ticket
+> `low`, `medium`, `high` y `critical`. Esta decisión corrige expresamente la exclusión anterior de
+> la sección 6. La sección 10 recoge el alcance acordado en las decisiones 1A–25A, con las
+> correcciones del responsable a 3A, 13A y 18A. El responsable la aprobó explícitamente.
 >
 > **Pasa a as-built el 2026-09-25**: lo que este documento define —los dos equipos, el modelo de
 > tickets, la numeración y los estados— **está implementado** en el módulo `tickets`, backend y
@@ -212,8 +217,7 @@ la conversación, la escalación o los estados, no hay producto.
 - **Adjuntos por encima de 25 MB** o almacenamiento externo: los archivos van a disco en el servidor.
 - **Roles a medida y edición de permisos**: los cuatro papeles son fijos, no se crean roles nuevos ni
   se cambian permisos desde la aplicación. La gestión de usuarios se limita al alta.
-- **Categoría y prioridad**: no existen. El asunto y la descripción bastan para triar; si más
-  adelante hacen falta, entrarán con su documento.
+- **Campos personalizados** distintos de la categoría y la prioridad cerradas para la 1.0.0.
 
 ## 7. El criterio para decidir lo dudoso: «sin ruido»
 
@@ -246,3 +250,16 @@ mueven los tickets y qué queda fuera**, y desbloquea los tres que dependen de �
 
 Ninguno de los tres habilita escribir código por sí solo: cada área necesita su documento aprobado
 antes de que se implemente nada (Regla 0 de `AGENTS.md`).
+
+## 10. Prioridad operativa para la 1.0.0
+
+Todo ticket principal tendrá una prioridad obligatoria: baja, media, alta o crítica. El Usuario la
+propone al crear y el valor predeterminado es media. Soporte puede corregirla; Desarrollo también
+puede hacerlo cuando exista un interno al que tenga acceso. La prioridad pertenece al principal y
+el interno siempre lee el mismo valor. Soporte y Desarrollo pueden modificarla cuantas veces sea
+necesario mientras el ticket esté abierto; al cerrarlo queda congelada.
+
+La prioridad sirve para identificar, filtrar y ordenar trabajo. No cambia estados, asignación,
+permisos, reparto por turnos ni tiempos de atención. La única automatización nueva es el aviso por
+correo la primera vez que un ticket llega a crítica, incluida su creación: se envía a todo Soporte
+activo y nunca bloquea la operación si falla.

@@ -1,3 +1,11 @@
+@if (toast(); as mensajeToast) {
+  <app-toast
+    [mensaje]="mensajeToast"
+    [etiquetaCerrar]="t().comun.cerrar"
+    (cerrado)="toast.set(null)"
+  />
+}
+
 <main class="mx-auto flex max-w-3xl flex-col gap-6">
   <div class="flex flex-wrap items-center gap-3">
     <!--
@@ -19,15 +27,15 @@
 
   @if (mensaje(); as aviso) {
     <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
 
-    @if (creado()) {
-      <a
-        [routerLink]="['/tickets', creado()]"
-        class="inline-flex min-h-11 w-fit items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
-      >
-        {{ t().tickets.verTicket }} {{ creado() }}
-      </a>
-    }
+  @if (creado()) {
+    <a
+      [routerLink]="['/tickets', creado()]"
+      class="inline-flex min-h-11 w-fit items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+    >
+      {{ t().tickets.verTicket }} {{ creado() }}
+    </a>
   }
 
   <app-tarjeta>
@@ -67,6 +75,15 @@
         <!-- Sin ninguna categoría activa no se puede crear: se dice, en vez de dejar rellenar y fallar. -->
         <app-aviso forma="atencion" [texto]="t().tickets.sinCategoriasActivas" />
       }
+
+      <app-selector
+        identificador="ticket-prioridad"
+        [etiqueta]="t().tickets.prioridad"
+        [ayuda]="t().tickets.prioridadAyuda"
+        [opciones]="opcionesDePrioridad()"
+        [valor]="prioridad()"
+        (valorChange)="prioridad.set($any($event))"
+      />
 
       <!--
         **El alta no pide etiquetas** (decisión del responsable, 2026-09-29, decisión 82): etiquetar

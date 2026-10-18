@@ -14,6 +14,7 @@ import (
 type CreateInput struct {
 	Subject     string
 	Description string
+	Priority    string
 	// **Todo ticket nace con una categoría** (docs/modules/tickets.md, decisión 65): es obligatoria, y
 	// el alta la exige antes de nada. Las etiquetas son opcionales y vienen como se escriben: el
 	// servicio las normaliza al guardarlas.
@@ -30,27 +31,31 @@ type CreateInput struct {
 //
 // El número y el ticket nacen **en la misma transacción**: un ticket sin número no puede existir, y
 // dos tickets creados a la vez no pueden llevarse el mismo (docs/modules/tickets.md, sección 2.2).
-func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, error) {
+func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, string, error) {
 	// El Administrador mira los tickets, no los crea (docs/usuarios-y-permisos.md, sección 3).
 	if actor.Role == auth.RoleAdministrador {
-		return Ticket{}, ErrForbidden
+		return Ticket{}, "", ErrForbidden
 	}
 
 	asunto := strings.TrimSpace(entrada.Subject)
 	if asunto == "" {
-		return Ticket{}, ErrSubjectRequired
+		return Ticket{}, "", ErrSubjectRequired
+	}
+	prioridad, err := normalizarPrioridad(entrada.Priority)
+	if err != nil {
+		return Ticket{}, "", err
 	}
 
 	// La descripción es **texto con formato** (docs/modules/tickets.md, sección 2.3): si trae HTML que
 	// no está en la lista blanca, no se guarda nada. El asunto, en cambio, sigue siendo texto plano.
 	descripcion := strings.TrimSpace(entrada.Description)
 	if descripcion == "" {
-		return Ticket{}, ErrBodyRequired
+		return Ticket{}, "", ErrBodyRequired
 	}
 
-	descripcion, err := SanearCuerpo(descripcion)
+	descripcion, err = SanearCuerpo(descripcion)
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	// **La mención vale en cualquier cuerpo del ticket** (docs/modules/tickets.md, decisión 58): la
@@ -59,7 +64,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 	// meten la mención donde sea—. Se comprueban una a una y, si alguna no vale, no se guarda nada.
 	menciones := MencionesDelCuerpo(descripcion)
 	if err := s.validarMenciones(menciones, nil, actor); err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	// **La categoría se comprueba antes de abrir la transacción y antes de repartir**: un ticket sin
@@ -67,34 +72,35 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 	// normalizan aquí, para que un texto que no vale no llegue a la base.
 	categoria, err := s.categoriaParaTicket(entrada.CategoryID)
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	etiquetas, err := NormalizarEtiquetas(entrada.Tags)
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	solicitante, err := s.solicitante(entrada.RequesterID, entrada.RequesterEmail, actor)
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	config, err := s.config.TicketSettings()
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	// El turno se decide **antes** de abrir la transacción: preguntar a `users` con una transacción
 	// abierta es dejar una conexión esperando a otra.
 	responsable, err := s.repartir(config.MainAssignment, auth.RoleSoporte, false)
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	var (
-		ticket repositories.Ticket
-		numero string
+		ticket        repositories.Ticket
+		numero        string
+		avisarCritico bool
 	)
 
 	err = s.tickets.DB().Transaction(func(tx *gorm.DB) error {
@@ -113,6 +119,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 			Subject:     asunto,
 			Description: descripcion,
 			State:       repositories.StateNuevo,
+			Priority:    prioridad,
 			CategoryID:  categoria.ID,
 			RequesterID: solicitante.ID,
 			CreatedByID: actor.ID,
@@ -120,6 +127,14 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 		})
 		if err != nil {
 			return err
+		}
+		if prioridad == repositories.PriorityCritical {
+			ahora := s.now()
+			ticket.CriticalNotifiedAt = &ahora
+			if err := s.tickets.UpdateTicket(tx, ticket); err != nil {
+				return err
+			}
+			avisarCritico = true
 		}
 
 		// **Las etiquetas se guardan con el ticket**, en la misma transacción: un ticket con una
@@ -151,17 +166,23 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 		)
 	})
 	if err != nil {
-		return Ticket{}, err
+		return Ticket{}, "", err
 	}
 
 	// El aviso sale **después** de que el ticket exista: el correo es un aviso, no la acción
 	// (docs/flujos.md, sección 2).
 	s.avisarCreacion(config, numero, asunto, solicitante, responsable, ticket.ID)
+	aviso := ""
+	if avisarCritico {
+		if err := s.avisarPrioridadCritica(ticket, solicitante); err != nil {
+			aviso = "tickets.priority.notificationFailed"
+		}
+	}
 	s.avisarEtiquetado(numero, asunto, menciones)
 
 	// Y el motor de IA empieza a redactar **sin que nadie espere**: quien abre un ticket no puede
 	// quedarse mirando un contenedor (docs/modules/ai.md, decisión 2). Los dos campos nacen aquí.
-	s.pedirAlMotor(numero, TipoMotivo, TipoUltimaAccion)
+	s.pedirAlMotor(numero, TipoSummary, TipoUltimaAccion)
 
 	return Ticket{
 		ID:          ticket.ID,
@@ -169,6 +190,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 		Subject:     ticket.Subject,
 		Description: ticket.Description,
 		State:       ticket.State,
+		Priority:    ticket.Priority,
 		Category:    aCategoria(categoria),
 		Tags:        etiquetas,
 		Requester:   &solicitante,
@@ -176,7 +198,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, erro
 		Assignee:    responsable,
 		CreatedAt:   ticket.CreatedAt,
 		UpdatedAt:   ticket.UpdatedAt,
-	}, nil
+	}, aviso, nil
 }
 
 // solicitante decide de quién es el ticket: de quien lo crea, o de quien diga Soporte.

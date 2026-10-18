@@ -84,21 +84,21 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
-| `docs/propósito-y-alcance.md` | **as-built**: define el producto (los dos equipos, el modelo de tickets, la numeración y los estados), que es lo que hace hoy `backend/modules/tickets/**` |
-| `docs/usuarios-y-permisos.md` | **as-built**: permiso acotado para que Soporte y Desarrollo mejoren borradores con IA |
-| `docs/modules/tickets.md` | **as-built**: idioma validado en resúmenes y ausencia normal del interno sin falso error |
-| `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
-| `docs/ambientes.md` | **as-built**: cuarta repetición pública completada y entorno limpio |
-| `docs/interfaz-y-experiencia.md` | **as-built**: enlace de código fuente y licencia verificado en entrada y menú |
-| `docs/modules/settings.md` | **as-built**: filas únicas ausentes sin falso error de GORM |
-| `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
-| `docs/modules/ai.md` | **as-built**: validación local del idioma global y reintento según modalidad |
-| `docs/modules/mail.md` | **as-built**: plantilla ausente sin falso error de GORM |
+| `docs/propósito-y-alcance.md` | **as-built**: incorpora prioridad a la versión 1.0.0 |
+| `docs/usuarios-y-permisos.md` | **as-built**: permisos para proponer y modificar prioridad |
+| `docs/modules/tickets.md` | **as-built**: retorno visible de Esperando a En progreso para Soporte |
+| `docs/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
+| `docs/ambientes.md` | **as-built**: guía pública resumida y demo alojada fuera del repositorio |
+| `docs/interfaz-y-experiencia.md` | **as-built**: tabla de altura disponible, cabecera fija y ayudas únicas |
+| `docs/modules/settings.md` | **as-built**: consulta automática del catálogo local |
+| `docs/primer-arranque.md` | **as-built**: catálogo automático en el paso 5 |
+| `docs/modules/ai.md` | **as-built**: resultados vigentes y recuperación automática finita |
+| `docs/modules/mail.md` | **as-built**: duodécima plantilla para prioridad crítica |
 | `docs/modules/auth.md` | **as-built**: token de contraseña ausente sin falso error de GORM |
 | `docs/modules/users.md` | **as-built**: búsquedas previas al alta de directorio sin falsos errores |
-| `docs/arquitectura.md` | **as-built**: ausencias esperadas por repositorio sin silenciar errores SQL |
-| `docs/prueba-local.md` | **as-built**: cuarta pasada pública completa y sin hallazgos abiertos |
-| `docs/proyecto-abierto.md` | **as-built**: rulesets separados y cero aprobaciones mientras exista un único mantenedor |
+| `docs/arquitectura.md` | **as-built**: migración técnica a summary y escalationReason |
+| `docs/prueba-local.md` | **as-built**: verificación del README bilingüe y capturas públicas con IA |
+| `docs/proyecto-abierto.md` | **as-built**: portada bilingüe, sitio oficial, demo y Ko-fi |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
@@ -130,14 +130,14 @@ con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `http
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
-La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintidós plantillas, `users`,
+La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veinticuatro plantillas, `users`,
 `password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
 IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
 su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
 Windows). Hay **cuatro módulos en marcha**:
 
-- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los once correos en sus dos idiomas, con vista previa y prueba—.
+- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los doce correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
@@ -208,8 +208,8 @@ reutiliza el campo de sólo lectura de `/setup`, antes del buscador, con el iden
 y actualización inmediata. La hora y el desfase permanecen debajo; se verificó en PC y móvil.
 
 **Los resultados de Configuración se ven desde la tarjeta actual** (2026-10-06): guardar, subir,
-restaurar y probar conexiones muestra un toast fijo en la ventana. Éxito e información desaparecen
-en cinco segundos; error y atención permanecen hasta cerrarse. Los avisos propios de cada tarjeta
+restaurar y probar conexiones muestra un toast fijo en la ventana. Todos los toast pueden cerrarse
+y desaparecen automáticamente en diez segundos como máximo. Los avisos propios de cada tarjeta
 siguen dentro de ella.
 
 **La instalación tiene vista de primer arranque** (2026-09-30): en una instalación **sin sellar** la
@@ -241,21 +241,26 @@ Las credenciales externas se cifran y nunca vuelven por la API. Una caída poste
 resúmenes pendientes sin impedir el trabajo normal (`docs/modules/settings.md` y
 `docs/modules/ai.md`).
 
-**Soporte y Desarrollo mejoran borradores con IA** (2026-10-08): junto a los editores de descripción
-y comentario aparece «Mejorar con IA», con cinco tonos y un modal de revisión. El backend deriva el
-destinatario del ticket, aplica los permisos del editor y entrega sólo el contexto mínimo al motor.
-Aceptar reemplaza el borrador local; guardar o publicar sigue siendo una acción separada. El Usuario
-y el Administrador no reciben esta función. Se verificó en PC y móvil sin tocar producción.
+**Soporte y Desarrollo mejoran borradores con IA** (actualizado el 2026-10-14): junto a cada editor
+autorizado aparece «Mejorar con IA». La acción genera inmediatamente en tono profesional y muestra
+una propuesta inline, seleccionable, con **Usar propuesta** y **Conservar original**; no hay modal ni
+selector de tono. Si el borrador cambia, la propuesta permanece visible pero no puede aplicarse
+hasta regenerarla, y la regeneración pide una paráfrasis distinta sin convertir la salida anterior
+en fuente. El backend deriva el destinatario, aplica permisos y entrega sólo el contexto mínimo.
+Guardar o publicar sigue siendo una acción separada; el Usuario y el Administrador no reciben esta
+función.
 
 **El botón de redacción sólo aparece con IA configurada** (2026-10-08): el detalle del ticket lleva
 `capabilities.aiWriting`, calculada con papel, editor disponible y configuración efectiva. No se
 consulta la salud para pintar el botón: una caída temporal conserva la acción y el intento muestra
-su error en el modal. La IA continúa obligatoria y el cambio se refleja al recargar el ticket.
+su error en el toast común. La IA continúa obligatoria y el cambio se refleja al recargar el ticket.
 
-**El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (AGPL-3.0-only)**,
-cómo **participar**, y **cómo levantarlo** —en local con `dev.yml` y en serio con `prod-build.sh`, la
-migración, nginx y lo que se configura desde la propia interfaz—. Queda **un hueco marcado** para las
-donaciones y la invitación a participar: el responsable lo rellenará con los datos que quiera publicar.
+**El README presenta el proyecto a quien llega de fuera en inglés y español** (`README.md` y
+`README.es.md`): qué es, que es **software libre (AGPL-3.0-only)**, cómo **participar**, probar la
+demo pública y levantarlo —en local con `dev.yml` y en serio con `prod-build.sh`, la migración,
+nginx y lo que se configura desde la propia interfaz—. Enlaza el sitio oficial, publica las once
+cuentas de demo salvo `admin`, advierte que el entorno es compartido y enlaza el apoyo voluntario en
+Ko-fi. Dos capturas reales muestran la vista doble y la ayuda de IA con la marca de fábrica.
 
 **El armazón con el menú lateral está hecho**, con sus tres zonas: el producto y su logo arriba, las
 opciones del papel en medio y los controles abajo (el nombre, el papel, el tema, el idioma y salir).
@@ -327,9 +332,16 @@ cambiar el prefijo **no cambia los números ya emitidos**, y el enlace al **edit
 que es una pantalla del módulo `mail` a propósito: llamar a `/api/mail/**` desde `settings` rompería
 la regla dura de modularidad.
 
-**El editor de los correos está hecho**: los once correos con sus dos idiomas al lado, el cuerpo con
+**El editor de los correos está hecho**: los doce correos con sus dos idiomas al lado, el cuerpo con
 sus botones de formato sobre lo seleccionado, los marcadores que se insertan al pulsarlos y una **vista
 previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
+
+**Los tickets tienen prioridad operativa** (2026-10-14): baja, media, alta y crítica, con media como
+valor inicial. El Usuario la propone al crear; Soporte la corrige desde el principal y Desarrollo
+desde el interno, mientras el ticket siga abierto. Principal e interno comparten el valor, cada
+cambio queda en el historial y las listas filtran varios niveles y ordenan por prioridad o por
+actualización. La primera llegada a crítica manda una sola vez el duodécimo correo a todo Soporte
+activo; un fallo SMTP se muestra en un toast y no revierte el cambio.
 
 **Y el idioma de la instalación es el que se le pone a una cuenta nueva** cuando quien la da de alta no
 elige otro.
@@ -361,7 +373,7 @@ de soporte manual (decisión del responsable, 2026-09-25).
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f tests.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra una instalación
-desechable aislada, en PC y en móvil, con **218 casos** (180 ejecutables y 38 que se omiten según el
+desechable aislada, en PC y en móvil, con **222 casos** (184 ejecutables y 38 que se omiten según el
 servicio, el dispositivo o el perfil). **Los dos caminos de directorio se incluyen con el perfil `directory` de `tests.yml`**,
 que levanta servicios propios, separados de los opcionales del entorno local. Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no

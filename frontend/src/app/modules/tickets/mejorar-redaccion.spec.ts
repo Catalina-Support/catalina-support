@@ -5,16 +5,6 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslationService } from '../../core/i18n/translation.service';
 import { MejorarRedaccion } from './mejorar-redaccion';
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-    this.open = true;
-  };
-  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-    this.open = false;
-    this.dispatchEvent(new Event('close'));
-  };
-});
-
 describe('MejorarRedaccion', () => {
   let fixture: ComponentFixture<MejorarRedaccion>;
   let http: HttpTestingController;
@@ -29,70 +19,110 @@ describe('MejorarRedaccion', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(MejorarRedaccion);
     fixture.componentRef.setInput('numero', 'CS-2026-0001');
+    fixture.componentRef.setInput('editor', 'comment');
+    fixture.componentRef.setInput('borrador', 'hola necesito datos');
     fixture.detectChanges();
   });
 
   afterEach(() => http.verify());
 
-  it('permite revisar el resultado y sólo lo aplica cuando se pulsa Usar este texto', async () => {
+  function boton(texto: string): HTMLButtonElement {
+    const encontrado = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ].find((candidato) => candidato.textContent?.trim() === texto);
+    expect(encontrado).toBeTruthy();
+    return encontrado!;
+  }
+
+  it('genera sin modal ni tono y sólo aplica la propuesta cuando se confirma', async () => {
     let aplicado = '';
     fixture.componentInstance.aplicado.subscribe((texto) => (aplicado = texto));
-    fixture.componentInstance.abrirCon('hola necesito datos', 'comment');
-    fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector<HTMLDialogElement>('dialog')?.open).toBe(true);
-    expect(host.querySelector<HTMLTextAreaElement>('#ia-redaccion-borrador')?.value).toBe(
-      'hola necesito datos',
-    );
-
-    const mejorar = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
-      (boton) => boton.textContent?.trim() === 'Mejorar',
-    );
-    mejorar!.click();
-
+    boton('Mejorar con IA').click();
     const peticion = http.expectOne('/api/tickets/CS-2026-0001/writing/improve');
-    expect(peticion.request.method).toBe('POST');
-    expect(peticion.request.body).toEqual({
-      editor: 'comment',
-      draft: 'hola necesito datos',
-      tone: 'professional',
-    });
-    peticion.flush({ text: 'Hola, ¿podría compartir los datos necesarios?' });
+    expect(peticion.request.body).toEqual({ editor: 'comment', draft: 'hola necesito datos' });
+    peticion.flush({ text: 'Hola, ¿podría compartir los datos necesarios?', qualityWarning: false });
 
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(aplicado).toBe('');
-    expect(host.querySelector<HTMLTextAreaElement>('#ia-redaccion-borrador')?.value).toBe(
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(host.querySelector('[role="region"]')?.textContent).toContain(
       'Hola, ¿podría compartir los datos necesarios?',
     );
+    expect(aplicado).toBe('');
 
-    const usar = [...host.querySelectorAll<HTMLButtonElement>('button')].find((boton) =>
-      boton.textContent?.includes('Usar este texto'),
-    );
-    usar!.click();
+    boton('Usar propuesta').click();
+    fixture.detectChanges();
     expect(aplicado).toBe('Hola, ¿podría compartir los datos necesarios?');
+    expect(host.querySelector('[role="region"]')).toBeNull();
   });
 
-  it('mantiene el borrador y muestra el error dentro del modal cuando falla la IA', async () => {
-    fixture.componentInstance.abrirCon('Texto que debe conservarse', 'description');
+  it('marca la propuesta como obsoleta y regenera desde el borrador actual evitando la última', async () => {
+    boton('Mejorar con IA').click();
+    http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
+      text: 'Primera propuesta',
+      qualityWarning: false,
+    });
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    const mejorar = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
-      (boton) => boton.textContent?.trim() === 'Mejorar',
-    );
-    mejorar!.click();
+    fixture.componentRef.setInput('borrador', 'borrador actualizado');
+    fixture.detectChanges();
+    expect(boton('Usar propuesta').disabled).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('El borrador cambió');
+
+    boton('Generar otra propuesta').click();
+    const regeneracion = http.expectOne('/api/tickets/CS-2026-0001/writing/improve');
+    expect(regeneracion.request.body).toEqual({
+      editor: 'comment',
+      draft: 'borrador actualizado',
+      previousSuggestion: 'Primera propuesta',
+    });
+    regeneracion.flush({ text: 'Propuesta diferente', qualityWarning: false });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Propuesta diferente');
+    expect(boton('Usar propuesta').disabled).toBe(false);
+  });
+
+  it('descarta la propuesta o comunica el error fuera del panel', async () => {
+    let error = '';
+    fixture.componentInstance.fallido.subscribe((texto) => (error = texto));
+
+    boton('Mejorar con IA').click();
+    http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
+      text: 'Una propuesta',
+      qualityWarning: false,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    boton('Conservar original').click();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="region"]')).toBeNull();
+
+    boton('Mejorar con IA').click();
     http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush(
       { error: 'tickets.writing.unavailable' },
       { status: 503, statusText: 'Unavailable' },
     );
-
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(host.querySelector<HTMLTextAreaElement>('#ia-redaccion-borrador')?.value).toBe(
-      'Texto que debe conservarse',
-    );
-    expect(host.textContent).toContain('El motor de IA no está disponible. El borrador se conserva.');
+    expect(error).toContain('motor de IA no está disponible');
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="region"]')).toBeNull();
+  });
+
+  it('avisa dentro del panel si la segunda propuesta cambia muy poco y permite usarla', async () => {
+    boton('Mejorar con IA').click();
+    http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
+      text: 'Hola necesito datos.',
+      qualityWarning: true,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Esta propuesta cambió muy poco');
+    expect(boton('Usar propuesta').disabled).toBe(false);
   });
 });

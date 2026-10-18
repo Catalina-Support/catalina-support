@@ -56,8 +56,10 @@ export const ES = {
     idiomaAyuda:
       'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
     traduccionTitulo: 'Revisar el cambio de idioma',
-    traduccionAyuda: 'Revisa y corrige las once plantillas antes de aplicar el idioma a toda la instalación.',
-    traduccionCosto: 'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
+    traduccionAyuda:
+      'Revisa y corrige las doce plantillas antes de aplicar el idioma a toda la instalación.',
+    traduccionCosto:
+      'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
     traducirConfirmando: 'Aceptar costo y traducir',
     editarManualmente: 'Editar manualmente',
     asuntoTraducido: 'Asunto',
@@ -88,7 +90,7 @@ export const ES = {
       'Esta instalación no está sirviendo por https: la contraseña y la sesión viajan sin cifrar por la red. Se puede usar así —para probarla en local, por ejemplo—, y para usarla en serio conviene ponerle un certificado.',
     motorDeIA: 'El motor de IA',
     motorDeIAAyuda:
-      'El motor que redacta el «Motivo» y la «Última acción» de cada ticket. Su configuración es obligatoria; si deja de responder, la mesa de ayuda continúa y recupera los resúmenes cuando vuelva.',
+      'El motor que redacta el «Resumen» y la «Última acción» de cada ticket. Su configuración es obligatoria; si deja de responder, la mesa de ayuda continúa y recupera los resúmenes cuando vuelva.',
     iaDireccion: 'Dirección del motor',
     iaDireccionAyuda:
       'Dónde escucha el motor. Sirve http o https, con puerto si hace falta. Si se deja vacío, la instalación no tiene motor y el entorno hace de respaldo.',
@@ -110,20 +112,31 @@ export const ES = {
     iaAuth_basic: 'Usuario y contraseña',
     iaCabecera: 'Nombre de la cabecera',
     iaCredencial: 'Credencial o token',
-    iaPrivacidad: 'Confirmo que los textos del ticket saldrán de este servidor.',
+    iaPrivacidad:
+      'Confirmo que el contenido funcional del ticket principal y su interno vinculado puede salir de este servidor.',
     iaPrivacidadCosto:
-      'Confirmo que los textos del ticket saldrán de este servidor y que esta prueba puede generar costos del proveedor.',
+      'Confirmo que el contenido funcional del ticket principal y su interno vinculado puede salir de este servidor y que esta prueba puede generar costos del proveedor.',
     iaCatalogo: 'Modelos locales',
-    iaCargarCatalogo: 'Ver y actualizar el catálogo',
+    iaCargarCatalogo: 'Refrescar catálogo',
+    iaRefrescandoCatalogo: 'Refrescando…',
     iaAceptarLicencia: 'Acepto la licencia de esta versión.',
     iaDescargar: 'Descargar',
     iaActivar: 'Activar',
+    iaDesactivar: 'Desactivar',
     iaEliminar: 'Eliminar',
     iaInstalado: 'Instalado',
     iaActivo: 'Activo',
+    iaInactivo: 'Inactivo',
     iaSaludable: 'Motor disponible',
     iaNoSaludable: 'Motor reiniciándose',
     iaDescargando: 'Descargando',
+    iaCancelar: 'Cancelar descarga',
+    iaReanudar: 'Reanudar descarga',
+    iaEliminarParcial: 'Eliminar descarga parcial',
+    iaPruename: '¡Pruébame!',
+    iaSaludo: 'Saludo de {modelo}: {saludo}',
+    iaConfirmarEliminar: '¿Eliminar este modelo descargado?',
+    iaConfirmarEliminarParcial: '¿Eliminar la descarga parcial?',
     iaDiscoDisponible: 'Disco disponible: {cantidad}',
     iaRecursos: 'Descarga {disco} · RAM recomendada {ram}',
     motorOk: 'El motor ha contestado: redacta los dos resúmenes del ticket.',
@@ -269,7 +282,7 @@ export const ES = {
     bandeja: 'Bandeja',
     ticketsPrincipales: 'Tickets principales',
     ticketsInternos: 'Tickets internos',
-    categorias: 'Categorías y etiquetas',
+    categorias: 'Clasificación',
     usuarios: 'Usuarios',
     configuracion: 'Configuración',
     opciones: 'Opciones',
@@ -277,7 +290,6 @@ export const ES = {
     cerrar: 'Cerrar el menú',
     plegar: 'Plegar el menú',
     desplegar: 'Desplegar el menú',
-    codigoFuente: 'Código fuente y licencia',
   },
 
   // Los cuatro papeles, como se llaman en la interfaz. Los valores son los del backend.
@@ -301,7 +313,7 @@ export const ES = {
   estados: {
     nuevo: 'Nuevo',
     'en progreso': 'En progreso',
-    'en espera': 'En espera',
+    'en espera': 'Esperando',
     escalado: 'Escalado',
     resuelto: 'Resuelto',
     cerrado: 'Cerrado',
@@ -312,7 +324,7 @@ export const ES = {
   estadosDelUsuario: {
     nuevo: 'Recibido',
     'en progreso': 'En curso',
-    'en espera': 'Esperamos tu respuesta',
+    'en espera': 'Esperándote',
     escalado: 'En curso',
     resuelto: 'Resuelto',
     cerrado: 'Cerrado',
@@ -333,6 +345,7 @@ export const ES = {
     reabierto: '{quien} lo reabrió',
     observador: '{quien} quitó a {detalle} de los observadores',
     observador_anadido: '{quien} añadió a {detalle} a los observadores',
+    prioridad: '{quien} cambió la prioridad de «{desde}» a «{hasta}»',
     elSistema: 'El sistema',
   },
 
@@ -501,6 +514,7 @@ export const ES = {
     'ticket.closed': 'Ticket cerrado, al usuario',
     'ticket.backToSupport': 'El ticket vuelve a Soporte',
     'ticket.mentioned': 'Te han etiquetado en un ticket',
+    'ticket.priorityCritical': 'Prioridad crítica, a Soporte',
     'auth.invitation': 'Alta de una cuenta',
     'auth.recovery': 'Recuperar la contraseña',
     'auth.passwordChanged': 'Contraseña cambiada',
@@ -513,6 +527,19 @@ export const ES = {
     buscarEtiqueta: 'Buscar',
     filtroEstado: 'Estado',
     filtroTipo: 'Tipo',
+    filtroPrioridad: 'Prioridad',
+    prioridad: 'Prioridad',
+    prioridadAyuda: 'Indica la urgencia inicial. Soporte podrá corregirla durante la atención.',
+    cambiarPrioridad: 'Cambiar la prioridad',
+    prioridadBaja: 'Baja',
+    prioridadMedia: 'Media',
+    prioridadAlta: 'Alta',
+    prioridadCritica: 'Crítica',
+    orden: 'Orden',
+    ordenPrioridad: 'Prioridad y antigüedad',
+    ordenActualizacion: 'Actualización más reciente',
+    prioridadGuardada: 'Prioridad actualizada.',
+    prioridadAvisoFallido: 'La prioridad se guardó, pero no se pudo enviar el aviso a Soporte.',
     tipoPrincipal: 'Principales',
     tipoInterno: 'Internos',
     tipoTodos: 'Todos',
@@ -524,7 +551,8 @@ export const ES = {
     columnaSolicitante: 'Solicitante',
     columnaResponsable: 'Responsable',
     columnaActualizado: 'Fecha actualización',
-    columnaMotivo: 'Motivo',
+    columnaAccion: 'Acción',
+    summary: 'Resumen',
     resumenes: 'De qué va el ticket',
     columnaUltimaAccion: 'Última acción',
 
@@ -535,21 +563,15 @@ export const ES = {
     resumenError: 'No se pudo resumir',
     resumenVacio: '—',
     iaRedaccionAbrir: 'Mejorar con IA',
-    iaRedaccionTitulo: 'Mejorar la redacción con IA',
-    iaRedaccionAyuda: 'Revisa el borrador y elige cómo debe sonar. La propuesta no se guardará hasta que la uses y publiques o guardes el editor principal.',
-    iaRedaccionPrivacidad: 'El motor configurado procesará este texto. Si es un servidor o proveedor externo, el texto saldrá de esta instalación conforme a la configuración aceptada por el Administrador.',
-    iaRedaccionBorrador: 'Borrador',
-    iaRedaccionTono: 'Tonalidad',
-    iaTonoProfesional: 'Profesional',
-    iaTonoCordial: 'Cordial',
-    iaTonoBreve: 'Breve',
-    iaTonoEmpatico: 'Empática',
-    iaTonoTecnico: 'Técnica',
-    iaRedaccionMejorar: 'Mejorar',
-    iaRedaccionRegenerar: 'Volver a generar',
-    iaRedaccionUsar: 'Usar este texto',
+    iaRedaccionTitulo: 'Propuesta de la IA',
+    iaRedaccionRegenerar: 'Generar otra propuesta',
+    iaRedaccionUsar: 'Usar propuesta',
+    iaRedaccionConservar: 'Conservar original',
     iaRedaccionGenerando: 'Mejorando la redacción…',
-    iaRedaccionLista: 'La propuesta está lista para revisar.',
+    iaRedaccionCalidadInsuficiente:
+      'Esta propuesta cambió muy poco. Aun así puedes usarla o copiarla, o generar otra.',
+    iaRedaccionDesactualizada:
+      'El borrador cambió después de pedir esta propuesta. Genera otra antes de usarla.',
     // --- editar donde se muestra (decisión 74) ---
     editarElAsunto: 'Editar el asunto',
     editarLaDescripcion: 'Editar la descripción',
@@ -585,9 +607,6 @@ export const ES = {
     buscarPorEtiqueta: 'Buscar por etiqueta',
     sinEtiquetas: 'Sin etiquetas',
 
-    regenerar: 'Volver a resumir',
-    regenerando: 'Pidiendo los resúmenes…',
-    resumenesPedidos: 'Se han pedido otra vez los dos resúmenes.',
     sinResponsable: 'Sin responsable',
     cargando: 'Cargando los tickets…',
     vacia: 'No hay ningún ticket que coincida con esos filtros.',
@@ -597,6 +616,10 @@ export const ES = {
     pagina: 'Página',
     anterior: 'Anterior',
     siguiente: 'Siguiente',
+    cargaMas: 'Cargando más tickets…',
+    cargaMasError: 'No se pudieron cargar más tickets.',
+    reintentarCarga: 'Reintentar',
+    cargaMasAnuncio: 'Se cargaron {n} tickets más.',
     verTicket: 'Abrir',
     verImagen: 'Ver la imagen en grande',
     verVideo: 'Ver el vídeo en grande',
@@ -657,14 +680,10 @@ export const ES = {
     guardarClasificacion: 'Guardar la categoría y las etiquetas',
     clasificacionGuardada: 'Categoría y etiquetas guardadas.',
     sinEtiquetasFicha: 'Sin etiquetas.',
-    motivoDelEscalado: 'Motivo del escalado',
+    escalationReason: 'Motivo del escalado',
     elPrincipal: 'El ticket principal',
     sinAdjuntos: 'Sin adjuntos',
     escribirComentario: 'Escribe un comentario',
-    // Un comentario puede ser sólo un adjunto: se dice, porque si no, parece que hay que escribir. Y
-    // las tres puertas para adjuntar se cuentan aquí, que es donde se escribe.
-    comentarioAyuda:
-      'Con formato, y con los archivos dentro: arrástralos aquí, pégalos con Ctrl+V o búscalos. Un comentario puede llevar sólo archivos.',
     enviar: 'Comentar',
     enviando: 'Enviando…',
     comentarioVacio: 'Escribe algo o adjunta un archivo antes de mandarlo.',
@@ -796,7 +815,7 @@ export const ES = {
     // --- «Categorías y etiquetas»: el catálogo (docs/interfaz-y-experiencia.md, sección 3.7) ---
     // La lista de categorías la mantienen Soporte y el Administrador; **retirar es sólo del
     // Administrador** (decisión 64). Abajo, las etiquetas que se están usando, con su cuenta.
-    categoriasTitulo: 'Categorías y etiquetas',
+    categoriasTitulo: 'Clasificación',
     categoriasDescripcion:
       'Con esto se clasifica cada ticket. Retirar una categoría deja de ofrecerla al crear, pero no toca los tickets que ya la tienen.',
     categoriasLista: 'Categorías',
@@ -959,10 +978,12 @@ export const ES = {
     // El motor de IA (docs/modules/ai.md): o no está, o contestó algo que no vale.
     'ai.unavailable': 'El motor de resúmenes no está disponible. Los tickets funcionan igual.',
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
-    'mail.translation.costConfirmationRequired': 'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
-    'mail.translation.incomplete': 'Revisa las once plantillas antes de aplicar el idioma.',
-    'mail.translation.protectedChanged': 'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
-    'settings.language.reviewRequired': 'Revisa las once plantillas antes de aplicar el idioma.',
+    'mail.translation.costConfirmationRequired':
+      'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
+    'mail.translation.incomplete': 'Revisa las doce plantillas antes de aplicar el idioma.',
+    'mail.translation.protectedChanged':
+      'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
+    'settings.language.reviewRequired': 'Revisa las doce plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -1068,7 +1089,6 @@ export const ES = {
     'tickets.description.required': 'Escribe una descripción.',
     'tickets.writing.draft.required': 'Escribe un borrador antes de pedir una mejora.',
     'tickets.writing.editor.invalid': 'Ese editor no admite la mejora de redacción.',
-    'tickets.writing.tone.invalid': 'Elige una tonalidad válida.',
     'tickets.writing.unavailable': 'El motor de IA no está disponible. El borrador se conserva.',
     'tickets.writing.invalid': 'El motor devolvió una propuesta que no se puede utilizar.',
     // El saneador del backend sólo admite las etiquetas y los atributos de su lista blanca, y lo que
@@ -1081,6 +1101,9 @@ export const ES = {
       'Escribe por qué se escala: sin el motivo, Desarrollo no sabe qué hace falta.',
     'tickets.comment.required': 'Escribe un comentario.',
     'tickets.state.unknown': 'Ese estado no existe.',
+    'tickets.priority.unknown': 'Esa prioridad no existe.',
+    'tickets.priority.notificationFailed':
+      'La prioridad se guardó, pero no se pudo enviar el aviso a Soporte.',
     'tickets.transition.notAllowed': 'Ese cambio de estado no se puede hacer así.',
     'tickets.forbidden': 'Eso no te toca en este ticket.',
     'tickets.closed': 'El ticket está cerrado: reábrelo para seguir.',

@@ -9,8 +9,8 @@ import (
 type asistenteDeRedaccionDePrueba struct{ configurado bool }
 
 func (a asistenteDeRedaccionDePrueba) Configured() bool { return a.configurado }
-func (a asistenteDeRedaccionDePrueba) ImproveDraft(string, string, string, string, string) (string, error) {
-	return "", nil
+func (a asistenteDeRedaccionDePrueba) ImproveDraft(string, string, string, string, string) (WritingSuggestion, error) {
+	return WritingSuggestion{}, nil
 }
 
 func TestPuedeMejorarRedaccionRespetaPapelEditorYCierre(t *testing.T) {
