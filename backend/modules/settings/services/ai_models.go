@@ -14,16 +14,21 @@ import (
 )
 
 type AIGreeting struct {
-	Greeting  string `json:"greeting"`
-	Current   string `json:"current"`
-	TimeZone  string `json:"timeZone"`
-	ModelID   string `json:"modelId"`
-	ModelName string `json:"modelName"`
+	Greeting              string `json:"greeting"`
+	Current               string `json:"current"`
+	TimeZone              string `json:"timeZone"`
+	ModelID               string `json:"modelId"`
+	ModelName             string `json:"modelName"`
+	AccelerationMode      string `json:"accelerationMode"`
+	EffectiveAcceleration string `json:"effectiveAcceleration"`
+	DeviceName            string `json:"deviceName"`
+	FallbackReason        string `json:"fallbackReason,omitempty"`
 }
 
 var (
 	ErrAIManagerUnavailable = errors.New("settings.ai.managerUnavailable")
 	ErrAILicenseRequired    = errors.New("settings.ai.licenseRequired")
+	ErrAINVIDIAUnavailable  = errors.New("settings.ai.nvidiaUnavailable")
 )
 
 type AIInsufficientMemoryError struct {
@@ -52,8 +57,13 @@ type AIModel struct {
 	Error           string `json:"error,omitempty"`
 }
 type AIModelCatalog struct {
-	Models             []AIModel `json:"models"`
-	DiskAvailableBytes int64     `json:"diskAvailableBytes"`
+	Models                []AIModel `json:"models"`
+	DiskAvailableBytes    int64     `json:"diskAvailableBytes"`
+	AccelerationMode      string    `json:"accelerationMode"`
+	EffectiveAcceleration string    `json:"effectiveAcceleration"`
+	DeviceName            string    `json:"deviceName"`
+	FallbackReason        string    `json:"fallbackReason,omitempty"`
+	Restarting            bool      `json:"restarting"`
 }
 type aiModelAcceptanceRepository interface {
 	AcceptAIModel(string, string, string, *int64, bool) error
@@ -98,12 +108,25 @@ func (s *Service) DownloadAIModel(id string, accepted bool, actor *auth.Identity
 	return s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/download?acceptLicense=true", bytes.NewReader(nil), nil)
 }
 func (s *Service) ActivateAIModel(id string) error {
+	acceleration := "auto"
+	if repo, ok := s.repo.(aiRepository); ok {
+		if row, err := repo.AI(); err == nil && row.AccelerationMode != "" {
+			acceleration = row.AccelerationMode
+		}
+	}
+	if catalog, err := s.AIModels(); err != nil {
+		return err
+	} else if catalog.AccelerationMode != acceleration {
+		if err := s.setAIAcceleration(acceleration); err != nil {
+			return err
+		}
+	}
 	if err := s.aiManager(http.MethodPost, "/models/"+url.PathEscape(id)+"/activate", bytes.NewReader(nil), nil); err != nil {
 		return err
 	}
 	if repo, ok := s.repo.(aiRepository); ok {
 		now := s.now()
-		if err := repo.UpdateAI(map[string]any{"mode": "local", "provider": "local", "base_url": "http://ai:8080", "model": id, "auth_type": "none", "auth_header": "", "tested_at": now}, nil); err != nil {
+		if err := repo.UpdateAI(map[string]any{"mode": "local", "provider": "local", "base_url": "http://ai:8080", "model": id, "auth_type": "none", "auth_header": "", "tested_at": now, "acceleration_mode": acceleration}, nil); err != nil {
 			return traducir(err)
 		}
 	}
@@ -164,7 +187,12 @@ func (s *Service) TestActiveAIModel() (AIGreeting, error) {
 	if err != nil {
 		return AIGreeting{}, ErrAIManagerUnavailable
 	}
-	return AIGreeting{Greeting: greeting, Current: current, TimeZone: zone, ModelID: model, ModelName: modelName}, nil
+	return AIGreeting{Greeting: greeting, Current: current, TimeZone: zone, ModelID: model, ModelName: modelName, AccelerationMode: catalog.AccelerationMode, EffectiveAcceleration: catalog.EffectiveAcceleration, DeviceName: catalog.DeviceName, FallbackReason: catalog.FallbackReason}, nil
+}
+
+func (s *Service) setAIAcceleration(mode string) error {
+	body, _ := json.Marshal(map[string]string{"mode": mode})
+	return s.aiManager(http.MethodPut, "/acceleration", bytes.NewReader(body), nil)
 }
 func (s *Service) aiManager(method, path string, body io.Reader, out any) error {
 	if s.aiManagerURL == "" || s.aiManagerToken == "" {
@@ -176,7 +204,7 @@ func (s *Service) aiManager(method, path string, body io.Reader, out any) error 
 	}
 	req.Header.Set("Authorization", "Bearer "+s.aiManagerToken)
 	timeout := 10 * time.Second
-	if strings.HasSuffix(path, "/activate") || strings.HasSuffix(path, "/deactivate") {
+	if strings.HasSuffix(path, "/activate") || strings.HasSuffix(path, "/deactivate") || path == "/acceleration" {
 		timeout = 310 * time.Second
 	}
 	client := http.Client{Timeout: timeout}
@@ -186,13 +214,21 @@ func (s *Service) aiManager(method, path string, body io.Reader, out any) error 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		var keyed struct {
+			Key string `json:"key"`
+		}
+		payload, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		_ = json.Unmarshal(payload, &keyed)
+		if keyed.Key == "settings.ai.nvidiaUnavailable" {
+			return ErrAINVIDIAUnavailable
+		}
 		if resp.StatusCode == http.StatusUnprocessableEntity {
 			var failure struct {
 				Key            string `json:"key"`
 				RequiredBytes  int64  `json:"requiredBytes"`
 				AvailableBytes int64  `json:"availableBytes"`
 			}
-			if json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&failure) == nil &&
+			if json.Unmarshal(payload, &failure) == nil &&
 				failure.Key == "settings.ai.insufficientMemory" && failure.RequiredBytes >= 0 && failure.AvailableBytes >= 0 {
 				return &AIInsufficientMemoryError{RequiredBytes: failure.RequiredBytes, AvailableBytes: failure.AvailableBytes}
 			}

@@ -73,7 +73,7 @@ export class CorreosPage {
 
   protected readonly idiomas = IDIOMAS;
 
-  /** Los doce correos, sin repetir: las plantillas vienen en dos idiomas. */
+  /** Los trece correos, sin repetir: las plantillas vienen en dos idiomas. */
   protected readonly correos = computed(() => {
     const vistos = new Set<string>();
 

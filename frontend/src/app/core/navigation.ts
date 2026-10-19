@@ -24,7 +24,13 @@ export interface EntradaDeMenu {
   readonly clavePorPapel?: Partial<Record<Papel, ClaveDeMenu>>;
   /** Qué icono lleva cuando el menú está plegado: los dibuja el propio componente. */
   readonly icono:
-    'tickets' | 'principales' | 'internos' | 'categorias' | 'usuarios' | 'configuracion';
+    | 'dashboard'
+    | 'tickets'
+    | 'principales'
+    | 'internos'
+    | 'categorias'
+    | 'usuarios'
+    | 'configuracion';
   readonly papeles: readonly Papel[];
 }
 
@@ -43,6 +49,12 @@ export interface EntradaDeMenu {
  * sin estas dos pantallas el trabajo que no es de nadie no tendría dónde verse (decisión 52).
  */
 export const ENTRADAS: readonly EntradaDeMenu[] = [
+  {
+    ruta: '/dashboard',
+    clave: 'dashboard',
+    icono: 'dashboard',
+    papeles: ['soporte', 'desarrollo', 'administrador'],
+  },
   {
     ruta: '/tickets',
     clave: 'misTickets',
@@ -81,9 +93,46 @@ export function claveDeEntrada(entrada: EntradaDeMenu, papel: string): ClaveDeMe
   return entrada.clavePorPapel?.[papel as Papel] ?? entrada.clave;
 }
 
+/**
+ * Qué entrada única representa la pantalla actual.
+ *
+ * Las rutas visibles coinciden exactamente: `/tickets` no es el padre visual de las otras listas.
+ * Las pantallas auxiliares que no tienen entrada propia conservan la pertenencia acordada en
+ * `docs/interfaz-y-experiencia.md`, sección 45.
+ */
+export function rutaDeMenuActiva(rutaActual: string): string | null {
+  const ruta = rutaActual.split(/[?#]/, 1)[0].replace(/\/$/, '') || '/';
+
+  if (ENTRADAS.some((entrada) => entrada.ruta === ruta)) {
+    return ruta;
+  }
+
+  if (ruta === '/tickets/new' || /^\/tickets\/[^/]+$/.test(ruta)) {
+    return '/tickets';
+  }
+
+  if (/^\/users\/[^/]+$/.test(ruta)) {
+    return '/users';
+  }
+
+  if (ruta === '/mail') {
+    return '/settings';
+  }
+
+  return null;
+}
+
 /** Las entradas que le tocan a ese papel. */
-export function entradasPara(papel: string): readonly EntradaDeMenu[] {
+export function entradasPara(
+  papel: string,
+  isAdmin = papel === 'administrador',
+): readonly EntradaDeMenu[] {
+  const administracionValida =
+    papel === 'administrador' || (isAdmin && (papel === 'soporte' || papel === 'desarrollo'));
   return ENTRADAS.filter(
-    (entrada) => entrada.papeles.length === 0 || entrada.papeles.includes(papel as Papel),
+    (entrada) =>
+      entrada.papeles.length === 0 ||
+      entrada.papeles.includes(papel as Papel) ||
+      (administracionValida && entrada.papeles.includes('administrador')),
   );
 }

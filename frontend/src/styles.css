@@ -60,6 +60,9 @@
   --aviso: light-dark(#8a5300, #f0c070);
   --aviso-suave: light-dark(#fdf3e2, #352c1b);
   --foco: light-dark(#1d4ed8, #7ea2ff);
+  /* Dos series que deben distinguirse incluso cuando el acento del tema cambia. */
+  --dashboard-created: var(--primario);
+  --dashboard-closed: light-dark(#9a4d00, #ffd166);
 
   font-family:
     system-ui,
@@ -261,6 +264,8 @@
   --color-aviso: var(--aviso);
   --color-aviso-suave: var(--aviso-suave);
   --color-foco: var(--foco);
+  --color-dashboard-created: var(--dashboard-created);
+  --color-dashboard-closed: var(--dashboard-closed);
 }
 
 body {

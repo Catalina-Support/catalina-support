@@ -14,6 +14,7 @@ type CreateUserRequest struct {
 	LastName string `json:"lastName"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
+	IsAdmin  bool   `json:"isAdmin"`
 	Origin   string `json:"origin"`
 	// ExternalID sólo tiene sentido en las cuentas de directorio.
 	ExternalID string `json:"externalId"`
@@ -29,6 +30,7 @@ type UserResponse struct {
 	LastName    string `json:"lastName"`
 	Email       string `json:"email"`
 	Role        string `json:"role"`
+	IsAdmin     bool   `json:"isAdmin"`
 	Origin      string `json:"origin"`
 	IsActive    bool   `json:"isActive"`
 	HasPassword bool   `json:"hasPassword"`
@@ -44,7 +46,17 @@ type UserEnvelope struct {
 	Invited bool `json:"invited,omitempty"`
 	// Warnings son avisos sobre algo que **sí se ha hecho**, pero conviene saber. Van como claves,
 	// como los errores, y el frontend los traduce.
-	Warnings []string `json:"warnings,omitempty"`
+	Warnings        []string             `json:"warnings,omitempty"`
+	AdminEvents     []AdminEventResponse `json:"adminEvents,omitempty"`
+	LastNormalAdmin bool                 `json:"lastNormalAdmin,omitempty"`
+}
+
+type AdminEventResponse struct {
+	ID           int64  `json:"id"`
+	Action       string `json:"action"`
+	Actor        string `json:"actor"`
+	CreatedAt    string `json:"createdAt"`
+	Acknowledged bool   `json:"acknowledged"`
 }
 
 // UsersResponse es la lista de cuentas, con lo que necesita la paginación.
@@ -64,6 +76,7 @@ type UpdateUserRequest struct {
 	LastName *string `json:"lastName"`
 	Email    *string `json:"email"`
 	Role     *string `json:"role"`
+	IsAdmin  *bool   `json:"isAdmin"`
 	IsActive *bool   `json:"isActive"`
 }
 
@@ -104,6 +117,7 @@ func NewUserResponse(account auth.Account) UserResponse {
 		LastName:    account.LastName,
 		Email:       account.Email,
 		Role:        account.Role,
+		IsAdmin:     account.IsAdmin,
 		Origin:      account.Origin,
 		IsActive:    account.IsActive,
 		HasPassword: account.HasPassword(),

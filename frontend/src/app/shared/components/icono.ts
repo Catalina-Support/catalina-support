@@ -8,6 +8,7 @@ import { Component, input } from '@angular/core';
  * 16 px se lee como un cuadrado, y el segundo sale como emoji de colores según la fuente del equipo.
  */
 export type NombreDeIcono =
+  | 'dashboard'
   | 'tickets'
   | 'principales'
   | 'internos'
@@ -50,6 +51,9 @@ export type NombreDeIcono =
       class="h-5 w-5 shrink-0"
     >
       @switch (nombre()) {
+        @case ('dashboard') {
+          <path d="M4 19V9M10 19V4M16 19v-7M22 19H2" />
+        }
         @case ('tickets') {
           <path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z" />
           <path d="M10 6v12" />

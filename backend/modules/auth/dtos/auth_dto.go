@@ -17,22 +17,38 @@ type UserResponse struct {
 	LastName string `json:"lastName"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
+	IsAdmin  bool   `json:"isAdmin"`
 	Origin   string `json:"origin"`
 	// Factory distingue la cuenta de fábrica, que no está en la base de datos y no se puede tocar.
-	Factory bool `json:"factory"`
+	Factory     bool                 `json:"factory"`
+	AdminEvents []AdminEventResponse `json:"adminEvents,omitempty"`
+}
+
+type AdminEventResponse struct {
+	ID        int64  `json:"id"`
+	Action    string `json:"action"`
+	Actor     string `json:"actor"`
+	CreatedAt string `json:"createdAt"`
 }
 
 // NewUserResponse arma la cuenta que se enseña.
 func NewUserResponse(identity auth.Identity) UserResponse {
-	return UserResponse{
+	response := UserResponse{
 		ID:       identity.ID,
 		Name:     identity.Name,
 		LastName: identity.LastName,
 		Email:    identity.Email,
 		Role:     identity.Role,
+		IsAdmin:  identity.IsAdministrator(),
 		Origin:   identity.Origin,
 		Factory:  identity.Factory,
 	}
+	if event := identity.AdminEvent; event != nil {
+		response.AdminEvents = []AdminEventResponse{{
+			ID: event.ID, Action: event.Action, Actor: event.Actor, CreatedAt: event.CreatedAt,
+		}}
+	}
+	return response
 }
 
 // MethodsResponse dice cómo se entra en la instalación.

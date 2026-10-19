@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import { Controles } from './controles';
@@ -10,7 +10,7 @@ import { Dialogo } from '../../shared/components/dialogo';
 import { Icono } from '../../shared/components/icono';
 import { Logo } from './logo';
 import { TranslationService } from '../i18n/translation.service';
-import { claveDeEntrada, entradasPara, type EntradaDeMenu } from '../navigation';
+import { claveDeEntrada, entradasPara, rutaDeMenuActiva, type EntradaDeMenu } from '../navigation';
 import { BrandService } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
 import { consultaDeAncho } from '../../shared/pantalla';
@@ -35,7 +35,7 @@ const ANCHO_DE_PC = 1200;
  */
 @Component({
   selector: 'app-armazon',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Logo, Icono, Controles, Boton, Dialogo],
+  imports: [RouterOutlet, RouterLink, Logo, Icono, Controles, Boton, Dialogo, Aviso],
   templateUrl: './armazon.html',
 })
 export class Armazon {
@@ -54,10 +54,28 @@ export class Armazon {
   );
 
   protected readonly esListadoOperativo = computed(() =>
-    ['/tickets', '/tickets/main', '/tickets/internal', '/users'].includes(this.rutaActiva()),
+    ['/dashboard', '/tickets', '/tickets/main', '/tickets/internal', '/users'].includes(
+      this.rutaActiva(),
+    ),
   );
 
   protected readonly usuario = this.sesion.usuario;
+  protected readonly avisoAdministrativo = this.sesion.avisoAdministrativo;
+
+  protected textoDelAvisoAdministrativo(): string {
+    const aviso = this.avisoAdministrativo();
+    if (!aviso) return '';
+    const plantilla =
+      aviso.action === 'granted'
+        ? this.t().usuarios.adminGrantedNotice
+        : this.t().usuarios.adminRevokedNotice;
+    return plantilla.replace('{actor}', aviso.actor);
+  }
+
+  protected async cerrarAvisoAdministrativo(): Promise<void> {
+    const aviso = this.avisoAdministrativo();
+    if (aviso) await this.sesion.cerrarAvisoAdministrativo(aviso.id);
+  }
 
   /**
    * El nombre de la instalación, que es el que se lee arriba junto al logo.
@@ -68,7 +86,6 @@ export class Armazon {
 
   /** La versión del sistema, con su `v`: se lee en la fila de salir, alineada a la derecha. */
   protected readonly versionDelSistema = this.marca.versionDelSistema;
-
 
   /** Si el menú está recogido: la tira de iconos. Es una elección, y se recuerda. */
   private readonly plegado = signal(leerPlegado());
@@ -97,7 +114,9 @@ export class Armazon {
   }
 
   /** Las entradas que le tocan al papel de quien ha entrado. */
-  protected readonly entradas = computed(() => entradasPara(this.usuario()?.role ?? ''));
+  protected readonly entradas = computed(() =>
+    entradasPara(this.usuario()?.role ?? '', this.usuario()?.isAdmin === true),
+  );
 
   protected readonly nombre = computed(() => {
     const quien = this.usuario();
@@ -135,6 +154,11 @@ export class Armazon {
    */
   protected etiquetaDe(entrada: EntradaDeMenu): string {
     return this.t().menu[claveDeEntrada(entrada, this.usuario()?.role ?? '')];
+  }
+
+  /** Sólo una entrada representa la ruta actual, incluidas las pantallas auxiliares sin enlace. */
+  protected entradaActiva(entrada: EntradaDeMenu): boolean {
+    return rutaDeMenuActiva(this.rutaActiva()) === entrada.ruta;
   }
 
   /** Pliega o despliega el menú, y lo recuerda. */

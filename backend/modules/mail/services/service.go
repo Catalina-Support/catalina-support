@@ -88,7 +88,7 @@ func (s *Service) zonaHoraria() *time.Location {
 	return time.UTC
 }
 
-// Templates devuelve las veinticuatro filas —doce plantillas en dos idiomas— para el editor.
+// Templates devuelve las veintiséis filas —trece plantillas en dos idiomas— para el editor.
 func (s *Service) Templates() ([]repositories.Template, error) {
 	return s.repo.FindAll()
 }

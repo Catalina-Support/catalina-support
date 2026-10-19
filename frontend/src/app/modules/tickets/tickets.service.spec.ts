@@ -212,7 +212,7 @@ describe('TicketsService', () => {
   it('los comentarios van a su ruta, con su identificador', async () => {
     void tickets.comentar('CS-2026-0001', 'Ya está arreglado.');
     const comentar = http.expectOne({ url: '/api/tickets/CS-2026-0001/comments', method: 'POST' });
-    expect(comentar.request.body).toEqual({ body: 'Ya está arreglado.' });
+    expect(comentar.request.body).toEqual({ body: 'Ya está arreglado.', visibility: 'public' });
     comentar.flush({
       comment: { id: 3, body: 'Ya está arreglado.', edited: false, deleted: false, createdAt: '' },
     });
@@ -222,6 +222,20 @@ describe('TicketsService', () => {
     expect(editar.request.body).toEqual({ body: 'Corregido.' });
     editar.flush({
       comment: { id: 3, body: 'Corregido.', edited: true, deleted: false, createdAt: '' },
+    });
+
+    void tickets.comentar('CS-2026-0001', 'Sólo para el equipo.', 'private');
+    const privado = http.expectOne({ url: '/api/tickets/CS-2026-0001/comments', method: 'POST' });
+    expect(privado.request.body).toEqual({ body: 'Sólo para el equipo.', visibility: 'private' });
+    privado.flush({
+      comment: {
+        id: 4,
+        body: 'Sólo para el equipo.',
+        visibility: 'private',
+        edited: false,
+        deleted: false,
+        createdAt: '',
+      },
     });
 
     void tickets.borrarComentario('CS-2026-0001', 3);

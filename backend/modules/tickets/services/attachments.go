@@ -45,7 +45,19 @@ func (s *Service) Attach(number string, file multipart.File, cabecera *multipart
 		return Attachment{}, err
 	}
 
-	if !puedeComentar(actor, convertido) {
+	var comentarioDestino *repositories.Comment
+	if commentID != nil {
+		comentario, err := s.comentarioDelTicket(*commentID, destino)
+		if err != nil {
+			return Attachment{}, err
+		}
+		comentarioDestino = &comentario
+	}
+	puedeAdjuntar := puedeComentar(actor, convertido)
+	if !esInterno && comentarioDestino != nil && comentarioDestino.Visibility == VisibilityPrivate && actor.Can(auth.RoleSoporte, auth.RoleDesarrollo) {
+		puedeAdjuntar = true
+	}
+	if !puedeAdjuntar {
 		return Attachment{}, ErrForbidden
 	}
 
@@ -78,13 +90,6 @@ func (s *Service) Attach(number string, file multipart.File, cabecera *multipart
 	// El tamaño se comprueba antes de escribir nada: nginx corta en 30 MB, y aquí el tope son 25.
 	if cabecera.Size > MaxAttachmentBytes {
 		return Attachment{}, ErrAttachmentTooBig
-	}
-
-	// El comentario, si lo hay, tiene que ser de ese mismo ticket.
-	if commentID != nil {
-		if _, err := s.comentarioDelTicket(*commentID, destino); err != nil {
-			return Attachment{}, err
-		}
 	}
 
 	guardado, tamano, err := s.guardarArchivo(file, nombre, carpeta)
@@ -159,6 +164,12 @@ func (s *Service) Attachment(number string, attachmentID int64, actor auth.Ident
 		(destino.InternalTicketID != nil && adjunto.InternalTicketID != nil && *adjunto.InternalTicketID == *destino.InternalTicketID)
 	if !esDeEseTicket {
 		return AttachmentFile{}, ErrAttachmentMissing
+	}
+	if actor.Role == auth.RoleUsuario && adjunto.CommentID != nil {
+		comentario, err := s.conversation.CommentByID(*adjunto.CommentID)
+		if err != nil || comentario.Visibility == VisibilityPrivate {
+			return AttachmentFile{}, ErrAttachmentMissing
+		}
 	}
 
 	archivo, err := os.Open(s.rutaDe(adjunto.StoredName))

@@ -107,7 +107,7 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
   aiAvailable: false,
   ai: {
     mode: '', provider: '', baseUrl: '', model: '', authType: 'none', authHeader: '',
-    credentialSet: false, privacyConfirmed: false, tested: false,
+	credentialSet: false, privacyConfirmed: false, tested: false, accelerationMode: 'auto',
   },
 };
 

@@ -17,16 +17,20 @@ type SettingsResponse struct {
 	TimeZone     string `json:"timeZone"`
 	PublicAppURL string `json:"publicAppUrl"`
 	// Directory y Keycloak van **sin sus secretos**: en su lugar dicen si hay uno puesto.
-	Directory            DirectoryDto `json:"directory"`
-	Keycloak             KeycloakDto  `json:"keycloak"`
-	Language             string       `json:"language"`
-	PrimaryColor         string       `json:"primaryColor"`
-	NumberPrefix         string       `json:"numberPrefix"`
-	MainAssignment       string       `json:"mainAssignment"`
-	MainNotification     string       `json:"mainNotification"`
-	InternalAssignment   string       `json:"internalAssignment"`
-	InternalNotification string       `json:"internalNotification"`
-	UpdatedAt            string       `json:"updatedAt"`
+	Directory                  DirectoryDto `json:"directory"`
+	Keycloak                   KeycloakDto  `json:"keycloak"`
+	Language                   string       `json:"language"`
+	PrimaryColor               string       `json:"primaryColor"`
+	NumberPrefix               string       `json:"numberPrefix"`
+	MainAssignment             string       `json:"mainAssignment"`
+	MainNotification           string       `json:"mainNotification"`
+	InternalAssignment         string       `json:"internalAssignment"`
+	InternalNotification       string       `json:"internalNotification"`
+	ReportOverdueCriticalHours int          `json:"reportOverdueCriticalHours"`
+	ReportOverdueHighHours     int          `json:"reportOverdueHighHours"`
+	ReportOverdueMediumHours   int          `json:"reportOverdueMediumHours"`
+	ReportOverdueLowHours      int          `json:"reportOverdueLowHours"`
+	UpdatedAt                  string       `json:"updatedAt"`
 	// AIURL y AIModel son **el motor de IA**: su dirección y su modelo. Vacíos es «no integrado».
 	AIURL   string                  `json:"aiUrl"`
 	AIModel string                  `json:"aiModel"`
@@ -82,17 +86,21 @@ type KeycloakDto struct {
 
 // UpdateSettingsRequest es lo que llega al guardar. Va todo: es un `PUT`.
 type UpdateSettingsRequest struct {
-	Name                 string       `json:"name"`
-	EntryMethod          string       `json:"entryMethod"`
-	Directory            DirectoryDto `json:"directory"`
-	Keycloak             KeycloakDto  `json:"keycloak"`
-	Language             string       `json:"language"`
-	PrimaryColor         string       `json:"primaryColor"`
-	NumberPrefix         string       `json:"numberPrefix"`
-	MainAssignment       string       `json:"mainAssignment"`
-	MainNotification     string       `json:"mainNotification"`
-	InternalAssignment   string       `json:"internalAssignment"`
-	InternalNotification string       `json:"internalNotification"`
+	Name                       string       `json:"name"`
+	EntryMethod                string       `json:"entryMethod"`
+	Directory                  DirectoryDto `json:"directory"`
+	Keycloak                   KeycloakDto  `json:"keycloak"`
+	Language                   string       `json:"language"`
+	PrimaryColor               string       `json:"primaryColor"`
+	NumberPrefix               string       `json:"numberPrefix"`
+	MainAssignment             string       `json:"mainAssignment"`
+	MainNotification           string       `json:"mainNotification"`
+	InternalAssignment         string       `json:"internalAssignment"`
+	InternalNotification       string       `json:"internalNotification"`
+	ReportOverdueCriticalHours int          `json:"reportOverdueCriticalHours"`
+	ReportOverdueHighHours     int          `json:"reportOverdueHighHours"`
+	ReportOverdueMediumHours   int          `json:"reportOverdueMediumHours"`
+	ReportOverdueLowHours      int          `json:"reportOverdueLowHours"`
 	// TimeZone es la zona horaria de la instalación (nombre IANA, `America/Guayaquil`). Decide
 	// cómo se leen las fechas; las guardadas siguen en UTC (docs/modules/settings.md, decisión 15).
 	TimeZone string `json:"timeZone"`
@@ -121,6 +129,7 @@ type AIConfigurationRequest struct {
 	Credential       string `json:"credential"`
 	PrivacyConfirmed bool   `json:"privacyConfirmed"`
 	Language         string `json:"language"`
+	AccelerationMode string `json:"accelerationMode"`
 }
 
 type AIConfigurationResponse struct {
@@ -133,13 +142,14 @@ type AIConfigurationResponse struct {
 	CredentialSet    bool   `json:"credentialSet"`
 	PrivacyConfirmed bool   `json:"privacyConfirmed"`
 	Tested           bool   `json:"tested"`
+	AccelerationMode string `json:"accelerationMode"`
 }
 
 func NewAIConfigurationInput(in AIConfigurationRequest) services.AIConfigurationInput {
-	return services.AIConfigurationInput{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, Credential: in.Credential, PrivacyConfirmed: in.PrivacyConfirmed, Language: in.Language}
+	return services.AIConfigurationInput{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, Credential: in.Credential, PrivacyConfirmed: in.PrivacyConfirmed, Language: in.Language, AccelerationMode: in.AccelerationMode}
 }
 func NewAIConfigurationResponse(in services.AIConfigurationView) AIConfigurationResponse {
-	return AIConfigurationResponse{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, CredentialSet: in.CredentialSet, PrivacyConfirmed: in.PrivacyConfirmed, Tested: in.Tested}
+	return AIConfigurationResponse{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, CredentialSet: in.CredentialSet, PrivacyConfirmed: in.PrivacyConfirmed, Tested: in.Tested, AccelerationMode: in.AccelerationMode}
 }
 
 // BrandResponse es lo que la aplicación necesita **antes de que nadie haya entrado**: el color
@@ -201,17 +211,21 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			RedirectURI:    config.Keycloak.RedirectURI,
 			SecretSet:      config.Keycloak.SecretSet,
 		},
-		Language:             config.Language,
-		PrimaryColor:         config.PrimaryColor,
-		NumberPrefix:         config.NumberPrefix,
-		MainAssignment:       config.MainAssignment,
-		MainNotification:     config.MainNotification,
-		InternalAssignment:   config.InternalAssignment,
-		InternalNotification: config.InternalNotification,
-		UpdatedAt:            config.UpdatedAt.UTC().Format(time.RFC3339),
-		AIURL:                config.AIURL,
-		AIModel:              config.AIModel,
-		AI:                   NewAIConfigurationResponse(config.AI),
+		Language:                   config.Language,
+		PrimaryColor:               config.PrimaryColor,
+		NumberPrefix:               config.NumberPrefix,
+		MainAssignment:             config.MainAssignment,
+		MainNotification:           config.MainNotification,
+		InternalAssignment:         config.InternalAssignment,
+		InternalNotification:       config.InternalNotification,
+		ReportOverdueCriticalHours: config.ReportOverdueCriticalHours,
+		ReportOverdueHighHours:     config.ReportOverdueHighHours,
+		ReportOverdueMediumHours:   config.ReportOverdueMediumHours,
+		ReportOverdueLowHours:      config.ReportOverdueLowHours,
+		UpdatedAt:                  config.UpdatedAt.UTC().Format(time.RFC3339),
+		AIURL:                      config.AIURL,
+		AIModel:                    config.AIModel,
+		AI:                         NewAIConfigurationResponse(config.AI),
 		Brand: BrandDto{
 			Light: newLogoDto(config.Brand.Light),
 			Dark:  newLogoDto(config.Brand.Dark),

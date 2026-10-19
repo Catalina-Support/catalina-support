@@ -92,6 +92,7 @@ export class UsersPage {
     lastName: '',
     email: '',
     role: 'usuario',
+    isAdmin: false,
     origin: 'local',
   });
 
@@ -344,6 +345,7 @@ export class UsersPage {
       email: '',
       // Soporte sólo puede crear usuarios, y un Administrador empieza por el papel más común.
       role: 'usuario',
+      isAdmin: false,
       origin: 'local',
     });
     this.mostrandoAlta.set(true);
@@ -358,7 +360,17 @@ export class UsersPage {
   }
 
   protected campoDelAltaElegido(campo: 'role' | 'origin', valor: string): void {
-    this.alta.update((alta) => ({ ...alta, [campo]: valor }));
+    this.alta.update((alta) => ({
+      ...alta,
+      [campo]: valor,
+      ...(campo === 'role' && valor !== 'soporte' && valor !== 'desarrollo'
+        ? { isAdmin: false }
+        : {}),
+    }));
+  }
+
+  protected administradorDelAlta(valor: boolean): void {
+    this.alta.update((alta) => ({ ...alta, isAdmin: valor }));
   }
 
   protected opcionesDePapelDelAlta() {

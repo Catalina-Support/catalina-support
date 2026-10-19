@@ -117,21 +117,25 @@ func (c *SettingsController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config, err := c.service.Update(services.UpdateInput{
-		Name:                 entrada.Name,
-		EntryMethod:          entrada.EntryMethod,
-		Directory:            dtos.NewDirectoryInput(entrada.Directory),
-		Keycloak:             dtos.NewKeycloakInput(entrada.Keycloak),
-		Language:             entrada.Language,
-		PrimaryColor:         entrada.PrimaryColor,
-		NumberPrefix:         entrada.NumberPrefix,
-		MainAssignment:       entrada.MainAssignment,
-		MainNotification:     entrada.MainNotification,
-		InternalAssignment:   entrada.InternalAssignment,
-		InternalNotification: entrada.InternalNotification,
-		TimeZone:             entrada.TimeZone,
-		PublicAppURL:         entrada.PublicAppURL,
-		AIURL:                entrada.AIURL,
-		AIModel:              entrada.AIModel,
+		Name:                       entrada.Name,
+		EntryMethod:                entrada.EntryMethod,
+		Directory:                  dtos.NewDirectoryInput(entrada.Directory),
+		Keycloak:                   dtos.NewKeycloakInput(entrada.Keycloak),
+		Language:                   entrada.Language,
+		PrimaryColor:               entrada.PrimaryColor,
+		NumberPrefix:               entrada.NumberPrefix,
+		MainAssignment:             entrada.MainAssignment,
+		MainNotification:           entrada.MainNotification,
+		InternalAssignment:         entrada.InternalAssignment,
+		InternalNotification:       entrada.InternalNotification,
+		ReportOverdueCriticalHours: entrada.ReportOverdueCriticalHours,
+		ReportOverdueHighHours:     entrada.ReportOverdueHighHours,
+		ReportOverdueMediumHours:   entrada.ReportOverdueMediumHours,
+		ReportOverdueLowHours:      entrada.ReportOverdueLowHours,
+		TimeZone:                   entrada.TimeZone,
+		PublicAppURL:               entrada.PublicAppURL,
+		AIURL:                      entrada.AIURL,
+		AIModel:                    entrada.AIModel,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, r, err)
@@ -370,7 +374,7 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.aiUrl.invalid")
 	case errors.Is(err, services.ErrAIUnreachable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.unreachable")
-	case errors.Is(err, services.ErrAIModeUnknown), errors.Is(err, services.ErrAIProviderUnknown), errors.Is(err, services.ErrAIAuthUnknown), errors.Is(err, services.ErrAIModelRequired), errors.Is(err, services.ErrAIPrivacyRequired), errors.Is(err, services.ErrAICredentialInvalid):
+	case errors.Is(err, services.ErrAIModeUnknown), errors.Is(err, services.ErrAIProviderUnknown), errors.Is(err, services.ErrAIAuthUnknown), errors.Is(err, services.ErrAIModelRequired), errors.Is(err, services.ErrAIPrivacyRequired), errors.Is(err, services.ErrAICredentialInvalid), errors.Is(err, services.ErrAIAccelerationUnknown), errors.Is(err, services.ErrAINVIDIAUnavailable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, services.ErrAILicenseRequired):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())

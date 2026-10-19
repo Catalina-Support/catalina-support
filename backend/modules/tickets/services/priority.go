@@ -29,10 +29,10 @@ func (s *Service) ChangePriority(number, value string, actor auth.Identity) (Tic
 	var principal repositories.Ticket
 	notify := false
 	err = s.tickets.DB().Transaction(func(tx *gorm.DB) error {
-		query := tx.Clauses(clause.Locking{Strength: "UPDATE"})
 		if isInternal {
 			var internal repositories.InternalTicket
-			result := query.Where("number = ?", number).Limit(1).Find(&internal)
+			result := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("number = ?", number).Limit(1).Find(&internal)
 			if result.Error != nil {
 				return result.Error
 			}
@@ -42,7 +42,8 @@ func (s *Service) ChangePriority(number, value string, actor auth.Identity) (Tic
 			if internal.State == repositories.StateCerrado {
 				return ErrClosed
 			}
-			result = query.Where("id = ?", internal.TicketID).Limit(1).Find(&principal)
+			result = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("id = ?", internal.TicketID).Limit(1).Find(&principal)
 			if result.Error != nil {
 				return result.Error
 			}
@@ -50,7 +51,8 @@ func (s *Service) ChangePriority(number, value string, actor auth.Identity) (Tic
 				return ErrTicketNotFound
 			}
 		} else {
-			result := query.Where("number = ?", number).Limit(1).Find(&principal)
+			result := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("number = ?", number).Limit(1).Find(&principal)
 			if result.Error != nil {
 				return result.Error
 			}

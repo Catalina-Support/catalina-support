@@ -63,7 +63,8 @@ type EscalateRequest struct {
 
 // CommentRequest escribe un comentario.
 type CommentRequest struct {
-	Body string `json:"body"`
+	Body       string `json:"body"`
+	Visibility string `json:"visibility,omitempty"`
 }
 
 type ImproveWritingRequest struct {
@@ -155,12 +156,13 @@ type TicketResponse struct {
 
 // CommentResponse es un comentario de la conversación.
 type CommentResponse struct {
-	ID        int64           `json:"id"`
-	Author    *PersonResponse `json:"author,omitempty"`
-	Body      string          `json:"body"`
-	Edited    bool            `json:"edited"`
-	Deleted   bool            `json:"deleted"`
-	CreatedAt string          `json:"createdAt"`
+	ID         int64           `json:"id"`
+	Author     *PersonResponse `json:"author,omitempty"`
+	Body       string          `json:"body"`
+	Visibility string          `json:"visibility"`
+	Edited     bool            `json:"edited"`
+	Deleted    bool            `json:"deleted"`
+	CreatedAt  string          `json:"createdAt"`
 }
 
 // AttachmentResponse es un adjunto: lo que hace falta para enseñarlo y para descargarlo.
@@ -395,12 +397,13 @@ func NewTicketResponse(ticket services.Ticket) TicketResponse {
 // NewCommentResponse traduce un comentario.
 func NewCommentResponse(comentario services.Comment) CommentResponse {
 	return CommentResponse{
-		ID:        comentario.ID,
-		Author:    NewPersonResponse(comentario.Author),
-		Body:      comentario.Body,
-		Edited:    comentario.Edited,
-		Deleted:   comentario.Deleted,
-		CreatedAt: comentario.CreatedAt.UTC().Format(time.RFC3339),
+		ID:         comentario.ID,
+		Author:     NewPersonResponse(comentario.Author),
+		Body:       comentario.Body,
+		Visibility: comentario.Visibility,
+		Edited:     comentario.Edited,
+		Deleted:    comentario.Deleted,
+		CreatedAt:  comentario.CreatedAt.UTC().Format(time.RFC3339),
 	}
 }
 

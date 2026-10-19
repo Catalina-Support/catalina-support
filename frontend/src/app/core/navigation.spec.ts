@@ -1,4 +1,4 @@
-import { ENTRADAS, claveDeEntrada, entradasPara } from './navigation';
+import { ENTRADAS, claveDeEntrada, entradasPara, rutaDeMenuActiva } from './navigation';
 
 describe('entradasPara', () => {
   it('el menú enseña lo que existe, y sólo lo que existe', () => {
@@ -7,6 +7,7 @@ describe('entradasPara', () => {
     const rutas = ENTRADAS.map((entrada) => entrada.ruta);
 
     expect(rutas).toEqual([
+      '/dashboard',
       '/tickets',
       '/tickets/main',
       '/tickets/internal',
@@ -20,6 +21,7 @@ describe('entradasPara', () => {
     expect(entradasPara('usuario').map((entrada) => entrada.ruta)).toEqual(['/tickets']);
 
     expect(entradasPara('soporte').map((entrada) => entrada.ruta)).toEqual([
+      '/dashboard',
       '/tickets',
       '/tickets/main',
       '/tickets/internal',
@@ -28,12 +30,14 @@ describe('entradasPara', () => {
     ]);
 
     expect(entradasPara('desarrollo').map((entrada) => entrada.ruta)).toEqual([
+      '/dashboard',
       '/tickets',
       '/tickets/main',
       '/tickets/internal',
     ]);
 
     expect(entradasPara('administrador').map((entrada) => entrada.ruta)).toEqual([
+      '/dashboard',
       '/tickets',
       '/tickets/categories',
       '/users',
@@ -59,7 +63,7 @@ describe('entradasPara', () => {
     // Una sola pantalla con dos nombres —«Mis tickets» para los tres que tienen tickets propios, y
     // «Bandeja» para el Administrador, que no tiene—, y el menú no se inventa dos entradas que llevan
     // al mismo sitio.
-    const bandeja = ENTRADAS[0];
+    const bandeja = ENTRADAS.find((entrada) => entrada.ruta === '/tickets')!;
 
     expect(claveDeEntrada(bandeja, 'usuario')).toBe('misTickets');
     expect(claveDeEntrada(bandeja, 'desarrollo')).toBe('misTickets');
@@ -86,6 +90,32 @@ describe('entradasPara', () => {
     }
   });
 
+  it('acumula las entradas administrativas sin perder las del papel operativo', () => {
+    expect(entradasPara('soporte', true).map((entrada) => entrada.ruta)).toEqual([
+      '/dashboard',
+      '/tickets',
+      '/tickets/main',
+      '/tickets/internal',
+      '/tickets/categories',
+      '/users',
+      '/settings',
+    ]);
+
+    expect(entradasPara('desarrollo', true).map((entrada) => entrada.ruta)).toEqual([
+      '/dashboard',
+      '/tickets',
+      '/tickets/main',
+      '/tickets/internal',
+      '/tickets/categories',
+      '/users',
+      '/settings',
+    ]);
+  });
+
+  it('no convierte a un usuario en administrador desde la navegación', () => {
+    expect(entradasPara('usuario', true).map((entrada) => entrada.ruta)).toEqual(['/tickets']);
+  });
+
   it('crear un ticket no está en el menú, para nadie', () => {
     // Es una acción de la bandeja, no un módulo (decisión 53): la ruta sigue existiendo y se entra
     // por el botón que hay dentro.
@@ -104,5 +134,29 @@ describe('entradasPara', () => {
       expect(entrada.ruta.startsWith('/')).toBe(true);
       expect(entrada.clave.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('rutaDeMenuActiva', () => {
+  it('activa exactamente una lista de tickets, sin convertir la bandeja en prefijo', () => {
+    expect(rutaDeMenuActiva('/tickets')).toBe('/tickets');
+    expect(rutaDeMenuActiva('/tickets/main')).toBe('/tickets/main');
+    expect(rutaDeMenuActiva('/tickets/internal')).toBe('/tickets/internal');
+    expect(rutaDeMenuActiva('/tickets/categories')).toBe('/tickets/categories');
+  });
+
+  it('mantiene las pantallas auxiliares dentro de su módulo acordado', () => {
+    expect(rutaDeMenuActiva('/tickets/new')).toBe('/tickets');
+    expect(rutaDeMenuActiva('/tickets/CS-2026-0001')).toBe('/tickets');
+    expect(rutaDeMenuActiva('/tickets/INT-CS-2026-0001?view=both')).toBe('/tickets');
+    expect(rutaDeMenuActiva('/users/42')).toBe('/users');
+    expect(rutaDeMenuActiva('/mail')).toBe('/settings');
+  });
+
+  it('tolera query, fragmento y barra final, y no inventa selección para otras pantallas', () => {
+    expect(rutaDeMenuActiva('/dashboard?from=2026-09-19#charts')).toBe('/dashboard');
+    expect(rutaDeMenuActiva('/users/')).toBe('/users');
+    expect(rutaDeMenuActiva('/profile')).toBeNull();
+    expect(rutaDeMenuActiva('/change-password')).toBeNull();
   });
 });

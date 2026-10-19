@@ -61,14 +61,18 @@ func (InstallationSettings) TableName() string { return "installation_settings" 
 
 // TicketSettings es la fila única de lo que configura el comportamiento de los tickets.
 type TicketSettings struct {
-	ID                   int64     `gorm:"primaryKey"`
-	NumberPrefix         string    `gorm:"column:number_prefix"`
-	MainAssignment       string    `gorm:"column:main_assignment"`
-	MainNotification     string    `gorm:"column:main_notification"`
-	InternalAssignment   string    `gorm:"column:internal_assignment"`
-	InternalNotification string    `gorm:"column:internal_notification"`
-	UpdatedAt            time.Time `gorm:"column:updated_at"`
-	UpdatedByID          *int64    `gorm:"column:updated_by_id"`
+	ID                         int64     `gorm:"primaryKey"`
+	NumberPrefix               string    `gorm:"column:number_prefix"`
+	MainAssignment             string    `gorm:"column:main_assignment"`
+	MainNotification           string    `gorm:"column:main_notification"`
+	InternalAssignment         string    `gorm:"column:internal_assignment"`
+	InternalNotification       string    `gorm:"column:internal_notification"`
+	ReportOverdueCriticalHours int       `gorm:"column:report_overdue_critical_hours"`
+	ReportOverdueHighHours     int       `gorm:"column:report_overdue_high_hours"`
+	ReportOverdueMediumHours   int       `gorm:"column:report_overdue_medium_hours"`
+	ReportOverdueLowHours      int       `gorm:"column:report_overdue_low_hours"`
+	UpdatedAt                  time.Time `gorm:"column:updated_at"`
+	UpdatedByID                *int64    `gorm:"column:updated_by_id"`
 }
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
@@ -121,6 +125,7 @@ type AISettings struct {
 	Provider                string     `gorm:"column:provider"`
 	BaseURL                 string     `gorm:"column:base_url"`
 	Model                   string     `gorm:"column:model"`
+	AccelerationMode        string     `gorm:"column:acceleration_mode"`
 	AuthType                string     `gorm:"column:auth_type"`
 	AuthHeader              string     `gorm:"column:auth_header"`
 	CredentialVersion       *int16     `gorm:"column:credential_version"`

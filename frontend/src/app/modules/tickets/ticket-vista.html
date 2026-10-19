@@ -181,7 +181,10 @@
       <!-- La línea de tiempo: los comentarios y lo que hizo el sistema, en orden. -->
       @for (renglon of linea(); track renglon.clave) {
         @if (renglon.comentario; as comentario) {
-          <div class="flex flex-col gap-2 rounded-lg border border-borde bg-superficie p-4">
+          <div
+            class="flex flex-col gap-2 rounded-lg border p-4"
+            [class]="comentario.visibility === 'private' ? 'border-borde-fuerte bg-superficie-suave' : 'border-borde bg-superficie'"
+          >
             <div class="flex flex-wrap items-center gap-2">
               <p class="text-xs font-medium text-apagado">
                 {{ nombreDe(comentario.author) }} · {{ cuando(comentario.createdAt) }}
@@ -189,6 +192,12 @@
 
               @if (comentario.edited) {
                 <span class="text-xs text-apagado">· {{ t().tickets.comentarioEditado }}</span>
+              }
+
+              @if (comentario.visibility === 'private') {
+                <span class="rounded border border-borde-fuerte bg-superficie px-2 py-0.5 text-xs font-medium text-texto">
+                  {{ t().tickets.privado }}
+                </span>
               }
 
               @if (puedeTocarComentario(comentario)) {
@@ -230,6 +239,14 @@
                 [valor]="textoEditado()"
                 (valorChange)="textoEditado.set($event)"
               />
+
+              @if (mostrarSelectorDeVisibilidad()) {
+                <app-conmutador
+                  [etiqueta]="t().tickets.visibilidad"
+                  [opciones]="opcionesDeVisibilidad()"
+                  [(valor)]="visibilidadEditada"
+                />
+              }
 
               @if (puedeMejorarConIA()) {
                 <app-mejorar-redaccion
@@ -316,6 +333,14 @@
             [valor]="comentario()"
             (valorChange)="comentario.set($event)"
           />
+
+          @if (mostrarSelectorDeVisibilidad()) {
+            <app-conmutador
+              [etiqueta]="t().tickets.visibilidad"
+              [opciones]="opcionesDeVisibilidad()"
+              [(valor)]="visibilidadComentario"
+            />
+          }
 
           @if (puedeMejorarConIA()) {
             <app-mejorar-redaccion

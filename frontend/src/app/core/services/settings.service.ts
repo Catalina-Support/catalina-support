@@ -82,6 +82,10 @@ export interface Configuracion {
   readonly mainNotification: string;
   readonly internalAssignment: string;
   readonly internalNotification: string;
+  readonly reportOverdueCriticalHours: number;
+  readonly reportOverdueHighHours: number;
+  readonly reportOverdueMediumHours: number;
+  readonly reportOverdueLowHours: number;
   readonly updatedAt: string;
   /**
    * El motor de IA: su dirección y su modelo.
@@ -106,6 +110,7 @@ export interface ConfiguracionDeIA {
   readonly credentialSet: boolean;
   readonly privacyConfirmed: boolean;
   readonly tested: boolean;
+	readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
 }
 
 export type ConfiguracionDeIAEscrita = Omit<ConfiguracionDeIA, 'credentialSet' | 'tested'> & {
@@ -123,8 +128,13 @@ export interface ModeloLocalDeIA {
 export interface CatalogoLocalDeIA {
   readonly models: readonly ModeloLocalDeIA[];
   readonly diskAvailableBytes: number;
+	readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
+	readonly effectiveAcceleration: 'cpu' | 'nvidia';
+	readonly deviceName: string;
+	readonly fallbackReason?: string;
+	readonly restarting: boolean;
 }
-export interface SaludoDeIA { readonly greeting:string; readonly current:string; readonly timeZone:string; readonly modelId:string; readonly modelName:string; }
+export interface SaludoDeIA { readonly greeting:string; readonly current:string; readonly timeZone:string; readonly modelId:string; readonly modelName:string; readonly accelerationMode:string; readonly effectiveAcceleration:string; readonly deviceName:string; readonly fallbackReason?:string; }
 
 export interface BorradorDeIdioma {
   readonly key: string; readonly sourceLanguage: string; readonly targetLanguage: string;

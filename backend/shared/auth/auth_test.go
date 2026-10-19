@@ -178,6 +178,24 @@ func TestIdentityCan(t *testing.T) {
 	if soporte.Can(RoleAdministrador) {
 		t.Fatal("soporte no debe poder lo del administrador")
 	}
+
+	soporteAdmin := Identity{Role: RoleSoporte, IsAdmin: true}
+	if !soporteAdmin.Can(RoleSoporte) || !soporteAdmin.Can(RoleAdministrador) {
+		t.Fatal("soporte con administración debe acumular ambos permisos")
+	}
+
+	desarrolloAdmin := Identity{Role: RoleDesarrollo, IsAdmin: true}
+	if !desarrolloAdmin.Can(RoleDesarrollo) || !desarrolloAdmin.Can(RoleAdministrador) {
+		t.Fatal("desarrollo con administración debe acumular ambos permisos")
+	}
+	if desarrolloAdmin.Can(RoleSoporte) {
+		t.Fatal("administrar no debe convertir desarrollo en soporte")
+	}
+
+	usuarioAdminInvalido := Identity{Role: RoleUsuario, IsAdmin: true}
+	if usuarioAdminInvalido.IsAdministrator() {
+		t.Fatal("usuario no puede adquirir administración aunque llegue una combinación inválida")
+	}
 }
 
 func TestFullName(t *testing.T) {
@@ -207,12 +225,12 @@ func TestRolesCerrados(t *testing.T) {
 
 	for _, inventado := range []string{"", "admin", "Administrador", "superusuario"} {
 		if RoleIsValid(inventado) {
-			t.Fatalf("%q no es uno de los cuatro papeles", inventado)
+			t.Fatalf("%q no es uno de los tres papeles operativos", inventado)
 		}
 	}
 
-	if len(Roles()) != 4 {
-		t.Fatalf("hay %d papeles y deben ser cuatro", len(Roles()))
+	if len(Roles()) != 3 {
+		t.Fatalf("hay %d papeles operativos y deben ser tres", len(Roles()))
 	}
 }
 

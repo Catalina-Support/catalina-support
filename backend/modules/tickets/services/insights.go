@@ -15,8 +15,9 @@ import (
 // Los dos campos que redacta el motor de IA (`docs/modules/ai.md`). Son los mismos nombres que usa
 // su tabla, y se declaran aquí para no escribirlos de dos maneras.
 const (
-	TipoSummary      = "summary"
-	TipoUltimaAccion = "ultima_accion"
+	TipoSummary          = "summary"
+	TipoUltimaAccion     = "ultima_accion"
+	sufijoInsightInterno = "::internal"
 )
 
 // Resumen es un texto del motor en el idioma global, con su estado y la clave del error.
@@ -72,7 +73,7 @@ func (s *Service) pedirAlMotor(numero string, tipos ...string) {
 		return
 	}
 
-	texto, err := s.textoParaElMotor(numero)
+	texto, err := s.textoParaElMotorConPrivados(numero, false)
 	if err != nil {
 		logs.LogWarning("no se pudo armar el texto para el resumen del ticket " + numero)
 		return
@@ -80,6 +81,17 @@ func (s *Service) pedirAlMotor(numero string, tipos ...string) {
 
 	for _, tipo := range tipos {
 		s.insights.Pedir(EntradaDeResumen{Numero: numero, Tipo: tipo, Texto: texto})
+	}
+
+	// Un principal conserva además una versión interna que sí incorpora las notas privadas. El
+	// sufijo es una clave técnica opaca: nunca sale por la API ni cambia el número del ticket.
+	if !strings.HasPrefix(numero, "INT-") {
+		textoInterno, errorInterno := s.textoParaElMotorConPrivados(numero, true)
+		if errorInterno == nil {
+			for _, tipo := range tipos {
+				s.insights.Pedir(EntradaDeResumen{Numero: numero + sufijoInsightInterno, Tipo: tipo, Texto: textoInterno})
+			}
+		}
 	}
 }
 
@@ -89,7 +101,9 @@ func (s *Service) pedirAlMotor(numero string, tipos ...string) {
 //
 // Se declara aquí y `ai` lo cumple por su cuenta: ninguno de los dos módulos importa al otro.
 func (s *Service) TextoParaElMotor(numero string) (string, error) {
-	return s.textoParaElMotor(numero)
+	interno := strings.HasSuffix(numero, sufijoInsightInterno)
+	numero = strings.TrimSuffix(numero, sufijoInsightInterno)
+	return s.textoParaElMotorConPrivados(numero, interno)
 }
 
 // NumerosParaRegenerarInsights enumera los dos tipos sin cruzar la frontera de datos: `ai`
@@ -109,6 +123,9 @@ func (s *Service) NumerosParaRegenerarInsights() ([]string, error) {
 	numeros := make([]string, 0, len(filas))
 	for _, actual := range filas {
 		numeros = append(numeros, actual.Number)
+		if !strings.HasPrefix(actual.Number, "INT-") {
+			numeros = append(numeros, actual.Number+sufijoInsightInterno)
+		}
 	}
 	return numeros, nil
 }
@@ -120,6 +137,10 @@ func (s *Service) NumerosParaRegenerarInsights() ([]string, error) {
 // texto** y **los adjuntos por su nombre**, nunca su contenido. El recorte, si el texto es largo, lo
 // hace el módulo `ai` (decisión 6), que es quien conoce el tope: aquí se manda lo que hay.
 func (s *Service) textoParaElMotor(numero string) (string, error) {
+	return s.textoParaElMotorConPrivados(numero, true)
+}
+
+func (s *Service) textoParaElMotorConPrivados(numero string, incluirPrivados bool) (string, error) {
 	idioma := "es"
 	if s.language != nil {
 		if actual, err := s.language.Language(); err == nil && actual == "en" {
@@ -140,6 +161,35 @@ func (s *Service) textoParaElMotor(numero string) (string, error) {
 	comentariosPrincipal, adjuntosPrincipal, historialPrincipal, err := s.conversacionDe(destinoPrincipal)
 	if err != nil {
 		return "", err
+	}
+	if !incluirPrivados {
+		privados := make(map[int64]struct{})
+		publicos := comentariosPrincipal[:0]
+		for _, comentario := range comentariosPrincipal {
+			if comentario.Visibility == VisibilityPrivate {
+				privados[comentario.ID] = struct{}{}
+				continue
+			}
+			publicos = append(publicos, comentario)
+		}
+		comentariosPrincipal = publicos
+		adjuntosPublicos := adjuntosPrincipal[:0]
+		for _, adjunto := range adjuntosPrincipal {
+			if adjunto.CommentID != nil {
+				if _, privado := privados[*adjunto.CommentID]; privado {
+					continue
+				}
+			}
+			adjuntosPublicos = append(adjuntosPublicos, adjunto)
+		}
+		adjuntosPrincipal = adjuntosPublicos
+		historialPublico := historialPrincipal[:0]
+		for _, entrada := range historialPrincipal {
+			if entrada.Event != "comment_visibility_changed" {
+				historialPublico = append(historialPublico, entrada)
+			}
+		}
+		historialPrincipal = historialPublico
 	}
 
 	var comentariosInterno []repositories.Comment
@@ -466,7 +516,7 @@ func quienEs(id *int64, porID map[int64]auth.Account, idioma string) string {
 //
 // Recibe la lista por su sitio en memoria —un `[]Ticket`— y no una copia: es lo que hace que el mismo
 // trabajo valga para una página entera y para un solo ticket.
-func (s *Service) pegarResumenes(tickets []Ticket) {
+func (s *Service) pegarResumenes(tickets []Ticket, internos bool) {
 	if len(tickets) == 0 {
 		return
 	}
@@ -476,7 +526,7 @@ func (s *Service) pegarResumenes(tickets []Ticket) {
 		numeros = append(numeros, tickets[i].Number)
 	}
 
-	resumenes := s.resumenesDe(numeros)
+	resumenes := s.resumenesDe(numeros, internos)
 	for i := range tickets {
 		if resumen, hay := resumenes[tickets[i].Number]; hay {
 			tickets[i].Resumen = resumen
@@ -489,16 +539,36 @@ func (s *Service) pegarResumenes(tickets []Ticket) {
 // Va aparte de `aTicket` porque la lista se arma en dos pasadas: primero los tickets y después sus
 // resúmenes, para no preguntar una vez por fila (decisión 9). Si el motor no está, devuelve el mapa
 // vacío y los campos se quedan sin texto.
-func (s *Service) resumenesDe(numeros []string) map[string]Resumenes {
+func (s *Service) resumenesDe(numeros []string, internos bool) map[string]Resumenes {
 	if s.insights == nil || len(numeros) == 0 {
 		return nil
 	}
 
-	resumenes, err := s.insights.De(numeros)
+	claves := numeros
+	if internos {
+		claves = make([]string, len(numeros))
+		for i, numero := range numeros {
+			if strings.HasPrefix(numero, "INT-") {
+				claves[i] = numero
+			} else {
+				claves[i] = numero + sufijoInsightInterno
+			}
+		}
+	}
+	resumenesLeidos, err := s.insights.De(claves)
 	if err != nil {
 		logs.LogWarning("no se pudieron leer los resúmenes de los tickets")
 		return nil
 	}
 
+	if !internos {
+		return resumenesLeidos
+	}
+	resumenes := make(map[string]Resumenes, len(numeros))
+	for i, numero := range numeros {
+		if resumen, hay := resumenesLeidos[claves[i]]; hay {
+			resumenes[numero] = resumen
+		}
+	}
 	return resumenes
 }
