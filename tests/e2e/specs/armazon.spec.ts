@@ -123,6 +123,41 @@ test.describe('El armazón', () => {
     await expect(page.getByRole('link', { name: 'Configuración' })).toHaveClass(/bg-superficie-suave/);
   });
 
+  test('marca una sola entrada en cada listado y conserva el módulo de las pantallas auxiliares', async ({
+    page,
+  }) => {
+    await entrar(page, 'dev1@demo.com', '123123123');
+
+    const menu = page.locator('aside');
+    const activa = menu.locator('nav a[aria-current="page"]');
+
+    for (const [ruta, etiqueta] of [
+      ['/tickets', 'My tickets'],
+      ['/tickets/main', 'Main tickets'],
+      ['/tickets/internal', 'Internal tickets'],
+      ['/tickets/categories', 'Classification'],
+      ['/users', 'Users'],
+      ['/settings', 'Settings'],
+    ] as const) {
+      await page.goto(ruta);
+      await expect(activa).toHaveCount(1);
+      await expect(activa).toHaveText(etiqueta);
+      await expect(activa).toHaveClass(/bg-superficie-suave/);
+    }
+
+    await page.goto('/tickets/new');
+    await expect(activa).toHaveCount(1);
+    await expect(activa).toHaveText('My tickets');
+
+    await page.goto('/users/00000000-0000-0000-0000-000000000000');
+    await expect(activa).toHaveCount(1);
+    await expect(activa).toHaveText('Users');
+
+    await page.goto('/mail');
+    await expect(activa).toHaveCount(1);
+    await expect(activa).toHaveText('Settings');
+  });
+
   test('la pantalla de entrada no lleva el menú', async ({ page }, info) => {
     test.skip(!esPc(info), 'En móvil el botón de salir está en el cajón');
 

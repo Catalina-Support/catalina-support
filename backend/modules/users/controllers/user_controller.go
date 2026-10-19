@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/juanky-estevez/go-logs"
 
 	"catalina-support/backend/modules/users/dtos"
+	"catalina-support/backend/modules/users/repositories"
 	"catalina-support/backend/modules/users/services"
 	"catalina-support/backend/shared/auth"
 	"catalina-support/backend/shared/httpx"
@@ -49,6 +51,7 @@ func (c *UserController) Create(w http.ResponseWriter, r *http.Request) {
 		LastName:   entrada.LastName,
 		Email:      entrada.Email,
 		Role:       entrada.Role,
+		IsAdmin:    entrada.IsAdmin,
 		Origin:     entrada.Origin,
 		ExternalID: entrada.ExternalID,
 	}, actor)
@@ -137,7 +140,57 @@ func (c *UserController) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, dtos.UserEnvelope{User: dtos.NewUserResponse(cuenta)})
+	events, err := c.service.AdminEvents(id, false)
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	lastAdmin, err := c.service.IsLastActiveAdmin(cuenta)
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.UserEnvelope{
+		User: dtos.NewUserResponse(cuenta), AdminEvents: adminEventResponses(events), LastNormalAdmin: lastAdmin,
+	})
+}
+
+func (c *UserController) PendingAdminEvents(w http.ResponseWriter, r *http.Request) {
+	actor := auth.MustFromContext(r.Context())
+	if actor.Factory {
+		httpx.WriteJSON(w, http.StatusOK, []dtos.AdminEventResponse{})
+		return
+	}
+	events, err := c.service.AdminEvents(actor.ID, true)
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, adminEventResponses(events))
+}
+
+func (c *UserController) AcknowledgeAdminEvent(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpx.WriteError(w, http.StatusNotFound, "users.notFound")
+		return
+	}
+	if err := c.service.AcknowledgeAdminEvent(id, auth.MustFromContext(r.Context())); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func adminEventResponses(events []repositories.AdminEvent) []dtos.AdminEventResponse {
+	result := make([]dtos.AdminEventResponse, 0, len(events))
+	for _, event := range events {
+		result = append(result, dtos.AdminEventResponse{
+			ID: event.ID, Action: event.Action, Actor: event.ActorLabel,
+			CreatedAt: event.CreatedAt.UTC().Format(time.RFC3339), Acknowledged: event.AcknowledgedAt != nil,
+		})
+	}
+	return result
 }
 
 // Update cambia una cuenta. Soporte sólo puede el nombre y los apellidos, y lo comprueba el servicio,
@@ -159,6 +212,7 @@ func (c *UserController) Update(w http.ResponseWriter, r *http.Request) {
 		LastName: entrada.LastName,
 		Email:    entrada.Email,
 		Role:     entrada.Role,
+		IsAdmin:  entrada.IsAdmin,
 		IsActive: entrada.IsActive,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {

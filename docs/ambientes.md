@@ -1,7 +1,10 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-17
+> **Última actualización:** 2026-10-18
+>
+> **Aprobado, implementado y verificado el 2026-10-18.** Se añadió `ai-nvidia.yml` para Linux con
+> NVIDIA Container Toolkit sin alterar el despliegue CPU portable.
 >
 > **Enmienda implementada y verificada el 2026-10-17: guía pública y demo alojada.** La sección 25
 > delimita cómo el README resume desarrollo y producción y presenta `demo.catalina-support.com`.
@@ -1284,3 +1287,15 @@ destructiva ya documentada— y se comprobaron el nombre Catalina Support, los d
 el color institucional `#1d4ed8`. La evidencia pública consta de una vista doble sin datos sensibles
 y una segunda captura del mismo ticket donde se leen `Summary`, `Last action` e `Improve with AI`.
 No se usó ni alteró producción o la demo pública para obtenerlas.
+
+## 26. Variante NVIDIA del motor local
+
+`ai.yml` continúa siendo el despliegue CPU y funciona mediante Docker en Linux, macOS y Windows.
+`ai-nvidia.yml` es una superposición opcional para Linux: usa la imagen CUDA del motor, reserva una
+GPU visible y mantiene el mismo volumen GGUF, red y token. Requiere controlador NVIDIA compatible,
+NVIDIA Container Toolkit y la comprobación previa documentada del runtime.
+
+La UI no instala controladores ni reinicia Compose. Si se solicita NVIDIA sin esa variante, el
+administrador responde capacidad ausente y la interfaz muestra el comando de despliegue. Auto usa
+CPU en el Compose normal y NVIDIA cuando la variante está disponible. Producción sólo cambia cuando
+su operador decide usar esa variante; este trabajo no la despliega.

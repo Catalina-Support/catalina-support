@@ -12,6 +12,15 @@
   <div class="flex flex-wrap items-center gap-3">
     <h1 class="text-xl font-semibold text-texto">{{ titulo() }}</h1>
 
+    @if (conChipDeVista()) {
+      <app-conmutador
+        [etiqueta]="t().tickets.vista"
+        [opciones]="opcionesDeVista()"
+        [valor]="filtros().view ?? ''"
+        (valorChange)="filtrar('view', $event)"
+      />
+    }
+
     <!--
     Los filtros, a la vista: el estado, el texto y el tipo de ticket. El chip de tipo lo lleva quien
     puede tener de los dos —Soporte, Desarrollo y el Administrador—, y no lo lleva quien tiene un
@@ -467,15 +476,6 @@
           <option value="updated">{{ t().tickets.ordenActualizacion }}</option>
         </select>
       </label>
-
-      @if (conChipDeVista()) {
-        <app-conmutador
-          [etiqueta]="t().tickets.vista"
-          [opciones]="opcionesDeVista()"
-          [valor]="borrador().view ?? ''"
-          (valorChange)="escribirEnElBorrador('view', $event)"
-        />
-      }
 
       @if (conChipDeTipo()) {
         <app-conmutador

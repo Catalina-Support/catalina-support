@@ -84,21 +84,22 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
-| `docs/propósito-y-alcance.md` | **as-built**: incorpora prioridad a la versión 1.0.0 |
-| `docs/usuarios-y-permisos.md` | **as-built**: permisos para proponer y modificar prioridad |
-| `docs/modules/tickets.md` | **as-built**: retorno visible de Esperando a En progreso para Soporte |
+| `docs/propósito-y-alcance.md` | **as-built**: Dashboard exclusivamente estadístico sin evaluación ni SLA |
+| `docs/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |
+| `docs/modules/tickets.md` | **as-built**: prioridad transaccional desde el ticket interno |
 | `docs/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
-| `docs/ambientes.md` | **as-built**: guía pública resumida y demo alojada fuera del repositorio |
-| `docs/interfaz-y-experiencia.md` | **as-built**: tabla de altura disponible, cabecera fija y ayudas únicas |
-| `docs/modules/settings.md` | **as-built**: consulta automática del catálogo local |
-| `docs/primer-arranque.md` | **as-built**: catálogo automático en el paso 5 |
-| `docs/modules/ai.md` | **as-built**: resultados vigentes y recuperación automática finita |
-| `docs/modules/mail.md` | **as-built**: duodécima plantilla para prioridad crítica |
-| `docs/modules/auth.md` | **as-built**: token de contraseña ausente sin falso error de GORM |
-| `docs/modules/users.md` | **as-built**: búsquedas previas al alta de directorio sin falsos errores |
-| `docs/arquitectura.md` | **as-built**: migración técnica a summary y escalationReason |
-| `docs/prueba-local.md` | **as-built**: verificación del README bilingüe y capturas públicas con IA |
+| `docs/ambientes.md` | **as-built**: variante opcional NVIDIA en Linux |
+| `docs/interfaz-y-experiencia.md` | **as-built**: navegación y gráficos visibles del Dashboard sin detalle de tickets |
+| `docs/modules/settings.md` | **as-built**: selección y estado efectivo de aceleración local |
+| `docs/primer-arranque.md` | **as-built**: aceleración local en el paso 5 |
+| `docs/modules/ai.md` | **as-built**: aceleración Auto/CPU/NVIDIA del motor local |
+| `docs/modules/mail.md` | **as-built**: decimotercera plantilla para comentarios privados |
+| `docs/modules/auth.md` | **as-built**: identidad con papel operativo y capacidad administrativa |
+| `docs/modules/users.md` | **as-built**: persistencia, auditoría y avisos de administración |
+| `docs/arquitectura.md` | **as-built**: frontera CPU/NVIDIA y reinicio transaccional |
+| `docs/prueba-local.md` | **as-built**: verificación de aceleración, respaldo y rollback |
 | `docs/proyecto-abierto.md` | **as-built**: portada bilingüe, sitio oficial, demo y Ko-fi |
+| `docs/modules/dashboard.md` | **as-built**: Dashboard agregado, reportería y exportación XLSX |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
@@ -130,14 +131,14 @@ con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `http
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
-La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veinticuatro plantillas, `users`,
+La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintiséis plantillas, `users`,
 `password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
 IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
 su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
 Windows). Hay **cuatro módulos en marcha**:
 
-- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los doce correos en sus dos idiomas, con vista previa y prueba—.
+- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los trece correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
@@ -332,7 +333,7 @@ cambiar el prefijo **no cambia los números ya emitidos**, y el enlace al **edit
 que es una pantalla del módulo `mail` a propósito: llamar a `/api/mail/**` desde `settings` rompería
 la regla dura de modularidad.
 
-**El editor de los correos está hecho**: los doce correos con sus dos idiomas al lado, el cuerpo con
+**El editor de los correos está hecho**: los trece correos con sus dos idiomas al lado, el cuerpo con
 sus botones de formato sobre lo seleccionado, los marcadores que se insertan al pulsarlos y una **vista
 previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
 

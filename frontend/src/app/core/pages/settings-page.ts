@@ -238,6 +238,7 @@ export class SettingsPage implements OnDestroy {
   protected readonly iaCabecera = signal('');
   protected readonly iaCredencial = signal('');
   protected readonly iaPrivacidad = signal(false);
+  protected readonly iaAceleracion = signal<'auto' | 'cpu' | 'nvidia'>('auto');
   protected readonly iaCredencialPuesta = signal(false);
   protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
   protected readonly refrescandoCatalogo = signal(false);
@@ -333,6 +334,15 @@ export class SettingsPage implements OnDestroy {
     );
   });
 
+  protected readonly reporteCritica = signal(4);
+  protected readonly reporteAlta = signal(24);
+  protected readonly reporteMedia = signal(72);
+  protected readonly reporteBaja = signal(120);
+  protected readonly cambioDeReporteriaPendiente = computed(() => {
+    const c = this.configuracion();
+    return !!c && (this.reporteCritica() !== c.reportOverdueCriticalHours || this.reporteAlta() !== c.reportOverdueHighHours || this.reporteMedia() !== c.reportOverdueMediumHours || this.reporteBaja() !== c.reportOverdueLowHours);
+  });
+
   /** **Si hay algo que guardar en la región y la dirección**: es la otra tarjeta, con su botón. */
   protected readonly cambioDeRegionPendiente = computed(() => {
     const configuracion = this.configuracion();
@@ -355,7 +365,8 @@ export class SettingsPage implements OnDestroy {
 
     return (
       this.iaDireccion().trim() !== configuracion.aiUrl ||
-      this.iaModelo().trim() !== configuracion.aiModel
+      this.iaModelo().trim() !== configuracion.aiModel ||
+      this.iaAceleracion() !== (configuracion.ai?.accelerationMode || 'auto')
     );
   });
 
@@ -502,7 +513,7 @@ export class SettingsPage implements OnDestroy {
         this.ajustes.guardar({
           ...configuracion,
           name: this.nombreElegido().trim(),
-          // El idioma sólo cambia mediante la aplicación atómica de las doce plantillas.
+          // El idioma sólo cambia mediante la aplicación atómica de las trece plantillas.
           language: configuracion.language,
         }),
       this.t().configuracion.instalacionGuardada,
@@ -555,6 +566,10 @@ export class SettingsPage implements OnDestroy {
     await this.guardarLaConfiguracion(this.t().configuracion.numeracionGuardada);
   }
 
+  protected async guardarReporteria(): Promise<void> {
+    await this.guardarLaConfiguracion(this.t().configuracion.reporteriaGuardada);
+  }
+
   /** Guarda el motor de IA: la dirección y el modelo. */
   protected async guardarIA(): Promise<void> {
     this.guardando.set(true);
@@ -565,6 +580,7 @@ export class SettingsPage implements OnDestroy {
         model: this.iaModelo().trim(), authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
         credential: this.iaCredencial(),
         privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(), language: this.configuracion()?.language ?? this.idioma(),
+        accelerationMode: this.iaAceleracion(),
       });
       this.ponerConfiguracionDeIA(ia);
       this.setup.marcarIAConfigurada();
@@ -597,6 +613,10 @@ export class SettingsPage implements OnDestroy {
           mainNotification: this.avisoPrincipal(),
           internalAssignment: this.asignacionInterno(),
           internalNotification: this.avisoInterno(),
+          reportOverdueCriticalHours: this.reporteCritica(),
+          reportOverdueHighHours: this.reporteAlta(),
+          reportOverdueMediumHours: this.reporteMedia(),
+          reportOverdueLowHours: this.reporteBaja(),
           // **El motor de IA también va aquí**: es un `PUT` entero, así que la configuración se
           // manda completa con lo que hay en pantalla, y guardar la región no borra lo escrito en
           // la tarjeta del motor.
@@ -788,6 +808,11 @@ export class SettingsPage implements OnDestroy {
     }
   }
   protected opcionesDeProveedorIA(): readonly OpcionSelector[] { return ['openai','claude','deepseek','openai-compatible'].map(valor => ({valor, etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor, grupo: this.t().configuracion.iaProveedor})); }
+  protected opcionesDeAceleracionIA(): readonly OpcionSelector[] { const t=this.t().configuracion; return [
+    {valor:'auto',etiqueta:t.iaAceleracionAuto,grupo:t.iaAceleracion},
+    {valor:'cpu',etiqueta:t.iaAceleracionCPU,grupo:t.iaAceleracion},
+    {valor:'nvidia',etiqueta:t.iaAceleracionNVIDIA,grupo:t.iaAceleracion},
+  ]; }
   protected opcionesDeModeloLocal(): readonly OpcionSelector[] { return [
     {valor:'qwen2.5-1.5b-instruct',etiqueta:'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',grupo:this.t().configuracion.iaLocal},
     {valor:'qwen2.5-3b-instruct',etiqueta:'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',grupo:this.t().configuracion.iaLocal},
@@ -798,6 +823,11 @@ export class SettingsPage implements OnDestroy {
     {valor:'header',etiqueta:t.iaAuth_header,grupo:t.iaAutenticacion},{valor:'basic',etiqueta:t.iaAuth_basic,grupo:t.iaAutenticacion},
   ]; }
   protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected descripcionAceleracion(catalogo: CatalogoLocalDeIA): string {
+    const configured = catalogo.accelerationMode === 'auto' ? this.t().configuracion.iaAceleracionAuto : catalogo.accelerationMode === 'nvidia' ? 'NVIDIA' : 'CPU';
+    const effective = catalogo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU';
+    return `${configured} · ${effective}${catalogo.deviceName && catalogo.deviceName !== effective ? ` · ${catalogo.deviceName}` : ''}`;
+  }
   protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
   protected async cargarCatalogoIA(): Promise<void> {
     if (this.refrescandoCatalogo()) return;
@@ -818,7 +848,7 @@ export class SettingsPage implements OnDestroy {
   protected async cancelarDescarga(id:string):Promise<void>{await this.accionIA(async()=>{await this.ajustes.cancelarDescarga(id);await this.refrescarCatalogo();});}
   protected pedirEliminarParcial(id:string):void{this.confirmacionModelo.set({id,parcial:true});}
   protected async confirmarEliminacion():Promise<void>{const pendiente=this.confirmacionModelo();if(!pendiente)return;this.confirmacionModelo.set(null);await this.accionIA(async()=>{if(pendiente.parcial){await this.ajustes.eliminarParcial(pendiente.id);await this.refrescarCatalogo();}else{await this.ajustes.eliminarModelo(pendiente.id);this.catalogoIA.set(await this.ajustes.modelosLocales());}});}
-  protected async probarModeloActivo():Promise<void>{await this.accionIA(async()=>{const saludo=await this.ajustes.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting})});});}
+  protected async probarModeloActivo():Promise<void>{await this.accionIA(async()=>{const saludo=await this.ajustes.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting,aceleracion:`${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`})});});}
   protected progreso(modelo:{downloadedBytes:number;downloadBytes:number}):number{return modelo.downloadBytes>0?Math.min(100,Math.round(modelo.downloadedBytes*100/modelo.downloadBytes)):0;}
   private async refrescarCatalogo():Promise<void>{const c=await this.ajustes.modelosLocales();this.catalogoIA.set(c);const activo=c.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=c.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
   ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
@@ -894,6 +924,7 @@ export class SettingsPage implements OnDestroy {
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerReporteria(configuracion);
       this.ponerIA(configuracion);
       if (configuracion.ai?.mode) {
         this.ponerConfiguracionDeIA(configuracion.ai);
@@ -924,6 +955,7 @@ export class SettingsPage implements OnDestroy {
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerReporteria(configuracion);
       this.ponerIA(configuracion);
       despues?.();
       this.mensaje.set({ forma: 'exito', texto: exito });
@@ -933,6 +965,13 @@ export class SettingsPage implements OnDestroy {
     } finally {
       this.guardando.set(false);
     }
+  }
+
+  private ponerReporteria(c: Configuracion): void {
+    this.reporteCritica.set(c.reportOverdueCriticalHours);
+    this.reporteAlta.set(c.reportOverdueHighHours);
+    this.reporteMedia.set(c.reportOverdueMediumHours);
+    this.reporteBaja.set(c.reportOverdueLowHours);
   }
 
   /** Deja los campos de la numeración con lo que hay guardado. */
@@ -959,6 +998,7 @@ export class SettingsPage implements OnDestroy {
     this.iaDireccion.set(ia.baseUrl || this.iaDireccion()); this.iaModelo.set(ia.model || this.iaModelo());
     this.iaAutenticacion.set(ia.authType); this.iaCabecera.set(ia.authHeader); this.iaCredencial.set('');
     this.iaCredencialPuesta.set(ia.credentialSet); this.iaPrivacidad.set(ia.privacyConfirmed);
+    this.iaAceleracion.set(ia.accelerationMode || 'auto');
   }
 
   /**

@@ -40,6 +40,28 @@ func RequireRole(roles ...string) func(http.Handler) http.Handler {
 	}
 }
 
+func RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := auth.FromContext(r.Context())
+		if !ok || !identity.IsAdministrator() {
+			httpx.WriteError(w, http.StatusForbidden, KeyForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func RequireStaff(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := auth.FromContext(r.Context())
+		if !ok || (!identity.IsAdministrator() && identity.Role != auth.RoleSoporte) {
+			httpx.WriteError(w, http.StatusForbidden, KeyForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Allowed dice si esa identidad puede, para comprobaciones dentro de un servicio —las que dependen
 // de los datos y no sólo de la ruta, como «Soporte sólo puede dar de alta usuarios»—.
 func Allowed(identity auth.Identity, roles ...string) bool {

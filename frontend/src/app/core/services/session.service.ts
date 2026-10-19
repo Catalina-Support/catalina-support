@@ -11,8 +11,17 @@ export interface Usuario {
   readonly lastName: string;
   readonly email: string;
   readonly role: string;
+  readonly isAdmin?: boolean;
   readonly origin: string;
   readonly factory: boolean;
+  readonly adminEvents?: readonly AdminEvent[];
+}
+
+export interface AdminEvent {
+  readonly id: number;
+  readonly action: 'granted' | 'revoked';
+  readonly actor: string;
+  readonly createdAt: string;
 }
 
 interface RespuestaEntrada {
@@ -100,6 +109,7 @@ export class SessionService {
 
   /** Quién ha entrado, o nada si no ha entrado nadie. */
   readonly usuario = this.usuarioActual.asReadonly();
+  readonly avisoAdministrativo = computed(() => this.usuarioActual()?.adminEvents?.[0] ?? null);
 
   /** Si ya se ha preguntado al backend quién es: es lo que evita enseñar la pantalla de entrada
    *  durante medio segundo a alguien que sí tiene sesión. */
@@ -112,11 +122,28 @@ export class SessionService {
    *  avise en vez de aparecer como si nada. */
   readonly sesionCaducada = this.caducada.asReadonly();
 
-  readonly esAdministrador = computed(() => this.usuarioActual()?.role === 'administrador');
+  readonly esAdministrador = computed(() => {
+    const usuario = this.usuarioActual();
+    return (
+      usuario?.role === 'administrador' ||
+      (usuario?.isAdmin === true && (usuario.role === 'soporte' || usuario.role === 'desarrollo'))
+    );
+  });
   readonly esSoporte = computed(() => {
     const papel = this.usuarioActual()?.role;
-    return papel === 'soporte' || papel === 'administrador';
+    return papel === 'soporte' || this.usuarioActual()?.isAdmin === true;
   });
+
+  async cerrarAvisoAdministrativo(id: number): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`/api/users/me/admin-events/${id}/acknowledge`, {}),
+    );
+    this.usuarioActual.update((usuario) =>
+      usuario
+        ? { ...usuario, adminEvents: usuario.adminEvents?.filter((event) => event.id !== id) }
+        : usuario,
+    );
+  }
 
   /**
    * El token de ahora mismo, leído **del almacenamiento cada vez**, no de memoria.

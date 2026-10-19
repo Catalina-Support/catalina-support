@@ -129,6 +129,37 @@ describe('BandejaPage', () => {
     return [...host.querySelectorAll('tbody tr:first-child td')] as HTMLElement[];
   }
 
+  it('trata Desarrollo con Admin como papel operativo y abre Mis tickets en Todos', async () => {
+    usuario.set({
+      id: 20,
+      name: 'Desarrollador',
+      lastName: 'Uno',
+      email: 'dev1@demo.com',
+      role: 'desarrollo',
+      isAdmin: true,
+      origin: 'local',
+      factory: false,
+    });
+
+    const fixture = TestBed.createComponent(BandejaPage);
+    fixture.detectChanges();
+
+    const peticion = http.expectOne((solicitud) => solicitud.url === '/api/tickets');
+    expect(peticion.request.params.get('type')).toBe('interno');
+    expect(peticion.request.params.get('mine')).toBe('1');
+    expect(peticion.request.params.has('view')).toBe(false);
+    peticion.flush(PAGINA);
+    http.expectOne('/api/tickets/categories').flush(SIN_CATEGORIAS);
+    await esperar();
+    fixture.detectChanges();
+
+    const cabecera = (fixture.nativeElement as HTMLElement).querySelector('main > div');
+    expect(cabecera?.textContent).toContain('Todos');
+    expect(cabecera?.textContent).toContain('Asignados');
+    expect(cabecera?.textContent).toContain('Observo');
+    expect(cabecera?.textContent).not.toContain('1 filtro');
+  });
+
   it('ordena toda la tabla según el contrato y deja la acción como columna visible', async () => {
     const fixture = await montar();
     const host = fixture.nativeElement as HTMLElement;

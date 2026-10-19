@@ -9,6 +9,7 @@ export interface Cuenta {
   readonly lastName: string;
   readonly email: string;
   readonly role: string;
+  readonly isAdmin?: boolean;
   readonly origin: string;
   readonly isActive: boolean;
   /** Si tiene contraseña propia. En las cuentas de directorio es falsa: la suya no es nuestra. */
@@ -33,6 +34,16 @@ export interface RespuestaDeCuenta {
   readonly invited?: boolean;
   /** Avisos sobre algo que **sí se ha hecho**, como claves que la pantalla traduce. */
   readonly warnings?: readonly string[];
+  readonly adminEvents?: readonly AdminEvent[];
+  readonly lastNormalAdmin?: boolean;
+}
+
+export interface AdminEvent {
+  readonly id: number;
+  readonly action: 'granted' | 'revoked';
+  readonly actor: string;
+  readonly createdAt: string;
+  readonly acknowledged: boolean;
 }
 
 /** Los filtros de la lista. Vacío quiere decir «sin filtrar». */
@@ -60,6 +71,7 @@ export interface AltaDeCuenta {
   readonly lastName: string;
   readonly email: string;
   readonly role: string;
+  readonly isAdmin?: boolean;
   readonly origin: string;
 }
 
@@ -69,6 +81,7 @@ export interface CambiosDeCuenta {
   readonly lastName?: string;
   readonly email?: string;
   readonly role?: string;
+  readonly isAdmin?: boolean;
 }
 
 /** Lo que cualquiera cambia de su propio perfil: su nombre y sus apellidos. */

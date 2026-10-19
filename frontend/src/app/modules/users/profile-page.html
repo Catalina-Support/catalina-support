@@ -34,6 +34,9 @@
       <div class="flex flex-col gap-1">
         <p class="text-sm font-medium text-texto">{{ t().perfil.papel }}</p>
         <p class="text-sm text-texto">{{ papel() }}</p>
+        @if (esAdministrador()) {
+          <p class="text-sm font-semibold text-primary">{{ t().papeles.administrador }}</p>
+        }
         <p class="text-sm text-apagado">{{ t().perfil.papelAyuda }}</p>
       </div>
 

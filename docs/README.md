@@ -1,7 +1,52 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-17
+> **Última actualización:** 2026-10-19
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/tickets.md`, `usuarios-y-permisos.md`,
+> `interfaz-y-experiencia.md`, `modules/ai.md` y `modules/mail.md` incorporan comentarios privados
+> en el principal, adjuntos protegidos, auditoría, correo interno y resúmenes separados por audiencia.
+> La regla anterior que remitía todo contenido interno al ticket escalado queda identificada como
+> hallazgo. El responsable cerró y aprobó 1A–26A; pasaron backend, 247 pruebas Angular, compilación
+> de producción y el recorrido real Soporte/Usuario.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/tickets.md`, `usuarios-y-permisos.md` e
+> `interfaz-y-experiencia.md` redefinen **Mis tickets** como asignados u observados actuales,
+> separados por nivel, con `All · Assigned · Watching` en la primera fila. Excluyen apertura,
+> comentarios y no asignados; retirar la observación elimina la pertenencia salvo asignación. La
+> capacidad Admin conserva el papel operativo. El responsable aprobó el documento; pasaron las
+> pruebas de frontend y backend y se verificó el flujo con una cuenta Desarrollo + Admin.
+>
+> **Corrección coordinada aprobada, implementada y verificada el 2026-10-19:** `interfaz-y-experiencia.md` corrige la selección doble
+> del menú lateral mediante una única entrada activa, coincidencias exactas y pertenencia explícita
+> para las pantallas auxiliares. El responsable eligió 1A–4A. No cambia rutas, permisos, etiquetas,
+> iconos ni temas. Pasaron la compilación y las 246 pruebas del frontend; el navegador confirmó
+> selección única en todas las entradas y la pertenencia de las rutas auxiliares.
+>
+> **Corrección coordinada aprobada, implementada y verificada el 2026-10-19:** `modules/tickets.md` corrige la
+> contaminación de cláusulas GORM al cambiar prioridad desde un interno. La reparación conserva la
+> transacción y el comportamiento ya aprobado; no cambia permisos, API, interfaz ni datos. Pasaron
+> la regresión aislada y toda la suite backend.
+>
+> **Corrección coordinada aprobada, implementada y verificada el 2026-10-19:** `propósito-y-alcance.md`,
+> `interfaz-y-experiencia.md` y `modules/dashboard.md` convierten Dashboard en reportería sólo
+> estadística, corrigen barras transparentes en los ocho temas, agrupan la tendencia sin solapar
+> fechas, reducen los filtros y reemplazan CSV por un XLSX localizado de seis hojas. La revisión real
+> encontró además que la pantalla actual lista tickets contra el nuevo alcance. El responsable cerró
+> 1A–4A, propuso XLSX en 5, eligió 6A–14A, corrigió 15A y eligió 16A. Pasaron las pruebas específicas
+> de Dashboard y reportería en backend, 241 pruebas
+> frontend, fronteras, compilación, los ocho temas y la validación estructural del XLSX.
+>
+> **Propuesta coordinada del 2026-10-18:** `modules/ai.md`, `modules/settings.md`,
+> `primer-arranque.md`, `arquitectura.md`, `ambientes.md` y `prueba-local.md` añaden aceleración
+> local Auto/CPU/NVIDIA, una variante Compose opcional y cambio transaccional con respaldo seguro.
+> El responsable cerró las decisiones 1A–25A; no quedan decisiones abiertas.
+>
+> **Dashboard implementado y verificado el 2026-10-18:** nace `modules/dashboard.md` y se actualizan
+> alcance, permisos, tickets, settings, arquitectura, interfaz y prueba local. Incluye reportería
+> operativa, filtros, tendencias, tiempos, umbrales y CSV. El responsable cerró 1A–45A, con 24A
+> ampliada a los dos formatos de duración y 26A excluyendo al Usuario. Pasaron PostgreSQL real,
+> pruebas de servicio, 241 pruebas frontend, fronteras, compilación y recorrido visual PC/móvil.
 >
 > **Cambio de interfaz del 2026-10-17, aprobado, implementado y verificado:**
 > `interfaz-y-experiencia.md` amplía verticalmente las tablas operativas de tickets y usuarios,
@@ -452,20 +497,21 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `proyecto-abierto.md` | **as-built** | Portada bilingüe, sitio oficial, demo pública y apoyo mediante Ko-fi |
-| `prueba-local.md` | **as-built** | Verificación del README bilingüe y capturas públicas con IA |
-| `arquitectura.md` | **as-built** | Migración técnica a `summary` y `escalationReason` |
-| `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Incorpora prioridad a la 1.0.0 y corrige su exclusión histórica |
-| `usuarios-y-permisos.md` | **as-built** | Permisos para proponer, modificar y consultar prioridad |
+| `prueba-local.md` | **as-built** | Verificación local de aceleración, respaldo y rollback |
+| `arquitectura.md` | **as-built** | Frontera CPU/NVIDIA y reinicio transaccional |
+| `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Dashboard exclusivamente estadístico, sin evaluación ni SLA |
+| `usuarios-y-permisos.md` | **as-built** | Permisos acumulativos y privacidad de comentarios del principal |
 | `flujos.md` | **as-built** | Aviso único a todo Soporte al llegar por primera vez a crítica |
-| `modules/settings.md` | **as-built** | Catálogo local automático y refresco sin ocultar fichas |
-| `modules/mail.md` | **as-built** | Duodécima plantilla para prioridad crítica en los dos idiomas |
-| `modules/auth.md` | **as-built** | Token ausente sin falso error; identidad y sesión conservan el idioma global |
-| `modules/users.md` | **as-built** | Alta automática de AD y Keycloak sin falsos errores en búsquedas previas |
-| `interfaz-y-experiencia.md` | **as-built** | Rótulo de `en espera` distinto para Usuario y papeles técnicos |
-| `primer-arranque.md` | **as-built** (8 enmiendas previas) | Catálogo visible automáticamente en el paso 5 |
-| `ambientes.md` | **as-built** | Guía resumida de instalación y límites de la demo alojada |
-| `modules/ai.md` | **as-built** | Resultados vigentes y recuperación automática finita |
-| `modules/tickets.md` | **as-built** | Retorno visible de Esperando a En progreso para Soporte |
+| `modules/settings.md` | **as-built** | Selección y estado efectivo de aceleración local |
+| `modules/mail.md` | **as-built** | Aviso interno de comentario privado sin contenido sensible |
+| `modules/auth.md` | **as-built** | Identidad con papel operativo y capacidad administrativa |
+| `modules/users.md` | **as-built** | Persistencia, API, auditoría y avisos de administración |
+| `interfaz-y-experiencia.md` | **as-built** | Selector Public/Private y representación accesible de notas privadas |
+| `primer-arranque.md` | **as-built** (8 enmiendas previas) | Aceleración local en el paso 5 |
+| `ambientes.md` | **as-built** | Variante opcional NVIDIA en Linux |
+| `modules/ai.md` | **as-built** | Summary y Last action separados por audiencia |
+| `modules/tickets.md` | **as-built** | Comentarios privados, adjuntos, búsqueda y auditoría del principal |
+| `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe

@@ -23,6 +23,7 @@ import { Adjunto, type AdjuntoDeTicket } from '../../shared/components/adjunto';
 import { Aviso, type MensajeDePantalla } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
+import { Conmutador, type OpcionConmutador } from '../../shared/components/conmutador';
 import { Dialogo } from '../../shared/components/dialogo';
 import {
   EditorConAdjuntos,
@@ -154,6 +155,7 @@ interface Pendiente {
     Aviso,
     Boton,
     Campo,
+    Conmutador,
     Dialogo,
     EditorConAdjuntos,
     Estado,
@@ -202,6 +204,7 @@ export class TicketVista implements OnDestroy {
 
   /** El texto del comentario que se está escribiendo, ya listo para guardar. */
   protected readonly comentario = signal('');
+  protected readonly visibilidadComentario = signal<'public' | 'private'>('public');
 
   /** La caja de escribir del comentario, que es quien tiene el texto y sus archivos. */
   private readonly elDelComentario = viewChild<EditorConAdjuntos>('elDelComentario');
@@ -230,6 +233,7 @@ export class TicketVista implements OnDestroy {
 
   protected readonly editando = signal<number | null>(null);
   protected readonly textoEditado = signal('');
+  protected readonly visibilidadEditada = signal<'public' | 'private'>('public');
 
   /**
    * **El asunto y la descripción se editan donde se leen** (decisión 74): cada uno tiene su lápiz y su
@@ -645,7 +649,21 @@ export class TicketVista implements OnDestroy {
       return this.esSoporte() || this.esDesarrollo();
     }
 
-    return this.esSoporte() || (this.esUsuario() && this.esSuyo());
+    return this.esSoporte() || this.esDesarrollo() || (this.esUsuario() && this.esSuyo());
+  }
+
+  protected mostrarSelectorDeVisibilidad(): boolean {
+    return !this.ticket().internal && (this.esSoporte() || this.esDesarrollo());
+  }
+
+  protected opcionesDeVisibilidad(): readonly OpcionConmutador[] {
+    if (this.esDesarrollo()) {
+      return [{ valor: 'private', etiqueta: this.t().tickets.privado }];
+    }
+    return [
+      { valor: 'public', etiqueta: this.t().tickets.publico },
+      { valor: 'private', etiqueta: this.t().tickets.privado },
+    ];
   }
 
   protected puedeEditar(): boolean {
@@ -909,11 +927,15 @@ export class TicketVista implements OnDestroy {
     }
 
     await this.actuar(async () => {
-      const respuesta = await this.tickets.comentar(this.ticket().number, texto);
+      const visibilidad = this.esDesarrollo() && !this.ticket().internal
+        ? 'private'
+        : this.visibilidadComentario();
+      const respuesta = await this.tickets.comentar(this.ticket().number, texto, visibilidad);
       const fallidos = await this.subirLosDelComentario(respuesta.comment.id, archivos);
 
       editor.limpiar();
       this.comentario.set('');
+      this.visibilidadComentario.set('public');
       this.adjuntosQueFaltan.set(fallidos);
 
       // Con archivos que no han subido **no se dice nada arriba**: lo dice el aviso que está junto a la
@@ -1059,6 +1081,7 @@ export class TicketVista implements OnDestroy {
   protected empezarEdicion(comentario: Comentario): void {
     this.editando.set(comentario.id);
     this.textoEditado.set(comentario.body);
+    this.visibilidadEditada.set(comentario.visibility ?? 'public');
   }
 
   /**
@@ -1080,7 +1103,12 @@ export class TicketVista implements OnDestroy {
     const archivos = editor.archivos();
 
     await this.actuar(async () => {
-      await this.tickets.editarComentario(this.ticket().number, comentario.id, texto);
+      await this.tickets.editarComentario(
+        this.ticket().number,
+        comentario.id,
+        texto,
+        this.visibilidadEditada(),
+      );
 
       const fallidos = await this.subirLosDelComentario(comentario.id, archivos);
       if (fallidos.length) {

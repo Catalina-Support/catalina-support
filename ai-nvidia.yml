@@ -1,0 +1,11 @@
+# Overlay opcional para Linux con NVIDIA Container Toolkit. El archivo base sigue siendo ai.yml;
+# este overlay cambia únicamente la imagen y expone a Docker las GPU elegidas por el servidor.
+services:
+  ai:
+    build:
+      context: .
+      dockerfile: config/dockerfiles/ai-nvidia.Dockerfile
+    environment:
+      AI_ACCELERATION_CAPABILITIES: cpu,nvidia
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+    gpus: all

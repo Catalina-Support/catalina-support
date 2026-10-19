@@ -224,6 +224,7 @@ type PatchInput struct {
 	LastName *string
 	Email    *string
 	Role     *string
+	IsAdmin  *bool
 	IsActive *bool
 }
 
@@ -242,11 +243,11 @@ func (s *Service) Patch(id int64, input PatchInput, actor auth.Identity) (auth.A
 // nombre y los apellidos de otra persona, pero de la suya cambia lo que cualquiera: su nombre, sus
 // apellidos y su idioma. Aplicarle ese límite a su propio perfil le impediría cambiar su idioma.
 func (s *Service) patch(id int64, input PatchInput, actor auth.Identity, propio bool) (auth.Account, error) {
-	esAdministrador := actor.Can(auth.RoleAdministrador)
+	esAdministrador := actor.IsAdministrator()
 
 	if !propio && !esAdministrador {
 		// Soporte editando a otra persona: sólo el nombre y los apellidos.
-		if input.Email != nil || input.Role != nil || input.IsActive != nil {
+		if input.Email != nil || input.Role != nil || input.IsAdmin != nil || input.IsActive != nil {
 			return auth.Account{}, ErrRoleNotAllowed
 		}
 	}
@@ -305,12 +306,41 @@ func (s *Service) patch(id int64, input PatchInput, actor auth.Identity, propio 
 		cambios["role"] = papel
 	}
 
+	if input.IsAdmin != nil {
+		if !esAdministrador || (!actor.Factory && actor.ID == id) {
+			return auth.Account{}, ErrRoleNotAllowed
+		}
+		papel := actual.Role
+		if input.Role != nil {
+			papel = strings.TrimSpace(*input.Role)
+		}
+		if *input.IsAdmin && papel != auth.RoleSoporte && papel != auth.RoleDesarrollo {
+			return auth.Account{}, ErrRoleNotAllowed
+		}
+		cambios["is_admin"] = *input.IsAdmin
+	}
+
 	if len(cambios) == 0 {
 		return actual, nil
 	}
 
-	if err := s.repo.UpdateFields(id, cambios); err != nil {
-		return auth.Account{}, traducirUsuario(err)
+	var writeErr error
+	if input.IsAdmin != nil && *input.IsAdmin != actual.IsAdmin {
+		action := "revoked"
+		if *input.IsAdmin {
+			action = "granted"
+		}
+		var actorID *int64
+		if !actor.Factory {
+			value := actor.ID
+			actorID = &value
+		}
+		writeErr = s.repo.UpdateFieldsWithAdminEvent(id, cambios, actorID, actor.FullName(), action)
+	} else {
+		writeErr = s.repo.UpdateFields(id, cambios)
+	}
+	if writeErr != nil {
+		return auth.Account{}, traducirUsuario(writeErr)
 	}
 
 	return s.ByID(id)
@@ -318,7 +348,7 @@ func (s *Service) patch(id int64, input PatchInput, actor auth.Identity, propio 
 
 // PatchOwn cambia el perfil propio: nombre, apellidos e idioma, y nada más.
 func (s *Service) PatchOwn(input PatchInput, actor auth.Identity) (auth.Account, error) {
-	if input.Role != nil || input.Email != nil {
+	if input.Role != nil || input.IsAdmin != nil || input.Email != nil {
 		// El correo y el papel son decisiones de otro (sección 8).
 		return auth.Account{}, ErrRoleNotAllowed
 	}

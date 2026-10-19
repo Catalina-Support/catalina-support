@@ -176,7 +176,7 @@ func creadorDelCatalogo(actor auth.Identity) *int64 {
 // De aquí sale también **qué se enseña en el catálogo**: quien no lo mantiene **sólo ve las categorías y
 // las etiquetas activas** (`soloActivas`), que es lo coherente con no poder cambiarlas.
 func puedeMantenerElCatalogo(actor auth.Identity) bool {
-	return actor.Role == auth.RoleAdministrador
+	return actor.IsAdministrator()
 }
 
 // Categories devuelve el catálogo con su cuenta de tickets.
@@ -285,7 +285,7 @@ func (s *Service) RenameCategory(id int64, nombre string, actor auth.Identity) (
 // Es **sólo del Administrador**, y **no se puede retirar la última activa**: un catálogo sin ninguna
 // categoría activa dejaría el alta de tickets sin nada que ofrecer, y la categoría es obligatoria.
 func (s *Service) CategoryState(id int64, active bool, actor auth.Identity) (CategoryWithCount, error) {
-	if actor.Role != auth.RoleAdministrador {
+	if !actor.IsAdministrator() {
 		return CategoryWithCount{}, ErrCategoryForbidden
 	}
 
@@ -461,7 +461,7 @@ func (s *Service) RenameTag(ruta string, nuevo string, actor auth.Identity) (Tag
 // tickets.md, decisión 72). Es **sólo del Administrador** (decisión 73), porque toca todos los
 // tickets que la llevan.
 func (s *Service) DeleteTag(ruta string, actor auth.Identity) error {
-	if actor.Role != auth.RoleAdministrador {
+	if !actor.IsAdministrator() {
 		return ErrTagForbidden
 	}
 

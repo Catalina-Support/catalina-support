@@ -10,6 +10,10 @@ import { SettingsService, type Configuracion } from './settings.service';
  * pantalla hace con ello (docs/modules/settings.md).
  */
 const CONFIGURACION: Configuracion = {
+	reportOverdueCriticalHours: 4,
+	reportOverdueHighHours: 24,
+	reportOverdueMediumHours: 72,
+	reportOverdueLowHours: 120,
   name: 'Ayuntamiento de Ejemplo',
   entryMethod: 'local',
   directory: {

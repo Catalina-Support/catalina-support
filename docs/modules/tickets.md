@@ -1,7 +1,31 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-16
+> **Última actualización:** 2026-10-19
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 30 añade comentarios públicos y privados en el
+> ticket principal. Sustituye expresamente la regla que remitía toda conversación interna al ticket
+> interno: los principales no escalados también necesitan coordinación de equipo. El responsable
+> cerró y aprobó las decisiones 1A–26A. Pasaron las suites completas de backend y frontend, la
+> compilación y una comprobación real con Soporte y Usuario.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 29 redefine **Mis tickets** como una bandeja
+> personal estricta: asignados u observados, sin incorporar tickets por haberlos abierto o
+> comentado y sin incluir los no asignados. Soporte conserva sólo principales y Desarrollo sólo
+> internos; las listas generales mantienen el acceso al resto. La capacidad Admin no altera el
+> papel operativo. El responsable cerró las decisiones 1B y 3A–9A y aprobó el documento.
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-19.** La prueba
+> `TestDesarrolloCambiaLaPrioridadDesdeElInterno` descubrió que `ChangePriority` reutiliza una
+> consulta GORM con bloqueo: después de localizar el interno por `number`, la búsqueda del principal
+> conserva por error ese mismo predicado y termina en `tickets.notFound`. La sección 18 ya establece
+> el comportamiento correcto. Se crea una consulta bloqueada nueva para cada tabla, se conserva una
+> sola transacción y la regresión demuestra tanto la actualización del
+> principal como la ficha interna devuelta. No cambian permisos, contrato HTTP, interfaz, correos ni
+> modelo de datos. Pasaron la regresión aislada y toda la suite backend.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 28 define las fuentes de datos y semántica
+> temporal que el nuevo Dashboard consume sin cambiar el flujo de tickets.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-16.** La sección 27 corrige el hueco
 > comprobado en navegador que impedía a Soporte devolver un ticket principal de «Esperando» a
@@ -138,7 +162,8 @@
 > lo mismo que el asignado** —el ticket tiene **como mucho un asignado** (que sigue siendo opcional,
 > como estaba) **y muchos observadores**—. Se etiqueta **escribiendo en el comentario** (`@` o el botón
 > del editor), el nombre queda **resaltado como una mención**, y quien la lee ve a quién se llama. Los
-> observadores **salen en su «Mis tickets» con un chip propio** —Asignados · Observo · Todos—, se ven
+> observadores **salen en su «Mis tickets» con un chip propio** —actualmente Todos · Asignados ·
+> Observo, según la sección 29—, se ven
 > en la ficha como **«Observadores»** y **reciben los mismos avisos que el responsable**. Etiquetar es de
 > **Soporte y Desarrollo**. Decisiones 58 a 63, y una **plantilla de correo nueva** (la undécima).
 >
@@ -165,7 +190,7 @@
 >
 > **Enmendado el 2026-09-26**, al pedir el responsable que **la bandeja sea «lo mío»** y que se pueda
 > ver **todo** desde su propio sitio: `GET /api/tickets` estrena el filtro **`mine`** —lo asignado a
-> mí, lo que abrí yo y aquello donde he comentado (decisión 51)—, **la Bandeja pasa a ser Mis
+> mí o lo que observo actualmente (decisión 51, sustituida por la sección 29)—, **la Bandeja pasa a ser Mis
 > tickets** con chip de tipo para Soporte y Desarrollo, y el módulo `tickets` gana **dos listas**:
 > **Tickets principales** y **Tickets internos**, para los dos equipos (decisión 52). **«Asignármelo»
 > sale de la bandeja** —la reasignación se hace dentro del ticket, que es donde se ve a quién se le
@@ -410,9 +435,9 @@ tener dos tablas de tickets, y se paga aquí y sólo aquí.
 - **Borrar un comentario no borra sus adjuntos**: siguen colgando del ticket y se descargan como
   cualquier otro. Un adjunto puede ser la prueba de algo, y quien borra su texto no está pidiendo
   que desaparezca el archivo.
-- **No hay notas internas dentro del principal.** Lo que el usuario no debe leer vive en el ticket
-  interno, que es exactamente para lo que existe. Añadir notas internas sería un segundo mecanismo
-  para lo mismo.
+- **La regla original no contempló los principales sin escalar.** Antes se remitía todo lo que el
+  Usuario no debía leer al ticket interno; la propuesta de la sección 30 sustituye esa conclusión,
+  porque un principal que nunca se escala también necesita coordinación privada.
 - **Un comentario puede ser sólo un adjunto** (decisión 41, del responsable): «mira esto» con la
   captura y sin escribir nada es algo que pasa todos los días, y obligar a escribir una frase para
   mandar una captura es ruido. **Es lo que obliga a que `body` deje de ser obligatorio**, y el motivo
@@ -985,7 +1010,7 @@ diciendo cosas distintas.
 | `POST /api/tickets/{number}/state` | Mueve el estado: `en progreso`, `en espera`, `resuelto`, `cerrado`, con `{ "state": "…", "comment": "…" }` —**el estado también se admite en `to`**, que es el nombre de esta tabla, y valen los dos—. **Al cerrar, el comentario es obligatorio** (decisión 81): sin él responde **422** con `tickets.cierre.sinComentario`, y con él **queda como un comentario de la conversación** | Quien pueda ese movimiento (sección 3) |
 | `POST /api/tickets/{number}/escalate` | Escala. Exige motivo. Crea el interno o lo reabre | Soporte |
 | `POST /api/tickets/{number}/reopen` | Reabre un principal cerrado | Soporte o el solicitante |
-| `GET /api/tickets?view=…` | Además de los filtros de siempre, **`view`**: `assigned` (asignados a mí), `watching` (los que observo) o vacío (todo lo mío: asignados, abiertos, comentados y observados). Es el chip de «Mis tickets». **`view` matiza «lo mío», no lo sustituye**: `mine=1` sigue siendo el interruptor, y `assigned`/`watching` lo implican por sí solos. Las listas de «todo» —Tickets principales e internos— no mandan ni `mine` ni `view` y siguen devolviendo todo (decisión 52) |
+| `GET /api/tickets?view=…` | Además de los filtros de siempre, **`view`**: `assigned` (asignados a mí), `watching` (los que observo actualmente) o vacío (la unión de ambos). Es el selector de «Mis tickets». **`view` matiza «lo mío», no lo sustituye**: `mine=1` sigue siendo el interruptor, y `assigned`/`watching` lo implican por sí solos. Las listas generales no mandan ni `mine` ni `view` y siguen devolviendo todo (sección 29) |
 | `GET /api/tickets/categories` | El catálogo: las activas para todo el mundo —el alta las necesita— y las retiradas para quien las mantiene |
 | `POST /api/tickets/categories` | Crea una categoría | Soporte y Administrador |
 | `PATCH /api/tickets/categories/{id}` | La renombra | Soporte y Administrador |
@@ -1001,11 +1026,10 @@ diciendo cosas distintas.
 
 - **La API se dirige por número, no por `id`.** `ACME-2026-0042` es lo que la gente dice en voz alta
   y lo que aparece en los correos; el `id` interno no sale de la base.
-- **`mine` es «lo mío», y se pregunta en el backend, no en la pantalla** (2026-09-26). Un ticket es
-  mío si **me lo han asignado**, si **lo abrí yo** (como solicitante) o si **he comentado en su
-  hilo**; en un principal el hilo es el principal y en un interno, el interno, y **el papel de quien
-  comenta no cambia nada**: si Soporte comentó en un interno, ese interno aparece en sus tickets. El
-  filtro se aplica a la consulta —con un `EXISTS` sobre los comentarios— y no trayendo todo para
+- **`mine` es «lo mío», y se pregunta en el backend, no en la pantalla** (actualizado en la sección
+  29). Para Soporte y Desarrollo un ticket es mío si **me lo han asignado** o si **lo observo
+  actualmente**; solicitarlo o comentar no basta. El filtro se aplica a la consulta —con un
+  `EXISTS` sobre los observadores actuales— y no trayendo todo para
   descartarlo después: la lista va paginada, y filtrar en la pantalla daría páginas de distinto
   tamaño. **Un usuario sigue viendo sólo los suyos**, con o sin `mine` (sección 3 de
   `docs/usuarios-y-permisos.md`).
@@ -1233,10 +1257,10 @@ Los huecos del segundo repaso (11 al 15) están aplicados en los vhosts, en `dev
 | 59 | **Quién etiqueta, y a quién** | **Decisión del responsable, 2026-09-27**: **Soporte y Desarrollo**, y **sólo a técnicos y desarrolladores activos**. Al guardar el comentario se comprueban una a una, y una que no valga **rechaza el comentario entero** con `tickets.mention.notAllowed`. **El usuario no etiqueta**: no ve la lista de técnicos ni tiene por qué |
 | 60 | **Observador no es asignado** | **Corrección del responsable, 2026-09-27**, sobre mi propuesta, que hablaba sólo de «partícipes»: el ticket tiene **como mucho un asignado —el que atiende— y muchos observadores —los que lo siguen—**, y no son lo mismo. **El asignado sigue siendo opcional**, como estaba: el responsable corrigió su propia corrección al ver que un ticket sin técnicos activos no tiene a quién repartirse. **Ser observador no da permisos**: sólo hace que el ticket esté en tu bandeja |
 | 61 | **Los observadores reciben los mismos avisos que el responsable** | **Decisión del responsable, 2026-09-27**, y **no la que yo recomendaba** —yo proponía sólo el aviso del etiquetado—: quien observa recibe **los mismos correos de personal** que el asignado, además del de que le etiquetaron. **Consecuencia dicha y aceptada**: un ticket con tres observadores manda cuatro correos por movimiento. Los avisos que van **al usuario** (lo resolvimos, lo cerramos, te preguntamos algo) **no se duplican** a los observadores: son de quien abrió el ticket |
-| 62 | **Cómo se ven los observados** | **Decisión del responsable, 2026-09-27**: «Mis tickets» estrena un **chip —Asignados · Observo · Todos—**, como el de tipo de los técnicos, y el chip arranca en **Asignados**. La ficha del ticket lleva su lista de **«Observadores»** |
+| 62 | **Cómo se ven los observados** | **Actualizada el 2026-10-19 por la sección 29**: «Mis tickets» muestra en su primera fila **Todos · Asignados · Observo** y arranca en **Todos**. La ficha del ticket mantiene su lista de **«Observadores»**. |
 | 63 | **Quitar a un observador** | **Decisión del responsable, 2026-09-27**: **se puede quitar**, y **cualquier técnico o desarrollador** puede hacerlo —no sólo quien lo etiquetó—. Eso obliga a **guardar los observadores en una tabla** (`ticket_observers`), porque quien quita no es el autor del comentario y no puede reescribirlo, y deja la regla que hay que decir en voz alta: **quitar manda sobre lo ya escrito** —la mención se queda en el comentario, como prueba de la llamada que se hizo, pero **no vuelve a añadirlo**; vuelve sólo si alguien lo menciona **de nuevo**—. Quitar a alguien **queda en el historial** |
-| 51 | **Qué es «lo mío»** | **Decisión del responsable, 2026-09-26**, **ampliada el 2026-09-27**: un ticket es mío si **me lo han asignado**, si **lo abrí yo**, si **he comentado en su hilo** o si **me han etiquetado** en él (observar es una forma de ser parte). El responsable **corrigió** la propuesta —que era «asignado o abierto»— añadiendo **donde he participado**, porque un ticket en el que ya se ha hablado se sigue hasta el final. **Participar es comentar en el hilo de ese ticket**, y el papel de quien comenta no cambia nada (un interno donde comentó Soporte es un ticket de Soporte) |
-| 52 | **Tres listas: lo mío, todo lo principal y todo lo interno** | **Decisión del responsable, 2026-09-26**: la **Bandeja** es **Mis tickets** —lo mío— y nacen **dos pantallas más**, **Tickets principales** y **Tickets internos**, para **Soporte y Desarrollo**, que son los dos papeles que pueden verlo todo. **Cada uno entra por el suyo**: Soporte por principales y Desarrollo por internos, con el chip de tipo para cambiar, porque un técnico de Soporte tiene internos donde ha comentado y uno de Desarrollo puede haber abierto un principal. **El Administrador se queda con la bandeja de siempre** —los dos tipos, con su chip y de sólo lectura—: no tiene tickets propios, así que «Mis tickets» no le dice nada |
+| 51 | **Qué es «lo mío»** | **Sustituida el 2026-10-19 por la sección 29**: para Soporte y Desarrollo sólo cuenta la asignación o la observación actuales. Se conserva aquí el número de la decisión para explicar la evolución, pero abrir y comentar ya no incorporan el ticket. |
+| 52 | **Tres listas: lo mío, todo lo principal y todo lo interno** | **Actualizada el 2026-10-19**: **Mis tickets** es la bandeja personal; Soporte reúne sus principales asignados u observados y Desarrollo sus internos asignados u observados. **Tickets principales** y **Tickets internos** conservan el acceso general autorizado. Admin acumulativo no altera el nivel operativo; el Administrador puro mantiene su bandeja general de sólo lectura. |
 | 53 | **Los textos y el menú que se van** | **Decisión del responsable, 2026-09-26**: las filas de la lista dicen **«Abrir»** (`Open`) y no «Abrir el ticket» —en una columna de acciones, la palabra «ticket» sobra—; **fuera el texto** «Lo que lleva más tiempo esperando va primero. Lo cerrado no estorba.» —la regla sigue, callada: el orden se ve en la lista—; **«Nuevo ticket» sale del menú lateral**, porque se confundía con un módulo, y se queda **dentro de la bandeja**, que es donde se crea; y **el idioma pasa a ser un desplegable** como el del tema, con su mismo ancho y sin la etiqueta a la vista |
 | 40 | **Quién puede ser el responsable** | Lo dice **este módulo** (`GET /api/tickets/assignees`), no `users`: la pantalla del frontend sólo puede hablar con su propia API |
 
@@ -1689,3 +1713,99 @@ No se añaden estados ni rutas, y no cambia la traducción contextual de `en esp
 viendo **Waiting for you/Esperándote** y los equipos **Waiting/Esperando**. Las pruebas cubren la
 matriz de acciones del principal e interno, la ausencia de opciones no autorizadas y el recorrido
 real Esperando → En progreso con Soporte.
+
+## 28. Datos operativos para reportería
+
+`tickets` conserva la autoridad sobre estados, prioridades, responsables, categorías e historial.
+Expone al módulo Dashboard una consulta de lectura con alcance ya autorizado; Dashboard no importa
+repositorios de tickets ni reconstruye permisos. Los eventos existentes determinan creación,
+primera respuesta humana, primera resolución, reapertura y cierre. Eventos automáticos no cuentan
+como respuesta. Principal e interno mantienen métricas separadas.
+
+La antigüedad pendiente se calcula por intervalos abiertos: nace con el ticket, se detiene al
+resolver y vuelve a correr si se reabre. El backend devuelve instantes UTC y aplica la zona global
+al delimitar periodos y exportar. No se modifica ningún estado, transición, correo o resumen de IA.
+
+El repositorio de lectura vive en `modules/tickets/repositories`, reconstruye el estado al corte y
+entrega hechos tipados al puerto de Dashboard. Una prueba contra PostgreSQL ejecuta la consulta real
+y valida tipos, números y antigüedad no negativa.
+
+## 29. Pertenencia estricta de «Mis tickets»
+
+`/tickets` es una bandeja personal calculada con el estado actual. Contiene únicamente:
+
+- tickets asignados a la cuenta que ha iniciado sesión;
+- tickets donde esa cuenta figura actualmente como observadora.
+
+No entran por haber sido abiertos, solicitados o comentados por esa persona, ni por carecer de
+responsable. Al retirar a una persona de observadores, el ticket desaparece de **Mis tickets** en la
+siguiente actualización, salvo que siga asignado a ella. La mención y el historial permanecen, pero
+no vuelven a conceder pertenencia.
+
+El papel operativo fija el nivel: Soporte sólo reúne principales y Desarrollo sólo internos. La
+capacidad Admin no amplía ni transforma esta bandeja; Soporte + Admin continúa como Soporte y
+Desarrollo + Admin como Desarrollo. Los demás tickets autorizados se consultan en **Tickets
+principales** y **Tickets internos**, que conservan su alcance actual.
+
+La API mantiene `view=assigned` y `view=watching`; la vista vacía combina ambos conjuntos, sin
+duplicar un ticket que cumpla las dos condiciones. Se elimina de la semántica de `mine` la apertura
+y la participación por comentarios. No cambia quién puede leer una ficha encontrada desde las
+listas generales, asignar, autoasignarse o administrar observadores.
+
+### 29.1 Registro de decisiones
+
+El responsable decidió el 2026-10-19: excluir no asignados (1B); excluir apertura y comentarios
+(3A y 9A); separar estrictamente principales para Soporte e internos para Desarrollo (6A); abrir en
+la combinación de asignados y observados (7A); y conservar el papel operativo cuando existe
+capacidad Admin (5A). Además corrigió expresamente que dejar de observar retira el ticket de la
+bandeja si no está asignado. No quedan decisiones abiertas.
+
+## 30. Comentarios privados en el ticket principal
+
+El principal admite comentarios con visibilidad técnica `public` o `private`; los nombres visibles
+son **Public / Private** y **Público / Privado**. Todo comentario nuevo empieza en `public`. Soporte
+puede publicar ambos tipos en cualquier principal que pueda abrir. Desarrollo obtiene una excepción
+precisa: puede escribir comentarios `private` en los principales a los que accede, pero nunca una
+respuesta `public` al Usuario. Los comentarios que acompañan movimientos de estado del principal
+permanecen siempre públicos.
+
+Un comentario privado lo leen Soporte y Desarrollo con acceso al principal, y el Administrador puro
+lo puede auditar en sólo lectura. El Usuario no recibe
+la fila, un marcador, el contenido, las menciones ni sus adjuntos; el backend aplica la exclusión en
+la lectura, búsqueda y descarga. Pedir directamente un adjunto privado como Usuario responde 404.
+El adjunto hereda dinámicamente la visibilidad de su comentario, de modo que cambiarla cambia también
+su acceso sin duplicar archivos.
+
+Sólo el autor, mientras conserve permiso para comentar, puede editar el cuerpo o alternar la
+visibilidad. El cambio vale inmediatamente en ambos sentidos. El historial añade una entrada con
+actor, visibilidad anterior, nueva e instante, sin copiar el contenido. Pasar de público a privado
+no puede retirar un correo ya entregado ni borrar el hecho auditado, pero no presenta confirmación
+ni advertencia adicional. El borrado lógico conserva las reglas actuales.
+
+Las menciones funcionan igual: validan técnicos o desarrolladores activos, añaden observadores y
+mandan su aviso interno. Además, una nueva nota privada notifica por correo al responsable y a los
+observadores del principal, sin duplicados y sin enviárselo al propio autor. El correo contiene
+número, asunto, autor y enlace; nunca cuerpo ni adjuntos. El solicitante no es destinatario.
+
+La búsqueda del Usuario excluye el texto privado; la búsqueda autorizada de Soporte y Desarrollo sí
+lo considera. Si el principal se escala, sus notas privadas permanecen únicamente en el principal:
+no se copian ni se proyectan en la conversación interna. Desarrollo puede consultarlas cambiando a
+la vista del principal.
+
+El modelo añade una visibilidad obligatoria con `public` como valor inicial para filas existentes.
+La API de creación acepta la visibilidad autorizada y la edición permite cambiar cuerpo y/o
+visibilidad; las respuestas se filtran antes de construir comentarios, adjuntos, observadores,
+contexto de IA y resultados de búsqueda. Las pruebas deben cubrir autorización por papel, cambio en
+ambos sentidos, historial, búsqueda, descarga por URL, destinatarios sin autor, movimientos siempre
+públicos y ausencia total para el Usuario.
+
+### 30.1 Registro de decisiones
+
+El responsable decidió el 2026-10-19: escritura y lectura para ambos equipos (1A–2A), selector
+**Public / Private** (3A corregida), permanencia sólo en el principal al escalar (4C), adjuntos con
+privacidad heredada (5A), `public` inicial (6A), cambio bidireccional por el autor (7B y 11A), dos
+resúmenes de IA (8A y 24A), avisos internos (9A, 21A–23A), menciones vigentes (10A), chip y fondo
+(12A), auditoría sin contenido (13A), invisibilidad total para el Usuario (14A), cambio sin aviso
+(15C), Desarrollo sólo privado (16A), Soporte con ambos tipos (17A), movimientos públicos (18A),
+búsqueda por audiencia (19A), adjuntos ajenos como 404 (20A), regeneración inmediata de IA (25A) y
+lectura administrativa sin edición (26A). No quedan decisiones abiertas.

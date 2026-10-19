@@ -15,21 +15,24 @@ import (
 )
 
 var (
-	ErrAIModeUnknown       = errors.New("settings.ai.modeUnknown")
-	ErrAIProviderUnknown   = errors.New("settings.ai.providerUnknown")
-	ErrAIAuthUnknown       = errors.New("settings.ai.authUnknown")
-	ErrAIModelRequired     = errors.New("settings.ai.modelRequired")
-	ErrAIPrivacyRequired   = errors.New("settings.ai.privacyRequired")
-	ErrAICredentialInvalid = errors.New("settings.ai.credentialInvalid")
+	ErrAIModeUnknown         = errors.New("settings.ai.modeUnknown")
+	ErrAIProviderUnknown     = errors.New("settings.ai.providerUnknown")
+	ErrAIAuthUnknown         = errors.New("settings.ai.authUnknown")
+	ErrAIModelRequired       = errors.New("settings.ai.modelRequired")
+	ErrAIPrivacyRequired     = errors.New("settings.ai.privacyRequired")
+	ErrAICredentialInvalid   = errors.New("settings.ai.credentialInvalid")
+	ErrAIAccelerationUnknown = errors.New("settings.ai.accelerationUnknown")
 )
 
 type AIConfigurationInput struct {
 	Mode, Provider, BaseURL, Model, AuthType, AuthHeader, Credential, Language string
+	AccelerationMode                                                           string
 	PrivacyConfirmed                                                           bool
 }
 
 type AIConfigurationView struct {
 	Mode, Provider, BaseURL, Model, AuthType, AuthHeader string
+	AccelerationMode                                     string
 	CredentialSet, PrivacyConfirmed, Tested              bool
 }
 
@@ -101,7 +104,19 @@ func (s *Service) TestAndActivateAI(input AIConfigurationInput, actor *auth.Iden
 	if input.AuthType != "none" && credential == "" {
 		return AIConfigurationView{}, ErrAICredentialInvalid
 	}
+	previousAcceleration := current.AccelerationMode
+	if previousAcceleration == "" {
+		previousAcceleration = "auto"
+	}
+	if input.Mode == "local" {
+		if err := s.setAIAcceleration(input.AccelerationMode); err != nil {
+			return AIConfigurationView{}, err
+		}
+	}
 	if s.ia == nil || s.ia.ProbarConfiguracion(input.BaseURL, input.Model, input.Provider, input.AuthType, input.AuthHeader, credential, input.Language) != nil {
+		if input.Mode == "local" && previousAcceleration != input.AccelerationMode {
+			_ = s.setAIAcceleration(previousAcceleration)
+		}
 		return AIConfigurationView{}, ErrAIUnreachable
 	}
 	nonce, ciphertext, err := s.encryptAICredential(credential)
@@ -109,7 +124,7 @@ func (s *Service) TestAndActivateAI(input AIConfigurationInput, actor *auth.Iden
 		return AIConfigurationView{}, err
 	}
 	now := s.now()
-	changes := map[string]any{"mode": input.Mode, "provider": input.Provider, "base_url": input.BaseURL, "model": input.Model, "auth_type": input.AuthType, "auth_header": input.AuthHeader, "tested_at": now}
+	changes := map[string]any{"mode": input.Mode, "provider": input.Provider, "base_url": input.BaseURL, "model": input.Model, "auth_type": input.AuthType, "auth_header": input.AuthHeader, "tested_at": now, "acceleration_mode": input.AccelerationMode}
 	if credential != "" {
 		changes["credential_version"] = int16(1)
 		changes["credential_nonce"] = nonce
@@ -125,6 +140,9 @@ func (s *Service) TestAndActivateAI(input AIConfigurationInput, actor *auth.Iden
 		changes["privacy_confirmed_by_id"] = actorIDValue
 	}
 	if err := repo.UpdateAI(changes, actorIDValue); err != nil {
+		if input.Mode == "local" && previousAcceleration != input.AccelerationMode {
+			_ = s.setAIAcceleration(previousAcceleration)
+		}
 		return AIConfigurationView{}, traducir(err)
 	}
 	return s.AIConfiguration()
@@ -141,6 +159,11 @@ func normalizeAI(in AIConfigurationInput) AIConfigurationInput {
 	if in.Mode == "local" {
 		in.Provider = "local"
 		in.AuthType = "none"
+		if in.AccelerationMode == "" {
+			in.AccelerationMode = "auto"
+		}
+	} else {
+		in.AccelerationMode = "auto"
 	}
 	if in.Mode == "remote" {
 		in.Provider = "openai-compatible"
@@ -168,6 +191,9 @@ func validateAI(in AIConfigurationInput) error {
 	if in.Model == "" {
 		return ErrAIModelRequired
 	}
+	if !validAccelerationMode(in.AccelerationMode) {
+		return ErrAIAccelerationUnknown
+	}
 	if in.Provider != "local" && in.Provider != "openai" && in.Provider != "claude" && in.Provider != "deepseek" && in.Provider != "openai-compatible" {
 		return ErrAIProviderUnknown
 	}
@@ -191,7 +217,15 @@ func validateAI(in AIConfigurationInput) error {
 }
 
 func aiView(row repositories.AISettings) AIConfigurationView {
-	return AIConfigurationView{Mode: row.Mode, Provider: row.Provider, BaseURL: row.BaseURL, Model: row.Model, AuthType: row.AuthType, AuthHeader: row.AuthHeader, CredentialSet: len(row.CredentialCiphertext) > 0, PrivacyConfirmed: row.PrivacyConfirmedAt != nil, Tested: row.TestedAt != nil}
+	acceleration := row.AccelerationMode
+	if acceleration == "" {
+		acceleration = "auto"
+	}
+	return AIConfigurationView{Mode: row.Mode, Provider: row.Provider, BaseURL: row.BaseURL, Model: row.Model, AuthType: row.AuthType, AuthHeader: row.AuthHeader, CredentialSet: len(row.CredentialCiphertext) > 0, PrivacyConfirmed: row.PrivacyConfirmedAt != nil, Tested: row.TestedAt != nil, AccelerationMode: acceleration}
+}
+
+func validAccelerationMode(mode string) bool {
+	return mode == "auto" || mode == "cpu" || mode == "nvidia"
 }
 
 func (s *Service) encryptAICredential(value string) ([]byte, []byte, error) {

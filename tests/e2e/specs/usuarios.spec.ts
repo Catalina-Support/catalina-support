@@ -92,6 +92,20 @@ test.describe('La lista de usuarios', () => {
     await expect(filaDe(page, ana.email)).toBeVisible();
   });
 
+  test('separa el papel operativo de la capacidad administrativa', async ({ page }) => {
+    await page.getByLabel('Buscar por nombre o correo').fill('dev1@demo.com');
+
+    const fila = filaDe(page, 'dev1@demo.com');
+    const papel = fila.locator('[data-user-role]');
+    const insignia = papel.locator('[data-admin-badge]');
+
+    await expect(fila).toBeVisible();
+    await expect(papel).toContainText('Desarrollo');
+    await expect(insignia).toHaveText('Administrador');
+    await expect(papel).toHaveCSS('flex-direction', 'column');
+    await expect(papel).toHaveCSS('align-items', 'flex-start');
+  });
+
   test('el alta desde la pantalla crea la cuenta, manda el enlace y la persona entra', async ({
     page,
     request,
