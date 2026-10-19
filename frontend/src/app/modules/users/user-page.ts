@@ -22,7 +22,7 @@ import {
   etiquetaDeOrigen,
   etiquetaDePapel,
 } from './etiquetas';
-import { UsersService, type CambiosDeCuenta, type Cuenta } from './users.service';
+import { UsersService, type AdminEvent, type CambiosDeCuenta, type Cuenta } from './users.service';
 
 /**
  * La ficha de una cuenta: todo lo que hay que saber de ella y todo lo que se puede hacer con ella.
@@ -49,6 +49,8 @@ export class UserPage implements OnInit {
   private readonly sesion = inject(SessionService);
 
   protected readonly cuenta = signal<Cuenta | null>(null);
+  protected readonly eventosAdministrativos = signal<readonly AdminEvent[]>([]);
+  protected readonly ultimoAdministradorNormal = signal(false);
   protected readonly cargando = signal(true);
   /**
    * La confirmación de mandar el enlace: `null` es «no se está preguntando», y un booleano dice si esa
@@ -63,12 +65,14 @@ export class UserPage implements OnInit {
   protected readonly apellidos = signal('');
   protected readonly correo = signal('');
   protected readonly papel = signal('usuario');
+  protected readonly administrador = signal(false);
 
   /** El origen elegido, que se guarda con su propia acción: no es un campo del formulario. */
   protected readonly origenElegido = signal('local');
 
   /** Si se está preguntando antes de desactivar. */
   protected readonly preguntandoDesactivar = signal(false);
+  protected readonly preguntandoRetirarAdmin = signal(false);
 
   /** Lo que se ha cambiado respecto a lo guardado: es lo único que se manda. */
   /** Si esa cuenta se reactiva sola al entrar por su camino (Keycloak). */
@@ -85,6 +89,7 @@ export class UserPage implements OnInit {
       lastName?: string;
       email?: string;
       role?: string;
+      isAdmin?: boolean;
     } = {};
 
     if (this.nombre().trim() !== cuenta.name) {
@@ -98,6 +103,9 @@ export class UserPage implements OnInit {
     }
     if (this.papel() !== cuenta.role) {
       cambios.role = this.papel();
+    }
+    if (this.administrador() !== Boolean(cuenta.isAdmin)) {
+      cambios.isAdmin = this.administrador();
     }
 
     return cambios;
@@ -160,7 +168,21 @@ export class UserPage implements OnInit {
     if (!cuenta || !this.hayCambios()) {
       return;
     }
+    if (this.cambios().isAdmin === false && this.ultimoAdministradorNormal()) {
+      this.preguntandoRetirarAdmin.set(true);
+      return;
+    }
+    await this.ejecutarGuardado();
+  }
 
+  protected async confirmarGuardado(): Promise<void> {
+    this.preguntandoRetirarAdmin.set(false);
+    await this.ejecutarGuardado();
+  }
+
+  private async ejecutarGuardado(): Promise<void> {
+    const cuenta = this.cuenta();
+    if (!cuenta || !this.hayCambios()) return;
     await this.actuar(async () => {
       const respuesta = await this.users.cambiar(cuenta.id, this.cambios());
       this.poner(respuesta.user);
@@ -286,6 +308,8 @@ export class UserPage implements OnInit {
     try {
       const respuesta = await this.users.ficha(id);
       this.poner(respuesta.user);
+      this.eventosAdministrativos.set(respuesta.adminEvents ?? []);
+      this.ultimoAdministradorNormal.set(Boolean(respuesta.lastNormalAdmin));
     } catch (error) {
       this.cuenta.set(null);
       this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
@@ -301,6 +325,7 @@ export class UserPage implements OnInit {
     this.apellidos.set(cuenta.lastName);
     this.correo.set(cuenta.email);
     this.papel.set(cuenta.role);
+    this.administrador.set(Boolean(cuenta.isAdmin));
     this.origenElegido.set(cuenta.origin);
   }
 

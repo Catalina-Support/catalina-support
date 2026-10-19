@@ -33,7 +33,7 @@ export const sesionActiva: CanActivateFn = async (_route, state) => {
 
   const usuario = sesion.usuario();
   if ((await setup.estadoDeInstalacion()).aiRequired && state.url !== '/settings' && state.url !== '/forbidden') {
-    return usuario?.role === 'administrador'
+    return usuario?.isAdmin
       ? router.createUrlTree(['/settings'], { queryParams: { ai: 'required' } })
       : router.createUrlTree(['/forbidden'], { queryParams: { ai: 'required' } });
   }
@@ -60,7 +60,9 @@ export const conPapel = (...papeles: readonly string[]): CanActivateFn => {
       return router.createUrlTree(['/login']);
     }
 
-    return papeles.includes(usuario.role) ? true : router.createUrlTree(['/forbidden']);
+    return papeles.includes(usuario.role) || (usuario.isAdmin && papeles.includes('administrador'))
+      ? true
+      : router.createUrlTree(['/forbidden']);
   };
 };
 
@@ -85,8 +87,8 @@ export const inicioSegunPapel: CanActivateFn = async () => {
     return router.createUrlTree(['/login']);
   }
 
-  // El Administrador a los usuarios; el usuario, Soporte y Desarrollo, a su bandeja.
-  return router.createUrlTree([usuario.role === 'administrador' ? '/users' : '/tickets']);
+  // Los equipos y cualquier Administrador aterrizan en el panel; el Usuario conserva Mis tickets.
+  return router.createUrlTree([usuario.role === 'usuario' && !usuario.isAdmin ? '/tickets' : '/dashboard']);
 };
 
 /**

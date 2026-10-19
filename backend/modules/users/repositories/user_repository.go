@@ -26,6 +26,7 @@ type User struct {
 	Email        string     `gorm:"column:email"`
 	PasswordHash *string    `gorm:"column:password_hash"`
 	Role         string     `gorm:"column:role"`
+	IsAdmin      bool       `gorm:"column:is_admin"`
 	Origin       string     `gorm:"column:origin"`
 	ExternalID   *string    `gorm:"column:external_id"`
 	IsActive     bool       `gorm:"column:is_active"`
@@ -33,6 +34,18 @@ type User struct {
 	CreatedAt    time.Time  `gorm:"column:created_at"`
 	UpdatedAt    time.Time  `gorm:"column:updated_at"`
 }
+
+type AdminEvent struct {
+	ID             int64      `gorm:"primaryKey"`
+	UserID         int64      `gorm:"column:user_id"`
+	ActorUserID    *int64     `gorm:"column:actor_user_id"`
+	ActorLabel     string     `gorm:"column:actor_label"`
+	Action         string     `gorm:"column:action"`
+	CreatedAt      time.Time  `gorm:"column:created_at"`
+	AcknowledgedAt *time.Time `gorm:"column:acknowledged_at"`
+}
+
+func (AdminEvent) TableName() string { return "user_admin_events" }
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
 func (User) TableName() string { return "users" }
@@ -48,6 +61,7 @@ func (u User) Account() auth.Account {
 		LastName:    u.LastName,
 		Email:       u.Email,
 		Role:        u.Role,
+		IsAdmin:     u.IsAdmin,
 		Origin:      u.Origin,
 		IsActive:    u.IsActive,
 		LastLoginAt: u.LastLoginAt,
@@ -216,6 +230,12 @@ func (r *UserRepository) Count(filtros Filtros) (int64, error) {
 	return total, err
 }
 
+func (r *UserRepository) CountActiveAdmins() (int64, error) {
+	var total int64
+	err := r.db.Model(&User{}).Where("is_admin = true AND is_active = true").Count(&total).Error
+	return total, err
+}
+
 // conFiltros aplica los filtros que se hayan pedido.
 func (r *UserRepository) conFiltros(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 	if filtros.Role != "" {
@@ -270,6 +290,43 @@ func (r *UserRepository) TouchLastLogin(id int64, cuando time.Time) error {
 func (r *UserRepository) UpdateFields(id int64, cambios map[string]any) error {
 	cambios["updated_at"] = time.Now()
 	return r.afterWrite(r.db.Model(&User{}).Where("id = ?", id).Updates(cambios))
+}
+
+func (r *UserRepository) UpdateFieldsWithAdminEvent(id int64, cambios map[string]any, actorID *int64, actorLabel, action string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		cambios["updated_at"] = time.Now()
+		result := tx.Model(&User{}).Where("id = ?", id).Updates(cambios)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrUserNotFound
+		}
+		return tx.Create(&AdminEvent{UserID: id, ActorUserID: actorID, ActorLabel: actorLabel, Action: action}).Error
+	})
+}
+
+func (r *UserRepository) AdminEvents(userID int64, pendingOnly bool) ([]AdminEvent, error) {
+	var events []AdminEvent
+	query := r.db.Where("user_id = ?", userID)
+	if pendingOnly {
+		query = query.Where("acknowledged_at IS NULL")
+	}
+	err := query.Order("created_at DESC").Find(&events).Error
+	return events, err
+}
+
+func (r *UserRepository) AcknowledgeAdminEvent(userID, eventID int64) error {
+	result := r.db.Model(&AdminEvent{}).
+		Where("id = ? AND user_id = ? AND acknowledged_at IS NULL", eventID, userID).
+		Update("acknowledged_at", time.Now())
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+	return nil
 }
 
 // afterWrite convierte «no se ha tocado ninguna fila» en «la cuenta no existe», que es lo que quiere

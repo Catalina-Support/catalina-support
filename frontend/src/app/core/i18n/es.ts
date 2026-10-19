@@ -57,7 +57,7 @@ export const ES = {
       'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
     traduccionTitulo: 'Revisar el cambio de idioma',
     traduccionAyuda:
-      'Revisa y corrige las doce plantillas antes de aplicar el idioma a toda la instalación.',
+      'Revisa y corrige las trece plantillas antes de aplicar el idioma a toda la instalación.',
     traduccionCosto:
       'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
     traducirConfirmando: 'Aceptar costo y traducir',
@@ -102,6 +102,12 @@ export const ES = {
     probarIA: 'Probar la conexión',
     guardarIA: 'Guardar el motor de IA',
     iaLocal: 'En este servidor',
+	iaAceleracion: 'Aceleración',
+	iaAceleracionAuto: 'Automática (recomendada)',
+	iaAceleracionCPU: 'CPU',
+	iaAceleracionNVIDIA: 'GPU NVIDIA',
+	iaAceleracionEfectiva: 'En uso',
+	iaAceleracionFallback: 'El inicio con NVIDIA falló, así que este modelo está usando CPU.',
     iaRemota: 'En otro servidor',
     iaProveedor: 'Proveedor externo',
     iaCompatible: 'Compatible con OpenAI',
@@ -134,7 +140,7 @@ export const ES = {
     iaReanudar: 'Reanudar descarga',
     iaEliminarParcial: 'Eliminar descarga parcial',
     iaPruename: '¡Pruébame!',
-    iaSaludo: 'Saludo de {modelo}: {saludo}',
+	iaSaludo: 'Saludo de {modelo} ({aceleracion}): {saludo}',
     iaConfirmarEliminar: '¿Eliminar este modelo descargado?',
     iaConfirmarEliminarParcial: '¿Eliminar la descarga parcial?',
     iaDiscoDisponible: 'Disco disponible: {cantidad}',
@@ -222,6 +228,14 @@ export const ES = {
     avisoAlAsignado: 'Al asignado',
     guardarNumeracion: 'Guardar la numeración y el reparto',
     numeracionGuardada: 'La numeración y el reparto están guardados.',
+    reporteria: 'Reportería',
+    reporteriaAyuda: 'Umbrales operativos en horas corridas. No son un SLA contractual.',
+    criticaHoras: 'Crítica (horas)',
+    altaHoras: 'Alta (horas)',
+    mediaHoras: 'Media (horas)',
+    bajaHoras: 'Baja (horas)',
+    guardarReporteria: 'Guardar reportería',
+    reporteriaGuardada: 'Los umbrales de reportería están guardados.',
   },
 
   // La vista de primer arranque: lo que se pide **antes de que la instalación tenga puerta**
@@ -278,6 +292,7 @@ export const ES = {
   },
 
   menu: {
+    dashboard: 'Panel',
     misTickets: 'Mis tickets',
     bandeja: 'Bandeja',
     ticketsPrincipales: 'Tickets principales',
@@ -290,6 +305,10 @@ export const ES = {
     cerrar: 'Cerrar el menú',
     plegar: 'Plegar el menú',
     desplegar: 'Desplegar el menú',
+  },
+
+  dashboard: {
+    title:'Panel', help:'Carga, tiempos y tendencias operativas.', refresh:'Actualizar', from:'Desde', to:'Hasta', type:'Tipo', all:'Todos', main:'Principal', internal:'Interno', state:'Estado', priority:'Prioridad', apply:'Aplicar', error:'No se pudo cargar la reportería.', metrics:'Indicadores', open:'Abiertos', critical:'Críticos abiertos', overdue:'Atrasados', firstResponse:'Primera respuesta', unanswered:'sin respuesta', resolution:'Resolución', reopens:'Reaperturas', category:'Categoría', assignee:'Responsable', ticket:'Ticket', subject:'Asunto', age:'Antigüedad', updated:'Actualización', unassigned:'Sin responsable', noResponse:'Sin respuesta', loading:'Cargando…', more:'Desplázate para cargar más', new:'Nuevo', inProgress:'En progreso', waiting:'Esperando', escalated:'Escalado', resolved:'Resuelto', closed:'Cerrado', priorityCritical:'Crítica', priorityHigh:'Alta', priorityMedium:'Media', priorityLow:'Baja', other:'Otros', createdClosed:'Creados y cerrados', created:'Creados', closedCount:'Cerrados', noClosed:'No se cerraron tickets en este periodo.', empty:'Ningún ticket coincide con estos filtros.'
   },
 
   // Los cuatro papeles, como se llaman en la interfaz. Los valores son los del backend.
@@ -432,6 +451,7 @@ export const ES = {
     volver: 'Volver a la lista',
     acciones: 'Acciones',
     desactivarPregunta: '¿Desactivar esta cuenta?',
+    lastAdminWarning: 'La cuenta de fábrica será la única cuenta con acceso administrativo.',
     desactivarConsecuencia:
       'Dejará de poder entrar en cuanto lo hagas, aunque tenga el navegador abierto: la siguiente petición suya no valdrá. No se borra nada, y sus tickets siguen contando su historia.',
     siDesactivar: 'Sí, desactivar',
@@ -440,6 +460,10 @@ export const ES = {
       'Pasar a local quita el vínculo con el directorio; si la cuenta se queda sin contraseña, se le manda el enlace de alta.',
     guardarOrigen: 'Guardar el origen',
     origenGuardado: 'Origen cambiado.',
+    adminGrantedNotice: '{actor} te concedió acceso de Administrador.',
+    adminRevokedNotice: '{actor} retiró tu acceso de Administrador.',
+    adminGranted: 'Concedió acceso de Administrador',
+    adminRevoked: 'Retiró el acceso de Administrador',
     guardar: 'Guardar',
     cancelar: 'Cancelar',
   },
@@ -515,6 +539,7 @@ export const ES = {
     'ticket.backToSupport': 'El ticket vuelve a Soporte',
     'ticket.mentioned': 'Te han etiquetado en un ticket',
     'ticket.priorityCritical': 'Prioridad crítica, a Soporte',
+    'ticket.privateComment': 'Comentario privado para el equipo',
     'auth.invitation': 'Alta de una cuenta',
     'auth.recovery': 'Recuperar la contraseña',
     'auth.passwordChanged': 'Contraseña cambiada',
@@ -767,6 +792,9 @@ export const ES = {
     reabiertoAviso: 'Ticket reabierto.',
     escaladoAviso: 'Ticket escalado. Se ha avisado a Desarrollo.',
     comentarioEscrito: 'Comentario escrito.',
+    visibilidad: 'Visibilidad',
+    publico: 'Público',
+    privado: 'Privado',
     // El comentario ya está publicado y algún archivo no ha subido: se dice cuál y se puede reintentar
     // sin volver a escribirlo, que es lo que evita el comentario duplicado.
     adjuntosQueFaltan: 'El comentario se ha publicado, pero no se han podido subir estos archivos:',
@@ -980,10 +1008,10 @@ export const ES = {
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
     'mail.translation.costConfirmationRequired':
       'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
-    'mail.translation.incomplete': 'Revisa las doce plantillas antes de aplicar el idioma.',
+    'mail.translation.incomplete': 'Revisa las trece plantillas antes de aplicar el idioma.',
     'mail.translation.protectedChanged':
       'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
-    'settings.language.reviewRequired': 'Revisa las doce plantillas antes de aplicar el idioma.',
+    'settings.language.reviewRequired': 'Revisa las trece plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -1062,6 +1090,8 @@ export const ES = {
     'settings.ai.unreachable':
       'El motor de IA no ha contestado: revisa la dirección y que esté levantado.',
     'settings.ai.managerUnavailable': 'El administrador local de modelos no está disponible.',
+	'settings.ai.nvidiaUnavailable': 'La aceleración NVIDIA no está disponible. Inicia el motor con ai.yml y ai-nvidia.yml en un servidor Linux con NVIDIA Container Toolkit.',
+	'settings.ai.accelerationUnknown': 'Elige aceleración Automática, CPU o NVIDIA.',
     'settings.ai.insufficientMemory':
       'El modelo requiere {requerida} de RAM y hay {disponible} disponibles. El modelo anterior continúa activo.',
     'settings.ai.required': 'Configura y prueba el motor de IA antes de entrar al producto.',

@@ -66,9 +66,8 @@ func (c *TicketController) List(w http.ResponseWriter, r *http.Request) {
 	filtros.Page = pagina
 	filtros.PerPage = porPagina
 
-	// `mine=1` es **«lo mío»**: lo asignado a quien mira, lo que abrió, aquello donde ha comentado y
-	// donde le han etiquetado. Lo pide la bandeja de los tres papeles (docs/modules/tickets.md,
-	// decisiones 51 y 62); `view` lo pide por sí solo, porque sin «lo mío» no matiza nada.
+	// `mine=1` es **«lo mío»**: lo asignado a quien mira o donde figura actualmente como observador
+	// (docs/modules/tickets.md, sección 29); `view` lo pide por sí solo porque lo matiza.
 	if consulta.Get("mine") == "1" || filtros.View != "" {
 		yo := auth.MustFromContext(r.Context()).ID
 		filtros.Mine = &yo
@@ -474,7 +473,7 @@ func (c *TicketController) Comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comentario, err := c.service.Comment(r.PathValue("number"), entrada.Body, auth.MustFromContext(r.Context()))
+	comentario, err := c.service.CommentWithVisibility(r.PathValue("number"), entrada.Body, entrada.Visibility, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -496,10 +495,11 @@ func (c *TicketController) EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comentario, err := c.service.EditComment(
+	comentario, err := c.service.EditCommentWithVisibility(
 		r.PathValue("number"),
 		id,
 		entrada.Body,
+		entrada.Visibility,
 		auth.MustFromContext(r.Context()),
 	)
 	if err != nil {

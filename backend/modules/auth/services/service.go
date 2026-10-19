@@ -631,6 +631,7 @@ func (s *Service) factorySession() (Session, error) {
 			ID:       0,
 			Name:     "Administrador",
 			Role:     auth.RoleAdministrador,
+			IsAdmin:  true,
 			Origin:   auth.OriginLocal,
 			IsActive: true,
 		},

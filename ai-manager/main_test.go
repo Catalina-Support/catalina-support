@@ -266,3 +266,35 @@ func TestDeactivateStopsActiveModelAndRemovesMarker(t *testing.T) {
 		t.Fatalf("el marcador activo debía desaparecer: %v", err)
 	}
 }
+
+func TestExplicitNVIDIAIsRejectedWhenItIsUnavailable(t *testing.T) {
+	m := newManager(t.TempDir(), "token")
+	m.nvidiaAvailable = func() (string, bool) { return "", false }
+	err := m.changeAcceleration("nvidia")
+	var unavailable *accelerationError
+	if !errors.As(err, &unavailable) || unavailable.Key != "settings.ai.nvidiaUnavailable" {
+		t.Fatalf("se esperaba NVIDIA no disponible y llegó %v", err)
+	}
+	if m.accelerationMode != "auto" || m.effectiveAcceleration != "cpu" {
+		t.Fatalf("la configuración anterior no se conservó: %s/%s", m.accelerationMode, m.effectiveAcceleration)
+	}
+}
+
+func TestAutoFallsBackOnceToCPUWhenNVIDIAStartFails(t *testing.T) {
+	m := newManager(t.TempDir(), "token")
+	m.accelerationMode, m.effectiveAcceleration, m.deviceName = "auto", "nvidia", "Test GPU"
+	m.command = func(modelSpec) *exec.Cmd {
+		if m.effectiveAcceleration == "nvidia" {
+			return exec.Command("/does-not-exist")
+		}
+		return exec.Command("sh", "-c", "sleep 60")
+	}
+	m.health = func(context.Context) error { return nil }
+	if err := m.activateModel(catalog[0]); err != nil {
+		t.Fatal(err)
+	}
+	if m.effectiveAcceleration != "cpu" || m.deviceName != "CPU" || m.fallbackReason == "" {
+		t.Fatalf("no se informó la recuperación por CPU: %s %s %q", m.effectiveAcceleration, m.deviceName, m.fallbackReason)
+	}
+	m.stopProcess()
+}

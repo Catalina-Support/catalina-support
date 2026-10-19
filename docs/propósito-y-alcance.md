@@ -1,7 +1,17 @@
 # Propósito y alcance
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-19
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-19.** El Dashboard es exclusivamente
+> estadístico: no lista ni enlaza tickets individuales. El detalle continúa en las bandejas y fichas
+> existentes. La interfaz y la API de detalle individual fueron retiradas.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 12 incorpora Dashboard y reportería
+> operativa sin convertir el producto en una herramienta de evaluación o SLA.
+>
+> **Implementado el 2026-10-18.** La sección 11 permite sumar Administrador a Soporte o Desarrollo sin mezclar sus
+> responsabilidades operativas.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** El responsable incorpora prioridades de ticket
 > `low`, `medium`, `high` y `critical`. Esta decisión corrige expresamente la exclusión anterior de
@@ -263,3 +273,22 @@ La prioridad sirve para identificar, filtrar y ordenar trabajo. No cambia estado
 permisos, reparto por turnos ni tiempos de atención. La única automatización nueva es el aviso por
 correo la primera vez que un ticket llega a crítica, incluida su creación: se envía a todo Soporte
 activo y nunca bloquea la operación si falla.
+
+## 11. Administrar sin abandonar el equipo
+
+La 1.0.0 permite que una persona de Soporte o Desarrollo sea también Administrador. Esto no crea un
+tercer nivel ni mezcla los dos existentes: conserva un único equipo operativo y la administración
+sólo añade la gestión de la instalación.
+
+Usuario, Soporte y Desarrollo siguen siendo excluyentes entre sí. La cuenta de fábrica permanece
+como Administrador puro y puerta de recuperación. Una cuenta combinada trabaja los tickets desde su
+nivel y ve además las herramientas administrativas. Así se evitan cuentas duplicadas y cambios de
+papel, con trazabilidad de quién concede o retira la capacidad.
+
+## 12. Dashboard operativo
+
+La 1.0.0 incorpora un Dashboard para Soporte, Desarrollo y Administrador. Resume carga, urgencia,
+antigüedad, tiempos y tendencias del trabajo que cada papel ya puede consultar. No amplía el acceso
+del Usuario, no puntúa personas y no genera automatismos. Sólo muestra estadísticas agregadas; no
+lista, identifica ni enlaza tickets. El detalle continúa exclusivamente en las bandejas y fichas del
+módulo de tickets.

@@ -99,6 +99,7 @@ const (
 	// (docs/modules/tickets.md, sección 5).
 	CorreoTicketEtiquetado       = "ticket.mentioned"
 	CorreoTicketPrioridadCritica = "ticket.priorityCritical"
+	CorreoComentarioPrivado      = "ticket.privateComment"
 )
 
 // Máximo de adjuntos y extensiones admitidas. La lista cerrada está en
@@ -247,12 +248,13 @@ type Ticket struct {
 
 // Comment es un comentario de la conversación.
 type Comment struct {
-	ID        int64
-	Author    *auth.Account
-	Body      string
-	Edited    bool
-	Deleted   bool
-	CreatedAt time.Time
+	ID         int64
+	Author     *auth.Account
+	Body       string
+	Visibility string
+	Edited     bool
+	Deleted    bool
+	CreatedAt  time.Time
 }
 
 // Attachment es un adjunto. El archivo no viaja aquí: esto es lo que la pantalla enseña.

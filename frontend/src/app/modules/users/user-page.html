@@ -62,6 +62,19 @@
           (valorChange)="papel.set($event)"
         />
 
+        @if (papel() === 'soporte' || papel() === 'desarrollo') {
+          <label class="flex min-h-12 items-center gap-3 text-sm font-medium text-texto">
+            <input
+              type="checkbox"
+              class="size-5 accent-primary"
+              [checked]="administrador()"
+              [disabled]="esMiCuenta()"
+              (change)="administrador.set($any($event.target).checked)"
+            />
+            {{ t().papeles.administrador }}
+          </label>
+        }
+
         <div class="flex flex-wrap items-center gap-3">
           <app-boton
             tipo="submit"
@@ -75,6 +88,35 @@
         </div>
       </form>
     </app-tarjeta>
+
+    @if (eventosAdministrativos().length) {
+      <app-tarjeta nivel="h2" [titulo]="t().papeles.administrador">
+        <ul class="flex flex-col gap-2 text-sm text-texto">
+          @for (evento of eventosAdministrativos(); track evento.id) {
+            <li>
+              {{ evento.actor }} ·
+              {{ evento.action === 'granted' ? t().usuarios.adminGranted : t().usuarios.adminRevoked }}
+              · {{ evento.createdAt }}
+            </li>
+          }
+        </ul>
+      </app-tarjeta>
+    }
+
+    @if (preguntandoRetirarAdmin()) {
+      <app-dialogo
+        [titulo]="t().papeles.administrador"
+        [abierto]="preguntandoRetirarAdmin()"
+        [etiquetaCerrar]="t().comun.cerrar"
+        (cerrado)="preguntandoRetirarAdmin.set(false)"
+      >
+        <p class="text-sm text-aviso">{{ t().usuarios.lastAdminWarning }}</p>
+        <div acciones class="flex gap-2">
+          <app-boton [texto]="t().usuarios.guardar" (pulsado)="confirmarGuardado()" />
+          <app-boton forma="secundario" [texto]="t().usuarios.cancelar" (pulsado)="preguntandoRetirarAdmin.set(false)" />
+        </div>
+      </app-dialogo>
+    }
 
     <!-- Lo que no se cambia escribiendo: el estado, la última entrada y de dónde sale la contraseña. -->
     <app-tarjeta nivel="h2" [titulo]="t().usuarios.estado">
@@ -136,6 +178,9 @@
         @if (preguntandoDesactivar()) {
           <div class="flex flex-col gap-3 rounded-md border border-aviso bg-aviso-suave p-3">
             <p class="text-sm font-medium text-texto">{{ t().usuarios.desactivarPregunta }}</p>
+            @if (ultimoAdministradorNormal()) {
+              <p class="text-sm text-aviso">{{ t().usuarios.lastAdminWarning }}</p>
+            }
             <p class="text-sm text-texto">{{ t().usuarios.desactivarConsecuencia }}</p>
 
             <div class="flex flex-wrap gap-2">

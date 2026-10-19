@@ -194,6 +194,30 @@ func (s *Service) avisarPersonal(plantilla string, datos map[string]string, pers
 	}
 }
 
+// avisarComentarioPrivado notifica sólo al personal que ya sigue el principal. El solicitante y el
+// autor quedan fuera, y el correo no contiene el cuerpo ni menciona adjuntos.
+func (s *Service) avisarComentarioPrivado(principal repositories.Ticket, actor auth.Identity) {
+	personas := s.observadoresDe(repositories.DestinoDePrincipal(principal.ID))
+	if principal.AssigneeID != nil {
+		if responsable, err := s.accounts.ByID(*principal.AssigneeID); err == nil {
+			personas = append([]auth.Account{responsable}, personas...)
+		}
+	}
+
+	destinatarios := make([]auth.Account, 0, len(personas))
+	for _, persona := range personas {
+		if persona.ID != actor.ID {
+			destinatarios = append(destinatarios, persona)
+		}
+	}
+	s.avisarPersonal(CorreoComentarioPrivado, map[string]string{
+		"numero": principal.Number,
+		"asunto": principal.Subject,
+		"autor":  actor.FullName(),
+		"enlace": s.enlaceDelTicket(principal.Number),
+	}, destinatarios)
+}
+
 func (s *Service) idiomaGlobal() string {
 	if s.language != nil {
 		if idioma, err := s.language.Language(); err == nil && idioma == "en" {

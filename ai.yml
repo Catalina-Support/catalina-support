@@ -11,6 +11,7 @@ services:
       # `--env-file config/env/prod.env`, igual que el backend.
       AI_MANAGER_TOKEN: ${AI_MANAGER_TOKEN:-catalina-support-dev-ai-manager}
       MODELS_PATH: /models
+      AI_ACCELERATION_CAPABILITIES: cpu
     volumes:
       - ai_models:/models
     # Techo, no reserva. La activación comprueba el perfil del modelo antes de iniciar llama-server.

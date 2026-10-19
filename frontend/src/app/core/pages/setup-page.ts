@@ -160,6 +160,7 @@ export class SetupPage implements OnDestroy {
   protected readonly iaCabecera = signal('');
   protected readonly iaCredencial = signal('');
   protected readonly iaPrivacidad = signal(false);
+  protected readonly iaAceleracion = signal<'auto' | 'cpu' | 'nvidia'>('auto');
   protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
   protected readonly refrescandoCatalogo = signal(false);
   protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
@@ -320,6 +321,15 @@ export class SetupPage implements OnDestroy {
     }));
   }
 
+  protected opcionesDeAceleracionIA(): readonly OpcionSelector[] {
+    const t = this.t().configuracion;
+    return [
+      { valor: 'auto', etiqueta: t.iaAceleracionAuto, grupo: t.iaAceleracion },
+      { valor: 'cpu', etiqueta: t.iaAceleracionCPU, grupo: t.iaAceleracion },
+      { valor: 'nvidia', etiqueta: t.iaAceleracionNVIDIA, grupo: t.iaAceleracion },
+    ];
+  }
+
   protected opcionesDeModeloLocal(): readonly OpcionSelector[] {
     return [
       { valor: 'qwen2.5-1.5b-instruct', etiqueta: 'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB', grupo: this.t().configuracion.iaLocal },
@@ -338,6 +348,11 @@ export class SetupPage implements OnDestroy {
     ];
   }
   protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected descripcionAceleracion(catalogo: CatalogoLocalDeIA): string {
+    const configured = catalogo.accelerationMode === 'auto' ? this.t().configuracion.iaAceleracionAuto : catalogo.accelerationMode === 'nvidia' ? 'NVIDIA' : 'CPU';
+    const effective = catalogo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU';
+    return `${configured} · ${effective}${catalogo.deviceName && catalogo.deviceName !== effective ? ` · ${catalogo.deviceName}` : ''}`;
+  }
   protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
   protected async cargarCatalogoIA(): Promise<void> {
     if (this.refrescandoCatalogo()) return;
@@ -365,7 +380,7 @@ export class SetupPage implements OnDestroy {
   protected async restaurarLogo(oscuro:boolean):Promise<void>{await this.accionModelo(async()=>{await this.setup.restablecerLogo(oscuro);await this.marca.cargar();});}
   protected urlLogo(oscuro:boolean):string{return this.marca.urlDelLogo(oscuro);}
   protected async previsualizarColor(valor:string):Promise<void>{this.colorElegido.set(valor);if(!/^#[0-9a-fA-F]{6}$/.test(valor)){this.colorResuelto.set(null);return;}try{const marca=await this.marca.previsualizarColor(valor);this.colorResuelto.set(marca.colors);this.aplicarVistaPrevia(marca.colors);}catch{this.colorResuelto.set(null);}}
-  protected async probarModeloActivo():Promise<void>{await this.accionModelo(async()=>{const saludo=await this.setup.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting})});});}
+  protected async probarModeloActivo():Promise<void>{await this.accionModelo(async()=>{const saludo=await this.setup.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting,aceleracion:`${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`})});});}
   private async refrescarCatalogo():Promise<void>{const catalogo=await this.setup.modelosLocales();this.catalogoIA.set(catalogo);const activo=catalogo.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=catalogo.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
   ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
   private async accionModelo(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
@@ -552,6 +567,7 @@ export class SetupPage implements OnDestroy {
                     credential: this.iaCredencial(),
                     privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(),
                     language: this.idioma(),
+                    accelerationMode: this.iaAceleracion(),
                   },
                 }));
 
@@ -659,6 +675,7 @@ export class SetupPage implements OnDestroy {
     this.iaCabecera.set(ia?.authHeader || '');
     this.iaCredencial.set('');
     this.iaPrivacidad.set(ia?.privacyConfirmed ?? false);
+    this.iaAceleracion.set(ia?.accelerationMode || 'auto');
   }
 
   private textoDelError(error: unknown): string {

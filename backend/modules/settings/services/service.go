@@ -147,15 +147,19 @@ type UpdateInput struct {
 	EntryMethod string
 	// Directory y Keycloak son las dos configuraciones de los caminos de directorio. Van **siempre**,
 	// esté puesto el método que esté: así se puede dejar configurado lo que no se usa todavía.
-	Directory            DirectoryInput
-	Keycloak             KeycloakInput
-	Language             string
-	PrimaryColor         string
-	NumberPrefix         string
-	MainAssignment       string
-	MainNotification     string
-	InternalAssignment   string
-	InternalNotification string
+	Directory                  DirectoryInput
+	Keycloak                   KeycloakInput
+	Language                   string
+	PrimaryColor               string
+	NumberPrefix               string
+	MainAssignment             string
+	MainNotification           string
+	InternalAssignment         string
+	InternalNotification       string
+	ReportOverdueCriticalHours int
+	ReportOverdueHighHours     int
+	ReportOverdueMediumHours   int
+	ReportOverdueLowHours      int
 	// TimeZone es la zona horaria que se elige (nombre IANA) y PublicAppURL la dirección pública.
 	TimeZone     string
 	PublicAppURL string
@@ -217,16 +221,20 @@ type Config struct {
 	// EntryMethod es el método de entrada que está puesto.
 	EntryMethod string
 	// Directory y Keycloak son las dos configuraciones, sin sus secretos.
-	Directory            DirectoryView
-	Keycloak             KeycloakView
-	Language             string
-	PrimaryColor         string
-	NumberPrefix         string
-	MainAssignment       string
-	MainNotification     string
-	InternalAssignment   string
-	InternalNotification string
-	UpdatedAt            time.Time
+	Directory                  DirectoryView
+	Keycloak                   KeycloakView
+	Language                   string
+	PrimaryColor               string
+	NumberPrefix               string
+	MainAssignment             string
+	MainNotification           string
+	InternalAssignment         string
+	InternalNotification       string
+	ReportOverdueCriticalHours int
+	ReportOverdueHighHours     int
+	ReportOverdueMediumHours   int
+	ReportOverdueLowHours      int
+	UpdatedAt                  time.Time
 	// TimeZone es la zona horaria de la instalación, y PublicAppURL su dirección pública.
 	TimeZone     string
 	PublicAppURL string
@@ -430,22 +438,26 @@ func (s *Service) Config() (Config, error) {
 	}
 
 	config := Config{
-		Name:                 nombreDeLaInstalacion(instalacion.InstallationName),
-		EntryMethod:          instalacion.EntryMethod,
-		TimeZone:             zonaHorariaDe(instalacion.TimeZone),
-		PublicAppURL:         direccionPublicaDe(instalacion.PublicAppURL),
-		Directory:            vistaDeDirectorio(directorio),
-		Keycloak:             vistaDeKeycloak(keycloak),
-		Language:             instalacion.Language,
-		PrimaryColor:         instalacion.PrimaryColor,
-		NumberPrefix:         tickets.NumberPrefix,
-		MainAssignment:       tickets.MainAssignment,
-		MainNotification:     tickets.MainNotification,
-		InternalAssignment:   tickets.InternalAssignment,
-		InternalNotification: tickets.InternalNotification,
-		UpdatedAt:            instalacion.UpdatedAt,
-		AIURL:                direccionPublicaDe(instalacion.AIURL),
-		AIModel:              strings.TrimSpace(instalacion.AIModel),
+		Name:                       nombreDeLaInstalacion(instalacion.InstallationName),
+		EntryMethod:                instalacion.EntryMethod,
+		TimeZone:                   zonaHorariaDe(instalacion.TimeZone),
+		PublicAppURL:               direccionPublicaDe(instalacion.PublicAppURL),
+		Directory:                  vistaDeDirectorio(directorio),
+		Keycloak:                   vistaDeKeycloak(keycloak),
+		Language:                   instalacion.Language,
+		PrimaryColor:               instalacion.PrimaryColor,
+		NumberPrefix:               tickets.NumberPrefix,
+		MainAssignment:             tickets.MainAssignment,
+		MainNotification:           tickets.MainNotification,
+		InternalAssignment:         tickets.InternalAssignment,
+		InternalNotification:       tickets.InternalNotification,
+		ReportOverdueCriticalHours: tickets.ReportOverdueCriticalHours,
+		ReportOverdueHighHours:     tickets.ReportOverdueHighHours,
+		ReportOverdueMediumHours:   tickets.ReportOverdueMediumHours,
+		ReportOverdueLowHours:      tickets.ReportOverdueLowHours,
+		UpdatedAt:                  instalacion.UpdatedAt,
+		AIURL:                      direccionPublicaDe(instalacion.AIURL),
+		AIModel:                    strings.TrimSpace(instalacion.AIModel),
 		Brand: Brand{
 			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
 			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
@@ -558,6 +570,12 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 	if !contiene(notifications, input.MainNotification) || !contiene(notifications, input.InternalNotification) {
 		return Config{}, ErrNotificationUnknown
 	}
+	if input.ReportOverdueCriticalHours == 0 && input.ReportOverdueHighHours == 0 && input.ReportOverdueMediumHours == 0 && input.ReportOverdueLowHours == 0 {
+		input.ReportOverdueCriticalHours, input.ReportOverdueHighHours, input.ReportOverdueMediumHours, input.ReportOverdueLowHours = 4, 24, 72, 120
+	}
+	if input.ReportOverdueCriticalHours < 1 || input.ReportOverdueHighHours < 1 || input.ReportOverdueMediumHours < 1 || input.ReportOverdueLowHours < 1 {
+		return Config{}, errors.New("settings.reporting.threshold.invalid")
+	}
 
 	// Avisar «al asignado» sin repartir no tiene sentido: no hay a quién avisar. Lo comprueba también
 	// la base, pero se avisa aquí para poder decirlo con su clave.
@@ -655,11 +673,15 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 	}
 
 	err = s.repo.UpdateTickets(map[string]any{
-		"number_prefix":         prefix,
-		"main_assignment":       input.MainAssignment,
-		"main_notification":     input.MainNotification,
-		"internal_assignment":   input.InternalAssignment,
-		"internal_notification": input.InternalNotification,
+		"number_prefix":                 prefix,
+		"main_assignment":               input.MainAssignment,
+		"main_notification":             input.MainNotification,
+		"internal_assignment":           input.InternalAssignment,
+		"internal_notification":         input.InternalNotification,
+		"report_overdue_critical_hours": input.ReportOverdueCriticalHours,
+		"report_overdue_high_hours":     input.ReportOverdueHighHours,
+		"report_overdue_medium_hours":   input.ReportOverdueMediumHours,
+		"report_overdue_low_hours":      input.ReportOverdueLowHours,
 	}, updatedByID)
 	if err != nil {
 		return Config{}, traducir(err)

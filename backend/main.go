@@ -27,6 +27,8 @@ import (
 	authcontrollers "catalina-support/backend/modules/auth/controllers"
 	authrepositories "catalina-support/backend/modules/auth/repositories"
 	authservices "catalina-support/backend/modules/auth/services"
+	dashboardcontrollers "catalina-support/backend/modules/dashboard/controllers"
+	dashboardservices "catalina-support/backend/modules/dashboard/services"
 	"catalina-support/backend/modules/mail/controllers"
 	"catalina-support/backend/modules/mail/repositories"
 	"catalina-support/backend/modules/mail/services"
@@ -308,6 +310,8 @@ func run() error {
 	ticketsService.SetMailer(mailService)
 	ticketsService.SetConfiguration(ajustesDeTickets{settings: settingsService})
 	ticketsService.SetGlobalLanguage(instalacionesDeLaConfiguracion{settings: settingsService})
+	dashboardService := dashboardservices.NewService(ticketrepositories.NewReportRepository(db))
+	dashboardController := dashboardcontrollers.NewDashboardController(dashboardService, settingsService.ZonaHoraria, settingsService.Language)
 
 	// El motor de IA redacta el motivo y la última acción de cada ticket. La instalación exige una
 	// configuración probada; una caída posterior no impide consultar ni trabajar con los tickets.
@@ -356,14 +360,14 @@ func run() error {
 	admin := func(handler http.Handler) http.Handler {
 		return middleware.Chain(handler,
 			middleware.Auth(tokens, whoIsCalling),
-			authz.RequireRole(auth.RoleAdministrador),
+			authz.RequireAdmin,
 			globalSettingsHeaders,
 		)
 	}
 	staff := func(handler http.Handler) http.Handler {
 		return middleware.Chain(handler,
 			middleware.Auth(tokens, whoIsCalling),
-			authz.RequireRole(auth.RoleAdministrador, auth.RoleSoporte),
+			authz.RequireStaff,
 			globalSettingsHeaders,
 		)
 	}
@@ -477,6 +481,8 @@ func run() error {
 
 	// El perfil propio lo cambia cualquiera que haya entrado, y sólo lo suyo.
 	mux.Handle("PATCH /api/users/me", authenticated(http.HandlerFunc(usersController.UpdateProfile)))
+	mux.Handle("GET /api/users/me/admin-events", authenticated(http.HandlerFunc(usersController.PendingAdminEvents)))
+	mux.Handle("POST /api/users/me/admin-events/{id}/acknowledge", authenticated(http.HandlerFunc(usersController.AcknowledgeAdminEvent)))
 
 	// Los tickets. Aquí la ruta sólo exige haber entrado: **quién puede qué depende del ticket** —un
 	// usuario ve el suyo y no el de otro, y no ve ningún interno—, y eso lo decide el servicio, que es
@@ -484,6 +490,8 @@ func run() error {
 	ticketsController := ticketcontrollers.NewTicketController(ticketsService)
 
 	mux.Handle("GET /api/tickets", authenticated(http.HandlerFunc(ticketsController.List)))
+	mux.Handle("GET /api/dashboard/summary", authenticated(http.HandlerFunc(dashboardController.Summary)))
+	mux.Handle("GET /api/dashboard/export", authenticated(http.HandlerFunc(dashboardController.Export)))
 	mux.Handle("POST /api/tickets", authenticated(http.HandlerFunc(ticketsController.Create)))
 	// La lista de responsables posibles: la da `tickets` para que la pantalla no tenga que llamar a
 	// `/api/users` (docs/arquitectura.md, sección 4).
@@ -650,7 +658,19 @@ func loadIdentity(users *userservices.Service) auth.IdentityLoader {
 			return auth.Identity{}, auth.ErrIdentityNotFound
 		}
 
-		return account.Identity(), nil
+		identity := account.Identity()
+		events, err := users.AdminEvents(account.ID, true)
+		if err != nil {
+			return auth.Identity{}, err
+		}
+		if len(events) > 0 {
+			event := events[len(events)-1]
+			identity.AdminEvent = &auth.AdminNotice{
+				ID: event.ID, Action: event.Action, Actor: event.ActorLabel,
+				CreatedAt: event.CreatedAt.UTC().Format(time.RFC3339),
+			}
+		}
+		return identity, nil
 	}
 }
 

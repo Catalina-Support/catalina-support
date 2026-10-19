@@ -101,6 +101,12 @@ export const EN: Textos = {
     probarIA: 'Test the connection',
     guardarIA: 'Save the AI engine',
     iaLocal: 'On this server',
+	iaAceleracion: 'Acceleration',
+	iaAceleracionAuto: 'Automatic (recommended)',
+	iaAceleracionCPU: 'CPU',
+	iaAceleracionNVIDIA: 'NVIDIA GPU',
+	iaAceleracionEfectiva: 'In use',
+	iaAceleracionFallback: 'The NVIDIA start failed, so this model is running on CPU.',
     iaRemota: 'On another server',
     iaProveedor: 'External provider',
     iaCompatible: 'OpenAI compatible',
@@ -133,7 +139,7 @@ export const EN: Textos = {
     iaReanudar: 'Resume download',
     iaEliminarParcial: 'Delete partial download',
     iaPruename: 'Try me!',
-    iaSaludo: 'Greeting from {modelo}: {saludo}',
+	iaSaludo: 'Greeting from {modelo} ({aceleracion}): {saludo}',
     iaConfirmarEliminar: 'Delete this downloaded model?',
     iaConfirmarEliminarParcial: 'Delete the partial download?',
     iaDiscoDisponible: 'Available disk: {cantidad}',
@@ -222,6 +228,14 @@ export const EN: Textos = {
     avisoAlAsignado: 'The assignee',
     guardarNumeracion: 'Save the numbering and the sharing out',
     numeracionGuardada: 'The numbering and the sharing out are saved.',
+    reporteria: 'Reporting',
+    reporteriaAyuda: 'Operational thresholds in calendar hours. They are not a contractual SLA.',
+    criticaHoras: 'Critical (hours)',
+    altaHoras: 'High (hours)',
+    mediaHoras: 'Medium (hours)',
+    bajaHoras: 'Low (hours)',
+    guardarReporteria: 'Save reporting',
+    reporteriaGuardada: 'Reporting thresholds have been saved.',
   },
 
   // The first-start view: what is asked for **before the installation has a door**
@@ -275,6 +289,7 @@ export const EN: Textos = {
   },
 
   menu: {
+    dashboard: 'Dashboard',
     misTickets: 'My tickets',
     bandeja: 'Inbox',
     ticketsPrincipales: 'Main tickets',
@@ -287,6 +302,10 @@ export const EN: Textos = {
     cerrar: 'Close the menu',
     plegar: 'Collapse the menu',
     desplegar: 'Expand the menu',
+  },
+
+  dashboard: {
+    title:'Dashboard', help:'Operational workload, times and trends.', refresh:'Refresh', from:'From', to:'To', type:'Type', all:'All', main:'Main', internal:'Internal', state:'State', priority:'Priority', apply:'Apply', error:'Reporting could not be loaded.', metrics:'Metrics', open:'Open', critical:'Open critical', overdue:'Overdue', firstResponse:'First response', unanswered:'unanswered', resolution:'Resolution', reopens:'Reopens', category:'Category', assignee:'Assignee', ticket:'Ticket', subject:'Subject', age:'Age', updated:'Updated', unassigned:'Unassigned', noResponse:'No response', loading:'Loading…', more:'Scroll to load more', new:'New', inProgress:'In progress', waiting:'Waiting', escalated:'Escalated', resolved:'Resolved', closed:'Closed', priorityCritical:'Critical', priorityHigh:'High', priorityMedium:'Medium', priorityLow:'Low', other:'Other', createdClosed:'Created and closed', created:'Created', closedCount:'Closed', noClosed:'No tickets closed in this period.', empty:'No tickets match these filters.'
   },
 
   papeles: {
@@ -419,6 +438,7 @@ export const EN: Textos = {
     volver: 'Back to the list',
     acciones: 'Actions',
     desactivarPregunta: 'Deactivate this account?',
+    lastAdminWarning: 'The factory account will be the only remaining administrator.',
     desactivarConsecuencia:
       'It will not be able to sign in as soon as you do it, even with the browser open: its next request will not be valid. Nothing is deleted, and its tickets still tell their story.',
     siDesactivar: 'Yes, deactivate',
@@ -427,6 +447,10 @@ export const EN: Textos = {
       'Moving to local removes the link with the directory; if the account is left without a password, the invitation link is sent.',
     guardarOrigen: 'Save the origin',
     origenGuardado: 'Origin changed.',
+    adminGrantedNotice: 'Administrator access was granted by {actor}.',
+    adminRevokedNotice: 'Administrator access was removed by {actor}.',
+    adminGranted: 'Granted administrator access',
+    adminRevoked: 'Removed administrator access',
     guardar: 'Save',
     cancelar: 'Cancel',
   },
@@ -499,6 +523,7 @@ export const EN: Textos = {
     'ticket.backToSupport': 'The ticket goes back to Support',
     'ticket.mentioned': 'You were mentioned in a ticket',
     'ticket.priorityCritical': 'Critical priority, to Support',
+    'ticket.privateComment': 'Private comment for the team',
     'auth.invitation': 'Account creation',
     'auth.recovery': 'Password recovery',
     'auth.passwordChanged': 'Password changed',
@@ -738,6 +763,9 @@ export const EN: Textos = {
     reabiertoAviso: 'Ticket reopened.',
     escaladoAviso: 'Ticket escalated. Development has been told.',
     comentarioEscrito: 'Comment written.',
+    visibilidad: 'Visibility',
+    publico: 'Public',
+    privado: 'Private',
     // The comment is already published and a file did not make it: it says which, and it can be
     // retried without writing the comment again, which is what stops the duplicate comment.
     adjuntosQueFaltan: 'The comment was published, but these files could not be uploaded:',
@@ -1019,6 +1047,8 @@ export const EN: Textos = {
       'The AI engine address is not valid: there is none to test, or it does not start with http:// or https:// and is missing its server.',
     'settings.ai.unreachable': 'The AI engine did not answer: check the address and that it is up.',
     'settings.ai.managerUnavailable': 'The local model manager is unavailable.',
+	'settings.ai.nvidiaUnavailable': 'NVIDIA acceleration is unavailable. Start the engine with ai.yml and ai-nvidia.yml on a Linux server with NVIDIA Container Toolkit.',
+	'settings.ai.accelerationUnknown': 'Choose Automatic, CPU or NVIDIA acceleration.',
     'settings.ai.insufficientMemory':
       'The model requires {requerida} of RAM and {disponible} is available. The previous model remains active.',
     'settings.ai.required': 'Configure and test the AI engine before entering the product.',

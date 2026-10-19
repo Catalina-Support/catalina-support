@@ -1,7 +1,13 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-18
+>
+> **Aprobado, implementado y verificado el 2026-10-18.** La sección 21 añade selección Auto/CPU/NVIDIA,
+> estado efectivo, dispositivo, fallback visible y restauración ante fallo.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 20 añade los cuatro umbrales de atraso de
+> reportería, administrables desde Configuración.
 >
 > **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
 > 19 separa la carga automática del catálogo local de su actualización manual y conserva los datos
@@ -902,20 +908,20 @@ el valor ilegible.
 
 ### 12.4 Cambio atómico de idioma
 
-`settings` coordina, pero no traduce plantillas. Pide a `mail` borradores de las doce plantillas a
+`settings` coordina, pero no traduce plantillas. Pide a `mail` borradores de las trece plantillas a
 partir de la versión actualmente activa. `mail` protege HTML y marcadores, `ai` traduce sólo el texto
 y `mail` valida que no aparezcan marcadores nuevos ni se alteren los existentes. Si el destino no
 estaba personalizado, la pantalla compara origen y borrador. Si ya tenía cambios, muestra tres
 versiones: fuente activa, borrador de IA y destino personalizado existente. El Administrador elige
 una, o combina y corrige el texto; nunca se sobrescribe silenciosamente.
 
-Al confirmar, una transacción guarda los doce destinos y el idioma global. Si falta una traducción,
+Al confirmar, una transacción guarda los trece destinos y el idioma global. Si falta una traducción,
 un marcador cambió o alguna escritura falla, no se cambia nada. Los resúmenes existentes no forman
 parte de esta operación: se conservan y siguen visibles con su idioma de origen; sólo los nuevos o
 los que se vuelvan a pedir usan el nuevo idioma global.
 
 Con proveedor externo, la pantalla pide confirmación económica exclusivamente para traducir las
-plantillas. Si se rechaza, no llama al proveedor y permite editar manualmente los doce destinos; la
+plantillas. Si se rechaza, no llama al proveedor y permite editar manualmente los trece destinos; la
 edición manual está disponible siempre. Con motor local o servidor propio genera borradores sin esa
 confirmación económica.
 
@@ -1077,3 +1083,30 @@ petición y conservación del catálogo ante error. No cambia persistencia, perm
 La prueba de componente atiende la consulta automática, comprueba que la ficha permanece durante la
 actualización y que el botón deshabilitado no abre una segunda petición. La suite queda en 228 casos
 aprobados y el frontend compila para producción.
+
+## 20. Umbrales de reportería
+
+La tarjeta Reportería guarda horas corridas por prioridad: crítica 4, alta 24, media 72 y baja 120
+como valores iniciales. Sólo Administrador puede cambiarlas. Deben ser enteros positivos y el
+guardado usa el toast común. El Dashboard lee los valores vigentes en cada consulta; cambiarlos no
+reescribe tickets ni historial y no crea SLA, aviso o correo.
+
+La API y la pantalla comparten la validación. La prueba real modificó temporalmente el valor crítico,
+confirmó el toast y lo restauró; PostgreSQL terminó en 4/24/72/120.
+
+## 21. Aceleración del motor local
+
+La tarjeta **En este servidor** ofrece Auto, CPU y NVIDIA; Auto viene seleccionado. El control sólo
+aparece para el motor local. Junto al modelo activo se leen modo configurado y ejecución efectiva,
+por ejemplo `Auto · NVIDIA · RTX 3060` o `Auto · CPU`. La prueba automática y **Try me!** incluyen
+esa misma atribución además del saludo.
+
+Guardar con un modelo activo reinicia y prueba el proceso. Durante `restarting` se bloquean cambios
+incompatibles. Un éxito usa el toast común; el respaldo de Auto a CPU añade un aviso breve; NVIDIA
+ausente explica que debe levantarse `ai-nvidia.yml` y no guarda. Si el nuevo modo falla, la pantalla
+conserva el anterior después de su restauración saludable.
+
+La API no devuelve UUID, bus PCI, memoria ni trazas. La compilación y las 241 pruebas del frontend
+verifican ambos idiomas y el contrato; las pruebas del administrador cubren NVIDIA ausente y el
+respaldo de Auto. La pasada visual específica en PC/móvil y el hardware NVIDIA real quedan para el
+entorno que disponga de Toolkit.

@@ -21,6 +21,22 @@ import (
 // momento no se sabe si van a llegar. La regla «texto **o** archivos» la sostiene la pantalla, que es
 // quien lo sabe, y editar un comentario sí sigue exigiendo texto (decisiones 41 y 42).
 func (s *Service) Comment(number, body string, actor auth.Identity) (Comment, error) {
+	return s.CommentWithVisibility(number, body, "public", actor)
+}
+
+const (
+	VisibilityPublic  = "public"
+	VisibilityPrivate = "private"
+)
+
+// CommentWithVisibility crea un comentario público o una nota privada en el principal.
+func (s *Service) CommentWithVisibility(number, body, visibility string, actor auth.Identity) (Comment, error) {
+	if visibility == "" {
+		visibility = VisibilityPublic
+	}
+	if visibility != VisibilityPublic && visibility != VisibilityPrivate {
+		return Comment{}, ErrForbidden
+	}
 	texto := strings.TrimSpace(body)
 
 	// El texto de un comentario es **texto con formato** (docs/modules/tickets.md, sección 2.3): si
@@ -46,7 +62,14 @@ func (s *Service) Comment(number, body string, actor auth.Identity) (Comment, er
 	if principal.State == repositories.StateCerrado {
 		return Comment{}, ErrClosed
 	}
-	if !puedeComentar(actor, convertido) {
+	if esInterno && visibility != VisibilityPublic {
+		return Comment{}, ErrForbidden
+	}
+	if visibility == VisibilityPrivate {
+		if esInterno || !actor.Can(auth.RoleSoporte, auth.RoleDesarrollo) {
+			return Comment{}, ErrForbidden
+		}
+	} else if !puedeComentar(actor, convertido) {
 		return Comment{}, ErrForbidden
 	}
 
@@ -70,18 +93,21 @@ func (s *Service) Comment(number, body string, actor auth.Identity) (Comment, er
 		return Comment{}, err
 	}
 
-	comentario, err := s.escribirComentario(destino, texto, actor, principal.Description, nil, menciones)
+	comentario, err := s.escribirComentarioConVisibilidad(destino, texto, visibility, actor, principal.Description, nil, menciones)
 	if err != nil {
 		return Comment{}, err
 	}
 
 	// Quien se acaba de etiquetar recibe su aviso, **una vez por persona** y sin el texto de nadie.
 	s.avisarEtiquetado(number, principal.Subject, menciones)
+	if visibility == VisibilityPrivate {
+		s.avisarComentarioPrivado(principal, actor)
+	}
 
 	// Comentar cambia lo último que ha pasado, así que **la última acción se vuelve a redactar**
 	// (docs/modules/ai.md, decisión 4). El motivo no: de qué va el ticket no cambia porque alguien
 	// conteste.
-	s.pedirAlMotor(number, TipoUltimaAccion)
+	s.pedirAlMotor(number, TipoSummary, TipoUltimaAccion)
 
 	return comentario, nil
 }
@@ -98,10 +124,14 @@ func (s *Service) Comment(number, body string, actor auth.Identity) (Comment, er
 // dentro —el motivo de un re-escalado, que es texto plano— lo escapa antes de llamar. Sanea quien tiene
 // algo que decirle a alguien: aquí no hay a quién contestarle una clave de error.
 func (s *Service) escribirComentario(destino repositories.Destino, texto string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (Comment, error) {
+	return s.escribirComentarioConVisibilidad(destino, texto, VisibilityPublic, actor, descripcion, anteriores, nuevos)
+}
+
+func (s *Service) escribirComentarioConVisibilidad(destino repositories.Destino, texto, visibility string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (Comment, error) {
 	var creado repositories.Comment
 	err := s.tickets.DB().Transaction(func(tx *gorm.DB) error {
 		var err error
-		creado, err = s.escribirComentarioEnTx(tx, destino, texto, actor, descripcion, anteriores, nuevos)
+		creado, err = s.escribirComentarioEnTxConVisibilidad(tx, destino, texto, visibility, actor, descripcion, anteriores, nuevos)
 
 		return err
 	})
@@ -110,10 +140,11 @@ func (s *Service) escribirComentario(destino repositories.Destino, texto string,
 	}
 
 	return Comment{
-		ID:        creado.ID,
-		Author:    cuentaDe(actor),
-		Body:      creado.Body,
-		CreatedAt: creado.CreatedAt,
+		ID:         creado.ID,
+		Author:     cuentaDe(actor),
+		Body:       creado.Body,
+		Visibility: creado.Visibility,
+		CreatedAt:  creado.CreatedAt,
 	}, nil
 }
 
@@ -128,11 +159,16 @@ func (s *Service) escribirComentario(destino repositories.Destino, texto string,
 // Aquí el texto llega ya saneado y con las menciones validadas: es lo mismo que exige un comentario
 // normal, hecho por quien puede rechazarlo con una clave de error antes de abrir la transacción.
 func (s *Service) escribirComentarioEnTx(tx *gorm.DB, destino repositories.Destino, texto string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (repositories.Comment, error) {
+	return s.escribirComentarioEnTxConVisibilidad(tx, destino, texto, VisibilityPublic, actor, descripcion, anteriores, nuevos)
+}
+
+func (s *Service) escribirComentarioEnTxConVisibilidad(tx *gorm.DB, destino repositories.Destino, texto, visibility string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (repositories.Comment, error) {
 	comentario := repositories.Comment{
 		TicketID:         destino.TicketID,
 		InternalTicketID: destino.InternalTicketID,
 		AuthorID:         actor.ID,
 		Body:             texto,
+		Visibility:       visibility,
 	}
 
 	creado, err := s.conversation.CreateComment(tx, comentario)
@@ -153,6 +189,10 @@ func (s *Service) escribirComentarioEnTx(tx *gorm.DB, destino repositories.Desti
 // no es lo mismo que nacer sin texto —eso es un comentario que sólo lleva un adjunto—, y lo que se
 // quiere en ese caso es borrarlo, que para eso está el borrado.
 func (s *Service) EditComment(number string, commentID int64, body string, actor auth.Identity) (Comment, error) {
+	return s.EditCommentWithVisibility(number, commentID, body, "", actor)
+}
+
+func (s *Service) EditCommentWithVisibility(number string, commentID int64, body, visibility string, actor auth.Identity) (Comment, error) {
 	texto := strings.TrimSpace(body)
 	if texto == "" {
 		return Comment{}, ErrCommentRequired
@@ -193,7 +233,20 @@ func (s *Service) EditComment(number string, commentID int64, body string, actor
 		// Lo que está borrado, borrado está: no se puede resucitar editándolo.
 		return Comment{}, ErrCommentNotFound
 	}
-	if !puedeComentar(actor, convertido) {
+	if visibility == "" {
+		visibility = comentario.Visibility
+	}
+	if visibility != VisibilityPublic && visibility != VisibilityPrivate {
+		return Comment{}, ErrForbidden
+	}
+	if esInterno && visibility != VisibilityPublic {
+		return Comment{}, ErrForbidden
+	}
+	if visibility == VisibilityPrivate {
+		if esInterno || !actor.Can(auth.RoleSoporte, auth.RoleDesarrollo) {
+			return Comment{}, ErrForbidden
+		}
+	} else if !puedeComentar(actor, convertido) {
 		return Comment{}, ErrForbidden
 	}
 
@@ -207,12 +260,22 @@ func (s *Service) EditComment(number string, commentID int64, body string, actor
 	}
 
 	ahora := s.now()
+	visibilidadAnterior := comentario.Visibility
 	comentario.Body = texto
+	comentario.Visibility = visibility
 	comentario.EditedAt = &ahora
 
 	err = s.tickets.DB().Transaction(func(tx *gorm.DB) error {
 		if err := s.conversation.UpdateComment(tx, comentario); err != nil {
 			return err
+		}
+		if visibilidadAnterior != visibility {
+			detalle := visibilidadAnterior + " -> " + visibility
+			entrada := repositories.Anotar(destino, &actor.ID, "comment_visibility_changed", "", "", detalle)
+			entrada.CommentID = &comentario.ID
+			if err := s.conversation.AddHistory(tx, entrada); err != nil {
+				return err
+			}
 		}
 
 		return s.sincronizarObservadores(tx, destino, principal.Description, anteriores, menciones, actor.ID)
@@ -223,13 +286,15 @@ func (s *Service) EditComment(number string, commentID int64, body string, actor
 
 	// Sólo se avisa de lo que se menciona **de nuevo**: quitar una mención no manda ningún correo.
 	s.avisarEtiquetado(number, principal.Subject, diferencia(menciones, anteriores))
+	s.pedirAlMotor(number, TipoSummary, TipoUltimaAccion)
 
 	return Comment{
-		ID:        comentario.ID,
-		Author:    cuentaDe(actor),
-		Body:      comentario.Body,
-		Edited:    true,
-		CreatedAt: comentario.CreatedAt,
+		ID:         comentario.ID,
+		Author:     cuentaDe(actor),
+		Body:       comentario.Body,
+		Visibility: comentario.Visibility,
+		Edited:     true,
+		CreatedAt:  comentario.CreatedAt,
 	}, nil
 }
 
@@ -267,9 +332,13 @@ func (s *Service) DeleteComment(number string, commentID int64, actor auth.Ident
 	comentario.Body = ""
 	comentario.DeletedAt = &ahora
 
-	return s.tickets.DB().Transaction(func(tx *gorm.DB) error {
+	err = s.tickets.DB().Transaction(func(tx *gorm.DB) error {
 		return s.conversation.UpdateComment(tx, comentario)
 	})
+	if err == nil {
+		s.pedirAlMotor(number, TipoSummary, TipoUltimaAccion)
+	}
+	return err
 }
 
 // comentarioDelTicket busca el comentario y comprueba que es de ese ticket: un identificador suelto no

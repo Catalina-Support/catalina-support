@@ -75,6 +75,7 @@ type Comment struct {
 	TicketID         *int64 `gorm:"column:ticket_id"`
 	InternalTicketID *int64 `gorm:"column:internal_ticket_id"`
 	AuthorID         int64  `gorm:"column:author_id"`
+	Visibility       string `gorm:"column:visibility"`
 	// Vacío cuando el comentario está borrado: el texto se vacía de verdad.
 	Body      string     `gorm:"column:body"`
 	EditedAt  *time.Time `gorm:"column:edited_at"`

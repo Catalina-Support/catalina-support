@@ -79,6 +79,11 @@ export const routes: Routes = [
             loadComponent: () => import('./core/pages/forbidden-page').then((m) => m.ForbiddenPage),
           },
           {
+            path: 'dashboard',
+            canActivate: [conPapel('soporte', 'desarrollo', 'administrador')],
+            loadComponent: () => import('./modules/dashboard/dashboard-page').then((m) => m.DashboardPage),
+          },
+          {
             // La bandeja: **«lo mío»** para el usuario, Soporte y Desarrollo —asignado, abierto por uno o
             // comentado—, y los dos tipos para el Administrador, de sólo lectura. Es la misma pantalla con
             // el nombre que le toca a cada uno (docs/interfaz-y-experiencia.md, secciones 3.2, 3.3 y 3.7).

@@ -1,7 +1,14 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-16
+> **Última actualización:** 2026-10-19
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 24 separa las versiones pública e interna de
+> Summary y Last action para que las notas privadas aporten contexto al equipo sin filtrarse al
+> Usuario. El responsable eligió y aprobó 8A, 24A y 25A.
+>
+> **Aprobado, implementado y verificado el 2026-10-18.** La sección 23 incorpora aceleración
+> `auto|cpu|nvidia`, recuperación Auto en CPU, cambio transaccional y atribución del dispositivo.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-16.** La sección 22 parte de dos fallos
 > del recorrido integral: una Última acción antigua pudo sobrescribir a la reciente y dos campos
@@ -531,7 +538,7 @@ backend sí arranca en estado «IA requiere configuración» para que la cuenta 
 La recuperación de resúmenes pendientes o `sin_motor` empieza automáticamente en las tres
 modalidades, incluido un proveedor externo: no crea un lote nuevo por cambiar el idioma y respeta los
 topes normales de la cola. La confirmación económica se reserva exclusivamente para traducir las
-doce plantillas de correo. Antes de esas veinticuatro solicitudes se muestran tokens y costo estimados;
+trece plantillas de correo. Antes de esas veintiséis solicitudes se muestran tokens y costo estimados;
 si se rechaza, no se llama al proveedor y las plantillas se editan manualmente.
 
 ### 9.10 Licencia e integridad del catálogo local
@@ -1164,3 +1171,77 @@ repite los casos de cierre y error observados en los tres tickets de auditoría.
 
 No cambian el contenido ni las fuentes de Summary y Last action, sus permisos, idioma, privacidad,
 modelo activo, catálogo, mejora de comentarios ni transiciones de tickets.
+
+## 23. Aceleración configurable del motor local
+
+### 23.1 Hallazgo
+
+El motor local actual es exclusivamente CPU: el administrador inicia `llama-server` con dos hilos,
+sin capas GPU, y `ai.yml` no expone dispositivos ni runtime NVIDIA. La imagen normal sigue siendo la
+vía portable para Linux, macOS y Windows. Servidor propio y proveedor externo administran su
+hardware fuera de Catalina-Support.
+
+### 23.2 Modos y persistencia
+
+La configuración local incorpora el valor técnico inglés `accelerationMode` con `auto`, `cpu` o
+`nvidia`, persistido en `ai_settings`. Nuevas instalaciones e instalaciones existentes migran a
+`auto`. Auto prefiere NVIDIA cuando el contenedor la tiene disponible y cae una sola vez a CPU si
+el arranque GPU falla; conserva `auto` para volver a probar en el próximo arranque. CPU nunca intenta
+GPU. NVIDIA explícito falla sin guardar si la infraestructura no está disponible y no usa respaldo.
+
+El modelo GGUF es el mismo en todos los modos: cambiar aceleración no descarga, duplica ni vuelve a
+validar el archivo completo. NVIDIA descarga a GPU todas las capas posibles. Con varias GPU usa la
+primera que Docker expone; elegir el dispositivo o repartir entre varias queda en la configuración
+del servidor, no en la interfaz.
+
+### 23.3 Cambio transaccional
+
+Con un modelo activo, cambiar aceleración marca la operación como `restarting`, bloquea otra
+activación o cambio, reinicia el proceso y ejecuta la prueba automática. Sólo confirma cuando el
+nuevo proceso está saludable. Si falla, restaura modo y proceso anteriores y confirma el error sólo
+después de que el anterior vuelva a estar saludable. Los encargos de IA permanecen pendientes y se
+recuperan mediante el mecanismo existente.
+
+Auto registra en logs técnicos por qué usó CPU y devuelve un aviso breve sin trazas. El estado del
+catálogo y las pruebas informan modo configurado, modo efectivo y dispositivo como fabricante más
+nombre comercial; no exponen memoria, UUID, bus PCI ni otros identificadores.
+
+### 23.4 Distribución y alcance
+
+La imagen CPU actual permanece. Una imagen NVIDIA separada se usa mediante `ai-nvidia.yml`, archivo
+Compose opcional que requiere Linux, GPU NVIDIA y NVIDIA Container Toolkit. La selección física se
+limita con lo que Docker exponga, incluido `NVIDIA_VISIBLE_DEVICES`. La API detecta si esa variante
+no está habilitada y explica el comando requerido sin guardar NVIDIA.
+
+Quedan fuera AMD/ROCm, Apple Metal, GPU NVIDIA en Windows/WSL2 como plataforma comprometida,
+selección de dispositivo desde la UI y reparto multi-GPU. CPU continúa soportada mediante Docker en
+Linux, macOS y Windows.
+
+### 23.5 Pruebas
+
+Las pruebas unitarias cubren rechazo explícito de NVIDIA ausente y respaldo de Auto a CPU. La suite
+de settings, las 241 pruebas del frontend, su compilación, la migración repetible y la construcción
+CPU pasaron. Compose resolvió el overlay NVIDIA y confirmó la imagen CUDA fijada; la descarga de sus
+capas, de unos 2 GB, se interrumpió tras validar el manifiesto porque este equipo no tiene GPU ni
+Toolkit. La pasada real NVIDIA queda condicionada a ese host. No se tocó producción, el dominio ni
+la etiqueta `v1.0.0`.
+
+## 24. Resúmenes por audiencia
+
+El ticket principal conserva dos versiones independientes de **Summary** y **Last action**:
+
+- la versión `public` usa sólo título, descripción, comentarios públicos y eventos visibles para el
+  Usuario;
+- la versión `internal` añade comentarios privados y sus eventos para Soporte, Desarrollo y
+  Administrador puro.
+
+El Usuario recibe exclusivamente la versión pública; no se envía contenido privado al modelo al
+generarla. Los equipos reciben la interna. Ambas permanecen en el idioma global y conservan el ciclo
+asíncrono, revisiones, reintentos y protección contra resultados antiguos. Crear, editar, borrar o
+cambiar la visibilidad de una nota solicita inmediatamente en segundo plano las versiones afectadas;
+un cambio de visibilidad regenera las dos para eliminar cualquier rastro de su audiencia anterior.
+
+Los contextos se construyen en backend después de aplicar visibilidad. La versión pública conserva
+la clave normal del ticket y la interna usa una clave técnica opaca que nunca sale por la API. Las
+pruebas de módulos, la compilación y el recorrido real confirman que el Usuario recibe sólo la
+versión pública y que no ve la nota usada por la versión interna.

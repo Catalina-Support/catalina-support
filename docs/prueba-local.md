@@ -1,7 +1,13 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-17
+> **Última actualización:** 2026-10-18
+>
+> **Aprobado e implementado el 2026-10-18.** La sección 24 registra la verificación portable de CPU,
+> detección NVIDIA, respaldo Auto y restauración transaccional sin tocar producción.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 23 añade la verificación del Dashboard,
+> sus cálculos, permisos, CSV y responsive.
 >
 > **Enmienda implementada y verificada el 2026-10-17: README bilingüe y capturas públicas.** La
 > sección 22 registra la comprobación del recorrido reordenado y de su equivalencia en español. Se
@@ -902,3 +908,35 @@ La interfaz comprobó en 1920 × 1200 el ticket principal y el interno completos
 mismo ticket mostró resultados reales en `Summary` y `Last action` junto a `Improve with AI`. La
 vista doble no renderiza ese panel lateral; se registró el desajuste respecto de la propuesta y se
 resolvió con dos capturas reales complementarias, sin componer ni maquillar la UI.
+
+## 23. Dashboard y reportería
+
+Una instalación desechable generará tickets principales e internos en límites de periodo y zona,
+con respuestas, resoluciones, reaperturas, cierres, prioridades y responsables variados. Las pruebas
+contrastarán los agregados con SQL conocido, el periodo anterior, los umbrales configurables y los
+valores pendientes. Recorrerán Soporte, Desarrollo, Administrador combinado, fábrica y Usuario
+rechazado.
+
+En PC y móvil comprobarán filtros persistentes en URL, gráficos accesibles, actualización manual,
+tabla progresiva, apertura de ticket y CSV completo con duraciones humana/minutos y celdas
+neutralizadas. Producción, dominio, correos y etiqueta `v1.0.0` quedan fuera.
+
+La verificación ejecutada usó PostgreSQL local y los usuarios del seeder. Soporte vio ambos tipos,
+Desarrollo sólo internos, Usuario recibió 403 y Administrador accedió a Dashboard y Configuración.
+Se comprobó un filtro recargable, apertura de fila, CSV completo, vista móvil y restauración de los
+umbrales. Las pruebas automatizadas cubren servicio, repositorio real, contrato HTTP frontend,
+fronteras y compilación. No se tocó producción ni el dominio.
+
+## 24. Aceleración del motor local
+
+La instalación desechable verifica migración y valor inicial Auto, ejecución CPU con el Compose
+normal, atribución de dispositivo, saludo, reinicio y persistencia. Simula capacidad NVIDIA para
+probar argumentos, ausencia, respaldo de Auto, rechazo explícito, bloqueo concurrente y rollback.
+La suite portable pasó en CPU. El manifiesto CUDA y el overlay se resolvieron correctamente, pero
+la descarga de la imagen NVIDIA se detuvo tras validar el manifiesto (sus capas rondan 2 GB) porque
+este host no tiene Toolkit ni GPU; la pasada real queda para un servidor Linux compatible.
+
+PC y móvil recorren `/setup` y `/settings` en ambos idiomas. Se inspecciona que API, toast y logs no
+expongan UUID, bus, memoria ni trazas. Al terminar se restaura Auto, se baja la variante opcional y
+se conserva el modelo compartido sólo durante el entorno de prueba. Producción, dominio y etiqueta
+siguen fuera.

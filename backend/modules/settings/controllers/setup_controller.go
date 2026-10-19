@@ -343,6 +343,8 @@ func (c *SetupController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.privacyRequired")
 	case errors.Is(err, services.ErrAICredentialInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.credentialInvalid")
+	case errors.Is(err, services.ErrAIAccelerationUnknown), errors.Is(err, services.ErrAINVIDIAUnavailable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, services.ErrAIURLInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.urlInvalid")
 	case errors.Is(err, services.ErrAIUnreachable):

@@ -43,6 +43,7 @@ type Account struct {
 	// hay, y en las locales no la hay hasta que su dueño la establece desde el enlace.
 	PasswordHash string
 	Role         string
+	IsAdmin      bool
 	Origin       string
 	// ExternalID es el identificador en el directorio. Vacío en las cuentas locales.
 	ExternalID  string
@@ -98,6 +99,7 @@ func (a Account) Identity() Identity {
 		LastName: a.LastName,
 		Email:    a.Email,
 		Role:     a.Role,
+		IsAdmin:  a.IsAdmin,
 		Origin:   a.Origin,
 		IsActive: a.IsActive,
 	}
@@ -110,6 +112,7 @@ func FactoryIdentity() Identity {
 		Subject:  FactorySubject,
 		Name:     "Administrador",
 		Role:     RoleAdministrador,
+		IsAdmin:  true,
 		Origin:   OriginLocal,
 		IsActive: true,
 	}
