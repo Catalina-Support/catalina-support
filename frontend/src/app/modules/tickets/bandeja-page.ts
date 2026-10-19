@@ -76,10 +76,8 @@ const ESTADOS_DE_NAVEGACION = new Map<string, EstadoDeNavegacion>();
  *
  * Es la misma tabla con distinto contenido, como manda `docs/modules/tickets.md`, sección 8:
  *
- * - **`mios`** (`/tickets`): **lo mío** —lo asignado, lo abierto por mí y aquello donde he
- *   comentado—, que es la bandeja del usuario, de Soporte y de Desarrollo. Soporte y Desarrollo
- *   llevan **chip de tipo** —cada uno entra por el suyo (decisión 52)—, y el usuario no: sus tickets
- *   son principales.
+ * - **`mios`** (`/tickets`): **lo mío** —lo asignado o lo observado actualmente—. Soporte reúne
+ *   principales y Desarrollo internos; la capacidad Admin no cambia el nivel operativo.
  * - **`principal`** (`/tickets/main`) y **`interno`** (`/tickets/internal`): **todo lo que hay**, para
  *   Soporte y Desarrollo, con el tipo fijo por la pantalla misma.
  * - **El Administrador** usa `/tickets` como siempre: los dos tipos, con su chip y **de sólo
@@ -168,7 +166,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly esUsuario = computed(() => this.papel() === 'usuario');
   protected readonly esSoporte = computed(() => this.papel() === 'soporte');
   protected readonly esDesarrollo = computed(() => this.papel() === 'desarrollo');
-  protected readonly esAdministrador = this.sesion.esAdministrador;
+  protected readonly esAdministradorPuro = computed(() => this.papel() === 'administrador');
 
   /**
    * Quién puede crear un ticket desde aquí: el usuario, Soporte y Desarrollo, **y sólo en la
@@ -178,7 +176,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly puedeCrear = computed(
     () =>
       !this.esListaDelTodo() &&
-      !this.esAdministrador() &&
+      !this.esAdministradorPuro() &&
       (this.esUsuario() || this.esSoporte() || this.esDesarrollo()),
   );
 
@@ -198,31 +196,29 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   );
 
   /**
-   * Con qué vista arranca «Mis tickets»: **Asignados** para Soporte y Desarrollo —lo que hay que
-   * atender— y sin vista para los demás, que no tienen el chip.
+   * «Mis tickets» abre combinando asignados y observados; los otros listados no tienen esta vista.
    */
   private vistaInicial(): { view?: string } {
-    return this.conChipDeVista() ? { view: 'assigned' } : {};
+    return this.conChipDeVista() ? { view: '' } : {};
   }
 
-  /** Las tres vistas, con **Asignados** primero, que es lo que hay que atender. */
+  /** Las tres vistas visibles en la cabecera, con la combinación como punto de entrada. */
   protected opcionesDeVista(): readonly OpcionConmutador[] {
     return [
+      { valor: '', etiqueta: this.t().tickets.vistaTodos },
       { valor: 'assigned', etiqueta: this.t().tickets.vistaAsignados },
       { valor: 'watching', etiqueta: this.t().tickets.vistaObservo },
-      { valor: '', etiqueta: this.t().tickets.vistaTodos },
     ];
   }
 
   protected readonly conChipDeTipo = computed(
     () =>
-      this.esAdministrador() ||
-      (this.listado() === 'mios' && (this.esSoporte() || this.esDesarrollo())),
+      this.esAdministradorPuro(),
   );
 
   /** Si la lista enseña **todo** (las dos del «todo»), que es lo que decide el botón de crear. */
   protected readonly esListaDelTodo = computed(
-    () => this.listado() !== 'mios' && !this.esAdministrador(),
+    () => this.listado() !== 'mios' && !this.esAdministradorPuro(),
   );
 
   constructor() {
@@ -341,7 +337,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** El título de la pantalla, que es como se llama esta lista. */
   protected titulo(): string {
-    if (this.esAdministrador()) {
+    if (this.esAdministradorPuro()) {
       return this.t().menu.bandeja;
     }
     if (this.listado() === 'principal') {
@@ -544,9 +540,6 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     if (filtros.q) {
       puestos.push(this.t().tickets.buscarEtiqueta);
     }
-    if (this.conChipDeVista() && filtros.view) {
-      puestos.push(this.t().tickets.vista);
-    }
     if (this.conChipDeTipo() && filtros.type !== this.tipoInicial()) {
       puestos.push(this.t().tickets.filtroTipo);
     }
@@ -587,26 +580,17 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * El tipo con el que arranca la lista.
-   *
-   * **Mirar lo que uno observa cruza los dos tipos** (2026-09-27): a un desarrollador lo pueden
-   * etiquetar en un principal —lo hace Soporte— y su «Mis tickets» arranca en internos, que es su
-   * trabajo; si «Observo» se quedara con ese filtro, no vería la mitad de lo que sigue. El
-   * responsable pidió que etiquetar valga **en los dos tipos**, y esto es lo que hace que se cumpla en
-   * la pantalla.
+   * El tipo queda fijado por la lista y por el papel operativo. En «Mis tickets», Soporte consulta
+   * principales y Desarrollo internos; una capacidad Admin acumulativa no amplía ese nivel.
    */
-  private tipoInicial(vista = this.filtros().view): string {
-    if (vista === 'watching' && this.conChipDeVista()) {
-      return '';
-    }
-
+  private tipoInicial(_vista = this.filtros().view): string {
     if (this.listado() === 'principal') {
       return TIPO_PRINCIPAL;
     }
     if (this.listado() === 'interno') {
       return TIPO_INTERNO;
     }
-    if (this.esDesarrollo() && !this.esAdministrador()) {
+    if (this.esDesarrollo()) {
       return TIPO_INTERNO;
     }
 
@@ -617,9 +601,9 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   private filtrosDeLaLista(): FiltrosDeBandeja {
     const filtros = this.filtros();
 
-    // **El Administrador nunca pide «lo mío»**: no tiene tickets propios, y su bandeja es la de
-    // siempre, con los dos tipos (decisión 52).
-    return this.listado() === 'mios' && !this.esAdministrador()
+    // Sólo la identidad de fábrica carece de papel operativo. Admin acumulativo conserva la bandeja
+    // personal de Soporte o Desarrollo (docs/usuarios-y-permisos.md, sección 16).
+    return this.listado() === 'mios' && !this.esAdministradorPuro()
       ? { ...filtros, mine: true }
       : filtros;
   }

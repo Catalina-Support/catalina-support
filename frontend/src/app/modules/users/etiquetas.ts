@@ -13,8 +13,8 @@ import type { Cuenta } from './users.service';
  * plantillas.
  */
 
-/** Los cuatro papeles, en el orden en que se ofrecen. */
-export const PAPELES = ['usuario', 'soporte', 'desarrollo', 'administrador'] as const;
+/** Los tres papeles operativos, en el orden en que se ofrecen. */
+export const PAPELES = ['usuario', 'soporte', 'desarrollo'] as const;
 
 /** Los tres orígenes de una cuenta. */
 export const ORIGENES = ['local', 'ad', 'keycloak'] as const;

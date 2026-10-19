@@ -137,6 +137,7 @@ export interface Comentario {
   readonly id: number;
   readonly author?: Persona;
   readonly body: string;
+  readonly visibility: 'public' | 'private';
   readonly edited: boolean;
   readonly deleted: boolean;
   readonly createdAt: string;
@@ -211,8 +212,8 @@ export interface FiltrosDeBandeja {
   /** **La etiqueta** por la que se filtra, tal y como se escribe. Vacío es «todas». */
   readonly tag?: string;
   /**
-   * **Sólo lo mío**: lo asignado a quien mira, lo que abrió y aquello donde ha comentado
-   * (`docs/modules/tickets.md`, decisión 51). Es lo que hace que la bandeja sea su bandeja.
+   * **Sólo lo mío**: lo asignado a quien mira o donde figura actualmente como observador
+   * (`docs/modules/tickets.md`, sección 29). Es lo que hace que la bandeja sea personal.
    */
   readonly mine?: boolean;
   /**
@@ -556,16 +557,16 @@ export class TicketsService {
   }
 
   /** Escribe un comentario. */
-  comentar(numero: string, body: string): Promise<{ comment: Comentario }> {
+  comentar(numero: string, body: string, visibility: 'public' | 'private' = 'public'): Promise<{ comment: Comentario }> {
     return firstValueFrom(
-      this.http.post<{ comment: Comentario }>(`/api/tickets/${numero}/comments`, { body }),
+      this.http.post<{ comment: Comentario }>(`/api/tickets/${numero}/comments`, { body, visibility }),
     );
   }
 
   /** Cambia el texto de un comentario: sólo su autor. */
-  editarComentario(numero: string, id: number, body: string): Promise<{ comment: Comentario }> {
+  editarComentario(numero: string, id: number, body: string, visibility?: 'public' | 'private'): Promise<{ comment: Comentario }> {
     return firstValueFrom(
-      this.http.patch<{ comment: Comentario }>(`/api/tickets/${numero}/comments/${id}`, { body }),
+      this.http.patch<{ comment: Comentario }>(`/api/tickets/${numero}/comments/${id}`, { body, visibility }),
     );
   }
 

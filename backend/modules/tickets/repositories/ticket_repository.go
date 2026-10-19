@@ -39,6 +39,8 @@ type Filtros struct {
 	State string
 	// Query busca por número y por texto del asunto, la descripción o el motivo del escalado.
 	Query string
+	// SearchPrivate habilita el texto de notas privadas únicamente para el personal interno.
+	SearchPrivate bool
 	// RequesterID limita a los tickets de una persona: es lo que hace que un usuario vea «los suyos».
 	RequesterID *int64
 	// Mine limita a **lo mío**: lo que tengo asignado, lo que abrí yo, aquello donde he comentado y
@@ -380,9 +382,8 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		)
 	}
 
-	// **«Lo mío»** (docs/modules/tickets.md, decisión 51): asignado, abierto por mí, comentado por mí
-	// o **donde me han etiquetado** (ampliado el 2026-09-27). El `EXISTS` mira el hilo del principal,
-	// que es la tabla de comentarios con `ticket_id`.
+	// **«Lo mío»** (docs/modules/tickets.md, sección 29): asignado a mí o donde figuro actualmente
+	// como observador. Abrir o comentar no concede pertenencia, y retirar la observación la elimina.
 	//
 	// `View` matiza ese «lo mío» sin salirse de él (decisión 62): el chip de «Mis tickets» puede
 	// pedir sólo lo asignado o sólo lo que observo, y sin chip es todo. **Se resuelve en la consulta**,
@@ -404,14 +405,11 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 
 		default:
 			consulta = consulta.Where(
-				`requester_id = ? OR assignee_id = ?
-				 OR EXISTS (SELECT 1 FROM ticket_comments
-				            WHERE ticket_comments.ticket_id = tickets.id
-				              AND ticket_comments.author_id = ?)
+				`assignee_id = ?
 				 OR EXISTS (SELECT 1 FROM ticket_observers
 				            WHERE ticket_observers.ticket_id = tickets.id
 				              AND ticket_observers.account_id = ?)`,
-				yo, yo, yo, yo,
+				yo, yo,
 			)
 		}
 	}
@@ -430,12 +428,17 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		consulta = consulta.Where(
 			`number ILIKE ? OR subject ILIKE ?
 			 OR regexp_replace(description, '<[^>]*>', ' ', 'g') ILIKE ?
+			 OR EXISTS (SELECT 1 FROM ticket_comments tc
+			            WHERE tc.ticket_id = tickets.id
+			              AND (tc.visibility = 'public' OR ?)
+			              AND tc.deleted_at IS NULL
+			              AND regexp_replace(tc.body, '<[^>]*>', ' ', 'g') ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_categories c
 			            WHERE c.id = tickets.category_id AND c.name ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_tags tt
 			            JOIN ticket_tag_names n ON n.id = tt.tag_id
 			            WHERE tt.ticket_id = tickets.id AND n.tag ILIKE ?)`,
-			como, como, como, como, como,
+			como, como, como, filtros.SearchPrivate, como, como, como,
 		)
 	}
 
@@ -462,9 +465,8 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		consulta = consulta.Where("internal_tickets.state = ?", filtros.State)
 	}
 
-	// **«Lo mío» en un interno** (docs/modules/tickets.md, decisión 51): asignado, **escalado por mí**
-	// —un interno no tiene solicitante, quien lo abre es quien escala—, comentado por mí en su hilo o
-	// **donde me han etiquetado** (ampliado el 2026-09-27). `View` matiza igual que en el principal.
+	// **«Lo mío» en un interno** (docs/modules/tickets.md, sección 29): asignado a mí o donde figuro
+	// actualmente como observador. `View` matiza igual que en el principal.
 	if filtros.Mine != nil {
 		yo := *filtros.Mine
 
@@ -482,14 +484,11 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 
 		default:
 			consulta = consulta.Where(
-				`internal_tickets.created_by_id = ? OR internal_tickets.assignee_id = ?
-				 OR EXISTS (SELECT 1 FROM ticket_comments
-				            WHERE ticket_comments.internal_ticket_id = internal_tickets.id
-				              AND ticket_comments.author_id = ?)
+				`internal_tickets.assignee_id = ?
 				 OR EXISTS (SELECT 1 FROM ticket_observers
 				            WHERE ticket_observers.internal_ticket_id = internal_tickets.id
 				              AND ticket_observers.account_id = ?)`,
-				yo, yo, yo, yo,
+				yo, yo,
 			)
 		}
 	}
@@ -516,12 +515,16 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		consulta = consulta.Where(
 			`internal_tickets.number ILIKE ? OR internal_tickets.escalation_reason ILIKE ?
 			 OR tickets.number ILIKE ? OR tickets.subject ILIKE ?
+			 OR EXISTS (SELECT 1 FROM ticket_comments tc
+			            WHERE tc.ticket_id = tickets.id
+			              AND tc.deleted_at IS NULL
+			              AND regexp_replace(tc.body, '<[^>]*>', ' ', 'g') ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_categories c
 			            WHERE c.id = tickets.category_id AND c.name ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_tags tt
 			            JOIN ticket_tag_names n ON n.id = tt.tag_id
 			            WHERE tt.ticket_id = internal_tickets.ticket_id AND n.tag ILIKE ?)`,
-			como, como, como, como, como, como,
+			como, como, como, como, como, como, como,
 		)
 	}
 

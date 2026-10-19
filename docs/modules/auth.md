@@ -1,7 +1,10 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-18
+>
+> **Implementado el 2026-10-18.** La identidad resuelve por separado papel operativo y capacidad administrativa,
+> conservando la cuenta de fábrica como Administrador puro.
 >
 > **Enmienda implementada y verificada el 2026-10-13: token ausente sin falso error.** Buscar una
 > invitación o recuperación inexistente conserva `auth.token.used` sin registrar
@@ -787,3 +790,18 @@ versión, sin cerrar sesión. Se implementó y verificó el 2026-10-07.
 `FindByHash` limita la consulta a una fila y usa `RowsAffected` para distinguir un token que no
 existe. Conserva el mismo error de dominio para enlaces desconocidos, sustituidos o ya retirados;
 no cambia caducidad, uso único, respuestas públicas ni ninguno de los tres métodos de entrada.
+
+## 16. Identidad con permisos acumulativos
+
+El token sigue llevando sólo `sub`. Al resolver cada petición, la identidad ordinaria incorpora
+`role` e `isAdmin`: el primero es Usuario, Soporte o Desarrollo y el segundo suma las funciones
+administrativas. La identidad de fábrica conserva `factory = true` e `isAdmin = true`, pero no tiene
+papel operativo.
+
+Las operaciones de gestión preguntan por la capacidad administrativa y las de tickets por el papel
+operativo. `GET /api/auth/me` publica ambas dimensiones y los avisos administrativos pendientes. La
+persona puede cerrarlos mediante el endpoint dueño de `users`.
+
+No se renueva el token: la concesión o retirada vale en la siguiente petición. Los tres métodos de
+entrada quedan intactos y la sincronización de AD o Keycloak conserva `isAdmin` como dato local.
+Las pruebas de autenticación, identidad y autorización pasaron el 2026-10-18.

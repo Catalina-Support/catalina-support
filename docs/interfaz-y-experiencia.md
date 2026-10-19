@@ -1,7 +1,47 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-17
+> **Última actualización:** 2026-10-19
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 47 añade el selector **Public / Private** al
+> editor del principal, distingue visualmente las notas privadas y garantiza su ausencia total en la
+> vista del Usuario. El responsable cerró y aprobó 1A–26A; se verificó el flujo real con ambos papeles.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 46 lleva `All · Assigned · Watching` a la
+> primera fila de **My tickets** y abre en `All`. La lista representa exclusivamente asignación u
+> observación actuales, separada por nivel y sin ampliarse por la capacidad Admin. El responsable
+> cerró 4A y 6A–9A y aprobó el documento.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 45 corrige el estado activo del menú lateral.
+> El hallazgo es que `/tickets` se evalúa hoy como prefijo y queda seleccionado a la vez que
+> **Tickets principales**, **Tickets internos** o **Clasificación**. El responsable eligió 1A–4A:
+> una sola entrada activa, fondo suave sin sombra, pertenencia de alta y detalle a **Mis tickets**,
+> y pertenencia de las fichas de usuario y correo a **Usuarios** y **Configuración**. La función
+> de resolución se cubre con pruebas unitarias; la compilación y las 246 pruebas del frontend pasan.
+> El navegador confirmó selección única en todas las entradas y en alta y detalle de ticket, ficha
+> de usuario y editor de correos.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 43 corrige la
+> composición del papel operativo y la insignia administrativa en la lista de usuarios. El
+> responsable eligió 1A–4A: el papel ocupa
+> la primera fila y la insignia **Admin / Administrador** una segunda, alineada a la izquierda y con
+> una separación vertical pequeña y constante, tanto en la tabla de escritorio como en las tarjetas
+> de pantallas estrechas. Pasaron las 243 pruebas del frontend, sus fronteras y la compilación. Se
+> añadió una regresión Playwright común a PC y móvil; el entorno aislado no llegó a ejecutarla por un
+> fallo de montaje de su volumen `node_modules`, ajeno a esta interfaz.
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-19.** La sección 44 retira la tabla y las tarjetas
+> del Dashboard, reduce sus filtros, corrige los tokens de color transparentes en los ocho temas,
+> evita el solapamiento de fechas y sustituye CSV por un XLSX agregado de seis hojas. El responsable
+> cerró 1A–4A, propuso XLSX en 5, eligió 6A–14A, corrigió el nombre en 15A y eligió 16A. No quedan
+> decisiones abiertas. Pasaron las 241 pruebas del frontend, fronteras y compilación; el navegador
+> confirmó las barras en los ocho temas, los cuatro filtros y la ausencia de detalle individual.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 44 define la navegación y presentación
+> accesible del nuevo Dashboard.
+>
+> **Implementado el 2026-10-18.** La sección 43 adapta cuentas, navegación y avisos al papel
+> operativo más capacidad administrativa.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-17.** La sección 42 aprovecha el alto
 > disponible en las tablas operativas de tickets y usuarios: 16 px exteriores arriba y abajo, 12 px
@@ -365,7 +405,7 @@
 > decisiones 58 a 63): el editor estrena un botón **«Etiquetar»** —y basta escribir `@`— que mete el
 > nombre de un técnico o de un desarrollador **dentro del comentario, resaltado**; eso lo convierte en
 > **observador** del ticket, que **no es lo mismo que el asignado**. «Mis tickets» lleva un chip nuevo
-> —**Asignados · Observo · Todos**—, la ficha tiene su lista de **«Observadores»** con su aspa para
+> —actualmente **Todos · Asignados · Observo**, según la sección 46—, la ficha tiene su lista de **«Observadores»** con su aspa para
 > quitarlos (Soporte y Desarrollo), y quitar a alguien **se cuenta en la línea de tiempo**.
 >
 > **Enmendado el 2026-09-27**, al pedir el responsable **dos columnas nuevas en la lista de tickets**,
@@ -381,8 +421,8 @@
 > reproducir**, y se reproduce en el visor (sección 6.5). Es la decisión 55 de `tickets.md`.
 >
 > **Enmendado el 2026-09-26**, al pedir el responsable que **la bandeja sea «lo mío»** y que existan
-> **dos módulos nuevos para ver todo**: la Bandeja pasa a ser **Mis tickets** —lo asignado a mí, lo que
-> abrí yo y donde he comentado—, y nacen **Tickets principales** y **Tickets internos**, sólo para
+> **dos módulos nuevos para ver todo**: la Bandeja pasa a ser **Mis tickets** —su semántica vigente
+> está en la sección 46—, y nacen **Tickets principales** y **Tickets internos**, sólo para
 > Soporte y Desarrollo (secciones 3.2, 3.3 y 3.7). **«Nuevo ticket» sale del menú** —se confundía con
 > un módulo— y se queda donde se crea, en el botón de la bandeja. **«Asignármelo» desaparece de la
 > bandeja**: la reasignación se hace dentro del ticket, que es donde se ve a quién se le pasa. Las
@@ -602,15 +642,14 @@ para cambiar una condición (`docs/modules/tickets.md`, sección 8).
 
 | Bandeja | Quién | Qué enseña |
 | --- | --- | --- |
-| **Mis tickets** (`/tickets`) | Usuario, Soporte y Desarrollo | **Lo mío**: lo que tengo asignado, lo que abrí yo y aquello en lo que he comentado |
+| **Mis tickets** (`/tickets`) | Usuario, Soporte y Desarrollo | Usuario: sus principales solicitados. Equipos: lo asignado o actualmente observado, limitado a su nivel operativo |
 | **Tickets principales** (`/tickets/main`) | Soporte y Desarrollo | **Todos** los principales |
 | **Tickets internos** (`/tickets/internal`) | Soporte y Desarrollo | **Todos** los internos |
 | **Bandeja del Administrador** (`/tickets`) | Administrador | Los dos tipos, con su chip y de sólo lectura |
 
-- **«Lo mío» es lo que toca de verdad** (decisión del responsable, 2026-09-26): lo asignado a mí, lo
-  que abrí yo y **aquello donde he comentado**, porque un ticket en el que ya se ha hablado se sigue
-  hasta el final. Participar es **haber comentado en el hilo de ese ticket** —en un principal, el
-  principal; en un interno, el interno—, sin mirar el papel de quien comenta.
+- **«Lo mío» es una relación vigente** (actualizado el 2026-10-19): para Soporte y Desarrollo es lo
+  asignado o actualmente observado. Abrir o comentar no añade el ticket, y dejar de observarlo lo
+  elimina salvo que permanezca asignado. Soporte ve aquí sólo principales y Desarrollo sólo internos.
 - **La lista es una tabla** en PC y **tarjetas** en móvil, donde una tabla de ocho columnas no se lee.
   Las columnas son: **Ticket** · **Asunto** · **Motivo** · **Última acción** · **Clasificación** ·
   **Estado** · **Solicitante** · **Responsable** · **Fecha actualización** (los dos nombres de los
@@ -688,17 +727,12 @@ para cambiar una condición (`docs/modules/tickets.md`, sección 8).
   dejaba sin hacer la reasignación a otro compañero.
 - Los filtros son **chips visibles** encima de la lista, no un formulario escondido: estado, texto y
   nada más.
-- **«Mis tickets» lleva además un chip de vista —Asignados · Observo · Todos—** para Soporte y
-  Desarrollo (2026-09-27): **arranca en «Asignados»**, que es lo que hay que atender, y **«Observo»** es
-  dónde se mira lo que uno sigue sin atenderlo. Mezclarlos sería una bandeja que crece sola en cuanto
-  alguien te etiqueta.
-- **Y un chip de tipo —Principales · Internos · Todos—** en **Mis tickets** para Soporte y Desarrollo,
-  y en la bandeja del Administrador. **Cada uno entra por el suyo**: Soporte por **Principales** y
-  Desarrollo por **Internos**, que es lo que mira la mayor parte del tiempo; y puede cambiar o ver los
-  dos, porque un técnico de Soporte tiene internos donde ha comentado y uno de Desarrollo puede haber
-  abierto un principal. **El usuario no lleva chip**: sus tickets son principales, y un filtro que sólo
-  tiene una opción es ruido. Lo mismo en las dos bandejas del «todo», donde el tipo es la pantalla
-  misma.
+- **«Mis tickets» lleva en la primera fila el selector —Todos · Asignados · Observo—** para Soporte
+  y Desarrollo (actualizado el 2026-10-19), y **arranca en «Todos»**. «Todos» es la unión sin
+  duplicados de asignación y observación vigentes; el selector visible no se cuenta como búsqueda.
+- **El nivel no se elige en «Mis tickets»**: Soporte ve sólo principales y Desarrollo sólo internos,
+  incluso cuando la cuenta acumula capacidad Admin. **El usuario no lleva selector** y el
+  Administrador puro mantiene su bandeja general de sólo lectura con el selector de tipo.
 - **Las dos bandejas del «todo» no llevan chip de tipo** por lo de arriba: «Tickets principales»
   enseña principales y «Tickets internos», internos. Sí llevan el chip de **estado** y la búsqueda.
 - El **estado va con color y con texto**: el color ayuda a barrer la lista, el texto dice qué es.
@@ -851,7 +885,7 @@ modularidad (sección 4.4).
 | --- | --- | --- |
 | El editor de los correos | `/mail` | Administrador |
 
-- **A la izquierda, los doce correos**; a la derecha, el que se está editando: su **asunto**, su
+- **A la izquierda, los trece correos**; a la derecha, el que se está editando: su **asunto**, su
   **cuerpo** y sus **marcadores**, con los imprescindibles marcados.
 - **Los dos idiomas van al lado** —el mismo correo en español y en inglés, para ver que dicen lo
   mismo— **y en móvil se apilan**: en un teléfono no caben dos columnas.
@@ -878,7 +912,7 @@ Lo que hace un usuario es **crear un ticket y responder**. Todo lo demás sobra.
   estado lo dice —«Esperándote»— y el correo se lo ha avisado.
 - **Cerrar y reabrir**: las dos, en el **desplegable de acciones** del ticket, y la de cerrar pregunta
   antes (`docs/usuarios-y-permisos.md`: cierra también el usuario).
-- **Lo que no ve**: notas internas (no existen), el ticket interno, la lista de usuarios, nada de
+- **Lo que no ve**: comentarios privados del principal, el ticket interno, la lista de usuarios, nada de
   administración. Su mundo son sus tickets.
 
 ### 4.2 Soporte: atender y escalar
@@ -1635,7 +1669,7 @@ tarjeta.
 
 ### 16.4 Revisión del cambio de idioma
 
-La revisión presenta las doce plantillas como lista de pendientes. Al abrir una se ven origen y
+La revisión presenta las trece plantillas como lista de pendientes. Al abrir una se ven origen y
 borrador lado a lado en PC y apilados en móvil, con asunto, cuerpo y marcadores. Si ya existe un
 destino personalizado, aparece como tercera versión y el Administrador elige conservarlo, usar el
 borrador o combinarlos en el editor. No se reemplaza en silencio. **Aplicar idioma** sólo se habilita
@@ -2705,3 +2739,122 @@ el 2026-10-17. La implementación respeta el alcance acordado: aplica el alto di
 bandejas de tickets y a Usuarios desde 768 px, compacta sus cabeceras y conserva el flujo móvil. Las
 238 pruebas del frontend, las fronteras y la compilación pasaron; la comprobación real confirmó las
 dos tablas en escritorio y las tarjetas de tickets en móvil.
+
+## 43. Interfaz para Administrador acumulativo
+
+Una cuenta combinada ve un único menú con la unión de las entradas de su papel operativo y las de
+Administrador, sin duplicados ni selector de personalidad. Al entrar aterriza en la bandeja de su
+papel operativo; la cuenta de fábrica conserva el inicio administrativo.
+
+La insignia **Admin / Administrador** aparece con el papel en lista de usuarios, ficha, perfil propio
+y bloque de cuenta al pie del menú. En la lista de usuarios, tanto la tabla de escritorio como las
+tarjetas de pantallas estrechas presentan el papel operativo en la primera fila y la insignia en una
+segunda fila, alineada a la izquierda y separada por un espacio pequeño y constante; nunca compiten
+por el ancho de una misma línea. No se repite en tickets ni comentarios y no depende sólo del color.
+
+Alta y ficha presentan selector de papel operativo y casilla independiente de Administrador. La
+casilla sólo se habilita para Soporte o Desarrollo y sólo la modifica otro Administrador. Cambiar
+entre ambos papeles no la desmarca.
+
+Al retirar o desactivar al último Administrador ordinario, una ventana acorde al tema informa que la
+cuenta de fábrica será la única vía administrativa y exige confirmación, sin impedir la acción.
+
+La próxima carga de identidad muestra a la persona afectada un aviso bilingüe por concesión o
+retirada. Puede cerrarse y, como excepción deliberada a los toast de diez segundos, no desaparece
+automáticamente. La ficha muestra el historial con actor, acción y fecha; no nace una pantalla global.
+
+Selector, casilla, insignia, confirmación, aviso e historial se verifican con teclado, lector de
+pantalla, PC y móvil. Las 240 pruebas del frontend y sus fronteras pasaron el 2026-10-18.
+
+## 44. Dashboard y reportería
+
+Dashboard/Panel es la primera entrada del menú de Soporte, Desarrollo y Administrador y su destino
+inicial. Usuario no la ve. Arriba presenta seis indicadores comparados con el periodo anterior; en
+el centro, una línea de entradas/cierres y barras de estado, prioridad, categoría y responsable;
+no presenta debajo tablas, tarjetas ni enlaces a tickets individuales.
+
+Los filtros de periodo, tipo, estado y prioridad viven en la URL y se adaptan al ancho sin ocultar
+su valor. Actualizar conserva el último
+resultado visible. Cada gráfico tiene título, leyenda, valores accesibles y alternativa textual;
+color nunca es la única diferencia. Las barras usan `bg-primario`, `text-primario`,
+`text-primario-texto` y `bg-exito`, nunca los alias ingleses inexistentes. En móvil los bloques se
+apilan. La serie es diaria hasta 31 días y semanal desde 32; sólo rotula fechas que caben y conserva
+la fecha exacta de cada punto de forma accesible.
+
+La única exportación visible genera `report_AAAA-MM-DD_AAAA-MM-DD.xlsx`, localizado y dividido en
+seis hojas agregadas, sin gráficas incrustadas ni datos individuales. La verificación recorrerá
+escritorio y móvil, los ocho temas y ambos idiomas, y comprobará dimensiones y colores computados,
+etiquetas temporales, ausencia de tickets y contenido del libro.
+
+## 45. Estado activo único del menú lateral
+
+El menú lateral muestra **una sola entrada activa**. Las rutas de sus listados coinciden de forma
+exacta: `/tickets`, `/tickets/main`, `/tickets/internal` y `/tickets/categories` no se activan por
+prefijo ni pueden iluminarse simultáneamente. La entrada activa conserva el fondo
+`bg-superficie-suave`, el texto principal y el peso medio actuales; no añade sombra, borde ni una
+segunda señal decorativa. El enlace expone además `aria-current="page"`.
+
+Las pantallas que no tienen entrada propia conservan la pertenencia funcional acordada:
+
+- `/tickets/new` y `/tickets/:numero` activan **Mis tickets / Bandeja**;
+- `/users/:id` activa **Usuarios**;
+- `/mail` activa **Configuración**;
+- las demás rutas sin entrada propia no seleccionan ningún módulo.
+
+La regla es idéntica con menú abierto, plegado o en cajón móvil y no depende del papel ni de que la
+cuenta acumule Administración. Una función pura resuelve la pertenencia de la URL y sus pruebas
+recorren las rutas visibles y auxiliares. La prueba E2E comprueba que existe exactamente un enlace
+con `aria-current="page"` y que conserva el fondo suave. El recorrido manual con una cuenta
+combinada confirmó todas las entradas y las cuatro clases de ruta auxiliar.
+
+### 45.1 Registro de decisiones
+
+El responsable eligió el 2026-10-19:
+
+1. coincidencia exacta y una sola entrada activa (1A);
+2. fondo suave actual, sin sombra (2A);
+3. alta y detalle dentro de **Mis tickets / Bandeja** (3A);
+4. ficha de usuario dentro de **Usuarios** y editor de correos dentro de **Configuración** (4A).
+
+Quedan fuera del alcance el orden, las etiquetas, los iconos, los permisos, las rutas, los destinos
+iniciales, la paleta de los temas y cualquier cambio de API o datos. No quedan decisiones abiertas;
+el responsable aprobó explícitamente la propuesta y la implementación respeta el alcance acordado.
+
+## 46. Cabecera y vistas de «Mis tickets»
+
+La primera fila de **Mis tickets** contiene, junto al título y las acciones existentes, un selector
+siempre visible con tres opciones: **All · Assigned · Watching** / **Todos · Asignados · Observo**.
+La vista inicial es **All**, que combina tickets asignados y observados sin duplicados. Cambiar la
+opción actualiza la lista y su dirección; no abre un modal ni se cuenta como filtro de búsqueda.
+
+Soporte ve únicamente principales y Desarrollo únicamente internos. Una cuenta operativa con
+capacidad Admin conserva exactamente esa presentación. Al dejar de observar un ticket no asignado,
+éste desaparece al actualizar la bandeja; si estaba abierto en detalle, la ficha no se cierra ni se
+interrumpe y al volver se refleja la lista vigente.
+
+No se ofrece vista de no asignados ni de participación histórica. **Tickets principales** y
+**Tickets internos** conservan sus filtros y su contenido general. Las pruebas cubren los tres
+selectores, la combinación sin duplicados, ambos papeles operativos, una cuenta combinada y la
+retirada de observador.
+
+## 47. Comentarios públicos y privados
+
+En el editor de comentarios del principal, Soporte ve un selector **Public · Private** / **Público ·
+Privado**, con `Public` seleccionado al abrir. Desarrollo ve el mismo control limitado a `Private`,
+pues no puede responder públicamente al Usuario. El selector no aparece en el interno ni al Usuario.
+Los editores que acompañan movimientos de estado no lo muestran y publican siempre en público.
+
+El equipo distingue una nota privada mediante el chip **Private / Privado** junto al autor y un
+fondo sutil derivado del tema; no depende sólo del color. El Usuario no ve hueco, candado, contador,
+entrada de historial ni señal de que existe. Los adjuntos privados se renderizan únicamente dentro
+de esa nota para la audiencia autorizada.
+
+El autor puede editar el comentario y alternar su visibilidad en ambos sentidos desde la acción de
+edición existente. La pantalla actualiza inmediatamente conversación, adjuntos, búsqueda y
+resúmenes; no abre confirmación al volver privado un comentario público. El historial técnico muestra
+quién cambió **Public → Private** o **Private → Public** y cuándo, sin repetir el cuerpo.
+
+Al escalar, la nota no se duplica en el hilo interno. En vista doble permanece en la columna del
+principal; si se mira sólo el interno se consulta cambiando de vista. Las pruebas recorren los ocho
+temas, ambos idiomas, PC y móvil, teclado y lector de pantalla, además de comprobar que el DOM del
+Usuario no contiene el comentario ni sus adjuntos.

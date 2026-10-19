@@ -1,7 +1,10 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-13
+> **Última actualización:** 2026-10-18
+>
+> **Implementado el 2026-10-18.** El módulo guarda un papel operativo y una capacidad administrativa
+> independiente, con auditoría y aviso persistente a la cuenta afectada.
 >
 > **Hallazgo corregido y verificado del tercer recorrido público, 2026-10-13.** La creación automática desde AD y
 > Keycloak funcionó, pero las comprobaciones por correo y por identidad externa registraron la
@@ -348,3 +351,30 @@ los datos sincronizados, los papeles ni los permisos.
 la misma regla al contrato de cuenta ausente. La prueba de integración confirmó las dos búsquedas
 vacías sin eventos de error y una consulta SQL inválida todavía visible. La suite backend completa y
 `go vet` pasaron el 2026-10-13.
+
+## 14. Capacidad administrativa de una cuenta operativa
+
+`users.role` admite únicamente `usuario`, `soporte` y `desarrollo`. Se añade `is_admin boolean not
+null default false`, restringido a Soporte o Desarrollo. Las filas existentes con
+`role = administrador` se migran a `role = soporte, is_admin = true`.
+
+Una tabla propia registra en inglés técnico la cuenta afectada, el actor —incluida la identidad de
+fábrica—, la acción `granted` o `revoked`, el instante y el momento en que la persona afectada cerró
+el aviso. Cerrar el aviso no borra el historial.
+
+Lista, ficha, perfil propio y `auth/me` exponen `isAdmin`. Alta y edición presentan por separado el
+papel operativo y la capacidad. Conceder o retirar exige un Administrador distinto de la cuenta
+afectada, sólo admite Soporte o Desarrollo, conserva la capacidad al cambiar entre esos papeles y
+registra el evento. Soporte sin administración conserva su alcance actual.
+
+Desactivar o retirar la capacidad al último Administrador ordinario está permitido porque permanece
+la cuenta de fábrica. La API aporta la señal necesaria para que la interfaz advierta y confirme antes
+de ejecutar. La cuenta afectada consulta y cierra sólo sus avisos; el historial completo sigue en la
+ficha administrativa.
+
+AD y Keycloak siguen creando como Usuario y nunca derivan ni borran `is_admin`. La cuenta de fábrica
+sigue fuera de `users`, es Administrador puro y no tiene ficha, perfil ni papel operativo.
+
+Migración, filtros, contratos, seeder y pruebas dejaron de interpretar Admin como papel operativo.
+La base de desarrollo confirmó la columna y la tabla de eventos; las pruebas del módulo pasaron el
+2026-10-18.

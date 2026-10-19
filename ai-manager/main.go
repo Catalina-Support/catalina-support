@@ -64,22 +64,38 @@ var catalog = []modelSpec{
 }
 
 type manager struct {
-	mu            sync.Mutex
-	activationMu  sync.Mutex
-	progress      map[string]*progress
-	active        string
-	process       *exec.Cmd
-	cancelProcess context.CancelFunc
-	processDone   chan struct{}
-	healthy       bool
-	lastError     string
-	models, token string
-	command       func(modelSpec) *exec.Cmd
-	health        func(context.Context) error
-	wait          func(context.Context, time.Duration) bool
-	available     func() int64
-	rss           func(*exec.Cmd) int64
+	mu                    sync.Mutex
+	activationMu          sync.Mutex
+	progress              map[string]*progress
+	active                string
+	process               *exec.Cmd
+	cancelProcess         context.CancelFunc
+	processDone           chan struct{}
+	healthy               bool
+	lastError             string
+	models, token         string
+	command               func(modelSpec) *exec.Cmd
+	health                func(context.Context) error
+	wait                  func(context.Context, time.Duration) bool
+	available             func() int64
+	rss                   func(*exec.Cmd) int64
+	accelerationMode      string
+	effectiveAcceleration string
+	deviceName            string
+	fallbackReason        string
+	restarting            bool
+	nvidiaAvailable       func() (string, bool)
 }
+
+type accelerationRequest struct {
+	Mode string `json:"mode"`
+}
+
+type accelerationError struct {
+	Key string `json:"key"`
+}
+
+func (e *accelerationError) Error() string { return e.Key }
 
 type memoryError struct {
 	Required  int64 `json:"requiredBytes"`
@@ -102,6 +118,7 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /models", m.auth(m.list))
+	mux.HandleFunc("PUT /acceleration", m.auth(m.setAcceleration))
 	mux.HandleFunc("POST /models/{id}/download", m.auth(m.download))
 	mux.HandleFunc("DELETE /models/{id}/download", m.auth(m.cancelDownload))
 	mux.HandleFunc("DELETE /models/{id}/partial", m.auth(m.removePartial))
@@ -115,9 +132,19 @@ func main() {
 }
 
 func newManager(models, token string) *manager {
-	m := &manager{progress: map[string]*progress{}, models: models, token: token}
+	m := &manager{progress: map[string]*progress{}, models: models, token: token, accelerationMode: "auto", effectiveAcceleration: "cpu"}
+	m.nvidiaAvailable = detectNVIDIA
+	if data, err := os.ReadFile(filepath.Join(models, "acceleration")); err == nil {
+		if mode := strings.TrimSpace(string(data)); validAcceleration(mode) {
+			m.accelerationMode = mode
+		}
+	}
+	m.resolveAcceleration()
 	m.command = func(s modelSpec) *exec.Cmd {
 		args := []string{"--model", filepath.Join(m.dir(s), s.Files[0].Name), "--alias", s.Alias, "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "4096", "--threads", "2", "--parallel", "1", "--n-predict", "512", "--no-webui"}
+		if m.effectiveAcceleration == "nvidia" {
+			args = append(args, "--n-gpu-layers", "999")
+		}
 		return exec.Command("/app/llama-server", args...)
 	}
 	m.health = modelHealth
@@ -125,6 +152,33 @@ func newManager(models, token string) *manager {
 	m.available = availableMemory
 	m.rss = processRSS
 	return m
+}
+
+func validAcceleration(mode string) bool { return mode == "auto" || mode == "cpu" || mode == "nvidia" }
+
+func detectNVIDIA() (string, bool) {
+	if !strings.Contains(","+strings.ToLower(os.Getenv("AI_ACCELERATION_CAPABILITIES"))+",", ",nvidia,") {
+		return "", false
+	}
+	out, err := exec.Command("nvidia-smi", "--query-gpu=name", "--format=csv,noheader").Output()
+	if err != nil {
+		return "", false
+	}
+	name := strings.TrimSpace(strings.Split(string(out), "\n")[0])
+	if name == "" {
+		return "", false
+	}
+	return name, true
+}
+
+func (m *manager) resolveAcceleration() {
+	m.effectiveAcceleration, m.deviceName, m.fallbackReason = "cpu", "CPU", ""
+	if m.accelerationMode == "cpu" {
+		return
+	}
+	if name, ok := m.nvidiaAvailable(); ok {
+		m.effectiveAcceleration, m.deviceName = "nvidia", name
+	}
 }
 func env(k, d string) string {
 	if v := os.Getenv(k); v != "" {
@@ -182,7 +236,73 @@ func (m *manager) list(w http.ResponseWriter, _ *http.Request) {
 		}
 		views = append(views, v)
 	}
-	_ = json.NewEncoder(w).Encode(map[string]any{"models": views, "diskAvailableBytes": diskAvailable(m.models)})
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"models": views, "diskAvailableBytes": diskAvailable(m.models),
+		"accelerationMode": m.accelerationMode, "effectiveAcceleration": m.effectiveAcceleration,
+		"deviceName": m.deviceName, "fallbackReason": m.fallbackReason, "restarting": m.restarting,
+	})
+}
+
+func (m *manager) setAcceleration(w http.ResponseWriter, r *http.Request) {
+	var input accelerationRequest
+	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&input) != nil || !validAcceleration(input.Mode) {
+		http.Error(w, "invalid acceleration mode", http.StatusUnprocessableEntity)
+		return
+	}
+	if err := m.changeAcceleration(input.Mode); err != nil {
+		var acceleration *accelerationError
+		if errors.As(err, &acceleration) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_ = json.NewEncoder(w).Encode(acceleration)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (m *manager) changeAcceleration(mode string) error {
+	m.activationMu.Lock()
+	defer m.activationMu.Unlock()
+	m.mu.Lock()
+	oldMode, oldEffective, oldDevice, oldFallback := m.accelerationMode, m.effectiveAcceleration, m.deviceName, m.fallbackReason
+	activeID, healthy := m.active, m.healthy
+	m.restarting = activeID != ""
+	m.accelerationMode = mode
+	m.resolveAcceleration()
+	if mode == "nvidia" && m.effectiveAcceleration != "nvidia" {
+		m.accelerationMode, m.effectiveAcceleration, m.deviceName, m.fallbackReason, m.restarting = oldMode, oldEffective, oldDevice, oldFallback, false
+		m.mu.Unlock()
+		return &accelerationError{Key: "settings.ai.nvidiaUnavailable"}
+	}
+	m.mu.Unlock()
+	if activeID != "" && healthy {
+		spec := find(activeID)
+		if spec != nil {
+			m.stopProcess()
+			if err := m.activateModel(*spec); err != nil {
+				m.mu.Lock()
+				m.accelerationMode, m.effectiveAcceleration, m.deviceName, m.fallbackReason = oldMode, oldEffective, oldDevice, oldFallback
+				m.mu.Unlock()
+				if restoreErr := m.activateModel(*spec); restoreErr != nil {
+					err = fmt.Errorf("%w; previous acceleration could not be restored: %v", err, restoreErr)
+				}
+				m.mu.Lock()
+				m.restarting = false
+				m.mu.Unlock()
+				return err
+			}
+		}
+	}
+	m.mu.Lock()
+	m.restarting = false
+	m.mu.Unlock()
+	if err := os.WriteFile(filepath.Join(m.models, "acceleration"), []byte(mode), 0644); err != nil {
+		return err
+	}
+	return nil
 }
 func (m *manager) hasPartial(s modelSpec) bool {
 	for _, f := range s.Files {
@@ -557,9 +677,20 @@ func effectiveMemory(host int64, read func(string) ([]byte, error)) int64 {
 	return host
 }
 func (m *manager) activateModel(s modelSpec) error {
+	if m.accelerationMode == "nvidia" && m.effectiveAcceleration != "nvidia" {
+		return &accelerationError{Key: "settings.ai.nvidiaUnavailable"}
+	}
 	m.stopProcess()
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd, err := m.launch(ctx, s)
+	if err != nil && m.accelerationMode == "auto" && m.effectiveAcceleration == "nvidia" {
+		fmt.Fprintf(os.Stderr, "NVIDIA start failed, retrying once on CPU: %v\n", err)
+		m.mu.Lock()
+		m.effectiveAcceleration, m.deviceName = "cpu", "CPU"
+		m.fallbackReason = "NVIDIA start failed; using CPU"
+		m.mu.Unlock()
+		cmd, err = m.launch(ctx, s)
+	}
 	if err != nil {
 		cancel()
 		return err

@@ -11,7 +11,7 @@ import (
 	"errors"
 )
 
-// Los cuatro papeles del producto (docs/usuarios-y-permisos.md, sección 3). Son fijos: no se crean
+// Los tres papeles operativos. Administrador queda como identidad técnica de fábrica y legado.
 // roles nuevos ni se editan permisos desde la aplicación, así que son constantes y no una tabla.
 const (
 	RoleUsuario       = "usuario"
@@ -20,12 +20,12 @@ const (
 	RoleAdministrador = "administrador"
 )
 
-// Roles devuelve los cuatro papeles, para validar lo que llega de fuera.
+// Roles devuelve los tres papeles operativos, para validar lo que llega de fuera.
 func Roles() []string {
-	return []string{RoleUsuario, RoleSoporte, RoleDesarrollo, RoleAdministrador}
+	return []string{RoleUsuario, RoleSoporte, RoleDesarrollo}
 }
 
-// RoleIsValid dice si el papel es uno de los cuatro.
+// RoleIsValid dice si el papel es uno de los tres operativos.
 func RoleIsValid(role string) bool {
 	for _, known := range Roles() {
 		if role == known {
@@ -49,14 +49,23 @@ type Identity struct {
 	// ID es el identificador de la cuenta. Cero en la cuenta de fábrica.
 	ID int64
 	// Factory distingue la cuenta de fábrica, que no está en la base y no se puede tocar.
-	Factory  bool
-	Name     string
-	LastName string
-	Email    string
-	Role     string
-	Origin   string
-	IsActive bool
-	Subject  string
+	Factory    bool
+	Name       string
+	LastName   string
+	Email      string
+	Role       string
+	IsAdmin    bool
+	Origin     string
+	IsActive   bool
+	Subject    string
+	AdminEvent *AdminNotice
+}
+
+type AdminNotice struct {
+	ID        int64
+	Action    string
+	Actor     string
+	CreatedAt string
 }
 
 // FullName arma el nombre completo, que es como se enseña en las pantallas y en los correos.
@@ -74,11 +83,19 @@ func (i Identity) FullName() string {
 // «¿su papel está entre estos?».
 func (i Identity) Can(roles ...string) bool {
 	for _, role := range roles {
+		if role == RoleAdministrador && i.IsAdministrator() {
+			return true
+		}
 		if i.Role == role {
 			return true
 		}
 	}
 	return false
+}
+
+func (i Identity) IsAdministrator() bool {
+	return i.Factory || i.Role == RoleAdministrador ||
+		(i.IsAdmin && (i.Role == RoleSoporte || i.Role == RoleDesarrollo))
 }
 
 // ErrIdentityNotFound lo devuelve el cargador cuando el `sub` del token ya no corresponde a ninguna

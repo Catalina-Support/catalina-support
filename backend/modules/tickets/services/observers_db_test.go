@@ -165,6 +165,58 @@ func TestAnadirObservadorAUnInterno(t *testing.T) {
 	}
 }
 
+// TestMisTicketsSigueAsignacionYObservacionActual comprueba la pertenencia estricta aprobada:
+// solicitar el ticket no basta; asignarlo u observarlo sí, y retirar la observación lo quita de la
+// bandeja cuando ya no está asignado (docs/modules/tickets.md, sección 29).
+func TestMisTicketsSigueAsignacionYObservacionActual(t *testing.T) {
+	_, tx, _ := servicioDeObservadores(t)
+	repo := repositories.NewTicketRepository(tx)
+	numero := primerNumeroDePrincipal(t, tx)
+	ticketID := idDelPrincipal(t, tx, numero)
+	cuenta := cuentaDeLaBase(t, tx, auth.RoleSoporte, true)
+
+	limpiarObservadores(t, tx, "ticket_id", ticketID)
+	if err := tx.Exec(`UPDATE tickets SET requester_id = ?, assignee_id = NULL WHERE id = ?`, cuenta.ID, ticketID).Error; err != nil {
+		t.Fatalf("no se pudo preparar el ticket: %v", err)
+	}
+
+	listar := func() bool {
+		filas, _, err := repo.List(repositories.Filtros{Mine: &cuenta.ID, Page: 1, PerPage: 100})
+		if err != nil {
+			t.Fatalf("no se pudo listar Mis tickets: %v", err)
+		}
+		for _, fila := range filas {
+			if fila.Number == numero {
+				return true
+			}
+		}
+		return false
+	}
+
+	if listar() {
+		t.Fatal("ser solicitante no debe incorporar el ticket a Mis tickets")
+	}
+	if err := tx.Exec(`UPDATE tickets SET assignee_id = ? WHERE id = ?`, cuenta.ID, ticketID).Error; err != nil {
+		t.Fatalf("no se pudo asignar el ticket: %v", err)
+	}
+	if !listar() {
+		t.Fatal("el ticket asignado debe aparecer en Mis tickets")
+	}
+	if err := tx.Exec(`UPDATE tickets SET assignee_id = NULL WHERE id = ?`, ticketID).Error; err != nil {
+		t.Fatalf("no se pudo desasignar el ticket: %v", err)
+	}
+	if err := tx.Exec(`INSERT INTO ticket_observers (ticket_id, account_id, added_by_id) VALUES (?, ?, ?)`, ticketID, cuenta.ID, cuenta.ID).Error; err != nil {
+		t.Fatalf("no se pudo añadir el observador: %v", err)
+	}
+	if !listar() {
+		t.Fatal("el ticket observado debe aparecer en Mis tickets")
+	}
+	limpiarObservadores(t, tx, "ticket_id", ticketID)
+	if listar() {
+		t.Fatal("al dejar de observar un ticket no asignado debe desaparecer de Mis tickets")
+	}
+}
+
 // ============================================================================
 // Utilidades
 // ============================================================================

@@ -1,7 +1,10 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-18
+>
+> **Aprobado, implementado y verificado el 2026-10-18.** La sección 16 incorpora Auto, CPU y NVIDIA
+> al paso 5 cuando el motor vive en este servidor.
 >
 > **Implementado y verificado el 2026-10-14, con aprobación explícita del responsable.** La sección
 > 15 muestra automáticamente el catálogo del paso 5 y reserva su botón para refrescar sin ocultar
@@ -503,3 +506,14 @@ cambian el quinto paso, el sello, la API ni la administración de cada modelo.
 
 El recorrido real avanzó desde el paso 1 con los valores guardados y encontró las tres fichas ya
 cargadas en el paso 5. El refresco manual terminó en el sitio sin ocultarlas ni alterar modelos.
+
+## 16. Aceleración en el paso de IA
+
+El paso 5 muestra Auto, CPU y NVIDIA únicamente al elegir **En este servidor**, con Auto como valor
+inicial. Activar un modelo reinicia y prueba usando el modo elegido; **Siguiente** continúa bloqueado
+hasta tener modelo saludable. La ficha y **Try me!** muestran modo efectivo y nombre comercial del
+dispositivo sin identificadores técnicos.
+
+Auto cae una vez a CPU con aviso. NVIDIA explícito sin la variante Compose rechaza la activación y
+explica cómo levantar `ai-nvidia.yml`; no sella ni guarda una configuración inservible. Reanudar el
+asistente reconstruye modo configurado, modo efectivo y operación `restarting` si existe.

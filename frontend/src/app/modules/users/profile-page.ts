@@ -31,6 +31,7 @@ export class ProfilePage {
   private readonly users = inject(UsersService);
   private readonly textos = inject(TranslationService);
   private readonly sesion = inject(SessionService);
+  protected readonly esAdministrador = this.sesion.esAdministrador;
 
   protected readonly guardando = signal(false);
   protected readonly mensaje = signal<MensajeDePantalla | null>(null);

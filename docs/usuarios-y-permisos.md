@@ -1,7 +1,22 @@
 # Usuarios y permisos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-19
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 17 incorpora comentarios privados en el principal
+> para Soporte y Desarrollo, sin conceder a Desarrollo respuestas públicas ni exponer contenido al
+> Usuario. El responsable cerró y aprobó 1A–26A; la lectura se comprobó con ambos papeles.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 16 restringe **Mis tickets** a asignación u
+> observación actuales, sin apertura, comentarios ni tickets no asignados. El papel operativo fija
+> el nivel aun con capacidad Admin.
+>
+> **Implementado y verificado el 2026-10-18.** La sección 15 fija el acceso y alcance del Dashboard
+> sin modificar los permisos operativos de tickets.
+>
+> **Implementado el 2026-10-18.** El modelo anterior trataba `usuario`, `soporte`,
+> `desarrollo` y `administrador` como cuatro papeles excluyentes. La sección 14 describe
+> separar el papel operativo de la capacidad administrativa y acumular sus permisos.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** La sección final añade los permisos de prioridad
 > acordados: el Usuario propone al crear; Soporte corrige en el principal; Desarrollo corrige el
@@ -45,7 +60,8 @@
 > opcional**, como estaba.
 >
 > **Enmendado el 2026-09-26**, al repartir las listas de tickets: la fila «ver sus propios tickets»
-> dice ya **qué es lo suyo** —lo asignado, lo abierto por uno y donde ha comentado (regla 2)—, y
+> definió entonces lo propio por asignación, apertura y comentarios. **La sección 16 sustituyó esa
+> regla el 2026-10-19** por asignación u observación actuales para los equipos, y
 > Soporte y Desarrollo estrenan **dos listas donde ven todo** (Tickets principales y Tickets internos)
 > además de su bandeja. **No cambia ningún permiso**: lo que cambia es dónde se ve lo que cada papel
 > ya podía ver (`docs/modules/tickets.md`, decisiones 51 y 52).
@@ -124,7 +140,7 @@ El papel es **uno por cuenta** y no se cambia desde la pantalla: se decide al da
 
 | Acción | Usuario | Soporte | Desarrollo | Administrador |
 | --- | :---: | :---: | :---: | :---: |
-| Ver sus propios tickets —para un técnico, los suyos, que son los que tiene asignados, los que abrió y donde ha comentado— | ✅ | ✅ | ✅ | — |
+| Ver sus propios tickets —para un técnico, los asignados o actualmente observados— | ✅ | ✅ | ✅ | — |
 | Ver **todos** los tickets principales | — | ✅ | ✅ (sólo lectura, regla 2) | ✅ (sólo lectura) |
 | Ver los tickets **internos** | — | ✅ | ✅ | ✅ (sólo lectura) |
 | Crear un ticket propio | ✅ | ✅ | ✅ | — |
@@ -159,12 +175,13 @@ Cinco reglas que la matriz no puede expresar y que van aparte:
 
 1. **El usuario sólo ve lo suyo.** Ni tickets de otros, ni la lista de usuarios, ni el ticket interno
    de su propia incidencia: ve su principal y nada más.
-2. **«Lo mío» vale para los tres papeles, y significa lo mismo** (decisión del responsable,
-   2026-09-26): lo que tengo asignado, lo que abrí yo y aquello donde he comentado. Con eso, Soporte
-   y Desarrollo tienen **su** bandeja —**Mis tickets**— además de las listas donde lo ven todo
-   —**Tickets principales** y **Tickets internos**—, que es dónde está el trabajo que no es suyo. El
-   Administrador no tiene tickets propios: su bandeja es la de siempre, con los dos tipos y de sólo
-   lectura (`docs/modules/tickets.md`, decisión 52).
+2. **«Lo mío» se calcula con la relación vigente** (actualizado el 2026-10-19): el Usuario conserva
+   sus principales solicitados; para Soporte y Desarrollo son los tickets que tienen asignados o
+   donde figuran actualmente como observadores. Abrir o comentar no incorpora un ticket, y dejar de
+   observarlo lo retira salvo que siga asignado. Soporte reúne sólo principales y Desarrollo sólo
+   internos, incluso si también tienen capacidad Admin. Las listas **Tickets principales** y
+   **Tickets internos** contienen el resto del alcance autorizado. El Administrador puro conserva
+   su bandeja general de sólo lectura (`docs/modules/tickets.md`, sección 29).
 3. **Ser observador no es ser responsable.** Un ticket tiene **como mucho un asignado** —el que
    atiende— y **muchos observadores** —los que lo siguen, porque alguien los etiquetó—. **Observar no
    da permisos**: ni escribe quien no escribía, ni mueve estados quien no los movía; sólo hace que el
@@ -422,3 +439,74 @@ este permiso operativo.
 El cambio de Desarrollo modifica el mismo campo del principal. El Usuario ve el valor vigente y el
 historial con prioridad anterior, nueva, autor y fecha, incluido el nombre real de quien lo cambió.
 Cerrar congela la prioridad para todos los papeles.
+
+## 14. Administración acumulativa
+
+Las cuentas ordinarias conservan exactamente un papel operativo: `usuario`, `soporte` o
+`desarrollo`. Sólo Soporte y Desarrollo pueden recibir además la capacidad administrativa. Los
+permisos se acumulan, pero en tickets manda siempre el papel operativo: Soporte + Administrador
+trabaja como Soporte y Desarrollo + Administrador trabaja como Desarrollo. La administración no
+mezcla ambos niveles.
+
+La cuenta de fábrica sigue siendo Administrador puro, sin papel operativo ni trabajo en tickets. La
+cuenta ordinaria que hoy tenga el papel exclusivo `administrador` pasa a Soporte + Administrador al
+aplicar la migración. Usuario nunca puede recibir la capacidad administrativa.
+
+Sólo un Administrador distinto de la cuenta afectada concede o retira esa capacidad. Cambiar entre
+Soporte y Desarrollo la conserva. AD y Keycloak sincronizan los datos del directorio, pero conservan
+la capacidad local. El servidor vuelve a resolver ambas dimensiones en cada petición, por lo que el
+cambio vale desde la siguiente petición y la interfaz lo refleja al navegar o recargar.
+
+La cuenta de fábrica cuenta como Administrador disponible. Se permite retirar o desactivar al último
+Administrador ordinario, con una confirmación que advierte que sólo quedará la cuenta de fábrica.
+
+Cada concesión y retirada deja un registro inmutable con actor, cuenta afectada, acción e instante,
+visible en la ficha de esa cuenta. La persona afectada recibe en la próxima carga de identidad un
+aviso sin correo que permanece hasta que lo cierre explícitamente.
+
+La matriz de la sección 3 sigue describiendo los permisos operativos; su columna Administrador pasa
+a describir una capacidad adicional o la identidad pura de fábrica. Cuando dos permisos coinciden
+basta que una dimensión lo conceda; cuando una regla restringe el lado del ticket manda el papel
+operativo. Esto corrige expresamente el supuesto vigente de cuatro papeles excluyentes.
+
+La migración, las restricciones y las pruebas de autorización quedaron verificadas el 2026-10-18.
+
+## 15. Dashboard y reportería
+
+Usuario no accede. Soporte consulta principales e internos; Desarrollo sólo internos; Administrador
+puro consulta todo. Una cuenta operativa con capacidad Admin acumula el alcance total. Sólo
+Administrador modifica los umbrales de atraso. Abrir una fila no concede permisos nuevos: la ficha
+del ticket vuelve a aplicar su autorización normal.
+
+El backend resuelve este alcance en cada endpoint. La prueba real confirmó 403 para Usuario y el
+tipo interno forzado para Desarrollo; las cuentas con capacidad administrativa usan el alcance
+acumulado definido en la sección 14.
+
+## 16. Alcance de «Mis tickets»
+
+Para Soporte y Desarrollo, **Mis tickets** no es una concesión adicional de lectura sino un
+subconjunto personal de lo ya autorizado: asignados a la cuenta u observados actualmente por ella.
+Soporte reúne sólo principales y Desarrollo sólo internos. Abrir, solicitar o comentar no añade el
+ticket; carecer de responsable tampoco. Retirar la observación retira la pertenencia, salvo que la
+asignación siga vigente.
+
+La capacidad Admin no modifica esta regla porque en tickets manda el papel operativo. El acceso al
+resto continúa en las listas generales y cada ficha vuelve a aplicar sus permisos normales. No se
+modifican los permisos para asignar, autoasignarse, observar o retirar observadores.
+
+## 17. Visibilidad de comentarios del principal
+
+| Acción | Usuario | Soporte | Desarrollo | Administrador puro |
+| --- | :---: | :---: | :---: | :---: |
+| Leer comentario público del principal | Su ticket | Sí | Sí | Sí, sólo lectura |
+| Leer comentario privado del principal | No | Sí | Sí | Sí, sólo lectura |
+| Crear comentario público en el principal | Sí, en su ticket | Sí | No | No |
+| Crear comentario privado en el principal | No | Sí | Sí | No |
+| Editar el cuerpo de un comentario | Sólo el suyo público | Sólo el suyo | Sólo el suyo privado | No |
+| Cambiar Public / Private | No | Sólo el suyo | Sólo el suyo privado | No |
+
+La capacidad Admin acumulativa no altera el papel operativo. El Usuario no puede inferir una nota
+privada mediante conversación, búsquedas, resúmenes, adjuntos, correos o respuestas diferenciadas:
+la descarga directa devuelve 404. Desarrollo conserva la prohibición de responder públicamente en
+el principal; la única ampliación es colaborar internamente mediante `private`. Los comentarios de
+movimientos de estado siguen las reglas públicas actuales.

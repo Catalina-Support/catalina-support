@@ -94,6 +94,7 @@ type CreateInput struct {
 	LastName string
 	Email    string
 	Role     string
+	IsAdmin  bool
 	Origin   string
 	// ExternalID sólo se usa en las cuentas de directorio, y lo resuelve quien las da de alta.
 	ExternalID string
@@ -116,7 +117,8 @@ func (s *Service) Create(input CreateInput, actor auth.Identity) (auth.Account, 
 		return auth.Account{}, ErrEmailInvalid
 	}
 	// El papel tiene que existir **y** estar entre los que ese papel puede repartir.
-	if !auth.RoleIsValid(input.Role) || !CanAssignRole(actor, input.Role) {
+	if !auth.RoleIsValid(input.Role) || !CanAssignRole(actor, input.Role) ||
+		(input.IsAdmin && (!actor.IsAdministrator() || (input.Role != auth.RoleSoporte && input.Role != auth.RoleDesarrollo))) {
 		return auth.Account{}, ErrRoleNotAllowed
 	}
 	if !auth.OriginIsValid(input.Origin) {
@@ -145,6 +147,7 @@ func (s *Service) Create(input CreateInput, actor auth.Identity) (auth.Account, 
 		LastName: input.LastName,
 		Email:    input.Email,
 		Role:     input.Role,
+		IsAdmin:  input.IsAdmin,
 		Origin:   input.Origin,
 		IsActive: true,
 	}
@@ -316,11 +319,34 @@ func (s *Service) TouchLastLogin(id int64) error {
 	return err
 }
 
+func (s *Service) AdminEvents(userID int64, pendingOnly bool) ([]repositories.AdminEvent, error) {
+	return s.repo.AdminEvents(userID, pendingOnly)
+}
+
+func (s *Service) IsLastActiveAdmin(account auth.Account) (bool, error) {
+	if !account.IsAdmin || !account.IsActive {
+		return false, nil
+	}
+	total, err := s.repo.CountActiveAdmins()
+	return total == 1, err
+}
+
+func (s *Service) AcknowledgeAdminEvent(eventID int64, actor auth.Identity) error {
+	if actor.Factory {
+		return auth.ErrAccountNotFound
+	}
+	err := s.repo.AcknowledgeAdminEvent(actor.ID, eventID)
+	if errors.Is(err, repositories.ErrUserNotFound) {
+		return auth.ErrAccountNotFound
+	}
+	return err
+}
+
 // CanAssignRole dice si quien da de alta puede repartir ese papel: Soporte sólo crea usuarios, y
 // repartir soporte, desarrollo o administrador es cosa de un Administrador
 // (docs/usuarios-y-permisos.md, sección 3).
 func CanAssignRole(actor auth.Identity, role string) bool {
-	if actor.Can(auth.RoleAdministrador) {
+	if actor.IsAdministrator() {
 		return true
 	}
 	return actor.Can(auth.RoleSoporte) && role == auth.RoleUsuario

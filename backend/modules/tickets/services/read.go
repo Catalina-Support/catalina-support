@@ -25,6 +25,7 @@ const (
 // internos» son la lista de todo y se piden sin él.
 func (s *Service) List(filtros repositories.Filtros, actor auth.Identity) (Page, error) {
 	filtros = NormalizarFiltros(filtros)
+	filtros.SearchPrivate = actor.Role != auth.RoleUsuario
 
 	// **La etiqueta del filtro se normaliza como se normaliza al guardar** (decisión 68): el chip
 	// manda lo que se escribió, y `Red Wifi` tiene que encontrar `red-wifi`. Si no queda nada —sólo
@@ -50,7 +51,7 @@ func (s *Service) List(filtros repositories.Filtros, actor auth.Identity) (Page,
 
 	switch filtros.Type {
 	case TypePrincipal:
-		return s.listaDePrincipales(filtros)
+		return s.listaDePrincipales(filtros, actor.Role != auth.RoleUsuario)
 	case TypeInternal:
 		return s.listaDeInternos(filtros)
 	default:
@@ -80,7 +81,7 @@ func (s *Service) ByNumber(number string, actor auth.Identity) (Detail, error) {
 }
 
 // listaDePrincipales arma una página de principales.
-func (s *Service) listaDePrincipales(filtros repositories.Filtros) (Page, error) {
+func (s *Service) listaDePrincipales(filtros repositories.Filtros, resumenInterno bool) (Page, error) {
 	tickets, total, err := s.tickets.List(filtros)
 	if err != nil {
 		return Page{}, err
@@ -128,7 +129,7 @@ func (s *Service) listaDePrincipales(filtros repositories.Filtros) (Page, error)
 
 	// Los dos campos del motor de IA se pegan aquí, **de una vez para toda la página**: una consulta
 	// para la lista entera, no una por fila (docs/modules/ai.md, decisión 9).
-	s.pegarResumenes(cuentas)
+	s.pegarResumenes(cuentas, resumenInterno)
 
 	return Page{Tickets: cuentas, Total: total, Page: filtros.Page, PerPage: filtros.PerPage}, nil
 }
@@ -185,7 +186,7 @@ func (s *Service) listaDeInternos(filtros repositories.Filtros) (Page, error) {
 	// **Los internos también llevan sus dos campos**: el «Resumen» se redacta a partir del motivo del
 	// escalado y la «Última acción» a partir del movimiento más reciente, ambos con el número propio
 	// del interno. Sin esta línea, las dos columnas salían vacías en la lista de internos.
-	s.pegarResumenes(tickets)
+	s.pegarResumenes(tickets, true)
 
 	return Page{Tickets: tickets, Total: total, Page: filtros.Page, PerPage: filtros.PerPage}, nil
 }
@@ -208,7 +209,7 @@ func (s *Service) listaDeLosDos(filtros repositories.Filtros) (Page, error) {
 	deInternos.Page = 1
 	deInternos.PerPage = hasta
 
-	principales, err := s.listaDePrincipales(dePrincipales)
+	principales, err := s.listaDePrincipales(dePrincipales, true)
 	if err != nil {
 		return Page{}, err
 	}
@@ -340,6 +341,41 @@ func (s *Service) detalleDePrincipal(ticket repositories.Ticket, actor auth.Iden
 		return Detail{}, ErrTicketNotFound
 	}
 
+	// El Usuario recibe una conversación pública materialmente distinta: no hay marcador ni hueco
+	// que permita inferir una nota privada, y sus adjuntos desaparecen con ella.
+	if actor.Role == auth.RoleUsuario {
+		privados := make(map[int64]struct{})
+		publicos := comentarios[:0]
+		for _, comentario := range comentarios {
+			if comentario.Visibility == VisibilityPrivate {
+				privados[comentario.ID] = struct{}{}
+				continue
+			}
+			publicos = append(publicos, comentario)
+		}
+		comentarios = publicos
+
+		adjuntosPublicos := adjuntos[:0]
+		for _, adjunto := range adjuntos {
+			if adjunto.CommentID != nil {
+				if _, privado := privados[*adjunto.CommentID]; privado {
+					continue
+				}
+			}
+			adjuntosPublicos = append(adjuntosPublicos, adjunto)
+		}
+		adjuntos = adjuntosPublicos
+
+		historialPublico := historial[:0]
+		for _, entrada := range historial {
+			if entrada.Event == "comment_visibility_changed" {
+				continue
+			}
+			historialPublico = append(historialPublico, entrada)
+		}
+		historial = historialPublico
+	}
+
 	detalle := Detail{
 		Ticket:      convertido,
 		Comments:    s.aComentarios(comentarios, porID),
@@ -357,7 +393,7 @@ func (s *Service) detalleDePrincipal(ticket repositories.Ticket, actor auth.Iden
 	// Los dos campos del motor de IA, para la ficha: la misma consulta en bloque que usan las listas,
 	// con un solo número.
 	temporal := []Ticket{detalle.Ticket}
-	s.pegarResumenes(temporal)
+	s.pegarResumenes(temporal, actor.Role != auth.RoleUsuario)
 	detalle.Ticket.Resumen = temporal[0].Resumen
 
 	return detalle, nil
@@ -407,7 +443,7 @@ func (s *Service) detalleDeInterno(interno repositories.InternalTicket, principa
 
 	// Y la ficha del interno, lo mismo: la última acción va con él (decisión 5).
 	temporal := []Ticket{convertido}
-	s.pegarResumenes(temporal)
+	s.pegarResumenes(temporal, true)
 	convertido = temporal[0]
 
 	return Detail{
@@ -519,12 +555,13 @@ func (s *Service) aComentarios(comentarios []repositories.Comment, porID map[int
 
 	for _, comentario := range comentarios {
 		convertidos = append(convertidos, Comment{
-			ID:        comentario.ID,
-			Author:    cuentaDeID(porID, comentario.AuthorID),
-			Body:      comentario.Body,
-			Edited:    comentario.EditedAt != nil,
-			Deleted:   comentario.DeletedAt != nil,
-			CreatedAt: comentario.CreatedAt,
+			ID:         comentario.ID,
+			Author:     cuentaDeID(porID, comentario.AuthorID),
+			Body:       comentario.Body,
+			Visibility: comentario.Visibility,
+			Edited:     comentario.EditedAt != nil,
+			Deleted:    comentario.DeletedAt != nil,
+			CreatedAt:  comentario.CreatedAt,
 		})
 	}
 

@@ -8,7 +8,7 @@
 --   psql -v ON_ERROR_STOP=1 -U catalina_support -d catalina_support -p 11003 < backend/migrations/v1.0.0.sql
 --
 -- **Lleva también los datos sin los cuales la aplicación no funciona** —las dos filas de
--- configuración y las veinticuatro plantillas de correo—, porque eso no es un dato de ejemplo: en una
+-- configuración y las veintiséis plantillas de correo—, porque eso no es un dato de ejemplo: en una
 -- instalación recién desplegada, sin la fila de configuración no se puede leer ni el idioma ni el
 -- nombre, y sin plantilla no sale ningún correo (docs/modules/settings.md, decisión 10).
 --
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS mail_templates (
 );
 
 COMMENT ON TABLE mail_templates IS
-    'Los doce correos del sistema, en dos idiomas: veinticuatro filas. Los escribe un administrador; el texto de fábrica se conserva para poder restaurarlo.';
+    'Los trece correos del sistema, en dos idiomas: veintiséis filas. Los escribe un administrador; el texto de fábrica se conserva para poder restaurarlo.';
 
--- Las veinticuatro plantillas de fábrica (docs/modules/mail.md, sección 5).
+-- Las veintiséis plantillas de fábrica (docs/modules/mail.md, sección 5).
 -- ON CONFLICT DO NOTHING: volver a aplicar la migración NO pisa lo que un administrador haya editado.
 INSERT INTO mail_templates (key, language, subject, body, default_subject, default_body) VALUES
 -- ---------------------------------------------------------------- avisos de ticket
@@ -196,6 +196,20 @@ INSERT INTO mail_templates (key, language, subject, body, default_subject, defau
 
 ON CONFLICT (key, language) DO NOTHING;
 
+-- Aviso interno de una nota privada. Deliberadamente no incluye cuerpo ni adjuntos.
+INSERT INTO mail_templates (key, language, subject, body, default_subject, default_body) VALUES
+('ticket.privateComment', 'es',
+ 'Nuevo comentario privado en {{numero}}',
+ '<p>{{autor}} añadió un comentario privado en el ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p><a href="{{enlace}}">Abrir el ticket</a></p>',
+ 'Nuevo comentario privado en {{numero}}',
+ '<p>{{autor}} añadió un comentario privado en el ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p><a href="{{enlace}}">Abrir el ticket</a></p>'),
+('ticket.privateComment', 'en',
+ 'New private comment on {{numero}}',
+ '<p>{{autor}} added a private comment to ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p><a href="{{enlace}}">Open the ticket</a></p>',
+ 'New private comment on {{numero}}',
+ '<p>{{autor}} added a private comment to ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p><a href="{{enlace}}">Open the ticket</a></p>')
+ON CONFLICT (key, language) DO NOTHING;
+
 -- La **plantilla número once** (`ticket.mentioned`), aparte además de dentro del bloque de arriba: el
 -- bloque grande ya la trae, así que en una base nueva esto es un no-op; en una que ya tenía las veinte
 -- filas, el bloque grande también la inserta, y esta sentencia deja dicho, en su sitio y sin depender
@@ -228,6 +242,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- locales está así hasta que la persona la establece desde el enlace del correo de alta.
     password_hash text,
     role          text        NOT NULL,
+    is_admin      boolean     NOT NULL DEFAULT false,
     origin        text        NOT NULL,
     -- El identificador del directorio (el `sub` de Keycloak o el GUID de AD). Nulo en las locales.
     external_id   text,
@@ -235,7 +250,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login_at timestamptz,
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT users_role_check CHECK (role IN ('usuario', 'soporte', 'desarrollo', 'administrador')),
+    CONSTRAINT users_role_check CHECK (role IN ('usuario', 'soporte', 'desarrollo')),
+    CONSTRAINT users_admin_operational_role_check CHECK (NOT is_admin OR role IN ('soporte', 'desarrollo')),
     CONSTRAINT users_origin_check CHECK (origin IN ('local', 'ad', 'keycloak')),
     -- Si el origen es de directorio, no hay contraseña local: la regla en la base, no sólo en el
     -- código (docs/usuarios-y-permisos.md, sección 5).
@@ -248,12 +264,33 @@ COMMENT ON TABLE users IS
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_language_check;
 ALTER TABLE users DROP COLUMN IF EXISTS language;
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
+UPDATE users SET role = 'soporte', is_admin = true WHERE role = 'administrador';
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('usuario', 'soporte', 'desarrollo'));
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_admin_operational_role_check;
+ALTER TABLE users ADD CONSTRAINT users_admin_operational_role_check
+    CHECK (NOT is_admin OR role IN ('soporte', 'desarrollo'));
+
 -- Un correo, una cuenta, sin distinguir mayúsculas: Ana@… y ana@… son la misma persona.
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (lower(email));
 
 -- Dos cuentas no pueden apuntar al mismo usuario del directorio.
 CREATE UNIQUE INDEX IF NOT EXISTS users_origin_external_id_unique
     ON users (origin, external_id) WHERE external_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS user_admin_events (
+    id              bigserial PRIMARY KEY,
+    user_id         bigint      NOT NULL REFERENCES users(id),
+    actor_user_id   bigint      REFERENCES users(id),
+    actor_label     text        NOT NULL,
+    action          text        NOT NULL,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    acknowledged_at timestamptz,
+    CONSTRAINT user_admin_events_action_check CHECK (action IN ('granted', 'revoked'))
+);
+CREATE INDEX IF NOT EXISTS user_admin_events_user_created_idx
+    ON user_admin_events (user_id, created_at DESC);
 
 -- La clave ajena que faltaba en mail_templates, ahora que existe la tabla de cuentas.
 DO $$
@@ -388,9 +425,13 @@ CREATE TABLE IF NOT EXISTS ai_settings (
     tested_at             timestamptz,
     updated_at            timestamptz NOT NULL DEFAULT now(),
     updated_by_id         bigint REFERENCES users (id) ON DELETE SET NULL,
+    acceleration_mode      text NOT NULL DEFAULT 'auto',
     CONSTRAINT ai_settings_mode_check CHECK (mode IN ('', 'local', 'remote', 'provider')),
     CONSTRAINT ai_settings_auth_check CHECK (auth_type IN ('none', 'bearer', 'header', 'basic'))
 );
+ALTER TABLE ai_settings ADD COLUMN IF NOT EXISTS acceleration_mode text NOT NULL DEFAULT 'auto';
+ALTER TABLE ai_settings DROP CONSTRAINT IF EXISTS ai_settings_acceleration_mode_check;
+ALTER TABLE ai_settings ADD CONSTRAINT ai_settings_acceleration_mode_check CHECK (acceleration_mode IN ('auto', 'cpu', 'nvidia'));
 INSERT INTO ai_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS ai_model_acceptances (
@@ -470,6 +511,10 @@ CREATE TABLE IF NOT EXISTS ticket_settings (
     main_notification     text        NOT NULL DEFAULT 'al_asignado',
     internal_assignment   text        NOT NULL DEFAULT 'ninguna',
     internal_notification text        NOT NULL DEFAULT 'a_nadie',
+    report_overdue_critical_hours integer NOT NULL DEFAULT 4 CHECK (report_overdue_critical_hours > 0),
+    report_overdue_high_hours     integer NOT NULL DEFAULT 24 CHECK (report_overdue_high_hours > 0),
+    report_overdue_medium_hours   integer NOT NULL DEFAULT 72 CHECK (report_overdue_medium_hours > 0),
+    report_overdue_low_hours      integer NOT NULL DEFAULT 120 CHECK (report_overdue_low_hours > 0),
     updated_at            timestamptz NOT NULL DEFAULT now(),
     updated_by_id         bigint      REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT ticket_settings_prefix_check CHECK (number_prefix ~ '^[A-Z0-9]{2,8}$'),
@@ -501,6 +546,11 @@ COMMENT ON TABLE ticket_settings IS
 -- aparte, con `IF NOT EXISTS`. En una base nueva son un no-op; en una que ya existía, son el cambio.
 
 ALTER TABLE keycloak_settings ADD COLUMN IF NOT EXISTS internal_issuer text NOT NULL DEFAULT '';
+
+ALTER TABLE ticket_settings ADD COLUMN IF NOT EXISTS report_overdue_critical_hours integer NOT NULL DEFAULT 4;
+ALTER TABLE ticket_settings ADD COLUMN IF NOT EXISTS report_overdue_high_hours integer NOT NULL DEFAULT 24;
+ALTER TABLE ticket_settings ADD COLUMN IF NOT EXISTS report_overdue_medium_hours integer NOT NULL DEFAULT 72;
+ALTER TABLE ticket_settings ADD COLUMN IF NOT EXISTS report_overdue_low_hours integer NOT NULL DEFAULT 120;
 
 ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS installation_name text NOT NULL DEFAULT 'Catalina Support';
@@ -694,6 +744,7 @@ CREATE TABLE IF NOT EXISTS ticket_comments (
     internal_ticket_id bigint     REFERENCES internal_tickets (id) ON DELETE CASCADE,
     author_id         bigint      NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
     body              text        NOT NULL,
+    visibility        text        NOT NULL DEFAULT 'public',
     edited_at         timestamptz,
     -- Borrado LÓGICO: la fila se queda con su marca y el texto se vacía de verdad.
     deleted_at        timestamptz,
@@ -701,7 +752,8 @@ CREATE TABLE IF NOT EXISTS ticket_comments (
     CONSTRAINT ticket_comments_one_target CHECK (
         (ticket_id IS NOT NULL AND internal_ticket_id IS NULL)
         OR (ticket_id IS NULL AND internal_ticket_id IS NOT NULL)
-    )
+    ),
+    CONSTRAINT ticket_comments_visibility_check CHECK (visibility IN ('public', 'private'))
 );
 
 COMMENT ON TABLE ticket_comments IS
@@ -885,6 +937,13 @@ SET body = '<p>' || replace(
     ) || '</p>'
 -- Un comentario borrado tiene el texto vacío a propósito y se queda vacío: no hay nada que convertir.
 WHERE btrim(body) <> '' AND body !~ '[<&]';
+
+-- Los comentarios ya existentes fueron publicados antes de existir la privacidad y, por tanto,
+-- continúan siendo públicos. La migración permanece repetible durante la versión 1.0.0 abierta.
+ALTER TABLE ticket_comments ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'public';
+ALTER TABLE ticket_comments DROP CONSTRAINT IF EXISTS ticket_comments_visibility_check;
+ALTER TABLE ticket_comments ADD CONSTRAINT ticket_comments_visibility_check
+    CHECK (visibility IN ('public', 'private'));
 
 -- ============================================================================
 -- ai — puesta al día: la tabla de los dos resúmenes del motor de IA

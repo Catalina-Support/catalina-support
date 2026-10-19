@@ -4,6 +4,7 @@ dist/
 .angular/
 
 # Playwright: informes, capturas y vídeos de las pruebas de interfaz
+.playwright-cli/
 tests/e2e/informe/
 tests/e2e/test-results/
 tests/e2e/resultados/

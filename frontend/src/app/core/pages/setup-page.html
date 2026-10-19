@@ -638,9 +638,14 @@
           />
 
           @if (iaModo() === 'local') {
+            <app-selector identificador="ia-aceleracion" [etiqueta]="t().configuracion.iaAceleracion"
+              [opciones]="opcionesDeAceleracionIA()" [valor]="iaAceleracion()"
+              (valorChange)="iaAceleracion.set($any($event))" />
             <div class="flex flex-col gap-3 rounded-md border border-borde p-4">
               <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3><app-boton forma="secundario" [texto]="t().configuracion.iaCargarCatalogo" [textoTrabajando]="t().configuracion.iaRefrescandoCatalogo" [trabajando]="refrescandoCatalogo()" (pulsado)="cargarCatalogoIA()" /></div>
               @if (catalogoIA(); as catalogo) {
+				<p class="text-sm text-texto">{{ t().configuracion.iaAceleracionEfectiva }}: <strong>{{ descripcionAceleracion(catalogo) }}</strong></p>
+				@if (catalogo.fallbackReason) { <p class="text-xs text-apagado">{{ t().configuracion.iaAceleracionFallback }}</p> }
                 <p class="text-xs text-apagado">{{ interpolar(t().configuracion.iaDiscoDisponible, { cantidad: formatoBytes(catalogo.diskAvailableBytes) }) }}</p>
                 @for (modelo of catalogo.models; track modelo.id) {
                   <article class="flex flex-col gap-2 rounded-md bg-superficie-suave p-3 text-sm">

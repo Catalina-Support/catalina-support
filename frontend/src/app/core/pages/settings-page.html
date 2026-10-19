@@ -522,6 +522,18 @@
       </div>
     </app-tarjeta>
 
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.reporteria" [descripcion]="t().configuracion.reporteriaAyuda">
+      <div class="flex flex-col gap-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="text-sm text-texto">{{t().configuracion.criticaHoras}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="number" min="1" [value]="reporteCritica()" (input)="reporteCritica.set(+$any($event.target).value)"></label>
+          <label class="text-sm text-texto">{{t().configuracion.altaHoras}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="number" min="1" [value]="reporteAlta()" (input)="reporteAlta.set(+$any($event.target).value)"></label>
+          <label class="text-sm text-texto">{{t().configuracion.mediaHoras}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="number" min="1" [value]="reporteMedia()" (input)="reporteMedia.set(+$any($event.target).value)"></label>
+          <label class="text-sm text-texto">{{t().configuracion.bajaHoras}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="number" min="1" [value]="reporteBaja()" (input)="reporteBaja.set(+$any($event.target).value)"></label>
+        </div>
+        <app-boton [texto]="t().configuracion.guardarReporteria" [textoTrabajando]="t().configuracion.guardando" [trabajando]="guardando()" [deshabilitado]="!cambioDeReporteriaPendiente()" (pulsado)="guardarReporteria()" />
+      </div>
+    </app-tarjeta>
+
     <!--
       **La región horaria y la dirección pública tienen su tarjeta** (decisión del responsable,
       2026-09-29): son de la instalación entera, no de la numeración, y el botón de la otra tarjeta
@@ -662,6 +674,9 @@
         />
 
         @if (iaModo() === 'local') {
+          <app-selector identificador="ia-aceleracion" [etiqueta]="t().configuracion.iaAceleracion"
+            [opciones]="opcionesDeAceleracionIA()" [valor]="iaAceleracion()"
+            (valorChange)="iaAceleracion.set($any($event))" />
           <div class="flex flex-col gap-3 rounded-md border border-borde p-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3>
@@ -670,6 +685,8 @@
                 [trabajando]="refrescandoCatalogo()" (pulsado)="cargarCatalogoIA()" />
             </div>
             @if (catalogoIA(); as catalogo) {
+			  <p class="text-sm text-texto">{{ t().configuracion.iaAceleracionEfectiva }}: <strong>{{ descripcionAceleracion(catalogo) }}</strong></p>
+			  @if (catalogo.fallbackReason) { <p class="text-xs text-apagado">{{ t().configuracion.iaAceleracionFallback }}</p> }
               <p class="text-xs text-apagado">{{ interpolar(t().configuracion.iaDiscoDisponible, { cantidad: formatoBytes(catalogo.diskAvailableBytes) }) }}</p>
               @for (modelo of catalogo.models; track modelo.id) {
                 <article class="flex flex-col gap-2 rounded-md bg-superficie-suave p-3 text-sm">
