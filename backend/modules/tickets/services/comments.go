@@ -103,7 +103,10 @@ func (s *Service) CommentWithVisibility(number, body, visibility string, actor a
 		return Comment{}, err
 	}
 
-	comentario, err := s.escribirComentarioConVisibilidad(destino, texto, visibility, actor, principal.Description, nil, menciones)
+	// Sólo la respuesta del solicitante en el principal reactiva la atención. La comprobación
+	// definitiva del estado se hace bajo bloqueo dentro de la misma transacción que el comentario.
+	reactivar := !esInterno && actor.ID == principal.RequesterID
+	comentario, err := s.escribirComentarioConVisibilidad(destino, texto, visibility, actor, principal.Description, nil, menciones, reactivar)
 	if err != nil {
 		return Comment{}, err
 	}
@@ -134,16 +137,43 @@ func (s *Service) CommentWithVisibility(number, body, visibility string, actor a
 // dentro —el motivo de un re-escalado, que es texto plano— lo escapa antes de llamar. Sanea quien tiene
 // algo que decirle a alguien: aquí no hay a quién contestarle una clave de error.
 func (s *Service) escribirComentario(destino repositories.Destino, texto string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (Comment, error) {
-	return s.escribirComentarioConVisibilidad(destino, texto, VisibilityPublic, actor, descripcion, anteriores, nuevos)
+	return s.escribirComentarioConVisibilidad(destino, texto, VisibilityPublic, actor, descripcion, anteriores, nuevos, false)
 }
 
-func (s *Service) escribirComentarioConVisibilidad(destino repositories.Destino, texto, visibility string, actor auth.Identity, descripcion string, anteriores, nuevos []int64) (Comment, error) {
+func (s *Service) escribirComentarioConVisibilidad(destino repositories.Destino, texto, visibility string, actor auth.Identity, descripcion string, anteriores, nuevos []int64, reactivar bool) (Comment, error) {
 	var creado repositories.Comment
 	err := s.tickets.DB().Transaction(func(tx *gorm.DB) error {
+		var principal repositories.Ticket
+		if reactivar {
+			if destino.TicketID == nil {
+				return repositories.ErrTicketNotFound
+			}
+
+			var err error
+			principal, err = s.tickets.ByIDForUpdate(tx, *destino.TicketID)
+			if err != nil {
+				return err
+			}
+		}
+
 		var err error
 		creado, err = s.escribirComentarioEnTxConVisibilidad(tx, destino, texto, visibility, actor, descripcion, anteriores, nuevos)
+		if err != nil {
+			return err
+		}
 
-		return err
+		if reactivar && principal.State == repositories.StateEnEspera {
+			desde := principal.State
+			principal.State = repositories.StateEnProgreso
+			if err := s.tickets.UpdateTicket(tx, principal); err != nil {
+				return err
+			}
+			if err := s.historialDeEstado(tx, destino, &actor.ID, desde, principal.State); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return Comment{}, err
