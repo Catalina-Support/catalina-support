@@ -95,7 +95,7 @@ does not require a GPU.
 ### 1. Clone and start
 
 ```bash
-git clone https://github.com/juanky-estevez/Catalina-Support.git catalina-support
+git clone https://github.com/Catalina-Support/catalina-support.git catalina-support
 cd catalina-support
 docker compose -f dev.yml up -d --build
 docker compose -f ai.yml up -d --build

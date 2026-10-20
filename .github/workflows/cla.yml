@@ -26,6 +26,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           path-to-signatures: signatures/version1/cla.json
-          path-to-document: https://github.com/juanky-estevez/Catalina-Support/blob/dev/CLA.md
+          path-to-document: https://github.com/Catalina-Support/catalina-support/blob/dev/CLA.md
           branch: cla-signatures
           allowlist: dependabot[bot]
