@@ -207,6 +207,6 @@ describe('TicketPage', () => {
     volver!.click();
     fixture.detectChanges();
 
-    expect(navegar).toHaveBeenCalledWith(['/tickets']);
+    expect(navegar).toHaveBeenCalledWith(['/my-tickets']);
   });
 });

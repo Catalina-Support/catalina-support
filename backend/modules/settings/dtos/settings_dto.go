@@ -64,6 +64,7 @@ type DirectoryDto struct {
 	BindDN       string `json:"bindDn"`
 	SearchBase   string `json:"searchBase"`
 	UserFilter   string `json:"userFilter"`
+	AttrUsername string `json:"attrUsername"`
 	AttrEmail    string `json:"attrEmail"`
 	AttrName     string `json:"attrName"`
 	AttrLastName string `json:"attrLastName"`
@@ -199,6 +200,7 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			BindDN:       config.Directory.BindDN,
 			SearchBase:   config.Directory.SearchBase,
 			UserFilter:   config.Directory.UserFilter,
+			AttrUsername: config.Directory.AttrUsername,
 			AttrEmail:    config.Directory.AttrEmail,
 			AttrName:     config.Directory.AttrName,
 			AttrLastName: config.Directory.AttrLastName,
@@ -291,6 +293,7 @@ func NewDirectoryInput(dto DirectoryDto) services.DirectoryInput {
 		BindPassword: dto.BindPassword,
 		SearchBase:   dto.SearchBase,
 		UserFilter:   dto.UserFilter,
+		AttrUsername: dto.AttrUsername,
 		AttrEmail:    dto.AttrEmail,
 		AttrName:     dto.AttrName,
 		AttrLastName: dto.AttrLastName,

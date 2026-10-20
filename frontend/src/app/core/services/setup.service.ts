@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import type { CatalogoLocalDeIA, ConfiguracionDeIA, ConfiguracionDeIAEscrita, SaludoDeIA } from './settings.service';
+import type {
+  CatalogoLocalDeIA,
+  ConfiguracionDeIA,
+  ConfiguracionDeIAEscrita,
+  SaludoDeIA,
+} from './settings.service';
 
 /**
  * La configuración del directorio tal y como la ve el asistente: **sin la contraseña**, con
@@ -14,6 +19,7 @@ export interface DirectorioDeInstalacion {
   readonly bindDn: string;
   readonly searchBase: string;
   readonly userFilter: string;
+  readonly attrUsername?: string;
   readonly attrEmail: string;
   readonly attrName: string;
   readonly attrLastName: string;
@@ -89,6 +95,7 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
     bindDn: '',
     searchBase: '',
     userFilter: '',
+    attrUsername: '',
     attrEmail: '',
     attrName: '',
     attrLastName: '',
@@ -108,8 +115,16 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
   },
   aiAvailable: false,
   ai: {
-    mode: '', provider: '', baseUrl: '', model: '', authType: 'none', authHeader: '',
-	credentialSet: false, privacyConfirmed: false, tested: false, accelerationMode: 'auto',
+    mode: '',
+    provider: '',
+    baseUrl: '',
+    model: '',
+    authType: 'none',
+    authHeader: '',
+    credentialSet: false,
+    privacyConfirmed: false,
+    tested: false,
+    accelerationMode: 'auto',
   },
 };
 
@@ -141,10 +156,13 @@ export interface CorreoEscrito {
   readonly password: string;
   readonly fromName: string;
   readonly fromEmail: string;
-	readonly testRecipient?: string;
+  readonly testRecipient?: string;
 }
 
-export interface ResultadoDeCorreo { readonly status: 'ok'; readonly recipient: string; }
+export interface ResultadoDeCorreo {
+  readonly status: 'ok';
+  readonly recipient: string;
+}
 
 export interface Paso4 {
   readonly mail: CorreoEscrito;
@@ -241,16 +259,52 @@ export class SetupService {
     return this.guardar('/api/setup/ai', paso);
   }
 
-  async modelosLocales(): Promise<CatalogoLocalDeIA> { return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/setup/ai/models')); }
-  async descargarModelo(id: string, acceptLicense: boolean): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense })); }
-  async activarModelo(id: string): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/activate`, {})); }
-  async desactivarModelo(id: string): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/deactivate`, {})); }
-  async eliminarModelo(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}`)); }
-  async cancelarDescarga(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/download`)); }
-  async eliminarParcial(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/partial`)); }
-  async subirLogo(oscuro: boolean, archivo: File): Promise<void> { const data=new FormData(); data.append('logo',archivo,archivo.name); await firstValueFrom(this.http.post(`/api/setup/brand/logo?variant=${oscuro?'oscuro':'claro'}`,data)); }
-  async restablecerLogo(oscuro: boolean): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/brand/logo?variant=${oscuro?'oscuro':'claro'}`)); }
-  async probarModeloActivo():Promise<SaludoDeIA>{return firstValueFrom(this.http.post<SaludoDeIA>('/api/setup/ai/models/active/test',{}));}
+  async modelosLocales(): Promise<CatalogoLocalDeIA> {
+    return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/setup/ai/models'));
+  }
+  async descargarModelo(id: string, acceptLicense: boolean): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense }),
+    );
+  }
+  async activarModelo(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/activate`, {}),
+    );
+  }
+  async desactivarModelo(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/deactivate`, {}),
+    );
+  }
+  async eliminarModelo(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}`));
+  }
+  async cancelarDescarga(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/download`),
+    );
+  }
+  async eliminarParcial(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}/partial`),
+    );
+  }
+  async subirLogo(oscuro: boolean, archivo: File): Promise<void> {
+    const data = new FormData();
+    data.append('logo', archivo, archivo.name);
+    await firstValueFrom(
+      this.http.post(`/api/setup/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`, data),
+    );
+  }
+  async restablecerLogo(oscuro: boolean): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/setup/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`),
+    );
+  }
+  async probarModeloActivo(): Promise<SaludoDeIA> {
+    return firstValueFrom(this.http.post<SaludoDeIA>('/api/setup/ai/models/active/test', {}));
+  }
 
   /** Sella la instalación: es lo que hace que el asistente no vuelva a aparecer. */
   async terminar(): Promise<EstadoDeInstalacion> {
@@ -279,7 +333,7 @@ export class SetupService {
    * Completa un envío real al destinatario efímero y no guarda los datos.
    */
   async probarCorreo(paso: Paso4): Promise<ResultadoDeCorreo> {
-	return firstValueFrom(this.http.post<ResultadoDeCorreo>('/api/setup/mail/test', paso));
+    return firstValueFrom(this.http.post<ResultadoDeCorreo>('/api/setup/mail/test', paso));
   }
 
   /** Una petición que devuelve el estado nuevo: el asistente avanza con lo que le contestan. */

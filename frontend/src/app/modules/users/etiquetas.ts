@@ -29,7 +29,7 @@ export const ORIGENES = ['local', 'ad', 'keycloak'] as const;
  *
  * El día que llegue el camino del directorio, esto se queda vacío y no hay que tocar ninguna pantalla.
  */
-export const ORIGENES_DE_DIRECTORIO: readonly string[] = ['ad', 'keycloak'];
+export const ORIGENES_DE_DIRECTORIO: readonly string[] = ['keycloak'];
 
 /** Cómo se llama un papel en la interfaz. */
 export function etiquetaDePapel(textos: Textos, papel: string): string {
@@ -56,12 +56,12 @@ export function opcionesDePapel(
 }
 
 /** Los tres orígenes, con los de directorio **desactivados** mientras no exista su camino. */
-export function opcionesDeOrigen(textos: Textos): readonly OpcionSelector[] {
+export function opcionesDeOrigen(textos: Textos, adDisponible = false): readonly OpcionSelector[] {
   return ORIGENES.map((origen) => ({
     valor: origen,
     etiqueta: etiquetaDeOrigen(textos, origen),
     grupo: textos.usuarios.origen,
-    deshabilitado: ORIGENES_DE_DIRECTORIO.includes(origen),
+    deshabilitado: ORIGENES_DE_DIRECTORIO.includes(origen) || (origen === 'ad' && !adDisponible),
   }));
 }
 

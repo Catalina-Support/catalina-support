@@ -2,6 +2,7 @@ package services
 
 import (
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -67,7 +68,7 @@ func (l *LDAP) Login(email, password string) (auth.DirectoryAccount, error) {
 	defer conexion.Close()
 
 	// 1. Se busca a la persona **con la cuenta de servicio**.
-	entrada, err := l.buscar(conexion, email)
+	entrada, err := l.buscarUno(conexion, email)
 	if err != nil {
 		return auth.DirectoryAccount{}, err
 	}
@@ -82,13 +83,7 @@ func (l *LDAP) Login(email, password string) (auth.DirectoryAccount, error) {
 		return auth.DirectoryAccount{}, err
 	}
 
-	datos := auth.DirectoryAccount{
-		Origin:     auth.OriginAD,
-		ExternalID: primerValor(entrada, l.cfg.AttrID),
-		Email:      primerValor(entrada, l.cfg.AttrEmail),
-		Name:       primerValor(entrada, l.cfg.AttrName),
-		LastName:   primerValor(entrada, l.cfg.AttrLastName),
-	}
+	datos := l.cuenta(entrada)
 
 	// Sin correo no hay cuenta: el correo es el identificador de las personas en este producto.
 	if strings.TrimSpace(datos.Email) == "" {
@@ -122,7 +117,7 @@ func (l *LDAP) Knows(email string) (bool, error) {
 	}
 	defer conexion.Close()
 
-	entrada, err := l.buscar(conexion, email)
+	entrada, err := l.buscarUno(conexion, email)
 	if err != nil {
 		return false, err
 	}
@@ -184,20 +179,48 @@ func (l *LDAP) conectar() (*ldap.Conn, error) {
 }
 
 // buscar encuentra a la persona por su correo con el filtro configurado.
-func (l *LDAP) buscar(conexion *ldap.Conn, email string) (*ldap.Entry, error) {
-	filtro := fmt.Sprintf(l.cfg.UserFilter, ldap.EscapeFilter(email))
+func (l *LDAP) buscarUno(conexion *ldap.Conn, identificador string) (*ldap.Entry, error) {
+	entradas, err := l.buscar(conexion, identificador, false, 1)
+	if err != nil || len(entradas) == 0 {
+		return nil, err
+	}
+	return entradas[0], nil
+}
+
+// Search busca personas para la gestión de cuentas. Parcial añade comodines después de escapar el
+// texto; el límite evita convertir el endpoint en una descarga del directorio.
+func (l *LDAP) Search(query string, partial bool, limit int) ([]auth.DirectoryAccount, error) {
+	if !l.cfg.Configured() {
+		return nil, ErrDirectoryUnavailable
+	}
+	conexion, err := l.conectar()
+	if err != nil {
+		return nil, err
+	}
+	defer conexion.Close()
+	entradas, err := l.buscar(conexion, query, partial, limit)
+	if err != nil {
+		return nil, err
+	}
+	cuentas := make([]auth.DirectoryAccount, 0, len(entradas))
+	for _, entrada := range entradas {
+		cuentas = append(cuentas, l.cuenta(entrada))
+	}
+	return cuentas, nil
+}
+
+func (l *LDAP) buscar(conexion *ldap.Conn, identificador string, partial bool, limit int) ([]*ldap.Entry, error) {
+	filtro, usuario := l.filtroDeBusqueda(identificador, partial)
 
 	peticion := ldap.NewSearchRequest(
 		l.cfg.SearchBase,
 		ldap.ScopeWholeSubtree,
 		ldap.NeverDerefAliases,
-		// Un límite de uno: dos cuentas con el mismo correo en el directorio es un problema de allí, y
-		// aquí no se puede decidir cuál es.
-		1,
+		limit,
 		int(l.timeout.Seconds()),
 		false,
 		filtro,
-		[]string{l.cfg.AttrEmail, l.cfg.AttrName, l.cfg.AttrLastName, l.cfg.AttrID},
+		[]string{usuario, l.cfg.AttrEmail, l.cfg.AttrName, l.cfg.AttrLastName, l.cfg.AttrID},
 		nil,
 	)
 
@@ -206,10 +229,53 @@ func (l *LDAP) buscar(conexion *ldap.Conn, email string) (*ldap.Entry, error) {
 		return nil, ErrDirectoryUnavailable
 	}
 	if len(resultado.Entries) == 0 {
-		return nil, nil
+		return []*ldap.Entry{}, nil
 	}
 
-	return resultado.Entries[0], nil
+	return resultado.Entries, nil
+}
+
+func (l *LDAP) filtroDeBusqueda(identificador string, partial bool) (string, string) {
+	valor := ldap.EscapeFilter(strings.TrimSpace(identificador))
+	if partial {
+		valor = "*" + valor + "*"
+	}
+	base := strings.TrimSpace(l.cfg.UserFilter)
+	if base == "" {
+		base = "(objectClass=person)"
+	}
+	usuario := l.cfg.AttrUsername
+	if usuario == "" {
+		usuario = "sAMAccountName"
+	}
+	filtro := fmt.Sprintf("(&%s(|(%s=%s)(%s=%s)))", base, usuario, valor, l.cfg.AttrEmail, valor)
+	return filtro, usuario
+}
+
+func (l *LDAP) cuenta(entrada *ldap.Entry) auth.DirectoryAccount {
+	usuario := l.cfg.AttrUsername
+	if usuario == "" {
+		usuario = "sAMAccountName"
+	}
+	externalID := primerValor(entrada, l.cfg.AttrID)
+	if strings.EqualFold(l.cfg.AttrID, "objectGUID") {
+		externalID = guidCanonico(entrada.GetRawAttributeValue(l.cfg.AttrID))
+	}
+	if externalID == "" {
+		externalID = entrada.DN
+	}
+	return auth.DirectoryAccount{Origin: auth.OriginAD, ExternalID: externalID,
+		Username: primerValor(entrada, usuario), Email: primerValor(entrada, l.cfg.AttrEmail),
+		Name: primerValor(entrada, l.cfg.AttrName), LastName: primerValor(entrada, l.cfg.AttrLastName)}
+}
+
+func guidCanonico(raw []byte) string {
+	if len(raw) != 16 {
+		return ""
+	}
+	b := []byte{raw[3], raw[2], raw[1], raw[0], raw[5], raw[4], raw[7], raw[6], raw[8], raw[9], raw[10], raw[11], raw[12], raw[13], raw[14], raw[15]}
+	h := hex.EncodeToString(b)
+	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
 }
 
 // validar prueba las credenciales de la persona contra el directorio.

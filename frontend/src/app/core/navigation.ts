@@ -24,13 +24,7 @@ export interface EntradaDeMenu {
   readonly clavePorPapel?: Partial<Record<Papel, ClaveDeMenu>>;
   /** Qué icono lleva cuando el menú está plegado: los dibuja el propio componente. */
   readonly icono:
-    | 'dashboard'
-    | 'tickets'
-    | 'principales'
-    | 'internos'
-    | 'categorias'
-    | 'usuarios'
-    | 'configuracion';
+    'dashboard' | 'tickets' | 'principales' | 'categorias' | 'usuarios' | 'configuracion';
   readonly papeles: readonly Papel[];
 }
 
@@ -56,22 +50,16 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
     papeles: ['soporte', 'desarrollo', 'administrador'],
   },
   {
-    ruta: '/tickets',
+    ruta: '/my-tickets',
     clave: 'misTickets',
     clavePorPapel: { administrador: 'bandeja' },
     icono: 'tickets',
     papeles: ['usuario', 'soporte', 'desarrollo', 'administrador'],
   },
   {
-    ruta: '/tickets/main',
-    clave: 'ticketsPrincipales',
+    ruta: '/tickets',
+    clave: 'tickets',
     icono: 'principales',
-    papeles: ['soporte', 'desarrollo'],
-  },
-  {
-    ruta: '/tickets/internal',
-    clave: 'ticketsInternos',
-    icono: 'internos',
     papeles: ['soporte', 'desarrollo'],
   },
   {
@@ -82,9 +70,9 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
     ruta: '/tickets/categories',
     clave: 'categorias',
     icono: 'categorias',
-    papeles: ['soporte', 'administrador'],
+    papeles: ['administrador'],
   },
-  { ruta: '/users', clave: 'usuarios', icono: 'usuarios', papeles: ['soporte', 'administrador'] },
+  { ruta: '/users', clave: 'usuarios', icono: 'usuarios', papeles: ['administrador'] },
   { ruta: '/settings', clave: 'configuracion', icono: 'configuracion', papeles: ['administrador'] },
 ];
 
@@ -108,7 +96,7 @@ export function rutaDeMenuActiva(rutaActual: string): string | null {
   }
 
   if (ruta === '/tickets/new' || /^\/tickets\/[^/]+$/.test(ruta)) {
-    return '/tickets';
+    return '/my-tickets';
   }
 
   if (/^\/users\/[^/]+$/.test(ruta)) {

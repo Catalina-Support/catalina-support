@@ -1,7 +1,18 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 16 reserva todo el
+> módulo y la búsqueda administrativa de AD a la capacidad Administrador. Soporte sin Admin deja de
+> administrar cuentas; los buscadores de personas propios de tickets quedan fuera de este módulo.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** Enmienda la decisión anterior que
+> impedía dar de alta cuentas de directorio desde `/users`. Con AD como método vigente, Soporte y
+> Administrador podrán buscar por usuario o correo, seleccionar una persona y crear una cuenta
+> activa con los datos del directorio. Keycloak conserva el alta automática en el primer acceso
+> mientras no exista una cuenta de servicio capaz de consultar usuarios. El responsable cerró
+> 1A–15A, con 6B.
 >
 > **Implementado el 2026-10-18.** El módulo guarda un papel operativo y una capacidad administrativa
 > independiente, con auditoría y aviso persistente a la cuenta afectada.
@@ -174,12 +185,11 @@ Estos son los del módulo, y son los únicos: la lista de `auth` vive en `docs/m
 3. **Según el origen**:
    - `local`: se genera el enlace de alta y se le manda por correo. La cuenta **no puede entrar hasta
      que establece la contraseña**, porque no tiene ninguna.
-   - `ad` o `keycloak`: **no se dan de alta a mano**, y se contesta `users.origin.byDirectory`. Quien
-     está en el directorio **entra solo** con su cuenta y la suya se crea, se vincula o se pone al día
-     en ese primer acceso (`docs/modules/auth.md`, sección 5.4): crearla aquí antes de tiempo sería
-     una cuenta con la contraseña de otro sitio y con unos datos que envejecen solos. **La pantalla ya
-     no ofrece esos dos orígenes** (decisión 17), así que esto es la red que recoge a quien llame a la
-     API a mano.
+   - `ad`: cuando es el método vigente, se busca y selecciona a la persona en AD; el servidor vuelve
+     a consultarla y crea o vincula la cuenta sin contraseña local. El alta genérica continúa
+     rechazando datos de directorio escritos a mano.
+   - `keycloak`: no se da de alta a mano porque no existe una cuenta de servicio para buscar personas;
+     la cuenta nace o se actualiza al entrar.
 4. **Lo que le preguntamos al directorio**, y por qué no se le pregunta lo mismo en los dos
    caminos:
 
@@ -304,9 +314,9 @@ dos llevan el mismo enlace. El texto va en el idioma global de la instalación (
 | 14 | **El estado no se cambia por el `PATCH`** | El documento se contradecía: la tabla del `PATCH` incluye el estado, pero el mismo documento explica que desactivar tiene su propia ruta para que no pase por accidente. Manda el motivo: el `PATCH` responde `users.stateHasItsOwnAction` |
 | 13 | **Cambiar el origen, hoy** | Se comprueba lo que se puede (no a una cuenta de directorio activa) y **pasar a `ad` o `keycloak` se rechaza** mientras no exista la consulta al directorio; pasar a `local` sí funciona |
 | 6 | **Reenviar el enlace a una cuenta desactivada** | No: 409 `users.accountInactive`, porque sería prometer una entrada que no va a ocurrir |
-| 7 | **El alta de cuentas de directorio, por ahora** | Rechazada con `users.directory.notFound` mientras no exista la comprobación contra el directorio. **El 2026-09-25 el responsable decidió cómo queda cuando exista** (y ya existe): no se crean a mano y el mensaje lo dice (sección 5, punto 4) |
+| 7 | **El alta de cuentas de directorio** | Desde el 2026-10-20, AD se consulta desde `/users` cuando es el método vigente; Keycloak conserva el alta al entrar. La API genérica no acepta datos de directorio escritos a mano |
 | 20 | **Reactivar una cuenta de directorio** | **Pregunta al directorio** si lo sigue conociendo: si lo encuentra, se reactiva; si no, `users.directory.notFound`. Decidido el 2026-09-25 y **hecho ese mismo día**, con un alcance que se fijó al implementarlo: **en Keycloak no se pregunta** —pediría una cuenta de servicio en el reino— y su reactivación a mano se rechaza diciendo que vuelve sola al entrar |
-| 21 | **El mensaje del alta a mano y del cambio de origen** | Dejan de hablar del directorio —que sí conoce a esa persona— y dicen lo que pasa: **esas cuentas no se crean ni se cambian a mano, las pone el directorio al entrar**. Decidido el 2026-09-25 y **hecho** con una sola clave, `users.origin.byDirectory`, porque las dos situaciones se cuentan con la misma frase |
+| 21 | **El mensaje del alta a mano y del cambio de origen** | `users.origin.byDirectory` sigue protegiendo la API genérica y el cambio de origen. La preparación desde AD usa endpoints propios y datos vueltos a consultar en el servidor |
 | 8 | **La dirección de correo en el log** | Sí, por decisión del responsable: es lo que permite investigar un «no me ha llegado». Nunca contraseñas, tokens ni el contenido del correo |
 | 15 | **Dónde edita Soporte** | **En línea, desde la lista**, porque no ve la ficha de nadie (decisión 2). El hallazgo: sin ficha, su permiso de cambiar nombre y apellidos no tenía dónde ejercerse |
 | 16 | **El alta** | **Un diálogo sobre la lista**, no una pantalla: son seis campos, y al guardar se vuelve a donde se estaba |
@@ -378,3 +388,57 @@ sigue fuera de `users`, es Administrador puro y no tiene ficha, perfil ni papel 
 Migración, filtros, contratos, seeder y pruebas dejaron de interpretar Admin como papel operativo.
 La base de desarrollo confirmó la columna y la tabla de eventos; las pruebas del módulo pasaron el
 2026-10-18.
+
+## 15. Alta desde Active Directory en `/users`
+
+La decisión anterior «las cuentas de directorio no se crean a mano» queda enmendada. Se conserva el
+alta automática en el primer acceso, pero cuando **AD sea el método de entrada vigente** también se
+podrá preparar una cuenta desde `/users`:
+
+1. Soporte o Administrador busca por nombre de usuario o correo. La búsqueda empieza con tres
+   caracteres, admite coincidencia parcial y devuelve como máximo veinte personas.
+2. Cada resultado muestra nombre completo, nombre de usuario y correo. Sólo aparecen personas que
+   cumplen el filtro base de la instalación; una cuenta deshabilitada en AD no aparece.
+3. Se selecciona una persona y se asigna el papel. Soporte sólo puede elegir Usuario; Administrador
+   conserva el modelo vigente de papel operativo y capacidad administrativa.
+4. El servidor vuelve a consultar el identificador seleccionado antes de crear. Los datos enviados
+   por el navegador no sustituyen nombre, apellidos, correo ni GUID del directorio.
+5. La cuenta nace activa, con origen `ad`, sin contraseña local y sin correo de alta. Puede entrar
+   inmediatamente mientras AD sea el método vigente.
+
+`GET /api/users/directory?q=...` ofrece la búsqueda autenticada y
+`POST /api/users/directory` crea o vincula la selección. Ambos conservan los permisos de
+`POST /api/users`. La consulta LDAP la ejecuta `auth` detrás de una interfaz declarada por `users`;
+`users` no lee configuración ni importa código interno de `auth`.
+
+Si ya existe la pareja `ad/external_id`, no se duplica: se devuelve el conflicto identificable. Si
+el correo pertenece a una cuenta local, la API exige `confirmLink: true`; la primera respuesta
+explica que la contraseña local dejará de funcionar. Al confirmar, se conserva el identificador de
+la cuenta, se retira su contraseña local, se actualizan sus datos desde AD y se registra el cambio
+en la auditoría administrativa. Una colisión con otro origen de directorio no se convierte
+automáticamente.
+
+Keycloak se mantiene fuera de estos endpoints: sin una cuenta de servicio con permiso de consulta
+no hay una forma correcta de buscar personas. Sus cuentas continúan creándose, vinculándose o
+actualizándose al primer acceso. La interfaz lo explica y no simula una consulta que no existe.
+
+La verificación automatizada cubre el contrato de búsqueda/alta, las opciones por método y la
+composición escapada del filtro. La verificación real confirmó la entrada con usuario y con correo;
+la migración confirmó la tabla de auditoría. El backend vuelve a consultar la selección y conserva
+las validaciones de permisos, duplicado, confirmación de vínculo y ausencia de correo de alta.
+
+## 16. Administración exclusiva por capacidad Admin
+
+Lista, ficha, alta local, búsqueda y alta desde AD, edición, capacidad administrativa, reenvío de
+enlace, activación, desactivación y cambio de origen requieren `is_admin`. La cuenta de fábrica y
+cualquier cuenta combinada con capacidad Admin conservan todas las funciones. El rol Soporte por sí
+solo deja de autorizar cualquier endpoint de `/api/users/**` administrativo y cualquier pantalla de
+`/users`.
+
+Esta restricción no elimina los buscadores de personas que otros módulos necesitan para asignar,
+observar o mencionar dentro de tickets. Esos contratos siguen perteneciendo a su flujo operativo,
+devuelven sólo los datos mínimos y no permiten administrar cuentas ni consultar AD.
+
+Frontend, rutas y controladores aplican la misma regla. Las pruebas de navegación verifican el
+acceso de Administrador puro y de Soporte/Desarrollo + Admin, y la ausencia de entradas
+administrativas para un rol no autorizado; el middleware Admin protege la API.

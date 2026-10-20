@@ -126,6 +126,7 @@ export class SetupPage implements OnDestroy {
   protected readonly dirContrasena = signal('');
   protected readonly dirBase = signal('');
   protected readonly dirFiltro = signal('');
+  protected readonly dirUsuario = signal('');
   protected readonly dirCorreo = signal('');
   protected readonly dirNombre = signal('');
   protected readonly dirApellidos = signal('');
@@ -151,7 +152,7 @@ export class SetupPage implements OnDestroy {
   protected readonly correoContrasena = signal('');
   protected readonly correoNombre = signal('');
   protected readonly correoCorreo = signal('');
-	protected readonly correoDestinoPrueba = signal('');
+  protected readonly correoDestinoPrueba = signal('');
 
   // --- Paso 5 · la IA obligatoria ---
   protected readonly iaModo = signal<'local' | 'remote' | 'provider'>('local');
@@ -317,7 +318,9 @@ export class SetupPage implements OnDestroy {
   protected cambiarModoIA(valor: string): void {
     const modo = valor as 'local' | 'remote' | 'provider';
     this.iaModo.set(modo);
-    this.iaProveedor.set(modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai');
+    this.iaProveedor.set(
+      modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai',
+    );
     if (modo === 'local') {
       this.iaDireccion.set('http://ai:8080');
       this.iaModelo.set('qwen2.5-1.5b-instruct');
@@ -349,9 +352,21 @@ export class SetupPage implements OnDestroy {
 
   protected opcionesDeModeloLocal(): readonly OpcionSelector[] {
     return [
-      { valor: 'qwen2.5-1.5b-instruct', etiqueta: 'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB', grupo: this.t().configuracion.iaLocal },
-      { valor: 'qwen2.5-3b-instruct', etiqueta: 'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB', grupo: this.t().configuracion.iaLocal },
-      { valor: 'qwen2.5-7b-instruct', etiqueta: 'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB', grupo: this.t().configuracion.iaLocal },
+      {
+        valor: 'qwen2.5-1.5b-instruct',
+        etiqueta: 'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
+      {
+        valor: 'qwen2.5-3b-instruct',
+        etiqueta: 'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
+      {
+        valor: 'qwen2.5-7b-instruct',
+        etiqueta: 'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
     ];
   }
 
@@ -364,13 +379,24 @@ export class SetupPage implements OnDestroy {
       { valor: 'basic', etiqueta: t.iaAuth_basic, grupo: t.iaAutenticacion },
     ];
   }
-  protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected formatoBytes(bytes: number): string {
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`;
+  }
   protected descripcionAceleracion(catalogo: CatalogoLocalDeIA): string {
-    const configured = catalogo.accelerationMode === 'auto' ? this.t().configuracion.iaAceleracionAuto : catalogo.accelerationMode === 'nvidia' ? 'NVIDIA' : 'CPU';
+    const configured =
+      catalogo.accelerationMode === 'auto'
+        ? this.t().configuracion.iaAceleracionAuto
+        : catalogo.accelerationMode === 'nvidia'
+          ? 'NVIDIA'
+          : 'CPU';
     const effective = catalogo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU';
     return `${configured} · ${effective}${catalogo.deviceName && catalogo.deviceName !== effective ? ` · ${catalogo.deviceName}` : ''}`;
   }
-  protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
+  protected aceptarLicencia(id: string, accepted: boolean): void {
+    const next = new Set(this.licenciasAceptadas());
+    accepted ? next.add(id) : next.delete(id);
+    this.licenciasAceptadas.set(next);
+  }
   protected async cargarCatalogoIA(): Promise<void> {
     if (this.refrescandoCatalogo()) return;
     this.refrescandoCatalogo.set(true);
@@ -383,24 +409,138 @@ export class SetupPage implements OnDestroy {
       this.refrescandoCatalogo.set(false);
     }
   }
-  protected async descargarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{this.iaModelo.set(id);await this.setup.descargarModelo(id,this.licenciasAceptadas().has(id));await this.refrescarCatalogo();}); }
-  protected async activarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.setup.modelosLocales());}); }
-  protected async desactivarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.desactivarModelo(id);this.iaModelo.set('');this.catalogoIA.set(await this.setup.modelosLocales());}); }
-  protected pedirEliminarModelo(id: string): void { this.confirmacionModelo.set({ id, parcial: false }); }
-  protected async cancelarDescarga(id:string):Promise<void>{await this.accionModelo(async()=>{await this.setup.cancelarDescarga(id);await this.refrescarCatalogo();});}
-  protected pedirEliminarParcial(id:string):void{this.confirmacionModelo.set({id,parcial:true});}
-  protected async confirmarEliminacion():Promise<void>{const pendiente=this.confirmacionModelo();if(!pendiente)return;this.confirmacionModelo.set(null);await this.accionModelo(async()=>{if(pendiente.parcial){await this.setup.eliminarParcial(pendiente.id);await this.refrescarCatalogo();}else{await this.setup.eliminarModelo(pendiente.id);this.catalogoIA.set(await this.setup.modelosLocales());}});}
-  protected progreso(modelo:{downloadedBytes:number;downloadBytes:number}):number{return modelo.downloadBytes>0?Math.min(100,Math.round(modelo.downloadedBytes*100/modelo.downloadBytes)):0;}
-  protected modeloLocalListo():boolean{return !!this.catalogoIA()?.models.some(m=>m.active&&m.healthy);}
-  protected elegirLogo(oscuro:boolean,event:Event):void{const file=(event.target as HTMLInputElement).files?.[0]??null;oscuro?this.logoOscuro.set(file):this.logoClaro.set(file);if(file)void this.subirLogo(oscuro,file);}
-  private async subirLogo(oscuro:boolean,file:File):Promise<void>{await this.accionModelo(async()=>{await this.setup.subirLogo(oscuro,file);await this.marca.cargar();});}
-  protected async restaurarLogo(oscuro:boolean):Promise<void>{await this.accionModelo(async()=>{await this.setup.restablecerLogo(oscuro);await this.marca.cargar();});}
-  protected urlLogo(oscuro:boolean):string{return this.marca.urlDelLogo(oscuro);}
-  protected async previsualizarColor(valor:string):Promise<void>{this.colorElegido.set(valor);if(!/^#[0-9a-fA-F]{6}$/.test(valor)){this.colorResuelto.set(null);return;}try{const marca=await this.marca.previsualizarColor(valor);this.colorResuelto.set(marca.colors);this.aplicarVistaPrevia(marca.colors);}catch{this.colorResuelto.set(null);}}
-  protected async probarModeloActivo():Promise<void>{await this.accionModelo(async()=>{const saludo=await this.setup.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting,aceleracion:`${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`})});});}
-  private async refrescarCatalogo():Promise<void>{const catalogo=await this.setup.modelosLocales();this.catalogoIA.set(catalogo);const activo=catalogo.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=catalogo.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
-  ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
-  private async accionModelo(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
+  protected async descargarModelo(id: string): Promise<void> {
+    await this.accionModelo(async () => {
+      this.iaModelo.set(id);
+      await this.setup.descargarModelo(id, this.licenciasAceptadas().has(id));
+      await this.refrescarCatalogo();
+    });
+  }
+  protected async activarModelo(id: string): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.activarModelo(id);
+      this.iaModelo.set(id);
+      this.iaDireccion.set('http://ai:8080');
+      this.catalogoIA.set(await this.setup.modelosLocales());
+    });
+  }
+  protected async desactivarModelo(id: string): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.desactivarModelo(id);
+      this.iaModelo.set('');
+      this.catalogoIA.set(await this.setup.modelosLocales());
+    });
+  }
+  protected pedirEliminarModelo(id: string): void {
+    this.confirmacionModelo.set({ id, parcial: false });
+  }
+  protected async cancelarDescarga(id: string): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.cancelarDescarga(id);
+      await this.refrescarCatalogo();
+    });
+  }
+  protected pedirEliminarParcial(id: string): void {
+    this.confirmacionModelo.set({ id, parcial: true });
+  }
+  protected async confirmarEliminacion(): Promise<void> {
+    const pendiente = this.confirmacionModelo();
+    if (!pendiente) return;
+    this.confirmacionModelo.set(null);
+    await this.accionModelo(async () => {
+      if (pendiente.parcial) {
+        await this.setup.eliminarParcial(pendiente.id);
+        await this.refrescarCatalogo();
+      } else {
+        await this.setup.eliminarModelo(pendiente.id);
+        this.catalogoIA.set(await this.setup.modelosLocales());
+      }
+    });
+  }
+  protected progreso(modelo: { downloadedBytes: number; downloadBytes: number }): number {
+    return modelo.downloadBytes > 0
+      ? Math.min(100, Math.round((modelo.downloadedBytes * 100) / modelo.downloadBytes))
+      : 0;
+  }
+  protected modeloLocalListo(): boolean {
+    return !!this.catalogoIA()?.models.some((m) => m.active && m.healthy);
+  }
+  protected elegirLogo(oscuro: boolean, event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    oscuro ? this.logoOscuro.set(file) : this.logoClaro.set(file);
+    if (file) void this.subirLogo(oscuro, file);
+  }
+  private async subirLogo(oscuro: boolean, file: File): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.subirLogo(oscuro, file);
+      await this.marca.cargar();
+    });
+  }
+  protected async restaurarLogo(oscuro: boolean): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.restablecerLogo(oscuro);
+      await this.marca.cargar();
+    });
+  }
+  protected urlLogo(oscuro: boolean): string {
+    return this.marca.urlDelLogo(oscuro);
+  }
+  protected async previsualizarColor(valor: string): Promise<void> {
+    this.colorElegido.set(valor);
+    if (!/^#[0-9a-fA-F]{6}$/.test(valor)) {
+      this.colorResuelto.set(null);
+      return;
+    }
+    try {
+      const marca = await this.marca.previsualizarColor(valor);
+      this.colorResuelto.set(marca.colors);
+      this.aplicarVistaPrevia(marca.colors);
+    } catch {
+      this.colorResuelto.set(null);
+    }
+  }
+  protected async probarModeloActivo(): Promise<void> {
+    await this.accionModelo(async () => {
+      const saludo = await this.setup.probarModeloActivo();
+      this.mensaje.set({
+        forma: 'exito',
+        texto: this.interpolar(this.t().configuracion.iaSaludo, {
+          modelo: saludo.modelName,
+          saludo: saludo.greeting,
+          aceleracion: `${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`,
+        }),
+      });
+    });
+  }
+  private async refrescarCatalogo(): Promise<void> {
+    const catalogo = await this.setup.modelosLocales();
+    this.catalogoIA.set(catalogo);
+    const activo = catalogo.models.find((m) => m.active);
+    if (activo) this.iaModelo.set(activo.id);
+    const busy = catalogo.models.some((m) =>
+      ['downloading', 'validating', 'activating', 'testing'].includes(m.phase),
+    );
+    if (busy && !this.refrescoIA)
+      this.refrescoIA = setInterval(() => void this.refrescarCatalogo(), 1000);
+    if (!busy && this.refrescoIA) {
+      clearInterval(this.refrescoIA);
+      this.refrescoIA = null;
+    }
+  }
+  ngOnDestroy(): void {
+    if (this.refrescoIA) clearInterval(this.refrescoIA);
+  }
+  private async accionModelo(action: () => Promise<void>): Promise<void> {
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      await action();
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.guardando.set(false);
+    }
+  }
 
   /** La explicación del método elegido. */
   protected ayudaDelMetodo(): string {
@@ -516,16 +656,21 @@ export class SetupPage implements OnDestroy {
    * Completa el envío real al destinatario efímero y no guarda los datos.
    */
   protected async probarCorreo(): Promise<void> {
-	this.guardando.set(true);
-	this.mensaje.set(null);
-	try {
-	  const resultado = await this.setup.probarCorreo({ mail: { ...this.correoEscrito(), testRecipient: this.correoDestinoPrueba().trim() } });
-	  this.mensaje.set({ forma: 'exito', texto: interpolar(this.t().instalacion.correoOk, { destinatario: resultado.recipient }) });
-	} catch (error) {
-	  this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
-	} finally {
-	  this.guardando.set(false);
-	}
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      const resultado = await this.setup.probarCorreo({
+        mail: { ...this.correoEscrito(), testRecipient: this.correoDestinoPrueba().trim() },
+      });
+      this.mensaje.set({
+        forma: 'exito',
+        texto: interpolar(this.t().instalacion.correoOk, { destinatario: resultado.recipient }),
+      });
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   /** Una prueba de conexión: no guarda nada y cuenta lo que ha pasado en el aviso de arriba. */
@@ -583,9 +728,12 @@ export class SetupPage implements OnDestroy {
               ? this.setup.guardarCorreo({ mail: this.correoEscrito() })
               : this.setup.guardarIA({
                   ai: {
-                    mode: this.iaModo(), provider: this.iaProveedor(),
-                    baseUrl: this.iaDireccion().trim(), model: this.iaModelo().trim(),
-                    authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
+                    mode: this.iaModo(),
+                    provider: this.iaProveedor(),
+                    baseUrl: this.iaDireccion().trim(),
+                    model: this.iaModelo().trim(),
+                    authType: this.iaAutenticacion(),
+                    authHeader: this.iaCabecera().trim(),
                     credential: this.iaCredencial(),
                     privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(),
                     language: this.idioma(),
@@ -612,6 +760,7 @@ export class SetupPage implements OnDestroy {
       bindDn: this.dirCuenta().trim(),
       searchBase: this.dirBase().trim(),
       userFilter: this.dirFiltro().trim(),
+      attrUsername: this.dirUsuario().trim(),
       attrEmail: this.dirCorreo().trim(),
       attrName: this.dirNombre().trim(),
       attrLastName: this.dirApellidos().trim(),
@@ -671,6 +820,7 @@ export class SetupPage implements OnDestroy {
     this.dirContrasena.set('');
     this.dirBase.set(estado.directory.searchBase);
     this.dirFiltro.set(estado.directory.userFilter);
+    this.dirUsuario.set(estado.directory.attrUsername ?? '');
     this.dirCorreo.set(estado.directory.attrEmail);
     this.dirNombre.set(estado.directory.attrName);
     this.dirApellidos.set(estado.directory.attrLastName);
@@ -707,7 +857,8 @@ export class SetupPage implements OnDestroy {
     const memory = memoriaDelError(error);
     if (key === 'settings.ai.insufficientMemory' && memory) {
       return interpolar(this.textos.error(key), {
-        requerida: this.formatoBytes(memory.requiredBytes), disponible: this.formatoBytes(memory.availableBytes),
+        requerida: this.formatoBytes(memory.requiredBytes),
+        disponible: this.formatoBytes(memory.availableBytes),
       });
     }
     return this.textos.error(key);

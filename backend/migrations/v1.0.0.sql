@@ -292,6 +292,20 @@ CREATE TABLE IF NOT EXISTS user_admin_events (
 CREATE INDEX IF NOT EXISTS user_admin_events_user_created_idx
     ON user_admin_events (user_id, created_at DESC);
 
+-- Deja constancia de las altas preparadas desde /users y, sobre todo, de la decisión explícita de
+-- enlazar una cuenta local existente con la identidad que devolvió Active Directory.
+CREATE TABLE IF NOT EXISTS user_directory_events (
+    id            bigserial PRIMARY KEY,
+    user_id       bigint      NOT NULL REFERENCES users(id),
+    actor_user_id bigint      REFERENCES users(id),
+    actor_label   text        NOT NULL,
+    action        text        NOT NULL,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT user_directory_events_action_check CHECK (action IN ('created', 'linked'))
+);
+CREATE INDEX IF NOT EXISTS user_directory_events_user_created_idx
+    ON user_directory_events (user_id, created_at DESC);
+
 -- La clave ajena que faltaba en mail_templates, ahora que existe la tabla de cuentas.
 DO $$
 BEGIN
@@ -476,8 +490,9 @@ CREATE TABLE IF NOT EXISTS directory_settings (
     bind_dn        text        NOT NULL DEFAULT '',
     bind_password  text        NOT NULL DEFAULT '',
     search_base    text        NOT NULL DEFAULT '',
-    -- El filtro, con `%s` donde va el correo de quien entra.
-    user_filter    text        NOT NULL DEFAULT '(mail=%s)',
+    -- Condición base de seguridad; la aplicación añade usuario/correo con escape LDAP.
+    user_filter    text        NOT NULL DEFAULT '(objectClass=person)',
+    attr_username  text        NOT NULL DEFAULT 'sAMAccountName',
     attr_email     text        NOT NULL DEFAULT 'mail',
     attr_name      text        NOT NULL DEFAULT 'givenName',
     attr_last_name text        NOT NULL DEFAULT 'sn',
@@ -488,6 +503,20 @@ CREATE TABLE IF NOT EXISTS directory_settings (
 
 COMMENT ON TABLE directory_settings IS
     'La configuración del directorio de la organización (AD por LDAP): una sola fila, editable desde la pantalla.';
+
+ALTER TABLE directory_settings ADD COLUMN IF NOT EXISTS attr_username text NOT NULL DEFAULT 'sAMAccountName';
+
+-- Transición de las plantillas antiguas al filtro base. Los dos valores conocidos se convierten sin
+-- perder la condición que excluye cuentas deshabilitadas; una plantilla personalizada permanece
+-- visible para que Configuración la rechace y el administrador la corrija explícitamente.
+UPDATE directory_settings
+SET user_filter = CASE
+    WHEN user_filter = '(mail=%s)' THEN '(objectClass=person)'
+    WHEN user_filter LIKE '%(sAMAccountName=%s)%' THEN replace(user_filter, '(sAMAccountName=%s)', '')
+    ELSE user_filter
+END,
+attr_username = CASE WHEN attr_username = '' THEN 'sAMAccountName' ELSE attr_username END
+WHERE user_filter IN ('(mail=%s)') OR user_filter LIKE '%(sAMAccountName=%s)%' OR attr_username = '';
 
 -- Keycloak (OIDC). Igual: el emisor vacío es «no hay este camino», y el secreto del cliente no sale
 -- nunca por la API.

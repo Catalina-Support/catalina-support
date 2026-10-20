@@ -120,6 +120,7 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 			BindDN:       estado.Directory.BindDN,
 			SearchBase:   estado.Directory.SearchBase,
 			UserFilter:   estado.Directory.UserFilter,
+			AttrUsername: estado.Directory.AttrUsername,
 			AttrEmail:    estado.Directory.AttrEmail,
 			AttrName:     estado.Directory.AttrName,
 			AttrLastName: estado.Directory.AttrLastName,

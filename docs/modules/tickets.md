@@ -1,7 +1,11 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 31 fusiona las listas
+> generales en un solo módulo **Tickets**, con Principales como vista inicial e Internos como vista
+> alternativa. El responsable cerró 1A–25A salvo 6B, 12B, 14B, 20B y 25B.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 30 añade comentarios públicos y privados en el
 > ticket principal. Sustituye expresamente la regla que remitía toda conversación interna al ticket
@@ -1809,3 +1813,24 @@ resúmenes de IA (8A y 24A), avisos internos (9A, 21A–23A), menciones vigentes
 (15C), Desarrollo sólo privado (16A), Soporte con ambos tipos (17A), movimientos públicos (18A),
 búsqueda por audiencia (19A), adjuntos ajenos como 404 (20A), regeneración inmediata de IA (25A) y
 lectura administrativa sin edición (26A). No quedan decisiones abiertas.
+
+## 31. Lista general unificada de tickets
+
+Soporte, Desarrollo y las cuentas combinadas que tengan uno de esos roles disponen de un único
+módulo **Tickets**. Dentro se elige **Principales** o **Internos**; Principales es siempre la vista
+inicial al entrar desde el menú. **Mis tickets** permanece separado y conserva su alcance personal.
+
+La dirección canónica es `/tickets?type=main|internal`. `/tickets` y cualquier `type` desconocido
+se normalizan a `?type=main`. Cambiar de opción actualiza la URL y Atrás/Adelante restaura la vista.
+Las rutas antiguas de las dos listas se eliminan sin redirecciones: no se conserva código de
+compatibilidad y responden 404.
+
+Cada vista mantiene por separado búsqueda, filtros, orden y datos cargados mientras se permanece en
+la pantalla. El selector no muestra cantidades. Desarrollo puede consultar principales y comentar
+en ellos, pero todo comentario suyo nace obligatoriamente `private`; no recibe selector de
+visibilidad ni puede publicar. Soporte y Desarrollo pueden leer esas notas privadas, además de las
+cuentas combinadas con esos roles; el Usuario nunca las recibe.
+
+Los contratos de lista comparten pantalla y estado, pero los permisos y consultas de
+principal e interno siguen siendo explícitos en el backend. Las pruebas verifican navegación,
+permisos combinados y la visibilidad privada forzada para Desarrollo.

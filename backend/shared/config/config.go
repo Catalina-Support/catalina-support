@@ -31,10 +31,11 @@ type Directory struct {
 	UseTLS   bool
 	BindDN   string
 	BindPass string
-	// SearchBase es dónde se busca, y UserFilter el filtro con `%s` donde va el identificador.
+	// SearchBase es dónde se busca, y UserFilter la condición base que limita las cuentas permitidas.
 	SearchBase string
 	UserFilter string
-	// Los atributos de los que salen el correo, el nombre, los apellidos y el identificador.
+	// Los atributos de los que salen el usuario, el correo, el nombre, los apellidos y el identificador.
+	AttrUsername string
 	AttrEmail    string
 	AttrName     string
 	AttrLastName string

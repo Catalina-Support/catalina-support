@@ -1,7 +1,17 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 49 sustituye las dos
+> entradas generales por **Tickets**, reserva Usuarios y Clasificación a Admin y repasa la
+> terminología visible completa del área de tickets.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** El diálogo de alta de `/users`
+> incorpora búsqueda de Active Directory por usuario o correo cuando AD es el método vigente,
+> resultados seleccionables y confirmación explícita al vincular una cuenta local. Keycloak se
+> muestra deshabilitado explicando que la cuenta nace en el primer acceso. Decisiones 4A–15A, con
+> 6B, cerradas por el responsable.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 47 añade el selector **Public / Private** al
 > editor del principal, distingue visualmente las notas privadas y garantiza su ausencia total en la
@@ -460,8 +470,8 @@
 > **Enmendado el 2026-09-25**, al implementar las tres acciones que dependían del
 > directorio: en las pantallas de usuarios, **reactivar sólo se ofrece donde puede funcionar** —en una
 > cuenta de AD sí, y en una de Keycloak no, con lo que pasa contado en su lugar— y **la nota del
-> origen** dice ya lo que ocurre de verdad: las cuentas de directorio no se dan de alta desde aquí
-> porque entran solas (`docs/modules/users.md`, sección 5, punto 4).
+> origen** distingue lo que ocurre: AD puede consultarse desde el alta cuando es el método vigente;
+> Keycloak continúa creando la cuenta al entrar (`docs/modules/users.md`, sección 15).
 >
 > Aprobado por el responsable el 2026-09-22, tras repasarlo en forma de preguntas mientras se
 > escribía: **no hay barra superior** —el menú lateral lleva el producto, las opciones del papel y,
@@ -818,10 +828,9 @@ Son **las primeras pantallas de producto**, y son tres, cada una con su direcci�
   (`docs/modules/users.md`, sección 5, punto 4). **La interfaz no ofrece lo que no se puede hacer.**
 - **El botón de desactivar no se ofrece sobre uno mismo** (`docs/modules/users.md`, sección 7):
   desactivarse es quedarse fuera al instante y sin poder volver.
-- **El origen se ofrece con sus tres valores, y `ad` y `keycloak` salen desactivados**, con una nota
-  que dice lo que pasa: **las cuentas de directorio no se dan de alta desde aquí**, porque quien está
-  en el directorio entra con su cuenta y la suya se crea sola en ese primer acceso
-  (`docs/modules/users.md`, sección 5, punto 4).
+- **El origen se ofrece con sus tres valores**: `ad` se habilita sólo cuando es el método vigente y
+  abre la búsqueda del directorio; `keycloak` permanece desactivado y explica que la cuenta se crea
+  en el primer acceso (`docs/modules/users.md`, sección 15).
 - **El perfil propio se abre desde tu nombre**, en la zona de controles del menú (sección 3.1), y
   lleva **tu nombre, tus apellidos y tu idioma**, más el enlace a cambiar la contraseña. El idioma se
   cambia aquí y en los controles: es el mismo ajuste, y es el que decide en qué idioma se te escriben
@@ -2781,8 +2790,9 @@ color nunca es la única diferencia. Las barras usan `bg-primario`, `text-primar
 apilan. La serie es diaria hasta 31 días y semanal desde 32; sólo rotula fechas que caben y conserva
 la fecha exacta de cada punto de forma accesible.
 
-La única exportación visible genera `report_AAAA-MM-DD_AAAA-MM-DD.xlsx`, localizado y dividido en
-seis hojas agregadas, sin gráficas incrustadas ni datos individuales. La verificación recorrerá
+La única exportación visible se presenta como un botón con un icono de descarga a la izquierda de
+«XLSX» y genera `report_AAAA-MM-DD_AAAA-MM-DD.xlsx`, localizado y dividido en seis hojas agregadas,
+sin gráficas incrustadas ni datos individuales. La verificación recorrerá
 escritorio y móvil, los ocho temas y ambos idiomas, y comprobará dimensiones y colores computados,
 etiquetas temporales, ausencia de tickets y contenido del libro.
 
@@ -2858,3 +2868,59 @@ Al escalar, la nota no se duplica en el hilo interno. En vista doble permanece e
 principal; si se mira sólo el interno se consulta cambiando de vista. Las pruebas recorren los ocho
 temas, ambos idiomas, PC y móvil, teclado y lector de pantalla, además de comprobar que el DOM del
 Usuario no contiene el comentario ni sus adjuntos.
+
+## 48. Buscar y crear una cuenta de Active Directory
+
+El diálogo de alta de `/users` conserva **Cuentas de la aplicación** para el alta local. Cuando AD
+sea el método vigente añade **Directorio de la organización**. Keycloak aparece deshabilitado con
+la explicación «La cuenta se crea en su primer acceso»; si el método vigente no es AD, su búsqueda
+no se ofrece.
+
+La vista de directorio empieza con un solo campo **Usuario o correo**. Antes de tres caracteres no
+consulta y muestra una ayuda breve. Después espera la pausa de escritura, cancela la petición
+anterior y presenta hasta veinte resultados con nombre completo, usuario y correo. Tiene estados
+distintos para buscando, sin coincidencias y directorio no disponible; teclado y lector de pantalla
+pueden recorrer y seleccionar cada resultado.
+
+Después de seleccionar se elige el papel con los límites actuales: Soporte sólo Usuario y
+Administrador los papeles/capacidad que ya administra. No se editan nombre, apellidos ni correo,
+porque vienen de AD. Crear vuelve a la lista, conserva filtros y muestra el resultado en el toast
+común. No manda correo de alta.
+
+En la interfaz en español, los rótulos visibles de cuenta dicen **Rol** —en el alta, los filtros,
+las columnas y el perfil— por ser el término más directo para quien administra usuarios. El modelo
+interno y los permisos no cambian.
+
+Si el correo ya corresponde a una cuenta local, el diálogo temático explica antes de confirmar que
+se conservará esa cuenta, pasará a AD y su contraseña local dejará de funcionar. Cancelar no cambia
+nada. La confirmación no se reutiliza para otra persona ni sobrevive al cierre del diálogo.
+
+Las pruebas automatizadas verifican las opciones según el método, que Keycloak no parezca
+consultable y el contrato de búsqueda y alta. La suite completa del frontend (249 casos), sus
+fronteras y la compilación de producción pasaron el 2026-10-20.
+
+## 49. Navegación unificada y módulos administrativos
+
+El menú de Soporte y Desarrollo sustituye **Tickets principales** y **Tickets internos** por una
+sola entrada **Tickets**. **Mis tickets** permanece independiente. Al entrar, la pantalla abre
+**Principales** y presenta un selector segmentado **Principales / Internos**; en móvil ese control se
+convierte en un desplegable para no comprimir las dos etiquetas.
+
+El selector escribe `type=main|internal` en la URL y responde al historial del navegador. Cada lado
+conserva sus propios filtros mientras la pantalla sigue montada. No muestra contadores. Las antiguas
+rutas desaparecen sin redirección, y el menú siempre enlaza a `/tickets?type=main`.
+
+En la vista principal, Desarrollo ve un editor rotulado **Comentario interno**. Todo lo que publique
+allí es privado automáticamente: no aparece selector de visibilidad ni un control bloqueado. Soporte
+y Desarrollo pueden leerlo; el Usuario no puede inferirlo. Soporte conserva en sus propios
+comentarios el selector público/privado vigente.
+
+**Clasificación** y **Usuarios** sólo aparecen cuando la identidad tiene capacidad Administrador.
+Una cuenta combinada ordena su menú como Panel, Mis tickets, Tickets, Clasificación, Usuarios y
+Configuración. El Administrador puro conserva su navegación administrativa y no recibe Tickets.
+
+La terminología visible del área se repasa completa en español e inglés: nombres de módulos,
+encabezados, filtros, botones, ayudas y estados. Se conservan los conceptos **Mis tickets**,
+**ticket principal** y **ticket interno**; el repaso elimina mezclas y nombres antiguos, no cambia el
+modelo. Las 249 pruebas del frontend, sus fronteras y la compilación de producción pasaron el
+2026-10-20; la navegación cubre roles puros y combinados y ausencia de entradas no autorizadas.

@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** Precisa que el filtro LDAP
+> configurado es la condición base de seguridad y que la aplicación añade la búsqueda escapada por
+> `sAMAccountName` o `mail`; el identificador `objectGUID` se normaliza como GUID canónico. No añade
+> credenciales de administración de Keycloak: su alta manual queda fuera de alcance (6B).
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: correo real de prueba.** La sección 23 hace que
 > `/setup` y Configuración pidan un destinatario efímero y prueben los datos escritos mediante un
 > envío real. La prueba sigue sin guardar configuración y es opcional. El responsable cerró y
@@ -294,7 +299,8 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `bind_dn` | `text` | no | `''` | La cuenta de servicio con la que se busca a la gente |
 | `bind_password` | `text` | no | `''` | La contraseña de esa cuenta: **no sale nunca por la API** |
 | `search_base` | `text` | no | `''` | Dónde se busca |
-| `user_filter` | `text` | no | `'(mail=%s)'` | El filtro, con `%s` donde va el correo de quien entra |
+| `user_filter` | `text` | no | `'(objectClass=person)'` | La condición base que limita las cuentas admitidas |
+| `attr_username` | `text` | no | `'sAMAccountName'` | El atributo del nombre de usuario |
 | `attr_email` | `text` | no | `'mail'` | De qué atributo sale el correo |
 | `attr_name` | `text` | no | `'givenName'` | De cuál, el nombre |
 | `attr_last_name` | `text` | no | `'sn'` | De cuál, los apellidos |
@@ -1162,3 +1168,24 @@ de `plain`, se aplica exactamente como en un envío normal.
 pareja IP–destinatario en quince minutos. La tarjeta autenticada dispone de la acción equivalente
 bajo `/api/settings/**`, protegida por capacidad administrativa. El éxito devuelve el destinatario
 aceptado para construir el toast preciso, sin afirmar entrega final.
+
+## 24. Condición base y atributo de usuario de Active Directory
+
+`directory_settings` añade `attr_username`, con `sAMAccountName` como valor inicial para Active
+Directory; los datos de OpenLDAP usan `uid`. `attr_email` continúa siendo el correo y `attr_id` el
+identificador estable.
+
+`user_filter` pasa a representar exclusivamente la **condición base de seguridad**: clases de
+objeto, ámbito organizativo y exclusión de cuentas deshabilitadas. No recibe texto escrito por una
+persona. Para entrada exacta y búsqueda administrativa, `auth` combina esa condición con otra
+generada y escapada sobre `attr_username` y `attr_email`.
+
+La migración abierta de `v1.0.0.sql` actualiza los valores conocidos de desarrollo y la instalación
+actual sin conservar una plantilla ambigua. Una configuración heredada que aún contenga `%s` se
+rechaza con una clave específica y debe guardarse de nuevo como condición base; nunca se ejecuta
+reinterpretándola silenciosamente. La tarjeta explica el nuevo significado y prueba conexión,
+credenciales de servicio y validez sintáctica del filtro, sin buscar ni exponer personas.
+
+No se añaden campos ni secretos para administración de Keycloak. Hasta disponer de una cuenta de
+servicio autorizada, Configuración conserva OIDC para el acceso y `/users` conserva allí el alta en
+el primer ingreso.

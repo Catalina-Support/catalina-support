@@ -182,6 +182,7 @@ type DirectoryInput struct {
 	BindPassword string
 	SearchBase   string
 	UserFilter   string
+	AttrUsername string
 	AttrEmail    string
 	AttrName     string
 	AttrLastName string
@@ -1212,6 +1213,7 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 		BindPass:     input.BindPassword,
 		SearchBase:   strings.TrimSpace(input.SearchBase),
 		UserFilter:   strings.TrimSpace(input.UserFilter),
+		AttrUsername: strings.TrimSpace(input.AttrUsername),
 		AttrEmail:    strings.TrimSpace(input.AttrEmail),
 		AttrName:     strings.TrimSpace(input.AttrName),
 		AttrLastName: strings.TrimSpace(input.AttrLastName),
@@ -1223,7 +1225,13 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 		directorio.Port = "389"
 	}
 	if directorio.UserFilter == "" {
-		directorio.UserFilter = "(mail=%s)"
+		directorio.UserFilter = "(objectClass=person)"
+	}
+	if strings.Contains(directorio.UserFilter, "%s") {
+		return config.Directory{}, ErrDirectoryIncomplete
+	}
+	if directorio.AttrUsername == "" {
+		directorio.AttrUsername = "sAMAccountName"
 	}
 	if directorio.AttrEmail == "" {
 		directorio.AttrEmail = "mail"
@@ -1298,6 +1306,7 @@ func (s *Service) cambiosDeDirectorio(directorio config.Directory) map[string]an
 		"bind_dn":        directorio.BindDN,
 		"search_base":    directorio.SearchBase,
 		"user_filter":    directorio.UserFilter,
+		"attr_username":  directorio.AttrUsername,
 		"attr_email":     directorio.AttrEmail,
 		"attr_name":      directorio.AttrName,
 		"attr_last_name": directorio.AttrLastName,
@@ -1335,6 +1344,7 @@ func directorioDe(fila repositories.DirectorySettings) config.Directory {
 		BindPass:     fila.BindPassword,
 		SearchBase:   fila.SearchBase,
 		UserFilter:   fila.UserFilter,
+		AttrUsername: fila.AttrUsername,
 		AttrEmail:    fila.AttrEmail,
 		AttrName:     fila.AttrName,
 		AttrLastName: fila.AttrLastName,
@@ -1363,6 +1373,7 @@ func vistaDeDirectorio(fila repositories.DirectorySettings) DirectoryView {
 			BindDN:       fila.BindDN,
 			SearchBase:   fila.SearchBase,
 			UserFilter:   fila.UserFilter,
+			AttrUsername: fila.AttrUsername,
 			AttrEmail:    fila.AttrEmail,
 			AttrName:     fila.AttrName,
 			AttrLastName: fila.AttrLastName,

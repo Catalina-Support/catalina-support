@@ -92,6 +92,7 @@ type DirectorySettings struct {
 	BindPassword string    `gorm:"column:bind_password"`
 	SearchBase   string    `gorm:"column:search_base"`
 	UserFilter   string    `gorm:"column:user_filter"`
+	AttrUsername string    `gorm:"column:attr_username"`
 	AttrEmail    string    `gorm:"column:attr_email"`
 	AttrName     string    `gorm:"column:attr_name"`
 	AttrLastName string    `gorm:"column:attr_last_name"`
