@@ -1,7 +1,17 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: validar el envío SMTP de prueba.** La sección 26
+> cubre destinatario efímero, `From:` real, datos sin guardar, secreto persistido, idioma, límite y
+> exactitud del resultado. El responsable cerró y aprobó 1A–14A; las pruebas focalizadas y las 248
+> del frontend pasaron, igual que fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: matriz de transporte SMTP.** La
+> sección 25 verifica los tres modos, la ausencia de degradación y el límite privado del modo sin
+> cifrar. El responsable cerró y aprobó 1A–10A; Mailpit, regresiones y relay real quedaron
+> comprobados.
 >
 > **Aprobado e implementado el 2026-10-18.** La sección 24 registra la verificación portable de CPU,
 > detección NVIDIA, respaldo Auto y restauración transaccional sin tocar producción.
@@ -940,3 +950,44 @@ PC y móvil recorren `/setup` y `/settings` en ambos idiomas. Se inspecciona que
 expongan UUID, bus, memoria ni trazas. Al terminar se restaura Auto, se baja la variante opcional y
 se conserva el modelo compartido sólo durante el entorno de prueba. Producción, dominio y etiqueta
 siguen fuera.
+
+## 25. Verificación de los modos SMTP
+
+Las pruebas unitarias y de integración cubren: STARTTLS correcto y rechazo cuando no se anuncia;
+TLS directo correcto; `plain` rechazado sin aceptación; aceptación anulada al abandonar el modo;
+rechazo si una sola resolución es pública o IPv6; admisión de `10/8`, `172.16/12`, `192.168/16` y
+`127/8`; y conexión contra la dirección ya validada sin segunda resolución.
+
+La migración se prueba con `smtp_secure=true` y `false`, esperando respectivamente `tls_direct` y
+`starttls`. El entorno de desarrollo verifica aparte que Mailpit queda `plain`, sin usuario ni
+contraseña y con aceptación local explícita. Ninguna prueba autoriza esa excepción en producción.
+
+El recorrido del paso 4 comprueba los tres textos en español e inglés, la advertencia, la
+confirmación persistida mientras el modo siga activo, su borrado al cambiar y los toasts. La prueba
+SMTP continúa sin `MAIL FROM`, `RCPT TO` ni `DATA`. Una comprobación con relay falso reproduce
+`AUTH LOGIN` sin STARTTLS: STARTTLS debe rechazarlo y `plain` sólo debe aceptarlo con confirmación y
+destino privado. Usuario, contraseña y cuerpo no aparecen en API, logs ni capturas.
+
+La ejecución terminó con las regresiones focalizadas de `mail` y `settings` aprobadas, 247 pruebas
+Angular aprobadas, fronteras y compilación de producción correctas. La suite backend completa
+conserva un fallo ajeno y dependiente de datos sembrados en el repositorio de reportería; los
+paquetes afectados por SMTP pasaron. La prueba manual real autenticó contra el relay y confirmó en
+el toast que no se envió ningún correo.
+
+## 26. Verificación del correo real de prueba
+
+Las pruebas unitarias atraviesan la transacción SMTP completa (`MAIL FROM`, `RCPT TO` y `DATA`) y
+comprueban que el remitente y el destinatario son exactamente los escritos. Cubren texto fijo en
+español e inglés, secreto guardado cuando el campo está vacío, secreto temporal sin persistencia,
+rechazo del `From:`, rechazo del destinatario y fallo durante `DATA`.
+
+El endpoint público admite cinco intentos para una pareja IP–destinatario dentro de quince minutos,
+rechaza el sexto con `429`, separa otra IP u otro destinatario y vuelve a admitir al vencer la
+ventana. También se comprueban el `409` tras el sello y que una dirección inválida no inicia SMTP.
+La ruta de Configuración exige capacidad administrativa y no hereda el carácter público de `/setup`.
+
+En PC y móvil se verifica un único botón, el destino no persistido, el carácter opcional y el toast
+**El servidor aceptó el correo para {destinatario}**. Mailpit permite confirmar asunto, cuerpo,
+idioma y cabeceras sin salir del entorno. La comprobación manual contra el relay institucional debe
+usar un buzón controlado y registrar aceptación y recepción como hechos distintos. Los logs se revisan
+para asegurar que sólo contienen destinatario parcialmente oculto y ningún secreto o cuerpo.

@@ -755,6 +755,28 @@
       </div>
     </app-tarjeta>
 
+	<app-tarjeta nivel="h2" [titulo]="t().instalacion.paso4" [descripcion]="t().instalacion.correoDestinoPruebaAyuda">
+	  <div class="flex flex-col gap-4">
+		<div class="grid gap-4 sm:grid-cols-2">
+		  <app-campo identificador="settings-correo-host" [etiqueta]="t().instalacion.correoHost" [valor]="correoHost()" (valorChange)="correoHost.set($event)" />
+		  <app-campo identificador="settings-correo-puerto" [etiqueta]="t().instalacion.correoPuerto" [valor]="correoPuerto()" (valorChange)="correoPuerto.set($event)" />
+		</div>
+		<app-selector identificador="settings-correo-seguridad" [etiqueta]="t().instalacion.correoSeguridad" [opciones]="opcionesDeCorreo()" [valor]="correoModo()" (valorChange)="cambiarModoCorreo($event)" />
+		@if (correoModo() === 'plain') {
+		  <app-aviso forma="atencion" [texto]="t().instalacion.correoInseguroAviso" />
+		  <label class="flex items-start gap-2 text-sm text-texto"><input type="checkbox" class="mt-0.5" [checked]="correoInseguroAceptado()" (change)="correoInseguroAceptado.set($any($event.target).checked)" /><span>{{ t().instalacion.correoInseguroAceptar }}</span></label>
+		}
+		<app-campo identificador="settings-correo-usuario" [etiqueta]="t().instalacion.correoUsuario" [valor]="correoUsuario()" (valorChange)="correoUsuario.set($event)" />
+		<app-campo identificador="settings-correo-contrasena" tipo="password" [etiqueta]="t().instalacion.correoContrasena" [ayuda]="configuracion()?.mail?.passwordSet ? t().instalacion.correoContrasenaPuesta : t().instalacion.correoContrasenaVacia" [valor]="correoContrasena()" (valorChange)="correoContrasena.set($event)" />
+		<div class="grid gap-4 sm:grid-cols-2">
+		  <app-campo identificador="settings-correo-nombre" [etiqueta]="t().instalacion.correoRemitenteNombre" [valor]="correoNombre()" (valorChange)="correoNombre.set($event)" />
+		  <app-campo identificador="settings-correo-remitente" tipo="email" [etiqueta]="t().instalacion.correoRemitenteCorreo" [valor]="correoCorreo()" (valorChange)="correoCorreo.set($event)" />
+		</div>
+		<app-campo identificador="settings-correo-destino" tipo="email" [etiqueta]="t().instalacion.correoDestinoPrueba" [ayuda]="t().instalacion.correoDestinoPruebaAyuda" [valor]="correoDestinoPrueba()" (valorChange)="correoDestinoPrueba.set($event)" />
+		<div><app-boton forma="secundario" [texto]="t().instalacion.probarCorreo" [textoTrabajando]="t().configuracion.probando" [trabajando]="guardando()" (pulsado)="probarCorreo()" /></div>
+	  </div>
+	</app-tarjeta>
+
     <!-- Los correos se editan en su módulo, y desde aquí se llega: es el enlace, no la pantalla. -->
     <app-tarjeta
       nivel="h2"

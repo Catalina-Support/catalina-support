@@ -1,7 +1,17 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: prueba SMTP con entrega al relay.** La sección 30
+> asigna a `settings` la entrada, autorización y limitación de la prueba, y a `mail` el mensaje fijo y
+> el envío. El responsable cerró y aprobó 1A–14A; las fronteras, pruebas focalizadas y compilación
+> quedaron verificadas.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: frontera de transporte SMTP
+> inseguro.** La sección 29 modela tres transportes y encierra SMTP sin cifrado detrás de una
+> aceptación persistida y una comprobación de destino privado en cada conexión. El responsable
+> cerró y aprobó 1A–10A; las fronteras y el relay real quedaron verificados.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** La sección 28 separa las imágenes CPU/NVIDIA,
 > persiste el modo en `ai_settings` y hace transaccional el reinicio del administrador local.
@@ -515,8 +525,8 @@ un administrador las cambia desde la pantalla de Configuración, con vista previ
 propio correo. El detalle está en `docs/modules/mail.md`.
 
 **El correo saliente vive en la base, no en variables de entorno**: los campos son
-`installation_settings.smtp_*` (`smtp_host`, `smtp_port`, `smtp_secure`, `smtp_user`,
-`smtp_password`, `smtp_from_name`, `smtp_from_email`), se piden en la vista de primer arranque y se
+`installation_settings.smtp_*` (`smtp_host`, `smtp_port`, `smtp_security_mode`,
+`smtp_insecure_ack`, `smtp_user`, `smtp_password`, `smtp_from_name`, `smtp_from_email`), se piden en la vista de primer arranque y se
 cambian desde Configuración. Las variables `SMTP_*` del entorno **se retiraron**.
 
 Se llaman `smtp_*` y no `SYSTEM_SMTP_*` como en Calibyou: allí el prefijo distingue el correo del
@@ -1511,3 +1521,36 @@ El cambio de modo es una operación serializada del administrador. Conserva la e
 proceso anterior hasta que el nuevo supere salud y generación; si falla, reactiva el anterior antes
 de responder. El estado público separa configuración de ejecución, limita el dispositivo a
 fabricante/nombre y nunca expone inventario sensible.
+
+## 29. Frontera de seguridad del transporte SMTP
+
+`settings` es dueño del modo `starttls|tls_direct|plain` y de la aceptación administrativa;
+`mail` es dueño de aplicarlos al conectar. STARTTLS es obligatorio en su modo, TLS directo empieza
+cifrado y ninguno cae a `plain`. El modo inseguro vuelve a validar en cada prueba y envío que todas
+las resoluciones del host pertenezcan a IPv4 RFC1918 o loopback.
+
+Para evitar una carrera entre validación y conexión, `mail` marca como válidas todas las direcciones
+resueltas y abre el socket contra una de ellas sin resolver de nuevo. El nombre configurado se
+conserva para el diálogo SMTP. Un cambio DNS posterior sólo afecta a la siguiente operación, que
+repite la validación completa. No se admiten destinos públicos ni IPv6 en `plain`.
+
+La migración nunca degrada instalaciones: el booleano verdadero se convierte en TLS directo y el
+falso en STARTTLS. Mailpit es una excepción declarada en datos de desarrollo, sin credenciales; no
+abre una excepción arquitectónica para producción. Logs y respuestas mantienen fuera usuario,
+contraseña y contenido SMTP.
+
+## 30. Frontera del correo real de prueba
+
+`settings` recibe los datos del formulario y el destinatario efímero, decide si la instalación está
+abierta o la identidad tiene capacidad administrativa, aplica el límite de cinco intentos por IP y
+destinatario en quince minutos y resuelve el secreto guardado cuando el campo llega vacío. No guarda
+el destinatario ni los cambios del formulario.
+
+`mail` recibe una configuración SMTP completa, remitente, destinatario, idioma y nombre de
+instalación. Construye el mensaje técnico fijo y ejecuta el mismo transporte de los envíos normales,
+incluidas las restricciones de `plain`. La operación termina sólo tras la aceptación final del relay;
+no interpreta esa aceptación como entrega al buzón.
+
+El mensaje de prueba no entra en `mail_templates`, no crea una tabla ni cruza la frontera hacia los
+avisos de `auth` o `tickets`. El log estructurado conserva resultado, servidor, IP y destinatario
+parcialmente oculto; excluye credenciales, cuerpo y conversación SMTP.

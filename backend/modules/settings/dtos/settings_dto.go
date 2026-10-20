@@ -19,6 +19,7 @@ type SettingsResponse struct {
 	// Directory y Keycloak van **sin sus secretos**: en su lugar dicen si hay uno puesto.
 	Directory                  DirectoryDto `json:"directory"`
 	Keycloak                   KeycloakDto  `json:"keycloak"`
+	Mail                       MailViewDto  `json:"mail"`
 	Language                   string       `json:"language"`
 	PrimaryColor               string       `json:"primaryColor"`
 	NumberPrefix               string       `json:"numberPrefix"`
@@ -211,6 +212,10 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			RedirectURI:    config.Keycloak.RedirectURI,
 			SecretSet:      config.Keycloak.SecretSet,
 		},
+		Mail: MailViewDto{Host: config.Mail.Host, Port: config.Mail.Port,
+			SecurityMode: config.Mail.SecurityMode, InsecureAccepted: config.Mail.InsecureAccepted,
+			User: config.Mail.User, FromName: config.Mail.FromName, FromEmail: config.Mail.FromEmail,
+			PasswordSet: config.Mail.PasswordSet},
 		Language:                   config.Language,
 		PrimaryColor:               config.PrimaryColor,
 		NumberPrefix:               config.NumberPrefix,

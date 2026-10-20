@@ -29,6 +29,8 @@ const CONFIGURACION = {
     passwordSet: false,
   },
   keycloak: { issuer: '', clientId: '', redirectUri: '', secretSet: false },
+	mail: { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls', insecureAccepted: false,
+		user: 'mesa', fromName: 'Mesa', fromEmail: 'mesa@ejemplo.com', passwordSet: true },
   language: 'es',
   primaryColor: '#1d4ed8',
   timeZone: 'UTC',

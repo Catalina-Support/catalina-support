@@ -217,11 +217,11 @@ siguen dentro de ella.
 aplicación lleva a **`/setup`**, que pide en cinco pasos **la instalación** (idioma y nombre), **cómo
 se entra** (con su prueba), **dónde está** (región y dirección) y **el correo saliente** (que vive en la base:
 las variables `SMTP_*` del entorno se retiraron), y al terminar **sella** la instalación: la vista no vuelve y su API
-contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30): el paso 2
-y el paso 4 traen su botón de «Probar la conexión» —`POST /api/setup/entry/test` y
-`POST /api/setup/mail/test`, públicos y con el sello como único candado—, reutilizando las pruebas de
-`auth` (directorio y Keycloak) y de `mail` (correo), y la del correo **comprueba la conexión y la
-autenticación sin mandar ningún correo**. El sello vive en `installation_settings.installed_at`, y
+contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30,
+actualizado 2026-10-20): el paso 2 y el paso 4 usan `POST /api/setup/entry/test` y
+`POST /api/setup/mail/test`. Son públicos y el sello los cierra; la prueba del correo completa un
+envío real opcional y aplica además su límite por IP y destinatario. El sello vive en
+`installation_settings.installed_at`, y
 **una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
 asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
 (`ADMIN_PASSWORD`): el asistente no la pide. El quinto paso configura y prueba obligatoriamente la
@@ -230,6 +230,15 @@ asistente en producción por este cambio. **La contraseña de la cuenta de fábr
 **La región seleccionada se ve explícitamente en el paso 3** (2026-10-05): antes del buscador,
 `/setup` muestra un campo de sólo lectura con el identificador IANA exacto. Cambia inmediatamente al
 elegir otra zona y conserva debajo la hora y el desfase; se verificó en PC y móvil.
+
+**El correo saliente distingue tres transportes** (2026-10-19): STARTTLS, TLS directo y SMTP sin
+cifrado. El último nunca aparece por degradación automática, exige aceptación administrativa y sólo
+admite destinos IPv4 privados o loopback; todas las direcciones resueltas deben cumplirlo. Mailpit
+es la única excepción explícita de desarrollo. **La prueba envía un mensaje real** (2026-10-20):
+`/setup` y Configuración piden un destinatario efímero, usan exactamente el remitente y los datos
+escritos y sólo confirman que el relay aceptó el mensaje. Es opcional, no guarda destino ni cambios y
+usa texto fijo en el idioma global. El endpoint público admite cinco intentos por IP y destinatario
+en quince minutos; la ruta posterior exige capacidad administrativa.
 
 **El asistente comparte los mismos mensajes toast** (2026-10-06): las pruebas de conexión y los
 errores generales se ven desde el paso actual, mientras sus explicaciones permanentes siguen dentro

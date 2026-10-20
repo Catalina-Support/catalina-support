@@ -1,7 +1,20 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `modules/mail.md`, `modules/settings.md`,
+> `primer-arranque.md`, `arquitectura.md` y `prueba-local.md` convierten la prueba SMTP en un envío
+> real opcional a una dirección efímera, con `From:` real, límite público, texto fijo y confirmación
+> de aceptación sin prometer entrega. El responsable cerró y aprobó 1A–14A; pasaron las pruebas
+> focalizadas, las 248 del frontend, fronteras y compilación.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/mail.md`,
+> `modules/settings.md`, `primer-arranque.md`, `arquitectura.md` y `prueba-local.md` distinguen
+> STARTTLS, TLS directo y SMTP sin cifrado. El último exige aceptación administrativa, sólo admite
+> IPv4 privada o loopback y no aparece por degradación automática; Mailpit es la única excepción
+> explícita de desarrollo. El responsable cerró y aprobó 1A–10A; el relay real autenticó sin enviar
+> correo y pasaron las pruebas focalizadas, las 247 del frontend, fronteras y compilación.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/tickets.md`, `usuarios-y-permisos.md`,
 > `interfaz-y-experiencia.md`, `modules/ai.md` y `modules/mail.md` incorporan comentarios privados

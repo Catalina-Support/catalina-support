@@ -47,7 +47,8 @@ services:
       # puede cambiarlas y sólo pasan a ser configuración al guardar el paso.
       SETUP_MAIL_HOST: mail
       SETUP_MAIL_PORT: "1025"
-      SETUP_MAIL_SECURE: "false"
+      SETUP_MAIL_SECURITY_MODE: plain
+      SETUP_MAIL_INSECURE_ACCEPTED: "true"
       SETUP_MAIL_USER: ""
       SETUP_MAIL_FROM_NAME: Catalina Support
       SETUP_MAIL_FROM_EMAIL: no-responder@catalina-support.local

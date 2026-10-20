@@ -61,7 +61,7 @@ type proberDeCorreoDePrueba struct {
 	err     error
 }
 
-func (p *proberDeCorreoDePrueba) ProbarCorreo(correo services.CorreoSaliente) error {
+func (p *proberDeCorreoDePrueba) ProbarCorreo(correo services.CorreoSaliente, _ string, _ string, _ string) error {
 	p.llamado = true
 	p.correo = correo
 	return p.err
@@ -241,7 +241,7 @@ func TestLasPruebasDelAsistenteLlamanALaPrueba(t *testing.T) {
 
 		respuesta := httptest.NewRecorder()
 		controlador.TestMail(respuesta, peticionDePrueba("/api/setup/mail/test",
-			`{"mail":{"host":"smtp.empresa.com","port":"587","user":"mesa","password":"secreta","fromEmail":"mesa@empresa.com"}}`))
+			`{"mail":{"host":"smtp.empresa.com","port":"587","user":"mesa","password":"secreta","fromEmail":"mesa@empresa.com","testRecipient":"destino@empresa.com"}}`))
 
 		if respuesta.Code != http.StatusOK {
 			t.Fatalf("el código es %d y se esperaba 200: %s", respuesta.Code, respuesta.Body.String())
@@ -281,7 +281,7 @@ func TestLasPruebasDelAsistenteCuentanElFallo(t *testing.T) {
 
 		respuesta := httptest.NewRecorder()
 		controlador.TestMail(respuesta, peticionDePrueba("/api/setup/mail/test",
-			`{"mail":{"host":"smtp.empresa.com","port":"587","fromEmail":"mesa@empresa.com"}}`))
+			`{"mail":{"host":"smtp.empresa.com","port":"587","fromEmail":"mesa@empresa.com","testRecipient":"destino@empresa.com"}}`))
 
 		if respuesta.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("el código es %d y se esperaba 422", respuesta.Code)

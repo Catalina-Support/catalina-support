@@ -145,11 +145,13 @@ export class SetupPage implements OnDestroy {
   // --- Paso 4 · el correo ---
   protected readonly correoHost = signal('');
   protected readonly correoPuerto = signal('');
-  protected readonly correoSecure = signal(false);
+  protected readonly correoModo = signal<'starttls' | 'tls_direct' | 'plain'>('starttls');
+  protected readonly correoInseguroAceptado = signal(false);
   protected readonly correoUsuario = signal('');
   protected readonly correoContrasena = signal('');
   protected readonly correoNombre = signal('');
   protected readonly correoCorreo = signal('');
+	protected readonly correoDestinoPrueba = signal('');
 
   // --- Paso 5 · la IA obligatoria ---
   protected readonly iaModo = signal<'local' | 'remote' | 'provider'>('local');
@@ -286,6 +288,21 @@ export class SetupPage implements OnDestroy {
         grupo: this.t().configuracion.metodo,
       },
     ];
+  }
+
+  protected opcionesDeCorreo(): readonly OpcionSelector[] {
+    const t = this.t().instalacion;
+    return [
+      { valor: 'starttls', etiqueta: t.correoStarttls, grupo: t.correoSeguridad },
+      { valor: 'tls_direct', etiqueta: t.correoTlsDirecto, grupo: t.correoSeguridad },
+      { valor: 'plain', etiqueta: t.correoSinCifrar, grupo: t.correoSeguridad },
+    ];
+  }
+
+  protected cambiarModoCorreo(valor: string): void {
+    const modo = valor as 'starttls' | 'tls_direct' | 'plain';
+    this.correoModo.set(modo);
+    if (modo !== 'plain') this.correoInseguroAceptado.set(false);
   }
 
   protected opcionesDeModoIA(): readonly OpcionSelector[] {
@@ -496,14 +513,19 @@ export class SetupPage implements OnDestroy {
   /**
    * Prueba la conexión del correo del paso 4 **con lo que hay en pantalla**, antes de guardarlo.
    *
-   * Comprueba la conexión y la autenticación y **no manda ningún correo**: en el asistente no hay
-   * destinatario (`docs/primer-arranque.md`, sección 3).
+   * Completa el envío real al destinatario efímero y no guarda los datos.
    */
   protected async probarCorreo(): Promise<void> {
-    await this.probar(
-      () => this.setup.probarCorreo({ mail: this.correoEscrito() }),
-      this.t().instalacion.correoOk,
-    );
+	this.guardando.set(true);
+	this.mensaje.set(null);
+	try {
+	  const resultado = await this.setup.probarCorreo({ mail: { ...this.correoEscrito(), testRecipient: this.correoDestinoPrueba().trim() } });
+	  this.mensaje.set({ forma: 'exito', texto: interpolar(this.t().instalacion.correoOk, { destinatario: resultado.recipient }) });
+	} catch (error) {
+	  this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
+	} finally {
+	  this.guardando.set(false);
+	}
   }
 
   /** Una prueba de conexión: no guarda nada y cuenta lo que ha pasado en el aviso de arriba. */
@@ -613,7 +635,8 @@ export class SetupPage implements OnDestroy {
     return {
       host: this.correoHost().trim(),
       port: this.correoPuerto().trim(),
-      secure: this.correoSecure(),
+      securityMode: this.correoModo(),
+      insecureAccepted: this.correoModo() === 'plain' && this.correoInseguroAceptado(),
       user: this.correoUsuario().trim(),
       password: this.correoContrasena(),
       fromName: this.correoNombre().trim(),
@@ -661,7 +684,8 @@ export class SetupPage implements OnDestroy {
     this.direccionPublica.set(estado.publicAppUrl);
     this.correoHost.set(estado.mail.host);
     this.correoPuerto.set(estado.mail.port);
-    this.correoSecure.set(estado.mail.secure);
+    this.correoModo.set(estado.mail.securityMode || 'starttls');
+    this.correoInseguroAceptado.set(estado.mail.insecureAccepted ?? false);
     this.correoUsuario.set(estado.mail.user);
     this.correoContrasena.set('');
     this.correoNombre.set(estado.mail.fromName);

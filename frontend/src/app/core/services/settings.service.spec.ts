@@ -35,6 +35,8 @@ const CONFIGURACION: Configuracion = {
     redirectUri: 'https://soporte.demo.com/login',
     secretSet: true,
   },
+	mail: { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls', insecureAccepted: false,
+		user: 'mesa', fromName: 'Mesa', fromEmail: 'mesa@ejemplo.com', passwordSet: true },
   language: 'es',
   primaryColor: '#1d4ed8',
   timeZone: 'America/Guayaquil',
@@ -90,7 +92,7 @@ describe('SettingsService', () => {
     await expect(guardado).resolves.toEqual(nueva);
   });
 
-  // **Las tres pruebas de conexión**: no guardan nada y contestan sin cuerpo; lo que importa es que
+  // Las pruebas de integración no guardan nada; lo que importa es que cada una vaya a su ruta con lo
   // cada una vaya a su ruta con lo que hay en pantalla.
   it('probarDirectorio manda lo escrito a su ruta', async () => {
     const escrito = {
@@ -119,6 +121,18 @@ describe('SettingsService', () => {
 
     await prueba;
   });
+
+	it('probarCorreo manda el destinatario efímero y devuelve la aceptación', async () => {
+		const escrito = { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls' as const,
+			insecureAccepted: false, user: 'mesa', password: '', fromName: 'Mesa',
+			fromEmail: 'mesa@ejemplo.com', testRecipient: 'destino@ejemplo.com' };
+		const prueba = ajustes.probarCorreo(escrito);
+		const peticion = http.expectOne('/api/settings/mail/test');
+		expect(peticion.request.method).toBe('POST');
+		expect(peticion.request.body).toEqual(escrito);
+		peticion.flush({ status: 'ok', recipient: 'destino@ejemplo.com' });
+		await expect(prueba).resolves.toEqual({ status: 'ok', recipient: 'destino@ejemplo.com' });
+	});
 
   it('probarMotor manda la dirección del motor a su ruta', async () => {
     const prueba = ajustes.probarMotor('http://catalina_support_ai:8080');

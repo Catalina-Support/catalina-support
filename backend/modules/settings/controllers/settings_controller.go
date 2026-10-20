@@ -300,6 +300,21 @@ func (c *SettingsController) TestKeycloak(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// TestMail envía un mensaje real con los valores escritos y sin guardar ninguno de ellos.
+func (c *SettingsController) TestMail(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.MailDto
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	destinatario, err := c.service.ProbarCorreoDeConfiguracion(dtos.NewMailInput(entrada), ipDe(r))
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "recipient": destinatario})
+}
+
 // TestAI prueba el motor de IA **sin guardarlo**: pregunta a su comprobación de salud.
 //
 // Prueba **la dirección que llega en el cuerpo** —lo que hay en pantalla—, y nunca la guardada: si
@@ -370,6 +385,12 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.unreachable")
 	case errors.Is(err, services.ErrKeycloakUnreachable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.unreachable")
+	case errors.Is(err, services.ErrCorreoIncompleto):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.incomplete")
+	case errors.Is(err, services.ErrCorreoDestinoInvalido):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.recipientInvalid")
+	case errors.Is(err, services.ErrCorreoInalcanzable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.unreachable")
 	case errors.Is(err, services.ErrAIURLInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.aiUrl.invalid")
 	case errors.Is(err, services.ErrAIUnreachable):

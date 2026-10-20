@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type { CorreoDeInstalacion, CorreoEscrito, ResultadoDeCorreo } from './setup.service';
 
 /** Un hueco del logo, tal y como lo cuenta la configuración. */
 export interface HuecoDeLogo {
@@ -62,6 +63,7 @@ export interface Configuracion {
   readonly entryMethod: string;
   readonly directory: Directorio;
   readonly keycloak: Keycloak;
+	readonly mail: CorreoDeInstalacion;
   readonly language: string;
   readonly primaryColor: string;
   /**
@@ -209,6 +211,10 @@ export class SettingsService {
   async probarKeycloak(keycloak: KeycloakEscrito): Promise<void> {
     await firstValueFrom(this.http.post('/api/settings/keycloak/test', keycloak));
   }
+
+	async probarCorreo(correo: CorreoEscrito): Promise<ResultadoDeCorreo> {
+		return firstValueFrom(this.http.post<ResultadoDeCorreo>('/api/settings/mail/test', correo));
+	}
 
   /**
    * Prueba el motor de IA **con lo que hay en pantalla**: se le pregunta a su comprobación de salud.

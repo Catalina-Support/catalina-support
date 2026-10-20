@@ -5,6 +5,7 @@ import { TranslationService } from '../i18n/translation.service';
 import { BrandService, logoDeFabrica, type Marca } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
 import { SetupService } from '../services/setup.service';
+import type { CorreoEscrito } from '../services/setup.service';
 import {
   SettingsService,
   type Configuracion,
@@ -165,6 +166,15 @@ export class SettingsPage implements OnDestroy {
   protected readonly kcCliente = signal('');
   protected readonly kcSecreto = signal('');
   protected readonly kcVuelta = signal('');
+	protected readonly correoHost = signal('');
+	protected readonly correoPuerto = signal('');
+	protected readonly correoModo = signal<'starttls' | 'tls_direct' | 'plain'>('starttls');
+	protected readonly correoInseguroAceptado = signal(false);
+	protected readonly correoUsuario = signal('');
+	protected readonly correoContrasena = signal('');
+	protected readonly correoNombre = signal('');
+	protected readonly correoCorreo = signal('');
+	protected readonly correoDestinoPrueba = signal('');
 
   /** Indica si los campos escritos están completos y permite mostrar el aviso antes de guardar. */
   protected readonly directorioConfigurado = computed(
@@ -718,6 +728,35 @@ export class SettingsPage implements OnDestroy {
     ];
   }
 
+	protected opcionesDeCorreo(): readonly OpcionSelector[] { return [
+		{ valor: 'starttls', etiqueta: this.t().instalacion.correoStarttls, grupo: this.t().instalacion.correoSeguridad },
+		{ valor: 'tls_direct', etiqueta: this.t().instalacion.correoTlsDirecto, grupo: this.t().instalacion.correoSeguridad },
+		{ valor: 'plain', etiqueta: this.t().instalacion.correoSinCifrar, grupo: this.t().instalacion.correoSeguridad },
+	]; }
+
+	protected cambiarModoCorreo(valor: string): void {
+		this.correoModo.set(valor as 'starttls' | 'tls_direct' | 'plain');
+		if (valor !== 'plain') this.correoInseguroAceptado.set(false);
+	}
+
+	protected async probarCorreo(): Promise<void> {
+		this.guardando.set(true); this.mensaje.set(null);
+		try {
+			const resultado = await this.ajustes.probarCorreo(this.correoEscrito());
+			this.mensaje.set({ forma: 'exito', texto: interpolar(this.t().instalacion.correoOk, { destinatario: resultado.recipient }) });
+		} catch (error) {
+			this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+		} finally { this.guardando.set(false); }
+	}
+
+	private correoEscrito(): CorreoEscrito { return {
+		host: this.correoHost().trim(), port: this.correoPuerto().trim(), securityMode: this.correoModo(),
+		insecureAccepted: this.correoModo() === 'plain' && this.correoInseguroAceptado(),
+		user: this.correoUsuario().trim(), password: this.correoContrasena(),
+		fromName: this.correoNombre().trim(), fromEmail: this.correoCorreo().trim(),
+		testRecipient: this.correoDestinoPrueba().trim(),
+	}; }
+
   /** La explicación del método que está elegido, para que se lea qué significa. */
   protected ayudaDelMetodo(): string {
     switch (this.metodo()) {
@@ -921,6 +960,7 @@ export class SettingsPage implements OnDestroy {
       const configuracion = await this.ajustes.cargar();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
+	  this.ponerCorreo(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
@@ -952,6 +992,7 @@ export class SettingsPage implements OnDestroy {
       const configuracion = await peticion();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
+	  this.ponerCorreo(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
@@ -991,6 +1032,14 @@ export class SettingsPage implements OnDestroy {
     this.iaDireccion.set(configuracion.aiUrl ?? '');
     this.iaModelo.set(configuracion.aiModel ?? '');
   }
+
+	private ponerCorreo(configuracion: Configuracion): void {
+		this.correoHost.set(configuracion.mail.host); this.correoPuerto.set(configuracion.mail.port);
+		this.correoModo.set(configuracion.mail.securityMode || 'starttls');
+		this.correoInseguroAceptado.set(configuracion.mail.insecureAccepted);
+		this.correoUsuario.set(configuracion.mail.user); this.correoContrasena.set('');
+		this.correoNombre.set(configuracion.mail.fromName); this.correoCorreo.set(configuracion.mail.fromEmail);
+	}
 
   private ponerConfiguracionDeIA(ia: import('../services/settings.service').ConfiguracionDeIA): void {
     if (ia.mode) this.iaModo.set(ia.mode);

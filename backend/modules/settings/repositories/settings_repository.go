@@ -41,13 +41,14 @@ type InstallationSettings struct {
 	InstalledAt *time.Time `gorm:"column:installed_at"`
 	// **El correo saliente** (docs/primer-arranque.md, sección 5): vive aquí, como el directorio y
 	// Keycloak, y la variable de entorno queda de respaldo. La contraseña **no sale nunca por la API**.
-	SMTPHost      string `gorm:"column:smtp_host"`
-	SMTPPort      string `gorm:"column:smtp_port"`
-	SMTPSecure    bool   `gorm:"column:smtp_secure"`
-	SMTPUser      string `gorm:"column:smtp_user"`
-	SMTPPassword  string `gorm:"column:smtp_password"`
-	SMTPFromName  string `gorm:"column:smtp_from_name"`
-	SMTPFromEmail string `gorm:"column:smtp_from_email"`
+	SMTPHost         string `gorm:"column:smtp_host"`
+	SMTPPort         string `gorm:"column:smtp_port"`
+	SMTPSecurityMode string `gorm:"column:smtp_security_mode"`
+	SMTPInsecureAck  bool   `gorm:"column:smtp_insecure_ack"`
+	SMTPUser         string `gorm:"column:smtp_user"`
+	SMTPPassword     string `gorm:"column:smtp_password"`
+	SMTPFromName     string `gorm:"column:smtp_from_name"`
+	SMTPFromEmail    string `gorm:"column:smtp_from_email"`
 	// LogoLight y LogoDark son el **nombre del archivo** en el disco, no el archivo. Nulo es «no hay
 	// logo propio» y se usa el de fábrica (docs/modules/settings.md, sección 5.3).
 	LogoLight   *string   `gorm:"column:logo_light"`

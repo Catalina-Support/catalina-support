@@ -1,7 +1,17 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: correo real de prueba.** La sección 23 hace que
+> `/setup` y Configuración pidan un destinatario efímero y prueben los datos escritos mediante un
+> envío real. La prueba sigue sin guardar configuración y es opcional. El responsable cerró y
+> aprobó 1A–14A; pasaron backend focalizado, 248 pruebas frontend, fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: transporte SMTP explícito.** La
+> sección 22 sustituye el booleano de cifrado por tres modos y guarda por separado la aceptación del
+> riesgo de SMTP sin cifrar. El responsable cerró y aprobó 1A–10A; migración, API y pantalla quedaron
+> verificadas contra Mailpit y el relay interno real.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** La sección 21 añade selección Auto/CPU/NVIDIA,
 > estado efectivo, dispositivo, fallback visible y restauración ante fallo.
@@ -79,8 +89,9 @@
 > **Enmendado el 2026-09-30**: **se repasaron las cuatro tablas de configuración contra el esquema de
 > verdad** (sección 3), a petición del responsable, y **faltaban columnas**: la tabla de
 > `installation_settings` no recogía `entry_method`, `time_zone`, `public_app_url`, `installed_at` ni
-> las siete del correo saliente (`smtp_host`, `smtp_port`, `smtp_secure`, `smtp_user`, `smtp_password`,
-> `smtp_from_name` y `smtp_from_email`); `ai_url` y `ai_model` sí estaban, en una línea conjunta. Las
+> las ocho del correo saliente (`smtp_host`, `smtp_port`, `smtp_security_mode`, `smtp_insecure_ack`,
+> `smtp_user`, `smtp_password`, `smtp_from_name` y `smtp_from_email`); `ai_url` y `ai_model` sí
+> estaban, en una línea conjunta. Las
 > cuatro tablas quedan ahora con **cada columna, su tipo, si admite nulo y su valor por defecto**,
 > comprobadas contra `\d` de la base y contra `backend/migrations/v1.0.0.sql`, que **coinciden**. El
 > repaso destapó además dos frases que contradecían al esquema —el correo saliente seguía contado como
@@ -258,7 +269,8 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `installed_at` | `timestamptz` | sí | — (nulo) | **El sello de instalación**: cuándo se terminó el asistente de primer arranque; nulo es «sin instalar» (sección 5.12) |
 | `smtp_host` | `text` | no | `''` | El servidor de correo saliente; vacío es «sin configurar» |
 | `smtp_port` | `text` | no | `''` | El puerto del servidor de correo saliente |
-| `smtp_secure` | `boolean` | no | `false` | Si la conexión con el servidor de correo va cifrada |
+| `smtp_security_mode` | `text` | no | `'starttls'` | El transporte: `starttls`, `tls_direct` o `plain` |
+| `smtp_insecure_ack` | `boolean` | no | `false` | La aceptación administrativa vigente del modo `plain`; fuera de él siempre es falsa |
 | `smtp_user` | `text` | no | `''` | El usuario con el que se autentica el envío |
 | `smtp_password` | `text` | no | `''` | La contraseña del envío: **no sale nunca por la API** |
 | `smtp_from_name` | `text` | no | `''` | El nombre del remitente de los correos |
@@ -541,14 +553,15 @@ funcionen, es que la instalación no los ofrece.
 - **Cambiar el método o el directorio vale en el intento siguiente**, sin reiniciar nada: el camino de
   entrada lee la base en cada intento (sección 4). Es lo que hace que esto sea configuración y no
   despliegue.
-- **El botón de Configuración se llama «Probar la conexión» y no «Guardar y probar»**: probar no
-  guarda nada, y guardar no prueba nada. Se puede probar con lo que hay en pantalla y luego decidir.
+- **Las pruebas no guardan**: se puede probar con lo que hay en pantalla y luego decidir. En correo,
+  el botón se llama **Enviar correo de prueba** porque completa un envío real; en las demás
+  integraciones conserva **Probar la conexión**.
 - **El asistente de primer arranque reutiliza estas pruebas**, sin duplicarlas: `POST
   /api/setup/entry/test` llama a **`Prober`** para el directorio o Keycloak, y `POST
   /api/setup/mail/test` llama a **`ProberDeCorreo`** para el correo saliente. Son públicas —todavía no
   hay sesión— y las protege **el sello de la instalación**, igual que el resto de `/api/setup/**`, no
-  un permiso de Administrador. La del correo **conecta y autentica sin mandar ningún correo**
-  (`docs/primer-arranque.md`, sección 3.1).
+  un permiso de Administrador. La del correo envía el mensaje técnico al destinatario efímero y
+  aplica su límite público (`docs/primer-arranque.md`, sección 3.1).
 
 ### 5.9 La versión del sistema
 
@@ -1110,3 +1123,42 @@ La API no devuelve UUID, bus PCI, memoria ni trazas. La compilación y las 241 p
 verifican ambos idiomas y el contrato; las pruebas del administrador cubren NVIDIA ausente y el
 respaldo de Auto. La pasada visual específica en PC/móvil y el hardware NVIDIA real quedan para el
 entorno que disponga de Toolkit.
+
+## 22. Configuración de los tres modos SMTP
+
+`installation_settings` reemplaza `smtp_secure boolean` por `smtp_security_mode text`, limitado a
+`starttls`, `tls_direct` o `plain`, y añade `smtp_insecure_ack boolean NOT NULL DEFAULT false`.
+La migración traduce `true` a `tls_direct` y `false` a `starttls`. Sólo los datos de desarrollo de
+Mailpit declaran `plain` y aceptación verdadera; no hay excepción equivalente en producción.
+
+El paso 4 muestra una selección explícita con las tres alternativas. Al elegir `plain`, presenta un
+aviso inequívoco de que credenciales y mensajes viajan sin cifrar y exige una confirmación antes de
+probar o guardar. Cambiar a un modo seguro borra la aceptación; volver a `plain` obliga a aceptarla
+otra vez. El contrato de `/api/setup/mail/test`, del guardado final y de la lectura del asistente
+transporta `securityMode` e `insecureAccepted`; deja de transportar `secure` cuando termine la
+migración coordinada.
+
+El backend rechaza `plain` sin aceptación y también cuando el host resuelve alguna dirección que no
+sea IPv4 RFC1918 o loopback. La misma comprobación se repite al probar y al enviar; no basta con la
+validación de pantalla. Los secretos mantienen su regla actual: se guardan, nunca vuelven por la API
+y un valor vacío conserva el existente donde corresponda.
+
+La configuración pide una dirección institucional propia de Catalina como remitente. No copia el
+remitente ni las credenciales de otra aplicación.
+
+## 23. Destinatario y envío de prueba
+
+El paso 4 y la tarjeta administrativa incorporan **Enviar prueba a** y sustituyen **Probar la
+conexión** por **Enviar correo de prueba**. El campo no es parte de `installation_settings`: sólo
+acompaña esa petición, no se recupera al recargar y no altera los destinatarios de los correos
+funcionales. La acción es opcional y su estado no participa en los requisitos para avanzar o sellar.
+
+Ambas pantallas envían al backend los valores visibles, aunque no se hayan guardado. En la pantalla
+administrativa, una contraseña vacía significa reutilizar el secreto persistido; una contraseña
+nueva se usa para el intento y no se persiste. El resto de validaciones, incluido el consentimiento
+de `plain`, se aplica exactamente como en un envío normal.
+
+`POST /api/setup/mail/test` continúa público sólo antes del sello y se limita a cinco intentos por
+pareja IP–destinatario en quince minutos. La tarjeta autenticada dispone de la acción equivalente
+bajo `/api/settings/**`, protegida por capacidad administrativa. El éxito devuelve el destinatario
+aceptado para construir el toast preciso, sin afirmar entrega final.

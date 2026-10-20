@@ -273,9 +273,14 @@ export const ES = {
     correoHostAyuda:
       'El nombre o la dirección del servidor saliente. Ejemplo: smtp.mi-institucion.org.',
     correoPuerto: 'Puerto',
-    correoPuertoAyuda: '587 para el envío con TLS, 465 para TLS directo y 25 sin cifrar.',
-    correoTls: 'Conexión cifrada (TLS)',
-    correoTlsAyuda: 'En producción, sí: por ahí viajan las credenciales del correo.',
+    correoPuertoAyuda: 'Normalmente 587 para STARTTLS, 465 para TLS directo y 25 para relays internos.',
+    correoSeguridad: 'Seguridad de la conexión',
+    correoSeguridadAyuda: 'Elige el modo que ofrece el servidor; nunca se rebaja automáticamente.',
+    correoStarttls: 'STARTTLS',
+    correoTlsDirecto: 'TLS directo',
+    correoSinCifrar: 'Sin cifrado',
+    correoInseguroAviso: 'El usuario, la contraseña y los mensajes viajarán sin cifrar. Este modo sólo admite servidores en una red IPv4 privada o local.',
+    correoInseguroAceptar: 'Acepto usar este relay interno sin cifrado.',
     correoUsuario: 'Usuario',
     correoUsuarioAyuda:
       'El usuario con el que se autentica el envío. Si el servidor no pide credenciales, se deja vacío.',
@@ -285,10 +290,10 @@ export const ES = {
     correoRemitenteNombre: 'Nombre del remitente',
     correoRemitenteCorreo: 'Correo del remitente',
     correoRemitenteCorreoAyuda: 'La dirección que verá quien reciba el correo.',
-    probarCorreo: 'Probar la conexión',
-    // Lo que hace y lo que **no** hace la prueba del correo, dicho en el propio mensaje.
-    correoOk:
-      'El servidor de correo ha contestado y la autenticación ha funcionado. No se ha enviado ningún correo.',
+	correoDestinoPrueba: 'Enviar prueba a',
+	correoDestinoPruebaAyuda: 'Se usa sólo para este envío y no se guarda.',
+    probarCorreo: 'Enviar correo de prueba',
+    correoOk: 'El servidor aceptó el correo para {destinatario}.',
   },
 
   menu: {
@@ -1186,6 +1191,8 @@ export const ES = {
     'mail.smtp.data': 'El servidor de correo ha cortado el envío.',
     'mail.smtp.write': 'No se ha podido escribir el correo al servidor.',
     'mail.smtp.close': 'El servidor de correo ha cerrado la conexión antes de terminar.',
+	'setup.mail.recipientInvalid': 'Escribe una dirección válida para recibir la prueba.',
+	'setup.mail.rateLimited': 'Se alcanzó el límite de cinco pruebas para esta dirección. Inténtalo de nuevo en quince minutos.',
     'mail.to.empty': 'No hay destinatarios.',
     'mail.to.invalid': 'Alguna dirección de destinatario no vale.',
     'mail.from.invalid': 'La dirección del remitente no vale.',

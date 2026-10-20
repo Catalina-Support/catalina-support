@@ -1,7 +1,19 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: envío real de prueba SMTP.** La sección 17
+> sustituye la comprobación que sólo conectaba y autenticaba por un mensaje real a un destinatario
+> escrito expresamente. Usa el remitente y los datos SMTP que se están probando, sin guardarlos, y
+> confirma únicamente que el servidor aceptó el mensaje. El responsable cerró y aprobó 1A–14A;
+> pasaron las pruebas focalizadas, las 248 del frontend, fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: tres modos SMTP y excepción insegura
+> explícita.** La sección 16 distingue STARTTLS, TLS directo y SMTP sin cifrado; este
+> último exige aceptación administrativa, sólo admite destinos privados y nunca se activa como
+> degradación automática. El responsable cerró y aprobó 1A–10A. El relay real aceptó `AUTH LOGIN`
+> sin enviar correo; pasaron las regresiones focalizadas, 247 pruebas frontend y la compilación.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 15 añade el aviso editable de comentario privado
 > para responsable y observadores internos, sin cuerpo ni adjuntos y excluyendo al autor. El
@@ -94,9 +106,9 @@ recoge lo que he propuesto yo.
 ## 2. Qué hace y qué no hace el módulo
 
 **Hace**: guardar los textos, validarlos, rellenarlos con datos, enviarlos por SMTP y dejar que un
-administrador los edite, los previsualice y se mande una prueba. Y **`Probar`**: comprobar que el
-servidor de correo contesta y que las credenciales valen, **sin mandar ningún correo** (§6), que es lo
-que necesita quien configura el correo antes de tener un destinatario.
+administrador los edite, los previsualice y se mande una prueba. La prueba de configuración entrega
+un mensaje técnico a la dirección efímera escrita para comprobar también remitente, destinatario y
+contenido SMTP (§17).
 
 **No hace**: decidir **a quién** se avisa. Quien pide el envío —`auth` o `tickets`— resuelve los
 destinatarios y se los pasa. Es lo que mantiene a `mail` sin saber nada de papeles, de repartos ni de
@@ -283,12 +295,9 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
   (`AGENTS.md`, reglas para agentes). Nunca el contenido del correo ni el enlace que lleva: igual que los intentos de acceso (`docs/modules/auth.md`, sección 12).
 - **El idioma lo decide el destinatario**, no quien provoca el correo: si a un equipo se le avisa a
   tres personas y una lee en inglés, esa recibe el texto en inglés. Son tres envíos, no uno.
-- **`Probar` comprueba la conexión y la autenticación, y no manda nada**: es la única puerta del
-  módulo que no entrega un mensaje. Abre la conexión —TLS directo en el 465 o STARTTLS en el 587, la
-  misma que usa el envío—, autentica si hay usuario y cierra con `QUIT`, **sin `MAIL FROM`, ni
-  `RCPT TO`, ni `DATA`**. Es lo que permite probar el correo saliente donde todavía no hay
-  destinatario, como el paso 4 del asistente de primer arranque (`docs/primer-arranque.md`, §3.1). La
-  contraseña **no se registra** en el log ni viaja en claro por el protocolo.
+- **La prueba de configuración envía de verdad**: abre la misma conexión del envío normal, autentica
+  y completa `MAIL FROM`, `RCPT TO` y `DATA` con el remitente y el destinatario escritos. El mensaje
+  es fijo y no pertenece a `mail_templates`; la contraseña nunca se registra.
 
 ## 7. Los endpoints
 
@@ -490,3 +499,73 @@ fragmentos, menciones ni adjuntos. Usa la dirección pública y las mismas regla
 previa, restauración y prueba que el catálogo actual. Una mención conserva además su aviso específico,
 pero la deduplicación del aviso privado evita dos copias de esta nueva plantilla para la misma cuenta.
 Un fallo de correo no revierte el comentario.
+
+## 16. Modos SMTP y autenticación sin cifrado controlada
+
+El transporte deja de resumirse en un booleano ambiguo y adopta tres modos cerrados:
+`starttls`, `tls_direct` y `plain`. STARTTLS abre SMTP, exige que el servidor anuncie la extensión y
+sube a TLS antes de autenticar. TLS directo negocia TLS desde el primer byte. `plain` conserva SMTP
+sin cifrado para relays internos heredados que sólo anuncian `AUTH LOGIN`, como el usado por SIGOC.
+No existe caída automática de un modo seguro a `plain`.
+
+`plain` sólo puede autenticarse cuando el administrador lo ha elegido y ha aceptado expresamente
+que usuario, contraseña y contenido viajarán sin cifrar. La aceptación queda guardada junto a la
+configuración, se anula al abandonar el modo y vuelve a pedirse si se reactiva. Antes de probar y
+antes de cada envío se resuelve el host: todas sus direcciones deben ser IPv4 privadas RFC1918 o
+loopback. El socket se abre contra una de las direcciones ya comprobadas, conservando el nombre del
+host para SMTP, para que una segunda resolución no eluda la restricción. IPv6 y destinos públicos
+se rechazan en este modo.
+
+La prueba de configuración usa `MAIL FROM`, `RCPT TO` y `DATA` con el modo elegido. Los modos seguros
+conservan la validación de certificados. `plain` no cambia plantillas,
+destinatarios, reintentos ni tratamiento de fallos.
+
+La configuración existente migra `smtp_secure=true` a `tls_direct` y `false` a `starttls`; por
+tanto, una actualización nunca convierte silenciosamente una instalación real en texto plano. La
+única excepción es Mailpit en los datos de desarrollo: queda declarado como `plain`, sin
+credenciales, con aceptación de desarrollo explícita. No se generaliza esa excepción a producción.
+
+El remitente debe ser una dirección institucional propia de Catalina. Esta propuesta no reutiliza
+la identidad de SIGOC, no incorpora sus credenciales y no fija una dirección concreta que aún deba
+asignar la organización.
+
+Decisiones cerradas: 1A tres modos; 2A aceptación explícita; 3A sólo red privada; 4A remitente
+propio; 5A migración segura; 6A RFC1918 y loopback; 7A todas las resoluciones privadas; 8A aceptación
+persistida y revocable; 9A prueba sin correo; 10A excepción exclusiva de Mailpit en desarrollo.
+
+La verificación real del 2026-10-19 conectó con `relay.quito.gob.ec:587`, comprobó su destino
+privado, completó `AUTH LOGIN` y cerró sin `MAIL FROM`, `RCPT TO` ni `DATA`. El modo STARTTLS rechazó
+el mismo relay por no anunciar la extensión y TLS directo rechazó correctamente su saludo SMTP.
+
+## 17. Envío real de prueba de la configuración SMTP
+
+La prueba de configuración deja de terminar después de autenticar: envía un mensaje real a la
+dirección escrita en **Enviar prueba a**. Hay un solo botón, **Enviar correo de prueba**, tanto en el
+paso 4 de `/setup` como en la tarjeta de correo de Configuración. El destinatario es obligatorio para
+esa acción, se valida como correo y no se guarda en la base ni en el navegador.
+
+El mensaje usa exactamente el servidor, modo, usuario, secreto, nombre del remitente y correo del
+remitente presentes en el formulario. En Configuración se pueden probar cambios todavía no guardados:
+un secreto vacío reutiliza el guardado y uno escrito se usa sólo para esa prueba. Así se comprueba
+también que el relay autoriza el `From:` pretendido, no sólo las credenciales.
+
+El asunto y el cuerpo son fijos, no editables, y se eligen con el idioma global de la instalación.
+Identifican la instalación, el carácter de prueba y que no hace falta responder ni realizar ninguna
+acción. No nacen filas en `mail_templates`: este mensaje técnico vive con el servicio de prueba y no
+forma parte del editor de avisos funcionales.
+
+Un `250` final del servidor produce el mensaje preciso **El servidor aceptó el correo para
+{destinatario}**. La interfaz no afirma entrega en buzón, lectura ni paso por filtros posteriores.
+Los rechazos de remitente, destinatario o datos conservan su error técnico en el servidor y ofrecen
+una explicación operativa sin credenciales en la API.
+
+Durante `/setup`, cada combinación de IP de origen y destinatario admite cinco intentos en quince
+minutos y el sexto responde `429`; el sello continúa cerrando completamente el endpoint. En
+Configuración la ruta exige capacidad administrativa. Los logs anotan resultado, servidor, IP y
+destinatario parcialmente oculto; nunca contraseña, cuerpo ni contenido de la sesión SMTP.
+
+Enviar la prueba es opcional y no bloquea el avance ni el sellado. Decisiones cerradas: 1A campo de
+destino; 2B un solo botón que envía; 3B opcional; 4A texto fijo; 5A asistente y Configuración; 6A
+límite público; 7A destino efímero; 8A remitente escrito; 9A aceptación SMTP precisa; 10A cinco en
+quince minutos; 11A datos aún no guardados; 12A secreto guardado o temporal; 13A idioma global; 14A
+logs técnicos acotados.

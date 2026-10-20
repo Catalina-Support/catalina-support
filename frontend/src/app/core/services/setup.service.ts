@@ -34,7 +34,8 @@ export interface KeycloakDeInstalacion {
 export interface CorreoDeInstalacion {
   readonly host: string;
   readonly port: string;
-  readonly secure: boolean;
+  readonly securityMode: 'starttls' | 'tls_direct' | 'plain';
+  readonly insecureAccepted: boolean;
   readonly user: string;
   readonly fromName: string;
   readonly fromEmail: string;
@@ -98,7 +99,8 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
   mail: {
     host: '',
     port: '',
-    secure: false,
+    securityMode: 'starttls',
+    insecureAccepted: false,
     user: '',
     fromName: '',
     fromEmail: '',
@@ -132,13 +134,17 @@ export interface Paso3 {
 export interface CorreoEscrito {
   readonly host: string;
   readonly port: string;
-  readonly secure: boolean;
+  readonly securityMode: 'starttls' | 'tls_direct' | 'plain';
+  readonly insecureAccepted: boolean;
   readonly user: string;
   /** Vacío quiere decir **«no la cambies»**: la guardada no sale nunca por la API. */
   readonly password: string;
   readonly fromName: string;
   readonly fromEmail: string;
+	readonly testRecipient?: string;
 }
+
+export interface ResultadoDeCorreo { readonly status: 'ok'; readonly recipient: string; }
 
 export interface Paso4 {
   readonly mail: CorreoEscrito;
@@ -270,11 +276,10 @@ export class SetupService {
    * Prueba la conexión del correo saliente del paso 4 **con lo que hay escrito en pantalla**, antes
    * de guardarlo.
    *
-   * Comprueba la conexión y la autenticación y **no manda ningún correo**: en el asistente todavía no
-   * hay destinatario (`docs/primer-arranque.md`, sección 3).
+   * Completa un envío real al destinatario efímero y no guarda los datos.
    */
-  async probarCorreo(paso: Paso4): Promise<void> {
-    await firstValueFrom(this.http.post('/api/setup/mail/test', paso));
+  async probarCorreo(paso: Paso4): Promise<ResultadoDeCorreo> {
+	return firstValueFrom(this.http.post<ResultadoDeCorreo>('/api/setup/mail/test', paso));
   }
 
   /** Una petición que devuelve el estado nuevo: el asistente avanza con lo que le contestan. */

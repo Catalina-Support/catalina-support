@@ -120,8 +120,7 @@ type Service struct {
 	now       func() time.Time
 	// ia dice si el motor de IA responde, para poder contarlo en la instalación.
 	ia ProberDeIA
-	// correo prueba el correo saliente **sin mandar ningún correo**: es lo que hace falta en el
-	// asistente, donde no hay destinatario (docs/primer-arranque.md, sección 3).
+	// correo prueba el correo saliente mediante el mensaje técnico al destinatario efímero.
 	correo ProberDeCorreo
 	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
 	// envío: el módulo mail sigue leyendo la configuración persistida.
@@ -223,6 +222,7 @@ type Config struct {
 	// Directory y Keycloak son las dos configuraciones, sin sus secretos.
 	Directory                  DirectoryView
 	Keycloak                   KeycloakView
+	Mail                       MailView
 	Language                   string
 	PrimaryColor               string
 	NumberPrefix               string
@@ -244,6 +244,11 @@ type Config struct {
 	AIModel string
 	AI      AIConfigurationView
 	Brand   Brand
+}
+
+type MailView struct {
+	Host, Port, SecurityMode, User, FromName, FromEmail string
+	InsecureAccepted, PasswordSet                       bool
 }
 
 // Brand es el estado de la marca.
@@ -438,12 +443,16 @@ func (s *Service) Config() (Config, error) {
 	}
 
 	config := Config{
-		Name:                       nombreDeLaInstalacion(instalacion.InstallationName),
-		EntryMethod:                instalacion.EntryMethod,
-		TimeZone:                   zonaHorariaDe(instalacion.TimeZone),
-		PublicAppURL:               direccionPublicaDe(instalacion.PublicAppURL),
-		Directory:                  vistaDeDirectorio(directorio),
-		Keycloak:                   vistaDeKeycloak(keycloak),
+		Name:         nombreDeLaInstalacion(instalacion.InstallationName),
+		EntryMethod:  instalacion.EntryMethod,
+		TimeZone:     zonaHorariaDe(instalacion.TimeZone),
+		PublicAppURL: direccionPublicaDe(instalacion.PublicAppURL),
+		Directory:    vistaDeDirectorio(directorio),
+		Keycloak:     vistaDeKeycloak(keycloak),
+		Mail: MailView{Host: instalacion.SMTPHost, Port: instalacion.SMTPPort,
+			SecurityMode: instalacion.SMTPSecurityMode, InsecureAccepted: instalacion.SMTPInsecureAck,
+			User: instalacion.SMTPUser, FromName: instalacion.SMTPFromName,
+			FromEmail: instalacion.SMTPFromEmail, PasswordSet: instalacion.SMTPPassword != ""},
 		Language:                   instalacion.Language,
 		PrimaryColor:               instalacion.PrimaryColor,
 		NumberPrefix:               tickets.NumberPrefix,

@@ -368,7 +368,8 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- por la API**.
     smtp_host      text NOT NULL DEFAULT '',
     smtp_port      text NOT NULL DEFAULT '',
-    smtp_secure    boolean NOT NULL DEFAULT false,
+    smtp_security_mode text NOT NULL DEFAULT 'starttls',
+    smtp_insecure_ack boolean NOT NULL DEFAULT false,
     smtp_user      text NOT NULL DEFAULT '',
     smtp_password  text NOT NULL DEFAULT '',
     smtp_from_name  text NOT NULL DEFAULT '',
@@ -595,11 +596,34 @@ ALTER TABLE installation_settings
 ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS smtp_host text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_port text NOT NULL DEFAULT '',
-    ADD COLUMN IF NOT EXISTS smtp_secure boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS smtp_security_mode text NOT NULL DEFAULT 'starttls',
+    ADD COLUMN IF NOT EXISTS smtp_insecure_ack boolean NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS smtp_user text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_password text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_from_name text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_from_email text NOT NULL DEFAULT '';
+
+-- La migración no degrada conexiones existentes: el booleano anterior sólo puede convertirse en
+-- STARTTLS o TLS directo. El modo sin cifrar se elige después de forma explícita.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = 'installation_settings'
+           AND column_name = 'smtp_secure'
+    ) THEN
+        UPDATE installation_settings
+           SET smtp_security_mode = CASE WHEN smtp_secure THEN 'tls_direct' ELSE 'starttls' END,
+               smtp_insecure_ack = false;
+        ALTER TABLE installation_settings DROP COLUMN smtp_secure;
+    END IF;
+END
+$$;
+ALTER TABLE installation_settings DROP CONSTRAINT IF EXISTS installation_settings_smtp_security_mode_check;
+ALTER TABLE installation_settings
+    ADD CONSTRAINT installation_settings_smtp_security_mode_check
+    CHECK (smtp_security_mode IN ('starttls', 'tls_direct', 'plain'));
 
 -- Las restricciones se quitan y se vuelven a poner: no hay `ADD CONSTRAINT IF NOT EXISTS`, y quitarla
 -- antes es lo que hace que se pueda aplicar el archivo dos veces.

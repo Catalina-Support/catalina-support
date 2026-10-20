@@ -86,17 +86,18 @@ type proberDeCorreo struct {
 	mail *services.Service
 }
 
-// ProbarCorreo prueba la conexión y la autenticación **sin mandar ningún correo**.
-func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente) error {
-	return p.mail.Probar(services.CorreoSaliente{
-		Host:      correo.Host,
-		Port:      correo.Port,
-		Secure:    correo.Secure,
-		User:      correo.User,
-		Password:  correo.Password,
-		FromName:  correo.FromName,
-		FromEmail: correo.FromEmail,
-	})
+// ProbarCorreo entrega el mensaje técnico con los datos todavía no guardados.
+func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente, destinatario, idioma, instalacion string) error {
+	return p.mail.ProbarEnvio(services.CorreoSaliente{
+		Host:             correo.Host,
+		Port:             correo.Port,
+		SecurityMode:     correo.SecurityMode,
+		InsecureAccepted: correo.InsecureAccepted,
+		User:             correo.User,
+		Password:         correo.Password,
+		FromName:         correo.FromName,
+		FromEmail:        correo.FromEmail,
+	}, destinatario, idioma, instalacion)
 }
 
 // resumidorDeIA traduce lo que `tickets` pide a lo que el módulo `ai` ofrece.
@@ -248,12 +249,13 @@ func run() error {
 	settingsService.SetAICredentialKey(cfg.AICredentialKey)
 	settingsService.SetAIManager("http://ai:8081", cfg.AIManagerToken)
 	settingsService.SetCorreoInicial(settingsservices.MailInput{
-		Host:      cfg.SetupMailHost,
-		Port:      cfg.SetupMailPort,
-		Secure:    cfg.SetupMailSecure,
-		User:      cfg.SetupMailUser,
-		FromName:  cfg.SetupMailFromName,
-		FromEmail: cfg.SetupMailFromEmail,
+		Host:             cfg.SetupMailHost,
+		Port:             cfg.SetupMailPort,
+		SecurityMode:     cfg.SetupMailSecurityMode,
+		InsecureAccepted: cfg.SetupMailInsecureAccepted,
+		User:             cfg.SetupMailUser,
+		FromName:         cfg.SetupMailFromName,
+		FromEmail:        cfg.SetupMailFromEmail,
 	})
 
 	usersService := userservices.NewService(userrepositories.NewUserRepository(db))
@@ -285,8 +287,8 @@ func run() error {
 	// directorio y con un reino: probar una conexión es hablar el protocolo, y eso no se duplica.
 	settingsService.SetProber(authService)
 
-	// Y la prueba del correo saliente la contesta `mail`, con la misma conexión y autenticación que
-	// usa para enviar: **sin mandar ningún correo**, que es lo que hace falta en el asistente
+	// Y la prueba del correo saliente la contesta `mail`, con la misma transacción que usa para enviar
+	// el mensaje técnico al destinatario efímero escrito en la pantalla.
 	// (docs/primer-arranque.md, sección 3).
 	settingsService.SetProberDeCorreo(proberDeCorreo{mail: mailService})
 
@@ -544,6 +546,7 @@ func run() error {
 	// (docs/modules/settings.md, sección 5.8).
 	mux.Handle("POST /api/settings/directory/test", admin(http.HandlerFunc(settingsController.TestDirectory)))
 	mux.Handle("POST /api/settings/keycloak/test", admin(http.HandlerFunc(settingsController.TestKeycloak)))
+	mux.Handle("POST /api/settings/mail/test", admin(http.HandlerFunc(settingsController.TestMail)))
 	// La prueba del motor de IA: pregunta a su comprobación de salud la dirección que se le manda, o
 	// la que hay guardada si no llega ninguna (docs/modules/ai.md).
 	mux.Handle("POST /api/settings/ai/test", admin(http.HandlerFunc(settingsController.TestAI)))
@@ -760,12 +763,13 @@ func (i instalacionesDeLaConfiguracion) SMTP() (services.CorreoSaliente, bool) {
 	}
 
 	return services.CorreoSaliente{
-		Host:      correo.Host,
-		Port:      correo.Port,
-		Secure:    correo.Secure,
-		User:      correo.User,
-		Password:  correo.Password,
-		FromName:  correo.FromName,
-		FromEmail: correo.FromEmail,
+		Host:             correo.Host,
+		Port:             correo.Port,
+		SecurityMode:     correo.SecurityMode,
+		InsecureAccepted: correo.InsecureAccepted,
+		User:             correo.User,
+		Password:         correo.Password,
+		FromName:         correo.FromName,
+		FromEmail:        correo.FromEmail,
 	}, true
 }
