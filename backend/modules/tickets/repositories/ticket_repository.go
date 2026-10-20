@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Los estados, que son un valor cerrado y viven aquí para que la base y el código digan lo mismo.
@@ -191,6 +192,23 @@ func (r *TicketRepository) ByID(id int64) (Ticket, error) {
 	var ticket Ticket
 
 	result := r.db.Where("id = ?", id).Limit(1).Find(&ticket)
+	if result.Error != nil {
+		return Ticket{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return Ticket{}, ErrTicketNotFound
+	}
+
+	return ticket, nil
+}
+
+// ByIDForUpdate relee y bloquea un principal dentro de una transacción. Se usa cuando una
+// decisión depende del estado que tenga la fila justo en ese instante: dos respuestas simultáneas
+// no pueden producir dos transiciones ni dos entradas de historial.
+func (r *TicketRepository) ByIDForUpdate(tx *gorm.DB, id int64) (Ticket, error) {
+	var ticket Ticket
+
+	result := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).Limit(1).Find(&ticket)
 	if result.Error != nil {
 		return Ticket{}, result.Error
 	}
