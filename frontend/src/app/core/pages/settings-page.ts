@@ -422,6 +422,14 @@ export class SettingsPage implements OnDestroy {
     return oscuro ? configuracion.brand.dark.filled : configuracion.brand.light.filled;
   }
 
+  protected hayIconoPropio(): boolean {
+    return this.configuracion()?.brand.siteIcon.filled ?? false;
+  }
+
+  protected vistaPreviaIcono(): string {
+    return this.marca.urlDelIcono();
+  }
+
   /** Un tamaño en algo que se lee: «203 KB», «1,2 MB». */
   protected peso(bytes: number | undefined): string {
     if (!bytes) {
@@ -451,6 +459,21 @@ export class SettingsPage implements OnDestroy {
   /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
   protected async volverAlDeFabrica(oscuro: boolean): Promise<void> {
     await this.pedir(() => this.marca.restablecerLogo(oscuro), this.t().configuracion.logoQuitado);
+  }
+
+  protected elegirIcono(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.[0] ?? null;
+    if (!archivo) return;
+    void this.pedir(
+      () => this.marca.subirIcono(archivo),
+      this.t().configuracion.iconoSubido,
+      () => (entrada.value = ''),
+    );
+  }
+
+  protected async restaurarIcono(): Promise<void> {
+    await this.pedir(() => this.marca.restablecerIcono(), this.t().configuracion.iconoQuitado);
   }
 
   /**

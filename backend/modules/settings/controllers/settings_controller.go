@@ -219,6 +219,70 @@ func (c *SettingsController) DeleteLogo(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
 }
 
+// UploadSiteIcon guarda el icono propio de la pestaña.
+func (c *SettingsController) UploadSiteIcon(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, services.MaxLogoBytes+1024)
+	archivo, _, err := r.FormFile("icon")
+	if err != nil {
+		var demasiado *http.MaxBytesError
+		if errors.As(err, &demasiado) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+			return
+		}
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
+		return
+	}
+	defer archivo.Close()
+	if _, err = c.service.SaveSiteIcon(archivo, auth.MustFromContext(r.Context())); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	config, err := c.service.Config()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
+}
+
+func (c *SettingsController) DeleteSiteIcon(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.RemoveSiteIcon(auth.MustFromContext(r.Context())); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	config, err := c.service.Config()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
+}
+
+func (c *SettingsController) SiteIconFile(w http.ResponseWriter, r *http.Request) {
+	icono, err := c.service.SiteIconFor()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	if icono.ContentType == "image/svg+xml" {
+		w.Header().Set("Content-Security-Policy", "sandbox")
+	}
+	w.Header().Set("Content-Type", icono.ContentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if r.URL.Query().Get("v") == icono.Version {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	archivo, err := os.Open(icono.Path)
+	if err != nil {
+		httpx.WriteError(w, http.StatusNotFound, "settings.logo.notFound")
+		return
+	}
+	defer archivo.Close()
+	_, _ = io.Copy(w, archivo)
+}
+
 // LogoFile sirve el archivo del logo que toca a ese tema.
 //
 // **Es público**: la pantalla de entrada lo enseña antes de que nadie haya entrado. Sólo devuelve la
@@ -425,6 +489,8 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
 	case errors.Is(err, services.ErrLogoTooBig):
 		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+	case errors.Is(err, services.ErrSiteIconTooSmall):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.siteIcon.tooSmall")
 	case errors.Is(err, services.ErrLogoVariantUnknown):
 		httpx.WriteError(w, http.StatusNotFound, "settings.logo.variantUnknown")
 	case errors.Is(err, services.ErrLogoNotFound):

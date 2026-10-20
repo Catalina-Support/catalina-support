@@ -33,6 +33,9 @@ services:
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
   backend:
     restart: always
@@ -121,19 +124,23 @@ services:
   # `database`).
   # Sólo el esquema: no borra, no carga ejemplos y no sella una base nueva.
   migrate:
-    image: postgres:18-alpine
+    build:
+      context: .
+      dockerfile: config/dockerfiles/backend.Dockerfile
     env_file: [./config/env/dev.env]
+    environment:
+      MIGRATIONS_DIR: /migrations
+      MIGRATION_BACKUP_DIR: /backups
     depends_on:
       database:
         condition: service_healthy
     volumes:
       - ./backend/migrations:/migrations:ro
-    entrypoint: ["sh", "-ec"]
-    command:
-      - |
-        export PGPASSWORD="$$POSTGRES_PASSWORD"
-        psql -h "$$POSTGRES_HOST" -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
-        echo "Esquema aplicado; los ejemplos siguen siendo opcionales."
+      - ./backend:/app:ro
+      - ./_backups:/backups
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
+    command: ["go", "run", "./cmd/migrate"]
 
   seed:
     image: postgres:18-alpine
@@ -148,8 +155,8 @@ services:
     env_file:
       - ./config/env/dev.env
     depends_on:
-      database:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ./scripts:/app/scripts:ro
       - ./backend/migrations:/app/backend/migrations:ro

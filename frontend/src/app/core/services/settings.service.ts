@@ -100,7 +100,11 @@ export interface Configuracion {
   readonly aiUrl: string;
   readonly aiModel: string;
   readonly ai?: ConfiguracionDeIA;
-  readonly brand: { readonly light: HuecoDeLogo; readonly dark: HuecoDeLogo };
+  readonly brand: {
+    readonly light: HuecoDeLogo;
+    readonly dark: HuecoDeLogo;
+    readonly siteIcon: HuecoDeLogo;
+  };
 }
 
 export interface ConfiguracionDeIA {

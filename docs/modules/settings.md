@@ -3,6 +3,13 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: icono del sitio configurable.** La sección 25 incorpora un
+> favicon propio e independiente de los dos logos, con administración en `/setup` y Configuración,
+> actualización inmediata y caída al logo claro efectivo. El responsable cerró el repaso con
+> 1A–14A y corrigió 4A: sin icono propio se usa el logo claro personalizado o, en su ausencia, el de
+> fábrica. Pasaron el módulo settings, 253 pruebas frontend, fronteras y compilación; la migración y
+> el endpoint público se verificaron en el entorno local.
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** Precisa que el filtro LDAP
 > configurado es la condición base de seguridad y que la aplicación añade la búsqueda escapada por
 > `sAMAccountName` o `mail`; el identificador `objectGUID` se normaliza como GUID canónico. No añade
@@ -265,6 +272,7 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `primary_color` | `text` | no | `'#1d4ed8'` | El color institucional, en hexadecimal `#rrggbb`; sólo afecta a los dos temas de fábrica |
 | `logo_light` | `text` | sí | — (nulo) | **El nombre del archivo** del logo para los temas claros, o nulo si no hay logo propio |
 | `logo_dark` | `text` | sí | — (nulo) | El del tema oscuro, o nulo |
+| `site_icon` | `text` | sí | — (nulo) | El nombre interno del icono de pestaña propio; nulo cae al logo claro efectivo |
 | `updated_at` | `timestamptz` | no | `now()` | Cuándo se cambió la fila por última vez |
 | `updated_by_id` | `bigint` | sí | — (nulo) | Quién la cambió: `users(id)` con `ON DELETE SET NULL`; nulo si fue la siembra |
 | `installation_name` | `text` | no | `'Catalina Support'` | El nombre de la institución, la empresa o el equipo; sustituye a «Catalina Support» donde antes se leía. **No admite vacío** y no pasa de 60 caracteres |
@@ -721,6 +729,9 @@ con esos dos campos sin texto.
 | `POST /api/settings/brand/logo?variant=claro\|oscuro` | Sube o reemplaza el logo de ese hueco (`multipart`) | Administrador |
 | `DELETE /api/settings/brand/logo?variant=claro\|oscuro` | Quita el propio y vuelve al de fábrica | Administrador |
 | `GET /api/settings/brand/logo?theme=claro\|oscuro` | **El archivo que toca** para ese tema. **Público** | Cualquiera |
+| `POST /api/settings/brand/site-icon` | Sube o reemplaza el icono de la pestaña (`multipart`) | Administrador |
+| `DELETE /api/settings/brand/site-icon` | Quita el icono propio y vuelve al logo claro efectivo | Administrador |
+| `GET /api/settings/brand/site-icon` | El icono propio o el logo claro personalizado. **Público** | Cualquiera |
 | `GET /api/settings/brand?color=%23rrggbb` | **Vista previa**: los mismos colores resueltos, pero **sin guardar nada**. Es lo que permite enseñar cómo va a quedar antes de cambiar el color de la casa | Cualquiera |
 | `GET /api/settings/brand` | **Público.** El **nombre de la instalación**, **la versión del sistema**, el color ya resuelto y si hay logo propio: es lo que la aplicación lee para pintarse antes de que nadie entre | Cualquiera |
 | `POST /api/settings/directory/test` | **Prueba** la configuración del directorio que llega en el cuerpo, **sin guardarla**: conecta con la cuenta de servicio y la cierra. No valida la contraseña de nadie | Administrador |
@@ -1189,3 +1200,38 @@ credenciales de servicio y validez sintáctica del filtro, sin buscar ni exponer
 No se añaden campos ni secretos para administración de Keycloak. Hasta disponer de una cuenta de
 servicio autorizada, Configuración conserva OIDC para el acceso y `/users` conserva allí el alta en
 el primer ingreso.
+
+## 25. Icono del sitio configurable
+
+La marca incorpora un **Icono del sitio** independiente de `logo_light` y `logo_dark`. Es opcional y
+se persiste en la nueva columna nullable `site_icon` de `installation_settings`; guarda sólo el
+nombre interno del archivo. Subir otro lo reemplaza de forma transaccional y elimina el anterior
+después de guardar la fila. Restaurar deja la columna nula. Ambas acciones registran actor y fecha
+mediante los campos de auditoría existentes.
+
+Acepta PNG, JPEG, WebP y SVG con la validación por contenido, el máximo de 1 MB y el máximo de 2000
+píxeles ya aplicados a los logos. Además, ambos lados deben medir al menos 32 píxeles. La imagen no
+se recorta ni se estira: el navegador la encaja completa, centrada y conserva su transparencia. Un
+archivo rectangular es válido.
+
+La cascada pública es única: icono propio; si no existe, logo claro personalizado; si tampoco existe,
+`logo-catalina-support-light.png`. Por ello, restaurar el icono o cambiar/restaurar el logo claro
+puede cambiar el favicon efectivo inmediatamente. El antiguo `favicon.ico` queda sólo como respaldo
+estático antes de que arranque la aplicación o si la marca pública no puede leerse.
+
+La marca pública añade `siteIcon.filled` y un sello que cambia al modificar el icono o cualquiera de
+las imágenes que puedan servir como fallback. `GET /api/settings/brand/site-icon` devuelve el icono
+propio o el logo claro personalizado, con su tipo real, `nosniff`, aislamiento para SVG y la misma
+política de caché versionada de los logos. Si ninguno existe responde 404 y el frontend usa el logo
+claro de fábrica. No genera `.ico`: los navegadores actuales aceptan los cuatro formatos decididos.
+
+Configuración añade `POST` y `DELETE /api/settings/brand/site-icon`, reservados a Administrador y con
+el mismo `multipart` y límite del logo. `/setup` ofrece las rutas paralelas antes del sello. La
+respuesta de configuración describe si el hueco propio está lleno, pero nunca expone rutas internas.
+Las claves existentes de formato, contenido y tamaño se reutilizan; una imagen menor de 32 × 32 usa
+`settings.siteIcon.tooSmall` con respuesta 422.
+
+Las pruebas cubrirán validación, reemplazo y limpieza de archivos, fallback en sus tres niveles,
+caché, SVG aislado, permisos, candado del sello y actualización del favicon al cambiar tanto el
+icono como el logo claro. No se añaden manifest, iconos instalables ni `apple-touch-icon`: el alcance
+es exclusivamente la pestaña del navegador.

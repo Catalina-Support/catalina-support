@@ -29,8 +29,16 @@ const CONFIGURACION = {
     passwordSet: false,
   },
   keycloak: { issuer: '', clientId: '', redirectUri: '', secretSet: false },
-	mail: { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls', insecureAccepted: false,
-		user: 'mesa', fromName: 'Mesa', fromEmail: 'mesa@ejemplo.com', passwordSet: true },
+  mail: {
+    host: 'smtp.ejemplo.com',
+    port: '587',
+    securityMode: 'starttls',
+    insecureAccepted: false,
+    user: 'mesa',
+    fromName: 'Mesa',
+    fromEmail: 'mesa@ejemplo.com',
+    passwordSet: true,
+  },
   language: 'es',
   primaryColor: '#1d4ed8',
   timeZone: 'UTC',
@@ -43,7 +51,11 @@ const CONFIGURACION = {
   aiUrl: 'http://catalina_support_ai:8080',
   aiModel: 'qwen2.5-1.5b-instruct',
   updatedAt: '2026-09-29T00:00:00Z',
-  brand: { light: { filled: false }, dark: { filled: false } },
+  brand: {
+    light: { filled: false },
+    dark: { filled: false },
+    siteIcon: { filled: false },
+  },
 };
 
 /** La marca que se contesta cuando la pantalla la relee al guardar. */
@@ -59,7 +71,11 @@ const MARCA = {
     onDark: '#0d0f12',
     isDefault: true,
   },
-  logo: { light: { filled: false }, dark: { filled: false } },
+  logo: {
+    light: { filled: false },
+    dark: { filled: false },
+    siteIcon: { filled: false },
+  },
   logoVersion: '',
 };
 
@@ -67,10 +83,22 @@ const CATALOGO = {
   diskAvailableBytes: 1024,
   models: [
     {
-      id: 'qwen2.5-1.5b-instruct', name: 'Qwen 1.5B', downloadBytes: 512, ramBytes: 1024,
-      checksum: 'abc', source: 'https://example.com/model', license: 'Apache-2.0', licenseUrl: '',
-      installed: true, partial: false, downloading: false, downloadedBytes: 512,
-      phase: 'active', active: true, healthy: true, error: '',
+      id: 'qwen2.5-1.5b-instruct',
+      name: 'Qwen 1.5B',
+      downloadBytes: 512,
+      ramBytes: 1024,
+      checksum: 'abc',
+      source: 'https://example.com/model',
+      license: 'Apache-2.0',
+      licenseUrl: '',
+      installed: true,
+      partial: false,
+      downloading: false,
+      downloadedBytes: 512,
+      phase: 'active',
+      active: true,
+      healthy: true,
+      error: '',
     },
   ],
 };

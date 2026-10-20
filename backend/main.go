@@ -447,6 +447,8 @@ func run() error {
 	mux.HandleFunc("DELETE /api/setup/ai/models/{id}", setupController.DeleteAIModel)
 	mux.HandleFunc("POST /api/setup/brand/logo", setupController.UploadLogo)
 	mux.HandleFunc("DELETE /api/setup/brand/logo", setupController.DeleteLogo)
+	mux.HandleFunc("POST /api/setup/brand/site-icon", setupController.UploadSiteIcon)
+	mux.HandleFunc("DELETE /api/setup/brand/site-icon", setupController.DeleteSiteIcon)
 	// Las dos pruebas de conexión del asistente: se prueba **lo que hay en pantalla**, antes de
 	// guardarlo, y por eso van por `POST` con los datos en el cuerpo y no tocan la base. El candado es
 	// el mismo que el del resto del asistente: sellada la instalación, contestan **409**
@@ -533,6 +535,7 @@ func run() error {
 	mux.Handle("GET /api/settings", admin(http.HandlerFunc(settingsController.Show)))
 	mux.Handle("PUT /api/settings", admin(http.HandlerFunc(settingsController.Update)))
 	mux.Handle("POST /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.UploadLogo)))
+	mux.Handle("POST /api/settings/brand/site-icon", admin(http.HandlerFunc(settingsController.UploadSiteIcon)))
 	// Las dos pruebas de conexión: se prueba **lo que hay en pantalla**, antes de guardarlo, y por eso
 	// van por `POST` con la configuración en el cuerpo y no leen nada de la base
 	// (docs/modules/settings.md, sección 5.8).
@@ -553,12 +556,14 @@ func run() error {
 	mux.Handle("POST /api/settings/ai/models/{id}/deactivate", admin(http.HandlerFunc(settingsController.DeactivateAIModel)))
 	mux.Handle("DELETE /api/settings/ai/models/{id}", admin(http.HandlerFunc(settingsController.DeleteAIModel)))
 	mux.Handle("DELETE /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.DeleteLogo)))
+	mux.Handle("DELETE /api/settings/brand/site-icon", admin(http.HandlerFunc(settingsController.DeleteSiteIcon)))
 
 	// Y la marca que necesita la aplicación **antes de que nadie entre**: el color institucional y el
 	// logo. Son públicos a propósito, y sólo devuelven la marca de la institución
 	// (docs/modules/settings.md, sección 5.4).
 	mux.HandleFunc("GET /api/settings/brand", settingsController.Brand)
 	mux.HandleFunc("GET /api/settings/brand/logo", settingsController.LogoFile)
+	mux.HandleFunc("GET /api/settings/brand/site-icon", settingsController.SiteIconFile)
 
 	return serve(cfg, middleware.Chain(mux, aiConfigured, middleware.Recover), func() error {
 		// Se para la cola del motor antes de cerrar la base: un trabajo a medias escribiría en una conexión

@@ -3,6 +3,10 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 31 define el ejecutor
+> Go de migraciones, su registro transaccional, checksums, bloqueo y frontera con el arranque. El
+> responsable cerró y aprobó las decisiones 1A–25A. No se desplegó producción.
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: prueba SMTP con entrega al relay.** La sección 30
 > asigna a `settings` la entrada, autorización y limitación de la prueba, y a `mail` el mensaje fijo y
 > el envío. El responsable cerró y aprobó 1A–14A; las fronteras, pruebas focalizadas y compilación
@@ -1337,7 +1341,9 @@ abiertas.
 
 ## 21. Salud distinguible con esquema pendiente
 
-El backend puede arrancar en producción después de que PostgreSQL acepte TCP aunque el operador todavía no haya ejecutado la migración manual. Al iniciar comprueba la existencia de `installation_settings`, tabla esencial de `v1.0.0.sql`, sin crear una tabla de control ni modificar el esquema. Si falta, registra una sola vez que la migración está pendiente.
+El backend comprueba al iniciar la existencia de `installation_settings`, tabla esencial de
+`v1.0.0.sql`. Compose lo inicia sólo después del ejecutor automático, pero la comprobación conserva
+un diagnóstico seguro si alguien ejecuta el binario fuera de ese orden.
 
 `GET /api/health` responde `503` con el objeto estable
 `{"status":"error","errorKey":"database.schema_pending"}` mientras falte esa tabla. Una base
@@ -1346,7 +1352,9 @@ no se confunden ambos diagnósticos. Las consultas de salud no repiten el mensaj
 La interfaz conserva la pantalla existente de servidor no disponible: el detalle operativo vive en
 salud y logs, sin una pantalla nueva.
 
-En desarrollo y pruebas el backend sigue esperando al servicio automático `migrate`, por lo que esta condición protege principalmente el orden manual de producción y diagnósticos accidentales. No se introducen migraciones automáticas dentro del proceso Go, reintentos SQL, tablas nuevas ni cambios de permisos.
+En los tres entornos backend y frontend esperan al servicio automático `migrate`. Las migraciones no
+viven dentro del servidor HTTP: el comando Go independiente mantiene `schema_migrations`, crea el
+respaldo y termina antes de habilitar la aplicación.
 
 ## 22. Implementación: ausencias esperadas sin falsos errores
 
@@ -1554,3 +1562,29 @@ no interpreta esa aceptación como entrega al buzón.
 El mensaje de prueba no entra en `mail_templates`, no crea una tabla ni cruza la frontera hacia los
 avisos de `auth` o `tickets`. El log estructurado conserva resultado, servidor, IP y destinatario
 parcialmente oculto; excluye credenciales, cuerpo y conversación SMTP.
+
+## 31. Frontera del ejecutor de migraciones
+
+El ejecutor es un comando Go independiente del servidor HTTP. Comparte `shared/version` para conocer
+la versión máxima y el estado de desarrollo, pero no importa módulos de negocio ni utiliza sus
+repositorios. Recibe la conexión PostgreSQL, el directorio de migraciones y el directorio de
+respaldos mediante la configuración de despliegue. No atiende red, no crea usuarios y no ejecuta el
+seeder.
+
+Su secuencia es determinista: descubre nombres estrictos, analiza y ordena SemVer, adquiere un
+advisory lock, inspecciona `schema_migrations`, rechaza degradaciones, archivos futuros y checksums
+inmutables, identifica trabajo pendiente y, sólo si lo hay, crea y valida el respaldo. Después
+ejecuta cada archivo en su propia transacción y registra versión, archivo, SHA-256 y fecha dentro de
+esa misma transacción. Libera el bloqueo al terminar o fallar. Un segundo ejecutor espera el lock y
+vuelve a calcular el estado al adquirirlo.
+
+La excepción de desarrollo se limita al archivo cuya versión coincide con la constante actual:
+puede reaplicarse si cambió el checksum porque sigue siendo idempotente. Ningún archivo histórico
+puede mutar. Al cambiar `Development` a falso, incluso el archivo actual queda sellado. El ejecutor
+no intenta interpretar sentencias, fabricar rollbacks ni continuar tras un error.
+
+Compose expresa la dependencia mediante finalización correcta del servicio de migración. La
+disponibilidad HTTP no sustituye esa dependencia; la comprobación de esquema pendiente permanece
+como defensa si se ejecuta el binario fuera de Compose. Logs y `BUILD_INFO` permiten relacionar una
+actualización con commit y versión, sin registrar DSN ni secretos. Los cambios destructivos siguen
+un ciclo expandir–migrar–contraer entre versiones para conservar una ruta operativa de recuperación.

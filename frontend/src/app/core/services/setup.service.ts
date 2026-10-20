@@ -302,6 +302,14 @@ export class SetupService {
       this.http.delete(`/api/setup/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`),
     );
   }
+  async subirIcono(archivo: File): Promise<void> {
+    const data = new FormData();
+    data.append('icon', archivo, archivo.name);
+    await firstValueFrom(this.http.post('/api/setup/brand/site-icon', data));
+  }
+  async restablecerIcono(): Promise<void> {
+    await firstValueFrom(this.http.delete('/api/setup/brand/site-icon'));
+  }
   async probarModeloActivo(): Promise<SaludoDeIA> {
     return firstValueFrom(this.http.post<SaludoDeIA>('/api/setup/ai/models/active/test', {}));
   }

@@ -43,6 +43,9 @@ var ErrLogoInvalid = errors.New("settings.logo.invalid")
 // ErrLogoTooBig se devuelve cuando el archivo pesa más de lo permitido.
 var ErrLogoTooBig = errors.New("settings.logo.tooBig")
 
+// ErrSiteIconTooSmall evita favicons que el navegador tendría que ampliar hasta volver borrosos.
+var ErrSiteIconTooSmall = errors.New("settings.siteIcon.tooSmall")
+
 // Logo es un archivo de logo ya validado, listo para guardar.
 type Logo struct {
 	// Bytes son los primeros bytes del archivo, que es lo que decide el formato de verdad.
@@ -98,6 +101,18 @@ func InspectLogo(entrada io.Reader) (Logo, error) {
 		Width:       ancho,
 		Height:      alto,
 	}, nil
+}
+
+// InspectSiteIcon aplica las reglas de imagen de la marca y exige 32 píxeles en ambos lados.
+func InspectSiteIcon(entrada io.Reader) (Logo, error) {
+	icono, err := InspectLogo(entrada)
+	if err != nil {
+		return Logo{}, err
+	}
+	if icono.Width < 32 || icono.Height < 32 {
+		return Logo{}, fmt.Errorf("%w: %dx%d", ErrSiteIconTooSmall, icono.Width, icono.Height)
+	}
+	return icono, nil
 }
 
 // tipoDeContenido mira los primeros bytes, que es lo único que no se puede falsear.

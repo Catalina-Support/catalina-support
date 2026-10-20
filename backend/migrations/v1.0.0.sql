@@ -1,11 +1,10 @@
 -- Catalina-Support — esquema de la versión 1.0.0
 --
 -- Este archivo es la ÚNICA vía para crear el esquema, **en desarrollo y en producción**
--- (docs/ambientes.md, sección 5). Es transaccional (todo va entre BEGIN y COMMIT, de modo que un
--- fallo a mitad no deja nada a medias) e idempotente (se puede aplicar tantas veces como haga falta
--- sin romper nada), y se aplica con:
---
---   psql -v ON_ERROR_STOP=1 -U catalina_support -d catalina_support -p 11003 < backend/migrations/v1.0.0.sql
+-- (docs/ambientes.md, sección 27). Es idempotente y el ejecutor de migraciones es dueño de la
+-- transacción que incluye tanto este contenido como su registro en `schema_migrations`.
+-- No se aplica directamente: `cmd/migrate` la descubre, respalda la base y la ejecuta de forma
+-- atómica.
 --
 -- **Lleva también los datos sin los cuales la aplicación no funciona** —las dos filas de
 -- configuración y las veintiséis plantillas de correo—, porque eso no es un dato de ejemplo: en una
@@ -16,8 +15,6 @@
 -- desarrollo y nunca en producción.
 --
 -- Va por secciones, una por módulo, en el orden en que se implementan.
-
-BEGIN;
 
 -- ============================================================================
 -- mail — las plantillas de los correos (docs/modules/mail.md)
@@ -397,6 +394,8 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- Nulo es «no hay logo propio» y se usa el de fábrica que trae la aplicación.
     logo_light    text,
     logo_dark     text,
+    -- Icono propio de la pestaña. Nulo cae al logo claro efectivo.
+    site_icon     text,
     updated_at    timestamptz NOT NULL DEFAULT now(),
     updated_by_id bigint      REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT installation_settings_language_check CHECK (language IN ('es', 'en')),
@@ -420,6 +419,7 @@ COMMENT ON TABLE installation_settings IS
 -- instalación existente, así que su idioma se conserva al volver a aplicar la migración.
 ALTER TABLE installation_settings ALTER COLUMN language SET DEFAULT 'en';
 ALTER TABLE installation_settings ADD COLUMN IF NOT EXISTS settings_version bigint NOT NULL DEFAULT 1;
+ALTER TABLE installation_settings ADD COLUMN IF NOT EXISTS site_icon text;
 
 -- La integración de IA tiene forma propia: modalidad, proveedor, autenticación y credencial
 -- cifrada. Nunca se devuelve credential_ciphertext por la API.
@@ -1276,5 +1276,3 @@ END $$;
 
 -- El índice por `tag_id`: es como se cuentan los tickets que llevan una etiqueta y como se filtran.
 CREATE INDEX IF NOT EXISTS ticket_tags_tag_id_idx ON ticket_tags (tag_id);
-
-COMMIT;

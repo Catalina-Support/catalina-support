@@ -53,6 +53,7 @@ type InstallationSettings struct {
 	// logo propio» y se usa el de fábrica (docs/modules/settings.md, sección 5.3).
 	LogoLight   *string   `gorm:"column:logo_light"`
 	LogoDark    *string   `gorm:"column:logo_dark"`
+	SiteIcon    *string   `gorm:"column:site_icon"`
 	UpdatedAt   time.Time `gorm:"column:updated_at"`
 	UpdatedByID *int64    `gorm:"column:updated_by_id"`
 }

@@ -28,7 +28,11 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
       onDark: '#101828',
       isDefault: false,
     },
-    logo: { light: { filled: false }, dark: { filled: false } },
+    logo: {
+      light: { filled: false },
+      dark: { filled: false },
+      siteIcon: { filled: false },
+    },
     logoVersion: '',
   };
 }
@@ -39,7 +43,11 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
  */
 const CONFIGURACION_CON_LOGO = {
   name: 'Ayuntamiento de Ejemplo',
-  brand: { light: { filled: true }, dark: { filled: false } },
+  brand: {
+    light: { filled: true },
+    dark: { filled: false },
+    siteIcon: { filled: false },
+  },
 };
 
 describe('BrandService', () => {
@@ -209,6 +217,50 @@ describe('BrandService', () => {
     peticion.flush(CONFIGURACION_CON_LOGO);
 
     await expect(restablecido).resolves.toEqual(CONFIGURACION_CON_LOGO);
+  });
+
+  it('sube y restaura el icono del sitio por sus rutas propias', async () => {
+    const archivo = new File(['icono'], 'icono.png', { type: 'image/png' });
+    const subida = marca.subirIcono(archivo);
+    const post = http.expectOne('/api/settings/brand/site-icon');
+    expect(post.request.method).toBe('POST');
+    expect(((post.request.body as FormData).get('icon') as File).name).toBe('icono.png');
+    post.flush(CONFIGURACION_CON_LOGO);
+    await subida;
+
+    const restauracion = marca.restablecerIcono();
+    const eliminar = http.expectOne('/api/settings/brand/site-icon');
+    expect(eliminar.request.method).toBe('DELETE');
+    eliminar.flush(CONFIGURACION_CON_LOGO);
+    await restauracion;
+  });
+
+  it('aplica el icono propio y cae al logo claro efectivo con versión', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush({
+      ...marcaConNombre('Catalina Support'),
+      logo: {
+        light: { filled: true },
+        dark: { filled: false },
+        siteIcon: { filled: true },
+      },
+      logoVersion: '20261020T134700',
+    });
+    await carga;
+
+    expect(document.head.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe(
+      '/api/settings/brand/site-icon?v=20261020T134700',
+    );
+  });
+
+  it('sin icono ni logo claro usa el logo claro de fábrica como favicon', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush(marcaConNombre('Catalina Support'));
+    await carga;
+
+    expect(document.head.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe(
+      LOGO_DE_FABRICA_CLARO,
+    );
   });
 
   // **La vista previa del color**: se pregunta al backend sin guardarlo, el color viaja escapado y

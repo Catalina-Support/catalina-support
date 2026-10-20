@@ -3,6 +3,10 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 19 incorpora el icono
+> opcional del sitio al paso 1. Las decisiones 1A–14A están cerradas; pasaron 253 pruebas frontend,
+> las fronteras y la compilación de producción.
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: mensaje real desde el paso 4.** La sección 18
 > incorpora un destinatario efímero y convierte la prueba SMTP en un envío opcional, limitado y con
 > texto fijo en el idioma global. El responsable cerró y aprobó 1A–14A; pasaron las pruebas
@@ -558,3 +562,15 @@ indicada, sin prometer que llegó a la bandeja. No probar sigue permitiendo avan
 Como el endpoint existe antes de iniciar sesión, limita cada pareja IP–destinatario a cinco intentos
 en quince minutos, responde `429` al excederlos y permanece inaccesible después del sello. Los logs
 ocultan parcialmente el destinatario y excluyen secreto y contenido.
+
+## 19. Icono opcional en el paso 1
+
+Después de los dos logos, el paso 1 presenta la tarjeta **Icono del sitio** definida en
+`docs/interfaz-y-experiencia.md`, sección 50. Subirlo o restaurarlo usa las rutas públicas de
+`/api/setup/brand/site-icon`, disponibles sólo mientras la instalación no esté sellada, y actualiza
+el favicon de todas las pestañas abiertas inmediatamente.
+
+El icono no es obligatorio y no participa en **Siguiente**, en la validación del paso ni en el sello
+final. Si se omite, la pestaña usa el logo claro personalizado y, si éste tampoco existe, el logo
+claro de fábrica. Los errores permanecen en el paso mediante el toast común y no descartan los demás
+datos ya escritos.

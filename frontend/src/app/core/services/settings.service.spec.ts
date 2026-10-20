@@ -10,10 +10,10 @@ import { SettingsService, type Configuracion } from './settings.service';
  * pantalla hace con ello (docs/modules/settings.md).
  */
 const CONFIGURACION: Configuracion = {
-	reportOverdueCriticalHours: 4,
-	reportOverdueHighHours: 24,
-	reportOverdueMediumHours: 72,
-	reportOverdueLowHours: 120,
+  reportOverdueCriticalHours: 4,
+  reportOverdueHighHours: 24,
+  reportOverdueMediumHours: 72,
+  reportOverdueLowHours: 120,
   name: 'Ayuntamiento de Ejemplo',
   entryMethod: 'local',
   directory: {
@@ -35,8 +35,16 @@ const CONFIGURACION: Configuracion = {
     redirectUri: 'https://soporte.demo.com/login',
     secretSet: true,
   },
-	mail: { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls', insecureAccepted: false,
-		user: 'mesa', fromName: 'Mesa', fromEmail: 'mesa@ejemplo.com', passwordSet: true },
+  mail: {
+    host: 'smtp.ejemplo.com',
+    port: '587',
+    securityMode: 'starttls',
+    insecureAccepted: false,
+    user: 'mesa',
+    fromName: 'Mesa',
+    fromEmail: 'mesa@ejemplo.com',
+    passwordSet: true,
+  },
   language: 'es',
   primaryColor: '#1d4ed8',
   timeZone: 'America/Guayaquil',
@@ -49,7 +57,11 @@ const CONFIGURACION: Configuracion = {
   updatedAt: '2026-09-29T00:00:00Z',
   aiUrl: 'http://catalina_support_ai:8080',
   aiModel: 'qwen2.5-1.5b-instruct',
-  brand: { light: { filled: false }, dark: { filled: false } },
+  brand: {
+    light: { filled: false },
+    dark: { filled: false },
+    siteIcon: { filled: false },
+  },
 };
 
 describe('SettingsService', () => {
@@ -122,17 +134,25 @@ describe('SettingsService', () => {
     await prueba;
   });
 
-	it('probarCorreo manda el destinatario efímero y devuelve la aceptación', async () => {
-		const escrito = { host: 'smtp.ejemplo.com', port: '587', securityMode: 'starttls' as const,
-			insecureAccepted: false, user: 'mesa', password: '', fromName: 'Mesa',
-			fromEmail: 'mesa@ejemplo.com', testRecipient: 'destino@ejemplo.com' };
-		const prueba = ajustes.probarCorreo(escrito);
-		const peticion = http.expectOne('/api/settings/mail/test');
-		expect(peticion.request.method).toBe('POST');
-		expect(peticion.request.body).toEqual(escrito);
-		peticion.flush({ status: 'ok', recipient: 'destino@ejemplo.com' });
-		await expect(prueba).resolves.toEqual({ status: 'ok', recipient: 'destino@ejemplo.com' });
-	});
+  it('probarCorreo manda el destinatario efímero y devuelve la aceptación', async () => {
+    const escrito = {
+      host: 'smtp.ejemplo.com',
+      port: '587',
+      securityMode: 'starttls' as const,
+      insecureAccepted: false,
+      user: 'mesa',
+      password: '',
+      fromName: 'Mesa',
+      fromEmail: 'mesa@ejemplo.com',
+      testRecipient: 'destino@ejemplo.com',
+    };
+    const prueba = ajustes.probarCorreo(escrito);
+    const peticion = http.expectOne('/api/settings/mail/test');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual(escrito);
+    peticion.flush({ status: 'ok', recipient: 'destino@ejemplo.com' });
+    await expect(prueba).resolves.toEqual({ status: 'ok', recipient: 'destino@ejemplo.com' });
+  });
 
   it('probarMotor manda la dirección del motor a su ruta', async () => {
     const prueba = ajustes.probarMotor('http://catalina_support_ai:8080');

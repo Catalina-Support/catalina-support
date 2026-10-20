@@ -41,8 +41,9 @@ type SettingsResponse struct {
 
 // BrandDto es el estado de la marca: los dos huecos.
 type BrandDto struct {
-	Light LogoDto `json:"light"`
-	Dark  LogoDto `json:"dark"`
+	Light    LogoDto `json:"light"`
+	Dark     LogoDto `json:"dark"`
+	SiteIcon LogoDto `json:"siteIcon"`
 }
 
 // LogoDto es un hueco del logo. `filled` en falso quiere decir que ese hueco usa el de fábrica.
@@ -234,8 +235,9 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 		AIModel:                    config.AIModel,
 		AI:                         NewAIConfigurationResponse(config.AI),
 		Brand: BrandDto{
-			Light: newLogoDto(config.Brand.Light),
-			Dark:  newLogoDto(config.Brand.Dark),
+			Light:    newLogoDto(config.Brand.Light),
+			Dark:     newLogoDto(config.Brand.Dark),
+			SiteIcon: newLogoDto(config.Brand.SiteIcon),
 		},
 	}
 }
@@ -260,8 +262,9 @@ func NewBrandResponse(public services.Public) BrandResponse {
 			IsDefault: public.Colors.IsDefault,
 		},
 		Logo: BrandDto{
-			Light: LogoDto{Filled: public.HasLight},
-			Dark:  LogoDto{Filled: public.HasDark},
+			Light:    LogoDto{Filled: public.HasLight},
+			Dark:     LogoDto{Filled: public.HasDark},
+			SiteIcon: LogoDto{Filled: public.HasSiteIcon},
 		},
 		LogoVersion: public.LogoVersion,
 	}

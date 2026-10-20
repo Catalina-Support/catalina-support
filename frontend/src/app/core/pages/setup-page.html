@@ -233,6 +233,35 @@
               />
             </div>
           }
+          <div class="flex flex-col gap-3 rounded-md border border-borde p-4 sm:col-span-2">
+            <strong>{{ t().configuracion.iconoSitio }}</strong>
+            <p class="text-sm text-apagado">{{ t().configuracion.iconoSitioAyuda }}</p>
+            <label
+              class="block w-20 cursor-pointer rounded-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primario"
+              [attr.aria-label]="t().configuracion.iconoSitio"
+            >
+              <img
+                class="h-20 w-20 rounded-md border border-borde object-contain p-2"
+                [src]="urlIcono()"
+                [alt]="t().configuracion.iconoSitio"
+              />
+              <input
+                class="sr-only"
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp,.svg"
+                (change)="elegirIcono($event)"
+              />
+            </label>
+            <p class="text-xs text-apagado">{{ t().configuracion.iconoFormatos }}</p>
+            @if (hayIconoPropio()) {
+              <app-boton
+                forma="secundario"
+                [texto]="t().configuracion.restaurarIcono"
+                [deshabilitado]="guardando()"
+                (pulsado)="restaurarIcono()"
+              />
+            }
+          </div>
         </div>
       </app-tarjeta>
     }

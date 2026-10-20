@@ -42,6 +42,15 @@ export const EN: Textos = {
     volverAlDeFabrica: 'Back to the factory one',
     logoSubido: 'Logo uploaded. It is already in use.',
     logoQuitado: 'That slot is back to the factory logo.',
+    iconoSitio: 'Site icon',
+    iconoSitioAyuda:
+      'It appears in the browser tab. If you do not upload one, the light-theme logo is used.',
+    iconoPuesto: 'A custom site icon is in use.',
+    iconoFallback: 'The light-theme logo is being used.',
+    iconoFormatos: 'PNG, JPEG, WebP or SVG, 32 to 2000 pixels per side and up to 1 MB.',
+    iconoSubido: 'Icon uploaded. It is already shown in the browser tab.',
+    iconoQuitado: 'The icon is back to the light-theme logo.',
+    restaurarIcono: 'Restore light logo',
     colorElegido: 'Colour',
     guardarMarca: 'Save the brand',
     guardando: 'Saving…',
@@ -1072,6 +1081,7 @@ export const EN: Textos = {
     'settings.notification.withoutAssignment':
       'You cannot notify only the assignee if the ticket is not handed out: there would be nobody to notify.',
     'settings.logo.format': 'That file is not one of the accepted images: PNG, JPEG, WebP or SVG.',
+    'settings.siteIcon.tooSmall': 'The icon must be at least 32 × 32 pixels.',
     'settings.logo.invalid': 'That image could not be read, or it is bigger than allowed.',
     'settings.logo.tooBig': 'That logo is too heavy: the maximum is 1 MB.',
     'settings.logo.variantUnknown': 'That logo slot does not exist: it is «light» or «dark».',

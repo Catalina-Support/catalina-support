@@ -43,6 +43,15 @@ export const ES = {
     volverAlDeFabrica: 'Volver al de fábrica',
     logoSubido: 'Logo subido. Ya se está usando.',
     logoQuitado: 'Ese hueco ha vuelto al logo de fábrica.',
+    iconoSitio: 'Icono del sitio',
+    iconoSitioAyuda:
+      'Se muestra en la pestaña del navegador. Si no subes uno, se usa el logo del tema claro.',
+    iconoPuesto: 'Tienes un icono propio puesto.',
+    iconoFallback: 'Se está usando el logo del tema claro.',
+    iconoFormatos: 'PNG, JPEG, WebP o SVG, de 32 a 2000 píxeles por lado y hasta 1 MB.',
+    iconoSubido: 'Icono subido. Ya se muestra en la pestaña.',
+    iconoQuitado: 'El icono ha vuelto al logo del tema claro.',
+    restaurarIcono: 'Restaurar al logo claro',
     colorElegido: 'Color',
     guardarMarca: 'Guardar la marca',
     guardando: 'Guardando…',
@@ -1114,6 +1123,7 @@ export const ES = {
     'settings.notification.withoutAssignment':
       'No se puede avisar sólo al asignado si el ticket no se reparte: no habría a quién avisar.',
     'settings.logo.format': 'Ese archivo no es una imagen de las que valen: PNG, JPEG, WebP o SVG.',
+    'settings.siteIcon.tooSmall': 'El icono debe medir al menos 32 × 32 píxeles.',
     'settings.logo.invalid':
       'Esa imagen no se ha podido leer, o es más grande de lo que se admite.',
     'settings.logo.tooBig': 'Ese logo pesa demasiado: el máximo es 1 MB.',

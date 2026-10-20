@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 50 añade la tarjeta **Icono del sitio** y define
+> la actualización inmediata del favicon en todas las pestañas. El responsable cerró 1A–14A y
+> corrigió el fallback: sin icono propio se usa el logo claro efectivo. Pasaron 253 pruebas frontend,
+> las fronteras y la compilación de producción.
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 49 sustituye las dos
 > entradas generales por **Tickets**, reserva Usuarios y Clasificación a Admin y repasa la
 > terminología visible completa del área de tickets.
@@ -1214,6 +1219,9 @@ carga— llega con las pantallas que lo usan.
 - **El selector puede enseñar una opción que no se puede elegir** (2026-09-24), con su texto de ayuda
   debajo: es como se enseñan hoy los orígenes de directorio, que están previstos y todavía no
   funcionan (sección 3.6).
+- **Todos los desplegables conservan un `<select>` nativo**, pero dibujan su indicador con el color
+  del texto y lo separan del borde derecho. El texto reserva ese espacio, por lo que nunca queda
+  debajo de la flecha.
 
 ### 6.5 El cuadro de escribir: un editor con formato y los adjuntos dentro
 
@@ -2924,3 +2932,22 @@ encabezados, filtros, botones, ayudas y estados. Se conservan los conceptos **Mi
 **ticket principal** y **ticket interno**; el repaso elimina mezclas y nombres antiguos, no cambia el
 modelo. Las 249 pruebas del frontend, sus fronteras y la compilación de producción pasaron el
 2026-10-20; la navegación cubre roles puros y combinados y ausencia de entradas no autorizadas.
+
+## 50. Icono del sitio y favicon
+
+El bloque de marca de `/setup` y Configuración añade una tarjeta cuadrada **Icono del sitio**, aparte
+de los logos claro y oscuro. La vista previa encaja la imagen completa y centrada, sin recortarla ni
+deformarla. Pulsarla abre el selector de archivo; la ayuda admite PNG, JPEG, WebP y SVG, hasta 1 MB y
+2000 píxeles por lado, con un mínimo de 32 × 32. La acción **Restaurar** sólo aparece cuando existe un
+icono propio y explica que se volverá al logo claro.
+
+El favicon de la pestaña se actualiza al terminar una subida o restauración, sin recargar. Si no hay
+icono propio, también se actualiza cuando cambia o se restaura el logo claro. La misma actualización
+se propaga a las demás pestañas abiertas de Catalina Support; una pestaña que se abra después obtiene
+el valor efectivo al leer la marca pública. El enlace lleva el sello de versión para no reutilizar
+una imagen anterior de la caché.
+
+El icono es decorativo porque el nombre de la pestaña ya identifica la aplicación. La carga conserva
+el foco, muestra el resultado en el toast común y no bloquea otras partes de Configuración. Se prueba
+en los ocho temas, ambos idiomas, teclado, PC y móvil, incluidos los tres niveles de fallback y la
+sincronización entre pestañas. No se cambia el icono de accesos directos instalados.

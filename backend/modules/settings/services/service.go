@@ -255,8 +255,9 @@ type MailView struct {
 // Brand es el estado de la marca.
 type Brand struct {
 	// Light y Dark dicen si hay logo propio en cada hueco, y con qué datos.
-	Light LogoInfo
-	Dark  LogoInfo
+	Light    LogoInfo
+	Dark     LogoInfo
+	SiteIcon LogoInfo
 }
 
 // LogoInfo es un hueco del logo.
@@ -469,8 +470,9 @@ func (s *Service) Config() (Config, error) {
 		AIURL:                      direccionPublicaDe(instalacion.AIURL),
 		AIModel:                    strings.TrimSpace(instalacion.AIModel),
 		Brand: Brand{
-			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
-			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
+			Light:    s.logoInfo(VarianteClaro, instalacion.LogoLight),
+			Dark:     s.logoInfo(VarianteOscuro, instalacion.LogoDark),
+			SiteIcon: s.logoInfo("icono", instalacion.SiteIcon),
 		},
 	}
 	if _, ok := s.repo.(aiRepository); ok {
@@ -719,8 +721,9 @@ type Public struct {
 	// LogoVersion cambia cada vez que se reemplaza un logo; vacío si no hay ninguno propio.
 	LogoVersion string
 	// HasLight y HasDark dicen qué huecos están puestos, para que el frontend sepa si pedir el logo.
-	HasLight bool
-	HasDark  bool
+	HasLight    bool
+	HasDark     bool
+	HasSiteIcon bool
 	// **TimeZone es la zona horaria de la instalacion** (nombre IANA): con ella se leen todas las
 	// fechas de la interfaz. Viaja en la marca porque la entrada se pinta antes de entrar y porque
 	// cualquier pantalla necesita formatear una fecha (docs/modules/settings.md, decision 15).
@@ -753,6 +756,7 @@ func (s *Service) PublicBrand() (Public, error) {
 		Colors:          colorsFrom(instalacion.PrimaryColor),
 		HasLight:        instalacion.LogoLight != nil,
 		HasDark:         instalacion.LogoDark != nil,
+		HasSiteIcon:     instalacion.SiteIcon != nil,
 		LogoVersion:     s.versionDe(instalacion),
 		TimeZone:        zonaHorariaDe(instalacion.TimeZone),
 	}
@@ -832,6 +836,64 @@ func (s *Service) RemoveLogo(variant string, actor auth.Identity) error {
 	s.borrarArchivo(apuntado(actual.LogoLight, actual.LogoDark, variant))
 
 	return nil
+}
+
+// SaveSiteIcon guarda el favicon propio sin mezclarlo con las dos variantes del logo.
+func (s *Service) SaveSiteIcon(entrada io.Reader, actor auth.Identity) (LogoInfo, error) {
+	icono, err := InspectSiteIcon(entrada)
+	if err != nil {
+		return LogoInfo{}, err
+	}
+	if err := os.MkdirAll(s.carpeta(), 0o755); err != nil {
+		return LogoInfo{}, fmt.Errorf("no se pudo preparar la carpeta de la marca: %w", err)
+	}
+	nombre := NombreDeLogo("icono", s.now().Format("20060102T150405"), icono.Extension)
+	if err := os.WriteFile(filepath.Join(s.carpeta(), nombre), icono.Bytes, 0o644); err != nil {
+		return LogoInfo{}, fmt.Errorf("no se pudo guardar el icono: %w", err)
+	}
+	anterior, err := s.repo.Installation()
+	if err != nil {
+		s.borrarArchivo(&nombre)
+		return LogoInfo{}, traducir(err)
+	}
+	if err := s.repo.UpdateInstallation(map[string]any{"site_icon": nombre}, actorID(actor)); err != nil {
+		s.borrarArchivo(&nombre)
+		return LogoInfo{}, traducir(err)
+	}
+	s.borrarArchivo(anterior.SiteIcon)
+	return s.logoInfo("icono", &nombre), nil
+}
+
+// RemoveSiteIcon restaura la cascada al logo claro personalizado o de fábrica.
+func (s *Service) RemoveSiteIcon(actor auth.Identity) error {
+	actual, err := s.repo.Installation()
+	if err != nil {
+		return traducir(err)
+	}
+	if err := s.repo.UpdateInstallation(map[string]any{"site_icon": nil}, actorID(actor)); err != nil {
+		return traducir(err)
+	}
+	s.borrarArchivo(actual.SiteIcon)
+	return nil
+}
+
+// SiteIconFor devuelve el icono propio o, si falta, el logo claro personalizado.
+func (s *Service) SiteIconFor() (LogoFile, error) {
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return LogoFile{}, traducir(err)
+	}
+	for _, nombre := range []*string{instalacion.SiteIcon, instalacion.LogoLight} {
+		if nombre == nil || *nombre == "" {
+			continue
+		}
+		ruta := filepath.Join(s.carpeta(), *nombre)
+		info, err := os.Stat(ruta)
+		if err == nil && !info.IsDir() {
+			return LogoFile{Path: ruta, ContentType: TipoDeLogo(*nombre), Version: s.versionDe(instalacion)}, nil
+		}
+	}
+	return LogoFile{}, ErrLogoNotFound
 }
 
 // LogoFile es el archivo que hay que servir para un tema.
@@ -1065,7 +1127,7 @@ func medidasDeArchivo(ruta string) (int, int) {
 func (s *Service) versionDe(instalacion repositories.InstallationSettings) string {
 	var ultima time.Time
 
-	for _, nombre := range []*string{instalacion.LogoLight, instalacion.LogoDark} {
+	for _, nombre := range []*string{instalacion.LogoLight, instalacion.LogoDark, instalacion.SiteIcon} {
 		if nombre == nil || *nombre == "" {
 			continue
 		}

@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `ambientes.md`,
+> `arquitectura.md` y `prueba-local.md` sustituyen la migración manual de producción por un ejecutor
+> Go automático, versionado, transaccional, con historial, checksum, bloqueo y respaldo previo. El
+> responsable cerró y aprobó las decisiones 1A–25A. No se desplegó producción.
+>
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `modules/tickets.md`,
 > `usuarios-y-permisos.md`, `modules/users.md` e `interfaz-y-experiencia.md` unifican las listas
 > generales en **Tickets**, reservan Usuarios y Clasificación a la capacidad Admin y fijan los

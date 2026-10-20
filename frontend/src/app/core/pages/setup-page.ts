@@ -482,6 +482,30 @@ export class SetupPage implements OnDestroy {
       await this.marca.cargar();
     });
   }
+  protected elegirIcono(event: Event): void {
+    const entrada = event.target as HTMLInputElement;
+    const file = entrada.files?.[0] ?? null;
+    if (file) void this.subirIcono(file, entrada);
+  }
+  private async subirIcono(file: File, entrada: HTMLInputElement): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.subirIcono(file);
+      entrada.value = '';
+      await this.marca.sincronizar();
+    });
+  }
+  protected async restaurarIcono(): Promise<void> {
+    await this.accionModelo(async () => {
+      await this.setup.restablecerIcono();
+      await this.marca.sincronizar();
+    });
+  }
+  protected hayIconoPropio(): boolean {
+    return this.marca.marca()?.logo.siteIcon.filled ?? false;
+  }
+  protected urlIcono(): string {
+    return this.marca.urlDelIcono();
+  }
   protected urlLogo(oscuro: boolean): string {
     return this.marca.urlDelLogo(oscuro);
   }
