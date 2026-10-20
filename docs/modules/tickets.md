@@ -3,6 +3,13 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-20
 >
+> **Corrección aprobada, implementada y verificada el 2026-10-20.** La sección 27.3 corrige la discrepancia entre la matriz
+> aprobada y el flujo de comentarios: cuando el solicitante responde en un principal `en espera`,
+> comentario, retorno a `en progreso` e historial forman una sola transacción. El responsable cerró
+> las decisiones 1A–8A; no quedan decisiones abiertas. Pasaron las pruebas del servicio de tickets;
+> la suite completa sólo conserva el fallo ambiental conocido de reportería cuando no hay tickets
+> sembrados.
+>
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 31 fusiona las listas
 > generales en un solo módulo **Tickets**, con Principales como vista inicial e Internos como vista
 > alternativa. El responsable cerró 1A–25A salvo 6B, 12B, 14B, 20B y 25B.
@@ -1717,6 +1724,42 @@ No se añaden estados ni rutas, y no cambia la traducción contextual de `en esp
 viendo **Waiting for you/Esperándote** y los equipos **Waiting/Esperando**. Las pruebas cubren la
 matriz de acciones del principal e interno, la ausencia de opciones no autorizadas y el recorrido
 real Esperando → En progreso con Soporte.
+
+### 27.3 Respuesta del solicitante como transición automática
+
+La matriz de la sección 3.1 ya promete que el Usuario devuelve el principal de `en espera` a
+`en progreso` al responder, pero el flujo construido sólo guarda el comentario. Esa discrepancia se
+corrige en el servicio, no mediante una acción nueva de la interfaz.
+
+Cuando se crea un comentario nuevo en el ticket principal, el servicio bloquea y relee el
+principal dentro de la misma transacción. Si sigue `en espera` y el autor es exactamente su
+solicitante (`requester_id`), guarda el comentario, cambia el estado a `en progreso` y añade la
+entrada de historial atribuida a esa persona. Las tres operaciones se confirman o revierten juntas.
+El bloqueo garantiza que dos respuestas simultáneas produzcan dos comentarios, pero una sola
+transición y una sola entrada de historial.
+
+Cualquier comentario nuevo del solicitante cuenta como respuesta, incluido el cuerpo inicialmente
+vacío que después recibirá adjuntos. Editar o borrar comentarios, subir un adjunto posteriormente,
+comentar como observador, Soporte, Desarrollo o Administrador y comentar en el interno no provocan
+la transición. Tampoco se cambia un principal que ya dejó de estar `en espera`.
+
+No se envía un correo adicional por el cambio automático: se conservan únicamente los avisos que
+ya correspondan al comentario. El contrato HTTP permanece igual y devuelve el comentario; la
+pantalla relee el detalle por su flujo normal para mostrar el estado vigente. La transición vuelve
+a solicitar **Última acción** una sola vez y no cambia permisos, estados ni rutas.
+
+Las pruebas contra PostgreSQL cubren al solicitante correcto y el actor del historial, otra
+identidad, el comentario sin cuerpo, el hilo interno y la edición posterior. La transacción incluye
+comentario, actualización e historial, y la relectura usa `SELECT ... FOR UPDATE`: por ello un fallo
+revierte el conjunto y dos respuestas concurrentes sólo pueden observar una vez `en espera`. El
+flujo no incorpora ninguna llamada de correo adicional.
+
+#### 27.3.1 Registro de decisiones
+
+El responsable decidió el 2026-10-20: una sola transacción (1A), cualquier comentario nuevo incluso
+vacío (2A), historial atribuido al solicitante (3A), ningún correo adicional (4A), coincidencia
+exacta con `requester_id` (5A), ninguna transición al editar (6A), bloqueo y relectura concurrente
+(7A) y contrato HTTP sin cambios (8A). No quedan decisiones abiertas.
 
 ## 28. Datos operativos para reportería
 
