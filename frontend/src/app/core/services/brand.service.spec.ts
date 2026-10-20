@@ -17,7 +17,7 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
     name,
     version,
     license: 'AGPL-3.0-only',
-    sourceUrl: 'https://github.com/juanky-estevez/Catalina-Support',
+    sourceUrl: 'https://github.com/Catalina-Support/catalina-support',
     development: false,
     timeZone,
     primaryColor: '#1d4ed8',
@@ -142,7 +142,7 @@ describe('BrandService', () => {
 
     expect(marca.versionDelSistema()).toBe('v1.0.0 · dev');
     expect(marca.fuente()).toEqual({
-      url: 'https://github.com/juanky-estevez/Catalina-Support',
+      url: 'https://github.com/Catalina-Support/catalina-support',
       licencia: 'AGPL-3.0-only',
     });
   });

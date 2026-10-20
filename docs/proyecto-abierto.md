@@ -1,7 +1,12 @@
 # Proyecto abierto, contribuciones y marca
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-17
+> **Última actualización:** 2026-10-20
+>
+> **Novena enmienda implementada el 2026-10-20: traslado del repositorio.** El código fuente se
+> trasladó a la organización `Catalina-Support`, bajo
+> `Catalina-Support/catalina-support`. Se actualizaron los enlaces públicos y operativos sin cambiar
+> la licencia, las reglas de contribución ni el modelo de publicación.
 >
 > **Octava enmienda implementada y verificada el 2026-10-17: portada pública, sitio y
 > sostenimiento.** La sección 17 define la portada bilingüe del repositorio, el enlace al sitio
@@ -64,8 +69,8 @@ ingeniería. También conserva caminos futuros de sostenimiento: servicio alojad
 soporte administrados, consultoría y licencias comerciales para organizaciones que no puedan usar
 AGPL. Ninguna de esas ofertas forma parte de este trabajo.
 
-El repositorio continuará inicialmente en la cuenta personal
-`juanky-estevez/Catalina-Support`. Podrá transferirse más adelante sin cambiar estas reglas.
+El repositorio vive en la organización `Catalina-Support`, bajo
+`Catalina-Support/catalina-support`. El traslado desde la cuenta personal no cambia estas reglas.
 
 ## 2. Licencia del código
 
