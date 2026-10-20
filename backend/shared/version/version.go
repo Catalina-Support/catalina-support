@@ -25,4 +25,4 @@ const License = "AGPL-3.0-only"
 
 // SourceURL identifica el código fuente correspondiente. Durante el desarrollo lleva al repositorio;
 // una versión publicada debe llevar a la etiqueta exacta de Version.
-const SourceURL = "https://github.com/juanky-estevez/Catalina-Support"
+const SourceURL = "https://github.com/Catalina-Support/catalina-support"
