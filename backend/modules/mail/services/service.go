@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"html"
 	"strings"
 	"time"
 
@@ -31,13 +32,14 @@ type Instalacion interface {
 // CorreoSaliente es el correo saliente tal y como lo necesita el remitente. Lo declara este
 // módulo y lo cumple el módulo de configuración, traducido por el cableado.
 type CorreoSaliente struct {
-	Host      string
-	Port      string
-	Secure    bool
-	User      string
-	Password  string
-	FromName  string
-	FromEmail string
+	Host             string
+	Port             string
+	SecurityMode     string
+	InsecureAccepted bool
+	User             string
+	Password         string
+	FromName         string
+	FromEmail        string
 }
 
 type Service struct {
@@ -199,6 +201,30 @@ func (s *Service) Probar(correo CorreoSaliente) error {
 	}
 
 	return s.sender.Probar(correo)
+}
+
+// ProbarEnvio entrega el mensaje técnico fijo con la configuración escrita. No usa ni modifica
+// plantillas: su objetivo es comprobar también MAIL FROM, RCPT TO y DATA.
+func (s *Service) ProbarEnvio(correo CorreoSaliente, destinatario, idioma, instalacion string) error {
+	if s.sender == nil {
+		return ErrNotConfigured
+	}
+	idioma = strings.TrimSpace(idioma)
+	if idioma != "en" {
+		idioma = "es"
+	}
+	nombre := strings.TrimSpace(instalacion)
+	if nombre == "" {
+		nombre = "Catalina Support"
+	}
+	asunto := "[prueba] Correo de prueba de " + nombre
+	nombreHTML := html.EscapeString(nombre)
+	cuerpo := "<p>Este es un correo de prueba de <strong>" + nombreHTML + "</strong>.</p><p>El servidor de correo aceptó el envío. No es necesario responder ni realizar ninguna acción.</p>"
+	if idioma == "en" {
+		asunto = "[test] Test email from " + nombre
+		cuerpo = "<p>This is a test email from <strong>" + nombreHTML + "</strong>.</p><p>The mail server accepted the message. No reply or action is required.</p>"
+	}
+	return s.sender.SendWithConfig([]string{destinatario}, asunto, cuerpo, correo)
 }
 
 // SendAsync manda un correo en segundo plano y no devuelve nada.

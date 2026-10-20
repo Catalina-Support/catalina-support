@@ -120,8 +120,7 @@ type Service struct {
 	now       func() time.Time
 	// ia dice si el motor de IA responde, para poder contarlo en la instalación.
 	ia ProberDeIA
-	// correo prueba el correo saliente **sin mandar ningún correo**: es lo que hace falta en el
-	// asistente, donde no hay destinatario (docs/primer-arranque.md, sección 3).
+	// correo prueba el correo saliente mediante el mensaje técnico al destinatario efímero.
 	correo ProberDeCorreo
 	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
 	// envío: el módulo mail sigue leyendo la configuración persistida.
@@ -183,6 +182,7 @@ type DirectoryInput struct {
 	BindPassword string
 	SearchBase   string
 	UserFilter   string
+	AttrUsername string
 	AttrEmail    string
 	AttrName     string
 	AttrLastName string
@@ -223,6 +223,7 @@ type Config struct {
 	// Directory y Keycloak son las dos configuraciones, sin sus secretos.
 	Directory                  DirectoryView
 	Keycloak                   KeycloakView
+	Mail                       MailView
 	Language                   string
 	PrimaryColor               string
 	NumberPrefix               string
@@ -246,11 +247,17 @@ type Config struct {
 	Brand   Brand
 }
 
+type MailView struct {
+	Host, Port, SecurityMode, User, FromName, FromEmail string
+	InsecureAccepted, PasswordSet                       bool
+}
+
 // Brand es el estado de la marca.
 type Brand struct {
 	// Light y Dark dicen si hay logo propio en cada hueco, y con qué datos.
-	Light LogoInfo
-	Dark  LogoInfo
+	Light    LogoInfo
+	Dark     LogoInfo
+	SiteIcon LogoInfo
 }
 
 // LogoInfo es un hueco del logo.
@@ -438,12 +445,16 @@ func (s *Service) Config() (Config, error) {
 	}
 
 	config := Config{
-		Name:                       nombreDeLaInstalacion(instalacion.InstallationName),
-		EntryMethod:                instalacion.EntryMethod,
-		TimeZone:                   zonaHorariaDe(instalacion.TimeZone),
-		PublicAppURL:               direccionPublicaDe(instalacion.PublicAppURL),
-		Directory:                  vistaDeDirectorio(directorio),
-		Keycloak:                   vistaDeKeycloak(keycloak),
+		Name:         nombreDeLaInstalacion(instalacion.InstallationName),
+		EntryMethod:  instalacion.EntryMethod,
+		TimeZone:     zonaHorariaDe(instalacion.TimeZone),
+		PublicAppURL: direccionPublicaDe(instalacion.PublicAppURL),
+		Directory:    vistaDeDirectorio(directorio),
+		Keycloak:     vistaDeKeycloak(keycloak),
+		Mail: MailView{Host: instalacion.SMTPHost, Port: instalacion.SMTPPort,
+			SecurityMode: instalacion.SMTPSecurityMode, InsecureAccepted: instalacion.SMTPInsecureAck,
+			User: instalacion.SMTPUser, FromName: instalacion.SMTPFromName,
+			FromEmail: instalacion.SMTPFromEmail, PasswordSet: instalacion.SMTPPassword != ""},
 		Language:                   instalacion.Language,
 		PrimaryColor:               instalacion.PrimaryColor,
 		NumberPrefix:               tickets.NumberPrefix,
@@ -459,8 +470,9 @@ func (s *Service) Config() (Config, error) {
 		AIURL:                      direccionPublicaDe(instalacion.AIURL),
 		AIModel:                    strings.TrimSpace(instalacion.AIModel),
 		Brand: Brand{
-			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
-			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
+			Light:    s.logoInfo(VarianteClaro, instalacion.LogoLight),
+			Dark:     s.logoInfo(VarianteOscuro, instalacion.LogoDark),
+			SiteIcon: s.logoInfo("icono", instalacion.SiteIcon),
 		},
 	}
 	if _, ok := s.repo.(aiRepository); ok {
@@ -709,8 +721,9 @@ type Public struct {
 	// LogoVersion cambia cada vez que se reemplaza un logo; vacío si no hay ninguno propio.
 	LogoVersion string
 	// HasLight y HasDark dicen qué huecos están puestos, para que el frontend sepa si pedir el logo.
-	HasLight bool
-	HasDark  bool
+	HasLight    bool
+	HasDark     bool
+	HasSiteIcon bool
 	// **TimeZone es la zona horaria de la instalacion** (nombre IANA): con ella se leen todas las
 	// fechas de la interfaz. Viaja en la marca porque la entrada se pinta antes de entrar y porque
 	// cualquier pantalla necesita formatear una fecha (docs/modules/settings.md, decision 15).
@@ -743,6 +756,7 @@ func (s *Service) PublicBrand() (Public, error) {
 		Colors:          colorsFrom(instalacion.PrimaryColor),
 		HasLight:        instalacion.LogoLight != nil,
 		HasDark:         instalacion.LogoDark != nil,
+		HasSiteIcon:     instalacion.SiteIcon != nil,
 		LogoVersion:     s.versionDe(instalacion),
 		TimeZone:        zonaHorariaDe(instalacion.TimeZone),
 	}
@@ -822,6 +836,64 @@ func (s *Service) RemoveLogo(variant string, actor auth.Identity) error {
 	s.borrarArchivo(apuntado(actual.LogoLight, actual.LogoDark, variant))
 
 	return nil
+}
+
+// SaveSiteIcon guarda el favicon propio sin mezclarlo con las dos variantes del logo.
+func (s *Service) SaveSiteIcon(entrada io.Reader, actor auth.Identity) (LogoInfo, error) {
+	icono, err := InspectSiteIcon(entrada)
+	if err != nil {
+		return LogoInfo{}, err
+	}
+	if err := os.MkdirAll(s.carpeta(), 0o755); err != nil {
+		return LogoInfo{}, fmt.Errorf("no se pudo preparar la carpeta de la marca: %w", err)
+	}
+	nombre := NombreDeLogo("icono", s.now().Format("20060102T150405"), icono.Extension)
+	if err := os.WriteFile(filepath.Join(s.carpeta(), nombre), icono.Bytes, 0o644); err != nil {
+		return LogoInfo{}, fmt.Errorf("no se pudo guardar el icono: %w", err)
+	}
+	anterior, err := s.repo.Installation()
+	if err != nil {
+		s.borrarArchivo(&nombre)
+		return LogoInfo{}, traducir(err)
+	}
+	if err := s.repo.UpdateInstallation(map[string]any{"site_icon": nombre}, actorID(actor)); err != nil {
+		s.borrarArchivo(&nombre)
+		return LogoInfo{}, traducir(err)
+	}
+	s.borrarArchivo(anterior.SiteIcon)
+	return s.logoInfo("icono", &nombre), nil
+}
+
+// RemoveSiteIcon restaura la cascada al logo claro personalizado o de fábrica.
+func (s *Service) RemoveSiteIcon(actor auth.Identity) error {
+	actual, err := s.repo.Installation()
+	if err != nil {
+		return traducir(err)
+	}
+	if err := s.repo.UpdateInstallation(map[string]any{"site_icon": nil}, actorID(actor)); err != nil {
+		return traducir(err)
+	}
+	s.borrarArchivo(actual.SiteIcon)
+	return nil
+}
+
+// SiteIconFor devuelve el icono propio o, si falta, el logo claro personalizado.
+func (s *Service) SiteIconFor() (LogoFile, error) {
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return LogoFile{}, traducir(err)
+	}
+	for _, nombre := range []*string{instalacion.SiteIcon, instalacion.LogoLight} {
+		if nombre == nil || *nombre == "" {
+			continue
+		}
+		ruta := filepath.Join(s.carpeta(), *nombre)
+		info, err := os.Stat(ruta)
+		if err == nil && !info.IsDir() {
+			return LogoFile{Path: ruta, ContentType: TipoDeLogo(*nombre), Version: s.versionDe(instalacion)}, nil
+		}
+	}
+	return LogoFile{}, ErrLogoNotFound
 }
 
 // LogoFile es el archivo que hay que servir para un tema.
@@ -1055,7 +1127,7 @@ func medidasDeArchivo(ruta string) (int, int) {
 func (s *Service) versionDe(instalacion repositories.InstallationSettings) string {
 	var ultima time.Time
 
-	for _, nombre := range []*string{instalacion.LogoLight, instalacion.LogoDark} {
+	for _, nombre := range []*string{instalacion.LogoLight, instalacion.LogoDark, instalacion.SiteIcon} {
 		if nombre == nil || *nombre == "" {
 			continue
 		}
@@ -1203,6 +1275,7 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 		BindPass:     input.BindPassword,
 		SearchBase:   strings.TrimSpace(input.SearchBase),
 		UserFilter:   strings.TrimSpace(input.UserFilter),
+		AttrUsername: strings.TrimSpace(input.AttrUsername),
 		AttrEmail:    strings.TrimSpace(input.AttrEmail),
 		AttrName:     strings.TrimSpace(input.AttrName),
 		AttrLastName: strings.TrimSpace(input.AttrLastName),
@@ -1214,7 +1287,13 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 		directorio.Port = "389"
 	}
 	if directorio.UserFilter == "" {
-		directorio.UserFilter = "(mail=%s)"
+		directorio.UserFilter = "(objectClass=person)"
+	}
+	if strings.Contains(directorio.UserFilter, "%s") {
+		return config.Directory{}, ErrDirectoryIncomplete
+	}
+	if directorio.AttrUsername == "" {
+		directorio.AttrUsername = "sAMAccountName"
 	}
 	if directorio.AttrEmail == "" {
 		directorio.AttrEmail = "mail"
@@ -1289,6 +1368,7 @@ func (s *Service) cambiosDeDirectorio(directorio config.Directory) map[string]an
 		"bind_dn":        directorio.BindDN,
 		"search_base":    directorio.SearchBase,
 		"user_filter":    directorio.UserFilter,
+		"attr_username":  directorio.AttrUsername,
 		"attr_email":     directorio.AttrEmail,
 		"attr_name":      directorio.AttrName,
 		"attr_last_name": directorio.AttrLastName,
@@ -1326,6 +1406,7 @@ func directorioDe(fila repositories.DirectorySettings) config.Directory {
 		BindPass:     fila.BindPassword,
 		SearchBase:   fila.SearchBase,
 		UserFilter:   fila.UserFilter,
+		AttrUsername: fila.AttrUsername,
 		AttrEmail:    fila.AttrEmail,
 		AttrName:     fila.AttrName,
 		AttrLastName: fila.AttrLastName,
@@ -1354,6 +1435,7 @@ func vistaDeDirectorio(fila repositories.DirectorySettings) DirectoryView {
 			BindDN:       fila.BindDN,
 			SearchBase:   fila.SearchBase,
 			UserFilter:   fila.UserFilter,
+			AttrUsername: fila.AttrUsername,
 			AttrEmail:    fila.AttrEmail,
 			AttrName:     fila.AttrName,
 			AttrLastName: fila.AttrLastName,

@@ -183,7 +183,11 @@
         @if (renglon.comentario; as comentario) {
           <div
             class="flex flex-col gap-2 rounded-lg border p-4"
-            [class]="comentario.visibility === 'private' ? 'border-borde-fuerte bg-superficie-suave' : 'border-borde bg-superficie'"
+            [class]="
+              comentario.visibility === 'private'
+                ? 'border-borde-fuerte bg-superficie-suave'
+                : 'border-borde bg-superficie'
+            "
           >
             <div class="flex flex-wrap items-center gap-2">
               <p class="text-xs font-medium text-apagado">
@@ -195,7 +199,9 @@
               }
 
               @if (comentario.visibility === 'private') {
-                <span class="rounded border border-borde-fuerte bg-superficie px-2 py-0.5 text-xs font-medium text-texto">
+                <span
+                  class="rounded border border-borde-fuerte bg-superficie px-2 py-0.5 text-xs font-medium text-texto"
+                >
                   {{ t().tickets.privado }}
                 </span>
               }
@@ -324,7 +330,7 @@
           <app-editor-con-adjuntos
             #elDelComentario
             [identificador]="'comentario-' + ticket().number"
-            [etiqueta]="t().tickets.escribirComentario"
+            [etiqueta]="etiquetaDelComentario()"
             [textos]="textosDelEditor()"
             [direcciones]="direccionesPorNombre()"
             [personas]="personasParaEtiquetar()"

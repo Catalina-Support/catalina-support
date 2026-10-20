@@ -1,7 +1,21 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 31 define el ejecutor
+> Go de migraciones, su registro transaccional, checksums, bloqueo y frontera con el arranque. El
+> responsable cerró y aprobó las decisiones 1A–25A. No se desplegó producción.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: prueba SMTP con entrega al relay.** La sección 30
+> asigna a `settings` la entrada, autorización y limitación de la prueba, y a `mail` el mensaje fijo y
+> el envío. El responsable cerró y aprobó 1A–14A; las fronteras, pruebas focalizadas y compilación
+> quedaron verificadas.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: frontera de transporte SMTP
+> inseguro.** La sección 29 modela tres transportes y encierra SMTP sin cifrado detrás de una
+> aceptación persistida y una comprobación de destino privado en cada conexión. El responsable
+> cerró y aprobó 1A–10A; las fronteras y el relay real quedaron verificados.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** La sección 28 separa las imágenes CPU/NVIDIA,
 > persiste el modo en `ai_settings` y hace transaccional el reinicio del administrador local.
@@ -515,8 +529,8 @@ un administrador las cambia desde la pantalla de Configuración, con vista previ
 propio correo. El detalle está en `docs/modules/mail.md`.
 
 **El correo saliente vive en la base, no en variables de entorno**: los campos son
-`installation_settings.smtp_*` (`smtp_host`, `smtp_port`, `smtp_secure`, `smtp_user`,
-`smtp_password`, `smtp_from_name`, `smtp_from_email`), se piden en la vista de primer arranque y se
+`installation_settings.smtp_*` (`smtp_host`, `smtp_port`, `smtp_security_mode`,
+`smtp_insecure_ack`, `smtp_user`, `smtp_password`, `smtp_from_name`, `smtp_from_email`), se piden en la vista de primer arranque y se
 cambian desde Configuración. Las variables `SMTP_*` del entorno **se retiraron**.
 
 Se llaman `smtp_*` y no `SYSTEM_SMTP_*` como en Calibyou: allí el prefijo distingue el correo del
@@ -1327,7 +1341,9 @@ abiertas.
 
 ## 21. Salud distinguible con esquema pendiente
 
-El backend puede arrancar en producción después de que PostgreSQL acepte TCP aunque el operador todavía no haya ejecutado la migración manual. Al iniciar comprueba la existencia de `installation_settings`, tabla esencial de `v1.0.0.sql`, sin crear una tabla de control ni modificar el esquema. Si falta, registra una sola vez que la migración está pendiente.
+El backend comprueba al iniciar la existencia de `installation_settings`, tabla esencial de
+`v1.0.0.sql`. Compose lo inicia sólo después del ejecutor automático, pero la comprobación conserva
+un diagnóstico seguro si alguien ejecuta el binario fuera de ese orden.
 
 `GET /api/health` responde `503` con el objeto estable
 `{"status":"error","errorKey":"database.schema_pending"}` mientras falte esa tabla. Una base
@@ -1336,7 +1352,9 @@ no se confunden ambos diagnósticos. Las consultas de salud no repiten el mensaj
 La interfaz conserva la pantalla existente de servidor no disponible: el detalle operativo vive en
 salud y logs, sin una pantalla nueva.
 
-En desarrollo y pruebas el backend sigue esperando al servicio automático `migrate`, por lo que esta condición protege principalmente el orden manual de producción y diagnósticos accidentales. No se introducen migraciones automáticas dentro del proceso Go, reintentos SQL, tablas nuevas ni cambios de permisos.
+En los tres entornos backend y frontend esperan al servicio automático `migrate`. Las migraciones no
+viven dentro del servidor HTTP: el comando Go independiente mantiene `schema_migrations`, crea el
+respaldo y termina antes de habilitar la aplicación.
 
 ## 22. Implementación: ausencias esperadas sin falsos errores
 
@@ -1511,3 +1529,62 @@ El cambio de modo es una operación serializada del administrador. Conserva la e
 proceso anterior hasta que el nuevo supere salud y generación; si falla, reactiva el anterior antes
 de responder. El estado público separa configuración de ejecución, limita el dispositivo a
 fabricante/nombre y nunca expone inventario sensible.
+
+## 29. Frontera de seguridad del transporte SMTP
+
+`settings` es dueño del modo `starttls|tls_direct|plain` y de la aceptación administrativa;
+`mail` es dueño de aplicarlos al conectar. STARTTLS es obligatorio en su modo, TLS directo empieza
+cifrado y ninguno cae a `plain`. El modo inseguro vuelve a validar en cada prueba y envío que todas
+las resoluciones del host pertenezcan a IPv4 RFC1918 o loopback.
+
+Para evitar una carrera entre validación y conexión, `mail` marca como válidas todas las direcciones
+resueltas y abre el socket contra una de ellas sin resolver de nuevo. El nombre configurado se
+conserva para el diálogo SMTP. Un cambio DNS posterior sólo afecta a la siguiente operación, que
+repite la validación completa. No se admiten destinos públicos ni IPv6 en `plain`.
+
+La migración nunca degrada instalaciones: el booleano verdadero se convierte en TLS directo y el
+falso en STARTTLS. Mailpit es una excepción declarada en datos de desarrollo, sin credenciales; no
+abre una excepción arquitectónica para producción. Logs y respuestas mantienen fuera usuario,
+contraseña y contenido SMTP.
+
+## 30. Frontera del correo real de prueba
+
+`settings` recibe los datos del formulario y el destinatario efímero, decide si la instalación está
+abierta o la identidad tiene capacidad administrativa, aplica el límite de cinco intentos por IP y
+destinatario en quince minutos y resuelve el secreto guardado cuando el campo llega vacío. No guarda
+el destinatario ni los cambios del formulario.
+
+`mail` recibe una configuración SMTP completa, remitente, destinatario, idioma y nombre de
+instalación. Construye el mensaje técnico fijo y ejecuta el mismo transporte de los envíos normales,
+incluidas las restricciones de `plain`. La operación termina sólo tras la aceptación final del relay;
+no interpreta esa aceptación como entrega al buzón.
+
+El mensaje de prueba no entra en `mail_templates`, no crea una tabla ni cruza la frontera hacia los
+avisos de `auth` o `tickets`. El log estructurado conserva resultado, servidor, IP y destinatario
+parcialmente oculto; excluye credenciales, cuerpo y conversación SMTP.
+
+## 31. Frontera del ejecutor de migraciones
+
+El ejecutor es un comando Go independiente del servidor HTTP. Comparte `shared/version` para conocer
+la versión máxima y el estado de desarrollo, pero no importa módulos de negocio ni utiliza sus
+repositorios. Recibe la conexión PostgreSQL, el directorio de migraciones y el directorio de
+respaldos mediante la configuración de despliegue. No atiende red, no crea usuarios y no ejecuta el
+seeder.
+
+Su secuencia es determinista: descubre nombres estrictos, analiza y ordena SemVer, adquiere un
+advisory lock, inspecciona `schema_migrations`, rechaza degradaciones, archivos futuros y checksums
+inmutables, identifica trabajo pendiente y, sólo si lo hay, crea y valida el respaldo. Después
+ejecuta cada archivo en su propia transacción y registra versión, archivo, SHA-256 y fecha dentro de
+esa misma transacción. Libera el bloqueo al terminar o fallar. Un segundo ejecutor espera el lock y
+vuelve a calcular el estado al adquirirlo.
+
+La excepción de desarrollo se limita al archivo cuya versión coincide con la constante actual:
+puede reaplicarse si cambió el checksum porque sigue siendo idempotente. Ningún archivo histórico
+puede mutar. Al cambiar `Development` a falso, incluso el archivo actual queda sellado. El ejecutor
+no intenta interpretar sentencias, fabricar rollbacks ni continuar tras un error.
+
+Compose expresa la dependencia mediante finalización correcta del servicio de migración. La
+disponibilidad HTTP no sustituye esa dependencia; la comprobación de esquema pendiente permanece
+como defensa si se ejecuta el binario fuera de Compose. Logs y `BUILD_INFO` permiten relacionar una
+actualización con commit y versión, sin registrar DSN ni secretos. Los cambios destructivos siguen
+un ciclo expandir–migrar–contraer entre versiones para conservar una ruta operativa de recuperación.

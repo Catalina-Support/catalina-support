@@ -29,6 +29,13 @@ const (
 	VisibilityPrivate = "private"
 )
 
+func visibilidadEfectiva(actor auth.Identity, esInterno bool, pedida string) string {
+	if !esInterno && actor.Role == auth.RoleDesarrollo {
+		return VisibilityPrivate
+	}
+	return pedida
+}
+
 // CommentWithVisibility crea un comentario público o una nota privada en el principal.
 func (s *Service) CommentWithVisibility(number, body, visibility string, actor auth.Identity) (Comment, error) {
 	if visibility == "" {
@@ -62,6 +69,9 @@ func (s *Service) CommentWithVisibility(number, body, visibility string, actor a
 	if principal.State == repositories.StateCerrado {
 		return Comment{}, ErrClosed
 	}
+	// Desarrollo colabora en el principal sólo mediante notas internas. La regla vive aquí y no en
+	// un selector del navegador: una llamada directa tampoco puede publicar en nombre del equipo.
+	visibility = visibilidadEfectiva(actor, esInterno, visibility)
 	if esInterno && visibility != VisibilityPublic {
 		return Comment{}, ErrForbidden
 	}
@@ -236,6 +246,7 @@ func (s *Service) EditCommentWithVisibility(number string, commentID int64, body
 	if visibility == "" {
 		visibility = comentario.Visibility
 	}
+	visibility = visibilidadEfectiva(actor, esInterno, visibility)
 	if visibility != VisibilityPublic && visibility != VisibilityPrivate {
 		return Comment{}, ErrForbidden
 	}

@@ -12,6 +12,29 @@
   <div class="flex flex-wrap items-center gap-3">
     <h1 class="text-xl font-semibold text-texto">{{ titulo() }}</h1>
 
+    @if (esListaGeneral()) {
+      <div class="hidden md:block">
+        <app-conmutador
+          [etiqueta]="t().tickets.tipo"
+          [opciones]="opcionesDeListaGeneral()"
+          [valor]="filtros().type"
+          (valorChange)="cambiarTipoGeneral($event)"
+        />
+      </div>
+      <label class="flex w-full flex-col gap-1 text-sm font-medium text-texto md:hidden">
+        <span>{{ t().tickets.tipo }}</span>
+        <select
+          class="min-h-11 rounded-md border border-borde-fuerte bg-superficie px-3 text-texto"
+          [value]="filtros().type"
+          (change)="cambiarTipoGeneral($any($event.target).value)"
+        >
+          @for (opcion of opcionesDeListaGeneral(); track opcion.valor) {
+            <option [value]="opcion.valor">{{ opcion.etiqueta }}</option>
+          }
+        </select>
+      </label>
+    }
+
     @if (conChipDeVista()) {
       <app-conmutador
         [etiqueta]="t().tickets.vista"

@@ -32,7 +32,11 @@ export const sesionActiva: CanActivateFn = async (_route, state) => {
   }
 
   const usuario = sesion.usuario();
-  if ((await setup.estadoDeInstalacion()).aiRequired && state.url !== '/settings' && state.url !== '/forbidden') {
+  if (
+    (await setup.estadoDeInstalacion()).aiRequired &&
+    state.url !== '/settings' &&
+    state.url !== '/forbidden'
+  ) {
     return usuario?.isAdmin
       ? router.createUrlTree(['/settings'], { queryParams: { ai: 'required' } })
       : router.createUrlTree(['/forbidden'], { queryParams: { ai: 'required' } });
@@ -88,7 +92,9 @@ export const inicioSegunPapel: CanActivateFn = async () => {
   }
 
   // Los equipos y cualquier Administrador aterrizan en el panel; el Usuario conserva Mis tickets.
-  return router.createUrlTree([usuario.role === 'usuario' && !usuario.isAdmin ? '/tickets' : '/dashboard']);
+  return router.createUrlTree([
+    usuario.role === 'usuario' && !usuario.isAdmin ? '/my-tickets' : '/dashboard',
+  ]);
 };
 
 /**

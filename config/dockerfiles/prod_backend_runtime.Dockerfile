@@ -1,8 +1,8 @@
 # Runtime del backend: sin Go, sin air y sin código fuente. El binario entra por
 # volumen desde /srv/catalina-support (ver prod.yml).
-FROM alpine:3.21
+FROM postgres:18-alpine
 
-# ca-certificates y tzdata los necesitan las conexiones TLS y las fechas locales.
+# El ejecutor usa las herramientas oficiales para crear y verificar el respaldo previo.
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app

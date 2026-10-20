@@ -12,16 +12,22 @@ services:
       timeout: 5s
       retries: 60
   migrate:
-    image: postgres:18-alpine
+    build:
+      context: .
+      dockerfile: config/dockerfiles/backend.Dockerfile
     env_file: [./config/env/dev.env]
+    environment:
+      MIGRATIONS_DIR: /migrations
+      MIGRATION_BACKUP_DIR: /backups
     depends_on:
       database: {condition: service_healthy}
-    volumes: [./backend/migrations:/migrations:ro]
-    entrypoint: [sh, -ec]
-    command:
-      - |
-        export PGPASSWORD="$$POSTGRES_PASSWORD"
-        psql -h database -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
+    volumes:
+      - ./backend:/app:ro
+      - ./backend/migrations:/migrations:ro
+      - backups:/backups
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
+    command: [go, run, ./cmd/migrate]
   mail:
     image: axllent/mailpit:latest
     environment:
@@ -43,6 +49,8 @@ services:
       - ./frontend:/app:ro
       - frontend_node_modules:/app/node_modules
       - frontend_cache:/app/.angular
+    depends_on:
+      migrate: {condition: service_completed_successfully}
   backend:
     build:
       context: .
@@ -115,4 +123,5 @@ volumes:
   backend_go_build:
   files:
   logs:
+  backups:
   e2e_node_modules:

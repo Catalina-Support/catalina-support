@@ -20,6 +20,24 @@ type CreateUserRequest struct {
 	ExternalID string `json:"externalId"`
 }
 
+type DirectoryCreateRequest struct {
+	Username    string `json:"username"`
+	Role        string `json:"role"`
+	IsAdmin     bool   `json:"isAdmin"`
+	ConfirmLink bool   `json:"confirmLink"`
+}
+
+type DirectoryPersonResponse struct {
+	Username string `json:"username"`
+	Name     string `json:"name"`
+	LastName string `json:"lastName"`
+	Email    string `json:"email"`
+}
+
+type DirectorySearchResponse struct {
+	Users []DirectoryPersonResponse `json:"users"`
+}
+
 // UserResponse es una cuenta tal y como la ve el frontend.
 //
 // Es **el mismo objeto** que devuelve `auth` en la entrada y en `me`, más los datos de la ficha que
@@ -65,6 +83,7 @@ type UsersResponse struct {
 	Total   int64          `json:"total"`
 	Page    int            `json:"page"`
 	PerPage int            `json:"perPage"`
+	DirectoryEnabled bool  `json:"directoryEnabled"`
 }
 
 // UpdateUserRequest es lo que llega al cambiar una cuenta.

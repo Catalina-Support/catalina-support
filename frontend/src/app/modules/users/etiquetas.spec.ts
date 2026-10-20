@@ -23,19 +23,18 @@ describe('las etiquetas del módulo users', () => {
     expect(etiquetaDeOrigen(ES, 'otro')).toBe('otro');
   });
 
-  it('los orígenes de directorio salen desactivados, con su nota en la pantalla', () => {
-    // Mientras no exista el camino del directorio, el backend los rechaza con
-    // `users.directory.notFound`: la pantalla los enseña, pero no deja elegirlos
-    // (docs/interfaz-y-experiencia.md, sección 3.6).
-    const opciones = opcionesDeOrigen(ES);
+  it('AD sólo se habilita cuando es el método vigente y Keycloak explica el primer acceso', () => {
+    const opciones = opcionesDeOrigen(ES, false);
 
     expect(opciones.map((opcion) => opcion.valor)).toEqual(['local', 'ad', 'keycloak']);
 
-    for (const opcion of opciones) {
-      expect(opcion.deshabilitado).toBe(ORIGENES_DE_DIRECTORIO.includes(opcion.valor));
-    }
-
     expect(opciones.find((opcion) => opcion.valor === 'local')?.deshabilitado).toBe(false);
+    expect(opciones.find((opcion) => opcion.valor === 'ad')?.deshabilitado).toBe(true);
+    expect(opciones.find((opcion) => opcion.valor === 'keycloak')?.deshabilitado).toBe(true);
+    expect(opcionesDeOrigen(ES, true).find((opcion) => opcion.valor === 'ad')?.deshabilitado).toBe(
+      false,
+    );
+    expect(ORIGENES_DE_DIRECTORIO).toEqual(['keycloak']);
   });
 
   it('Soporte no puede repartir papeles: sólo se le ofrece el suyo de alta', () => {
@@ -44,7 +43,6 @@ describe('las etiquetas del módulo users', () => {
       4,
     );
   });
-
 });
 
 describe('fechaCorta', () => {

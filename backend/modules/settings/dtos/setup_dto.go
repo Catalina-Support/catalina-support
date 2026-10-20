@@ -31,13 +31,23 @@ type SetupRequest struct {
 // cambies»**: la contraseña guardada no sale nunca por la API, así que la pantalla no puede mandarla de
 // vuelta. Es la misma regla que el directorio y Keycloak.
 type MailDto struct {
-	Host      string `json:"host"`
-	Port      string `json:"port"`
-	Secure    bool   `json:"secure"`
-	User      string `json:"user"`
-	Password  string `json:"password"`
-	FromName  string `json:"fromName"`
-	FromEmail string `json:"fromEmail"`
+	Host             string `json:"host"`
+	Port             string `json:"port"`
+	SecurityMode     string `json:"securityMode"`
+	InsecureAccepted bool   `json:"insecureAccepted"`
+	User             string `json:"user"`
+	Password         string `json:"password"`
+	FromName         string `json:"fromName"`
+	FromEmail        string `json:"fromEmail"`
+	TestRecipient    string `json:"testRecipient"`
+}
+
+func NewMailInput(entrada MailDto) services.MailInput {
+	return services.MailInput{
+		Host: entrada.Host, Port: entrada.Port, SecurityMode: entrada.SecurityMode,
+		InsecureAccepted: entrada.InsecureAccepted, User: entrada.User, Password: entrada.Password,
+		FromName: entrada.FromName, FromEmail: entrada.FromEmail, TestRecipient: entrada.TestRecipient,
+	}
 }
 
 // NewSetupStep traduce el cuerpo que llega al paso que entiende el servicio.
@@ -51,16 +61,8 @@ func NewSetupStep(entrada SetupRequest) services.PasoDeInstalacion {
 		Keycloak:     NewKeycloakInput(entrada.Keycloak),
 		TimeZone:     entrada.TimeZone,
 		PublicAppURL: entrada.PublicAppURL,
-		Mail: services.MailInput{
-			Host:      entrada.Mail.Host,
-			Port:      entrada.Mail.Port,
-			Secure:    entrada.Mail.Secure,
-			User:      entrada.Mail.User,
-			Password:  entrada.Mail.Password,
-			FromName:  entrada.Mail.FromName,
-			FromEmail: entrada.Mail.FromEmail,
-		},
-		AI: NewAIConfigurationInput(entrada.AI),
+		Mail:         NewMailInput(entrada.Mail),
+		AI:           NewAIConfigurationInput(entrada.AI),
 	}
 }
 
@@ -90,13 +92,14 @@ type SetupResponse struct {
 
 // MailViewDto es el correo saliente **sin su contraseña**: en su lugar dice si hay una guardada.
 type MailViewDto struct {
-	Host        string `json:"host"`
-	Port        string `json:"port"`
-	Secure      bool   `json:"secure"`
-	User        string `json:"user"`
-	FromName    string `json:"fromName"`
-	FromEmail   string `json:"fromEmail"`
-	PasswordSet bool   `json:"passwordSet"`
+	Host             string `json:"host"`
+	Port             string `json:"port"`
+	SecurityMode     string `json:"securityMode"`
+	InsecureAccepted bool   `json:"insecureAccepted"`
+	User             string `json:"user"`
+	FromName         string `json:"fromName"`
+	FromEmail        string `json:"fromEmail"`
+	PasswordSet      bool   `json:"passwordSet"`
 }
 
 // NewSetupResponse arma la respuesta del asistente a partir del estado del servicio.
@@ -117,6 +120,7 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 			BindDN:       estado.Directory.BindDN,
 			SearchBase:   estado.Directory.SearchBase,
 			UserFilter:   estado.Directory.UserFilter,
+			AttrUsername: estado.Directory.AttrUsername,
 			AttrEmail:    estado.Directory.AttrEmail,
 			AttrName:     estado.Directory.AttrName,
 			AttrLastName: estado.Directory.AttrLastName,
@@ -131,13 +135,14 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 			SecretSet:      estado.Keycloak.SecretSet,
 		},
 		Mail: MailViewDto{
-			Host:        estado.MailHost,
-			Port:        estado.MailPort,
-			Secure:      estado.MailSecure,
-			User:        estado.MailUser,
-			FromName:    estado.MailFromName,
-			FromEmail:   estado.MailFromEmail,
-			PasswordSet: estado.MailSet,
+			Host:             estado.MailHost,
+			Port:             estado.MailPort,
+			SecurityMode:     estado.MailSecurityMode,
+			InsecureAccepted: estado.MailInsecureAccepted,
+			User:             estado.MailUser,
+			FromName:         estado.MailFromName,
+			FromEmail:        estado.MailFromEmail,
+			PasswordSet:      estado.MailSet,
 		},
 		AiAvailable: estado.AiAvailable,
 		AI:          NewAIConfigurationResponse(estado.AI),

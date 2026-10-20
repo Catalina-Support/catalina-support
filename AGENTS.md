@@ -138,6 +138,15 @@ IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0
 su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
 Windows). Hay **cuatro módulos en marcha**:
 
+**Las migraciones se aplican automáticamente antes de la aplicación** (2026-10-20): un comando Go
+de una sola ejecución descubre únicamente `vMAJOR.MINOR.PATCH.sql`, ordena SemVer, toma un advisory
+lock, crea y verifica un `pg_dump -Fc` cuando hay trabajo y registra versión, archivo, SHA-256 y
+fecha en `schema_migrations`. Cada archivo y su registro comparten transacción; un fallo mantiene
+backend y frontend detenidos. La versión actual puede reaplicarse mientras `Development=true`; una
+publicada es inmutable. `scripts/update.sh` exige `main` limpio y avance rápido desde `origin/main`,
+compila antes de interrumpir el servicio y no restaura automáticamente una base. Los `*_dev.sql`
+siguen fuera y son opcionales.
+
 - **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los trece correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
@@ -178,17 +187,18 @@ cada uno de los seis fijos es **un bloque de variables**; el tema se elige con u
 
 **La marca está puesta**: la instalación tiene **nombre propio** —configurable desde Configuración, y
 es lo que se lee en la pantalla de entrada, en el menú lateral y en la pestaña del navegador, en lugar
-del texto de fábrica— y **logo**, el que trae la aplicación —**dos, uno por tema**— o el que suba un
-administrador, en sus dos huecos claro y oscuro. El **color institucional** se aplica a los dos temas de fábrica. El nombre, el
-logo y el color se guardan en la instalación (módulo `settings`), con su endpoint público porque la
+del texto de fábrica—, **logo**, el que trae la aplicación —**dos, uno por tema**— o el que suba un
+administrador, en sus dos huecos claro y oscuro, e **icono de pestaña propio y opcional**. Sin icono
+propio, el favicon usa el logo claro personalizado o el claro de fábrica. El **color institucional** se aplica a los dos temas de fábrica. El nombre, el
+logo, el icono y el color se guardan en la instalación (módulo `settings`), con su endpoint público porque la
 entrada se pinta antes de entrar.
 
 **La instalación dice qué versión es**: una constante del backend (`shared/version`, hoy `1.0.0`) que viaja en **la marca pública** y se lee **en la fila de salir del menú lateral, a la derecha, y en el pie de la pantalla de entrada** —decisión del responsable, 2026-09-25, que eligió el pie de la entrada además del menú—.
 
 **La pantalla de Configuración está entera**: **el nombre de la instalación**, **cómo se entra** —el
 método de entrada, el directorio de la organización y Keycloak, con sus dos botones de «Probar la
-conexión» y **sus secretos guardados y sin salir nunca por la API**—, **el logo** (los dos huecos,
-subir y volver al de fábrica), **el color institucional** con vista previa, **el idioma de la
+conexión» y **sus secretos guardados y sin salir nunca por la API**—, **la marca** (los dos huecos de
+logo, el icono del sitio, subir y restaurar), **el color institucional** con vista previa, **el idioma de la
 instalación** y **el prefijo y el reparto** con el aviso de que cambiar el prefijo no cambia los
 números ya emitidos. **El directorio y Keycloak ya no son variables de entorno**: viven en la base y
 se cambian desde aquí, así que configurar una instalación no pide editar un archivo en el servidor ni
@@ -217,11 +227,11 @@ siguen dentro de ella.
 aplicación lleva a **`/setup`**, que pide en cinco pasos **la instalación** (idioma y nombre), **cómo
 se entra** (con su prueba), **dónde está** (región y dirección) y **el correo saliente** (que vive en la base:
 las variables `SMTP_*` del entorno se retiraron), y al terminar **sella** la instalación: la vista no vuelve y su API
-contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30): el paso 2
-y el paso 4 traen su botón de «Probar la conexión» —`POST /api/setup/entry/test` y
-`POST /api/setup/mail/test`, públicos y con el sello como único candado—, reutilizando las pruebas de
-`auth` (directorio y Keycloak) y de `mail` (correo), y la del correo **comprueba la conexión y la
-autenticación sin mandar ningún correo**. El sello vive en `installation_settings.installed_at`, y
+contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30,
+actualizado 2026-10-20): el paso 2 y el paso 4 usan `POST /api/setup/entry/test` y
+`POST /api/setup/mail/test`. Son públicos y el sello los cierra; la prueba del correo completa un
+envío real opcional y aplica además su límite por IP y destinatario. El sello vive en
+`installation_settings.installed_at`, y
 **una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
 asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
 (`ADMIN_PASSWORD`): el asistente no la pide. El quinto paso configura y prueba obligatoriamente la
@@ -230,6 +240,15 @@ asistente en producción por este cambio. **La contraseña de la cuenta de fábr
 **La región seleccionada se ve explícitamente en el paso 3** (2026-10-05): antes del buscador,
 `/setup` muestra un campo de sólo lectura con el identificador IANA exacto. Cambia inmediatamente al
 elegir otra zona y conserva debajo la hora y el desfase; se verificó en PC y móvil.
+
+**El correo saliente distingue tres transportes** (2026-10-19): STARTTLS, TLS directo y SMTP sin
+cifrado. El último nunca aparece por degradación automática, exige aceptación administrativa y sólo
+admite destinos IPv4 privados o loopback; todas las direcciones resueltas deben cumplirlo. Mailpit
+es la única excepción explícita de desarrollo. **La prueba envía un mensaje real** (2026-10-20):
+`/setup` y Configuración piden un destinatario efímero, usan exactamente el remitente y los datos
+escritos y sólo confirman que el relay aceptó el mensaje. Es opcional, no guarda destino ni cambios y
+usa texto fijo en el idioma global. El endpoint público admite cinco intentos por IP y destinatario
+en quince minutos; la ruta posterior exige capacidad administrativa.
 
 **El asistente comparte los mismos mensajes toast** (2026-10-06): las pruebas de conexión y los
 errores generales se ven desde el paso actual, mientras sus explicaciones permanentes siguen dentro
@@ -368,7 +387,11 @@ comprueba que el volcado se puede leer, guarda **catorce días** y está puesto 
 máquina. **No copia `_files`**, y es a propósito: los adjuntos no se borran nunca y copiarlos es cosa
 de soporte manual (decisión del responsable, 2026-09-25).
 
-**El despliegue a producción está hecho y verificado por dentro** (2026-09-25): `scripts/prod-build.sh` construye y publica los artefactos en `/srv/catalina-support` y levanta los tres contenedores de `prod.yml`, con el esquema de `v1.0.0.sql` aplicado **una sola vez** en la base de producción y **la cuenta de fábrica entrando** con la contraseña de `config/env/prod.env` —que no se versiona y **no aparece en la documentación**—. La base de producción **se copia a diario** desde el mismo día, con su línea en el `cron`.
+**El despliegue a producción está hecho y verificado por dentro** (2026-09-25, actualizado el
+2026-10-20): `scripts/prod-build.sh` compila antes de detener, publica los artefactos en
+`/srv/catalina-support`, ejecuta las migraciones pendientes y sólo entonces levanta la aplicación.
+La cuenta de fábrica entra con la contraseña de `config/env/prod.env` —que no se versiona ni aparece
+en la documentación—. La base se copia a diario y además antes de cada actualización con esquema.
 
 **Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
 

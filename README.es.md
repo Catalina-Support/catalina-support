@@ -236,27 +236,26 @@ Como mínimo:
 3. Usa almacenamiento persistente para PostgreSQL, `_files`, `_logs` y los modelos locales de IA.
 4. Construye y publica desde una revisión limpia. El script incluido publica en
    `/srv/catalina-support`; inspecciona y adapta ese supuesto antes de ejecutarlo.
-5. Aplica las migraciones de versión de forma manual y visible. Nunca apliques `*_dev.sql` ni
-   ejecutes el seeder.
+5. Deja que el servicio de una sola ejecución aplique las migraciones aprobadas antes de iniciar la
+   aplicación. Nunca descubre `*_dev.sql` ni ejecuta el seeder.
 6. Completa `/setup` antes de exponer el servicio, configura SMTP real y sustituye todo valor de
    prueba.
 7. Coloca la aplicación detrás de HTTPS, restringe los puertos directos y comprueba CSP y salud.
 8. Copia y prueba la restauración tanto de la base como de los **adjuntos**. La copia incluida de la
    base no incluye `_files`.
 
-El orden actual de compilación y migración es:
+Para el primer despliegue, construye e inicia el conjunto:
 
 ```bash
-./scripts/prod-build.sh --no-deploy
-cd /srv/catalina-support
-docker compose -f prod.yml --profile migrate run --rm migrate
-docker compose -f prod.yml up -d
+./scripts/prod-build.sh
 ```
 
-`prod-build.sh` copia las migraciones, pero no las ejecuta. El servicio vive bajo el perfil
-`migrate`, por lo que un `up -d` normal nunca modifica el esquema. Verifica dominio, configuración
-de nginx, puertos expuestos, rutas de artefactos y recuperación para tu instalación: los archivos
-del repositorio incluyen supuestos del servidor de referencia y no son un instalador universal.
+Para las actualizaciones publicadas posteriores, usa `./scripts/update.sh` desde una rama `main`
+limpia. Sólo admite un avance rápido desde `origin/main`, compila antes de interrumpir la versión
+activa, crea y verifica un respaldo cuando hay migraciones pendientes e inicia la aplicación sólo
+si terminan correctamente. `schema_migrations` guarda archivos y checksums SHA-256; una migración
+publicada es inmutable. Verifica dominio, nginx, puertos, rutas y recuperación para tu instalación:
+los archivos incluyen supuestos del servidor de referencia.
 
 ## Pruebas
 
