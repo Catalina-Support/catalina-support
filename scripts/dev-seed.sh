@@ -10,7 +10,7 @@
 #
 # Qué hace:
 #
-#   1. Aplica `backend/migrations/v1.0.0.sql`, por si la base está recién creada o le falta algo.
+#   1. Exige que el ejecutor versionado haya completado el esquema.
 #   2. Aplica `backend/migrations/v1.0.0_dev.sql`: **once cuentas y 25 tickets** con su historia,
 #      sus escalados, sus comentarios y sus adjuntos.
 #   3. Copia los archivos de los adjuntos (`config/seed/`) a `_files/`, en la carpeta de su ticket.
@@ -68,6 +68,8 @@ else
         exit 1
     fi
 
+    docker compose -f "$COMPOSE" run --rm migrate
+
     # Los avisos de «la tabla ya existe» son lo normal al volver a aplicar el esquema, así que se
     # callan; **los errores no**: `ON_ERROR_STOP` corta en el primero y el guion se para con él.
     psql() {
@@ -78,8 +80,7 @@ fi
 
 echo "AVISO: se recrean todos los tickets, categorías, cuentas @demo.com y adjuntos de desarrollo (salvo la marca)."
 echo "La configuración se conserva si la instalación está sellada; si no, se completa y sella una demo local."
-echo "1/3  Aplicando el esquema…"
-psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0.sql"
+echo "1/3  Esquema versionado verificado."
 
 echo "2/3  Aplicando los datos de ejemplo…"
 psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0_dev.sql"

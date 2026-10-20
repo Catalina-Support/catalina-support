@@ -122,6 +122,19 @@ func TestInspectLogoLeeElTamanio(t *testing.T) {
 	}
 }
 
+func TestInspectSiteIconExigeTreintaYDosPixelesPorLado(t *testing.T) {
+	if _, err := InspectSiteIcon(bytes.NewReader(pngDe(31, 64))); !errors.Is(err, ErrSiteIconTooSmall) {
+		t.Fatalf("se esperaba ErrSiteIconTooSmall y llegó %v", err)
+	}
+	icono, err := InspectSiteIcon(bytes.NewReader(pngDe(32, 48)))
+	if err != nil {
+		t.Fatalf("un icono rectangular de 32x48 debería valer: %v", err)
+	}
+	if icono.Width != 32 || icono.Height != 48 {
+		t.Fatalf("medidas inesperadas: %dx%d", icono.Width, icono.Height)
+	}
+}
+
 // El SVG se mide por sus atributos o por su `viewBox`, y uno sin ninguno de los dos se acepta.
 func TestMedidasDelSVG(t *testing.T) {
 	casos := []struct {

@@ -219,6 +219,70 @@ func (c *SettingsController) DeleteLogo(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
 }
 
+// UploadSiteIcon guarda el icono propio de la pestaña.
+func (c *SettingsController) UploadSiteIcon(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, services.MaxLogoBytes+1024)
+	archivo, _, err := r.FormFile("icon")
+	if err != nil {
+		var demasiado *http.MaxBytesError
+		if errors.As(err, &demasiado) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+			return
+		}
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
+		return
+	}
+	defer archivo.Close()
+	if _, err = c.service.SaveSiteIcon(archivo, auth.MustFromContext(r.Context())); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	config, err := c.service.Config()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
+}
+
+func (c *SettingsController) DeleteSiteIcon(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.RemoveSiteIcon(auth.MustFromContext(r.Context())); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	config, err := c.service.Config()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
+}
+
+func (c *SettingsController) SiteIconFile(w http.ResponseWriter, r *http.Request) {
+	icono, err := c.service.SiteIconFor()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	if icono.ContentType == "image/svg+xml" {
+		w.Header().Set("Content-Security-Policy", "sandbox")
+	}
+	w.Header().Set("Content-Type", icono.ContentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if r.URL.Query().Get("v") == icono.Version {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	archivo, err := os.Open(icono.Path)
+	if err != nil {
+		httpx.WriteError(w, http.StatusNotFound, "settings.logo.notFound")
+		return
+	}
+	defer archivo.Close()
+	_, _ = io.Copy(w, archivo)
+}
+
 // LogoFile sirve el archivo del logo que toca a ese tema.
 //
 // **Es público**: la pantalla de entrada lo enseña antes de que nadie haya entrado. Sólo devuelve la
@@ -300,6 +364,21 @@ func (c *SettingsController) TestKeycloak(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// TestMail envía un mensaje real con los valores escritos y sin guardar ninguno de ellos.
+func (c *SettingsController) TestMail(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.MailDto
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	destinatario, err := c.service.ProbarCorreoDeConfiguracion(dtos.NewMailInput(entrada), ipDe(r))
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "recipient": destinatario})
+}
+
 // TestAI prueba el motor de IA **sin guardarlo**: pregunta a su comprobación de salud.
 //
 // Prueba **la dirección que llega en el cuerpo** —lo que hay en pantalla—, y nunca la guardada: si
@@ -370,6 +449,12 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.unreachable")
 	case errors.Is(err, services.ErrKeycloakUnreachable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.unreachable")
+	case errors.Is(err, services.ErrCorreoIncompleto):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.incomplete")
+	case errors.Is(err, services.ErrCorreoDestinoInvalido):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.recipientInvalid")
+	case errors.Is(err, services.ErrCorreoInalcanzable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.unreachable")
 	case errors.Is(err, services.ErrAIURLInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.aiUrl.invalid")
 	case errors.Is(err, services.ErrAIUnreachable):
@@ -404,6 +489,8 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
 	case errors.Is(err, services.ErrLogoTooBig):
 		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+	case errors.Is(err, services.ErrSiteIconTooSmall):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.siteIcon.tooSmall")
 	case errors.Is(err, services.ErrLogoVariantUnknown):
 		httpx.WriteError(w, http.StatusNotFound, "settings.logo.variantUnknown")
 	case errors.Is(err, services.ErrLogoNotFound):

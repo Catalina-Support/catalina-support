@@ -30,6 +30,7 @@ import {
   type AltaDeCuenta,
   type Cuenta,
   type FiltrosDeCuentas,
+  type PersonaDeDirectorio,
 } from './users.service';
 
 /** A partir de aquí la lista se pinta con la tabla: por debajo, con tarjetas (sección 7). */
@@ -64,6 +65,7 @@ export class UsersPage {
   protected readonly total = signal(0);
   protected readonly porPagina = signal(0);
   protected readonly cargando = signal(true);
+  protected readonly directorioDisponible = signal(false);
 
   /**
    * La confirmación de mandar el enlace: `null` es «no se está preguntando», y el valor es la cuenta
@@ -87,6 +89,11 @@ export class UsersPage {
 
   /** El alta, que es un diálogo sobre la lista. */
   protected readonly mostrandoAlta = signal(false);
+  protected readonly consultaDirectorio = signal('');
+  protected readonly resultadosDirectorio = signal<readonly PersonaDeDirectorio[]>([]);
+  protected readonly personaDirectorio = signal<PersonaDeDirectorio | null>(null);
+  protected readonly buscandoDirectorio = signal(false);
+  protected readonly confirmandoVinculo = signal(false);
   protected readonly alta = signal<AltaDeCuenta>({
     name: '',
     lastName: '',
@@ -97,6 +104,8 @@ export class UsersPage {
   });
 
   private temporizador: ReturnType<typeof setTimeout> | null = null;
+  private temporizadorDirectorio: ReturnType<typeof setTimeout> | null = null;
+  private versionBusquedaDirectorio = 0;
 
   /**
    * Si la pantalla es ancha: decide si se pinta la tabla o las tarjetas.
@@ -348,6 +357,9 @@ export class UsersPage {
       isAdmin: false,
       origin: 'local',
     });
+    this.consultaDirectorio.set('');
+    this.resultadosDirectorio.set([]);
+    this.personaDirectorio.set(null);
     this.mostrandoAlta.set(true);
   }
 
@@ -367,6 +379,11 @@ export class UsersPage {
         ? { isAdmin: false }
         : {}),
     }));
+    if (campo === 'origin') {
+      this.personaDirectorio.set(null);
+      this.resultadosDirectorio.set([]);
+      this.consultaDirectorio.set('');
+    }
   }
 
   protected administradorDelAlta(valor: boolean): void {
@@ -378,13 +395,48 @@ export class UsersPage {
   }
 
   protected opcionesDeOrigenDelAlta() {
-    return opcionesDeOrigen(this.t());
+    return opcionesDeOrigen(this.t(), this.directorioDisponible());
   }
 
+  protected buscarEnDirectorio(valor: string): void {
+    const version = ++this.versionBusquedaDirectorio;
+    this.consultaDirectorio.set(valor);
+    this.personaDirectorio.set(null);
+    if (this.temporizadorDirectorio) clearTimeout(this.temporizadorDirectorio);
+    if ([...valor.trim()].length < 3) {
+      this.resultadosDirectorio.set([]);
+      return;
+    }
+    this.temporizadorDirectorio = setTimeout(async () => {
+      this.buscandoDirectorio.set(true);
+      try {
+        const personas = (await this.users.buscarDirectorio(valor.trim())).users;
+        if (version === this.versionBusquedaDirectorio) this.resultadosDirectorio.set(personas);
+      } catch (error) {
+        if (version === this.versionBusquedaDirectorio) {
+          this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
+        }
+      } finally {
+        if (version === this.versionBusquedaDirectorio) this.buscandoDirectorio.set(false);
+      }
+    }, ESPERA_DE_BUSQUEDA);
+  }
+
+  protected seleccionarPersona(persona: PersonaDeDirectorio): void {
+    this.personaDirectorio.set(persona);
+  }
 
   /** Da de alta la cuenta y, si sale bien, cierra el diálogo y refresca la lista. */
   protected async crear(): Promise<void> {
     const alta = this.alta();
+    if (alta.origin === 'ad') {
+      if (!this.personaDirectorio()) {
+        this.mensaje.set({ forma: 'error', texto: this.t().usuarios.directorioSelecciona });
+        return;
+      }
+      await this.crearDirectorio(false);
+      return;
+    }
     if (!alta.name.trim() || !alta.lastName.trim() || !alta.email.trim()) {
       this.mensaje.set({ forma: 'error', texto: this.t().usuarios.obligatorios });
       return;
@@ -414,6 +466,34 @@ export class UsersPage {
     }
   }
 
+  private async crearDirectorio(confirmLink: boolean): Promise<void> {
+    const persona = this.personaDirectorio();
+    if (!persona) return;
+    this.trabajando.set(true);
+    try {
+      await this.users.crearDesdeDirectorio(
+        persona.username,
+        this.alta().role,
+        Boolean(this.alta().isAdmin),
+        confirmLink,
+      );
+      this.confirmandoVinculo.set(false);
+      this.mostrandoAlta.set(false);
+      await this.cargar();
+      this.mensaje.set({ forma: 'exito', texto: this.t().usuarios.creada });
+    } catch (error) {
+      const clave = claveDelError(error);
+      if (clave === 'users.directory.linkConfirmation') this.confirmandoVinculo.set(true);
+      else this.mensaje.set({ forma: 'error', texto: this.textos.error(clave) });
+    } finally {
+      this.trabajando.set(false);
+    }
+  }
+
+  protected confirmarVinculo(): void {
+    void this.crearDirectorio(true);
+  }
+
   // ------------------------------------------------------------------ el trabajo sucio
 
   private async cargar(): Promise<void> {
@@ -424,6 +504,7 @@ export class UsersPage {
       this.cuentas.set(pagina.users);
       this.total.set(pagina.total);
       this.porPagina.set(pagina.perPage);
+      this.directorioDisponible.set(pagina.directoryEnabled);
     } catch (error) {
       this.cuentas.set([]);
       this.total.set(0);

@@ -1,7 +1,21 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 27 verifica la
+> actualización autosuficiente y las migraciones versionadas. El responsable cerró y aprobó las
+> decisiones 1A–25A. No se tocó producción.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: validar el envío SMTP de prueba.** La sección 26
+> cubre destinatario efímero, `From:` real, datos sin guardar, secreto persistido, idioma, límite y
+> exactitud del resultado. El responsable cerró y aprobó 1A–14A; las pruebas focalizadas y las 248
+> del frontend pasaron, igual que fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: matriz de transporte SMTP.** La
+> sección 25 verifica los tres modos, la ausencia de degradación y el límite privado del modo sin
+> cifrar. El responsable cerró y aprobó 1A–10A; Mailpit, regresiones y relay real quedaron
+> comprobados.
 >
 > **Aprobado e implementado el 2026-10-18.** La sección 24 registra la verificación portable de CPU,
 > detección NVIDIA, respaldo Auto y restauración transaccional sin tocar producción.
@@ -940,3 +954,83 @@ PC y móvil recorren `/setup` y `/settings` en ambos idiomas. Se inspecciona que
 expongan UUID, bus, memoria ni trazas. Al terminar se restaura Auto, se baja la variante opcional y
 se conserva el modelo compartido sólo durante el entorno de prueba. Producción, dominio y etiqueta
 siguen fuera.
+
+## 25. Verificación de los modos SMTP
+
+Las pruebas unitarias y de integración cubren: STARTTLS correcto y rechazo cuando no se anuncia;
+TLS directo correcto; `plain` rechazado sin aceptación; aceptación anulada al abandonar el modo;
+rechazo si una sola resolución es pública o IPv6; admisión de `10/8`, `172.16/12`, `192.168/16` y
+`127/8`; y conexión contra la dirección ya validada sin segunda resolución.
+
+La migración se prueba con `smtp_secure=true` y `false`, esperando respectivamente `tls_direct` y
+`starttls`. El entorno de desarrollo verifica aparte que Mailpit queda `plain`, sin usuario ni
+contraseña y con aceptación local explícita. Ninguna prueba autoriza esa excepción en producción.
+
+El recorrido del paso 4 comprueba los tres textos en español e inglés, la advertencia, la
+confirmación persistida mientras el modo siga activo, su borrado al cambiar y los toasts. La prueba
+SMTP continúa sin `MAIL FROM`, `RCPT TO` ni `DATA`. Una comprobación con relay falso reproduce
+`AUTH LOGIN` sin STARTTLS: STARTTLS debe rechazarlo y `plain` sólo debe aceptarlo con confirmación y
+destino privado. Usuario, contraseña y cuerpo no aparecen en API, logs ni capturas.
+
+La ejecución terminó con las regresiones focalizadas de `mail` y `settings` aprobadas, 247 pruebas
+Angular aprobadas, fronteras y compilación de producción correctas. La suite backend completa
+conserva un fallo ajeno y dependiente de datos sembrados en el repositorio de reportería; los
+paquetes afectados por SMTP pasaron. La prueba manual real autenticó contra el relay y confirmó en
+el toast que no se envió ningún correo.
+
+## 26. Verificación del correo real de prueba
+
+Las pruebas unitarias atraviesan la transacción SMTP completa (`MAIL FROM`, `RCPT TO` y `DATA`) y
+comprueban que el remitente y el destinatario son exactamente los escritos. Cubren texto fijo en
+español e inglés, secreto guardado cuando el campo está vacío, secreto temporal sin persistencia,
+rechazo del `From:`, rechazo del destinatario y fallo durante `DATA`.
+
+El endpoint público admite cinco intentos para una pareja IP–destinatario dentro de quince minutos,
+rechaza el sexto con `429`, separa otra IP u otro destinatario y vuelve a admitir al vencer la
+ventana. También se comprueban el `409` tras el sello y que una dirección inválida no inicia SMTP.
+La ruta de Configuración exige capacidad administrativa y no hereda el carácter público de `/setup`.
+
+En PC y móvil se verifica un único botón, el destino no persistido, el carácter opcional y el toast
+**El servidor aceptó el correo para {destinatario}**. Mailpit permite confirmar asunto, cuerpo,
+idioma y cabeceras sin salir del entorno. La comprobación manual contra el relay institucional debe
+usar un buzón controlado y registrar aceptación y recepción como hechos distintos. Los logs se revisan
+para asegurar que sólo contienen destinatario parcialmente oculto y ningún secreto o cuerpo.
+
+## 27. Verificación de actualizaciones y migraciones
+
+La implementación se verificará en instalaciones desechables, sin tocar producción, el dominio ni
+la base habitual. La matriz mínima cubre:
+
+1. Base nueva: crea el respaldo sólo al detectar trabajo, aplica `v1.0.0.sql`, registra checksum y
+   fecha, y arranca backend y frontend después del ejecutor.
+2. Base existente sin historial: reaplica idempotentemente `v1.0.0.sql`, conserva datos y registra
+   la versión sin duplicados.
+3. Reinicio sin pendientes: no ejecuta SQL, no crea respaldo nuevo y arranca normalmente.
+4. Actualización con dos versiones pendientes: las ordena por SemVer, crea un único respaldo y
+   confirma cada transacción en orden.
+5. Error SQL: revierte íntegramente sólo esa versión, no la registra y deja la aplicación detenida
+   con un mensaje que identifica el archivo sin exponer secretos.
+6. Respaldo inválido o imposible: no inicia ninguna migración ni aplicación.
+7. Dos ejecutores concurrentes: el segundo espera el advisory lock, vuelve a leer el historial y no
+   repite trabajo.
+8. Checksum cambiado: la versión actual se reaplica únicamente con `Development=true`; una versión
+   publicada o histórica bloquea el arranque.
+9. Archivo futuro, nombre inválido, versión duplicada o base más nueva que el código: todos se
+   rechazan antes de modificar el esquema.
+10. Archivo `*_dev.sql`: nunca lo descubre el ejecutor; continúa aplicándose sólo por el seeder.
+11. `update.sh`: exige `main`, árbol limpio y avance rápido; un fallo de descarga o compilación deja
+   sirviendo la instalación anterior y no modifica el despliegue activo.
+12. Recuperación: una migración compatible permite levantar temporalmente la versión anterior; no
+   se ejecuta restauración automática. Se valida aparte el procedimiento manual con una copia
+   desechable.
+
+También se comprueban retención de catorce días, nombre del respaldo con versiones, logs completos
+sin DSN ni credenciales, archivos SQL sin transacciones propias, compilación del comando Go,
+configuración resuelta de los tres Compose y las suites existentes. README, runbook y arquitectura
+quedan actualizados a `as-built`.
+
+Se verificaron los casos de base nueva, adopción existente, segundo arranque, rollback, checksum,
+nombres estrictos, exclusión `_dev` y rechazo de `update.sh` fuera de `main`. La exclusión mutua
+queda implementada con un advisory lock sobre una conexión exclusiva; el recorrido con varias
+versiones se ejercerá cuando el responsable abra la siguiente. La suite backend conserva únicamente
+el fallo ambiental conocido del informe sin tickets sembrados.

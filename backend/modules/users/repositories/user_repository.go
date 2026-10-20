@@ -47,6 +47,17 @@ type AdminEvent struct {
 
 func (AdminEvent) TableName() string { return "user_admin_events" }
 
+type DirectoryEvent struct {
+	ID          int64     `gorm:"primaryKey"`
+	UserID      int64     `gorm:"column:user_id"`
+	ActorUserID *int64    `gorm:"column:actor_user_id"`
+	ActorLabel  string    `gorm:"column:actor_label"`
+	Action      string    `gorm:"column:action"`
+	CreatedAt   time.Time `gorm:"column:created_at"`
+}
+
+func (DirectoryEvent) TableName() string { return "user_directory_events" }
+
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
 func (User) TableName() string { return "users" }
 
@@ -141,6 +152,15 @@ func (r *UserRepository) FindByExternalID(origin, externalID string) (User, erro
 	}
 
 	return user, nil
+}
+
+// RecordDirectoryEvent conserva quién preparó una cuenta de AD o confirmó el enlace de una cuenta
+// local preexistente. No se reutilizan los avisos de capacidad administrativa porque este registro
+// es auditoría y no una notificación pendiente para la persona afectada.
+func (r *UserRepository) RecordDirectoryEvent(userID int64, actorUserID *int64, actorLabel, action string) error {
+	return r.db.Create(&DirectoryEvent{
+		UserID: userID, ActorUserID: actorUserID, ActorLabel: actorLabel, Action: action,
+	}).Error
 }
 
 // EmailExists dice si ese correo ya lo usa **otra** cuenta.

@@ -1,7 +1,29 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: icono del sitio configurable.** La sección 25 incorpora un
+> favicon propio e independiente de los dos logos, con administración en `/setup` y Configuración,
+> actualización inmediata y caída al logo claro efectivo. El responsable cerró el repaso con
+> 1A–14A y corrigió 4A: sin icono propio se usa el logo claro personalizado o, en su ausencia, el de
+> fábrica. Pasaron el módulo settings, 253 pruebas frontend, fronteras y compilación; la migración y
+> el endpoint público se verificaron en el entorno local.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** Precisa que el filtro LDAP
+> configurado es la condición base de seguridad y que la aplicación añade la búsqueda escapada por
+> `sAMAccountName` o `mail`; el identificador `objectGUID` se normaliza como GUID canónico. No añade
+> credenciales de administración de Keycloak: su alta manual queda fuera de alcance (6B).
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: correo real de prueba.** La sección 23 hace que
+> `/setup` y Configuración pidan un destinatario efímero y prueben los datos escritos mediante un
+> envío real. La prueba sigue sin guardar configuración y es opcional. El responsable cerró y
+> aprobó 1A–14A; pasaron backend focalizado, 248 pruebas frontend, fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: transporte SMTP explícito.** La
+> sección 22 sustituye el booleano de cifrado por tres modos y guarda por separado la aceptación del
+> riesgo de SMTP sin cifrar. El responsable cerró y aprobó 1A–10A; migración, API y pantalla quedaron
+> verificadas contra Mailpit y el relay interno real.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** La sección 21 añade selección Auto/CPU/NVIDIA,
 > estado efectivo, dispositivo, fallback visible y restauración ante fallo.
@@ -79,8 +101,9 @@
 > **Enmendado el 2026-09-30**: **se repasaron las cuatro tablas de configuración contra el esquema de
 > verdad** (sección 3), a petición del responsable, y **faltaban columnas**: la tabla de
 > `installation_settings` no recogía `entry_method`, `time_zone`, `public_app_url`, `installed_at` ni
-> las siete del correo saliente (`smtp_host`, `smtp_port`, `smtp_secure`, `smtp_user`, `smtp_password`,
-> `smtp_from_name` y `smtp_from_email`); `ai_url` y `ai_model` sí estaban, en una línea conjunta. Las
+> las ocho del correo saliente (`smtp_host`, `smtp_port`, `smtp_security_mode`, `smtp_insecure_ack`,
+> `smtp_user`, `smtp_password`, `smtp_from_name` y `smtp_from_email`); `ai_url` y `ai_model` sí
+> estaban, en una línea conjunta. Las
 > cuatro tablas quedan ahora con **cada columna, su tipo, si admite nulo y su valor por defecto**,
 > comprobadas contra `\d` de la base y contra `backend/migrations/v1.0.0.sql`, que **coinciden**. El
 > repaso destapó además dos frases que contradecían al esquema —el correo saliente seguía contado como
@@ -249,6 +272,7 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `primary_color` | `text` | no | `'#1d4ed8'` | El color institucional, en hexadecimal `#rrggbb`; sólo afecta a los dos temas de fábrica |
 | `logo_light` | `text` | sí | — (nulo) | **El nombre del archivo** del logo para los temas claros, o nulo si no hay logo propio |
 | `logo_dark` | `text` | sí | — (nulo) | El del tema oscuro, o nulo |
+| `site_icon` | `text` | sí | — (nulo) | El nombre interno del icono de pestaña propio; nulo cae al logo claro efectivo |
 | `updated_at` | `timestamptz` | no | `now()` | Cuándo se cambió la fila por última vez |
 | `updated_by_id` | `bigint` | sí | — (nulo) | Quién la cambió: `users(id)` con `ON DELETE SET NULL`; nulo si fue la siembra |
 | `installation_name` | `text` | no | `'Catalina Support'` | El nombre de la institución, la empresa o el equipo; sustituye a «Catalina Support» donde antes se leía. **No admite vacío** y no pasa de 60 caracteres |
@@ -258,7 +282,8 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `installed_at` | `timestamptz` | sí | — (nulo) | **El sello de instalación**: cuándo se terminó el asistente de primer arranque; nulo es «sin instalar» (sección 5.12) |
 | `smtp_host` | `text` | no | `''` | El servidor de correo saliente; vacío es «sin configurar» |
 | `smtp_port` | `text` | no | `''` | El puerto del servidor de correo saliente |
-| `smtp_secure` | `boolean` | no | `false` | Si la conexión con el servidor de correo va cifrada |
+| `smtp_security_mode` | `text` | no | `'starttls'` | El transporte: `starttls`, `tls_direct` o `plain` |
+| `smtp_insecure_ack` | `boolean` | no | `false` | La aceptación administrativa vigente del modo `plain`; fuera de él siempre es falsa |
 | `smtp_user` | `text` | no | `''` | El usuario con el que se autentica el envío |
 | `smtp_password` | `text` | no | `''` | La contraseña del envío: **no sale nunca por la API** |
 | `smtp_from_name` | `text` | no | `''` | El nombre del remitente de los correos |
@@ -282,7 +307,8 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `bind_dn` | `text` | no | `''` | La cuenta de servicio con la que se busca a la gente |
 | `bind_password` | `text` | no | `''` | La contraseña de esa cuenta: **no sale nunca por la API** |
 | `search_base` | `text` | no | `''` | Dónde se busca |
-| `user_filter` | `text` | no | `'(mail=%s)'` | El filtro, con `%s` donde va el correo de quien entra |
+| `user_filter` | `text` | no | `'(objectClass=person)'` | La condición base que limita las cuentas admitidas |
+| `attr_username` | `text` | no | `'sAMAccountName'` | El atributo del nombre de usuario |
 | `attr_email` | `text` | no | `'mail'` | De qué atributo sale el correo |
 | `attr_name` | `text` | no | `'givenName'` | De cuál, el nombre |
 | `attr_last_name` | `text` | no | `'sn'` | De cuál, los apellidos |
@@ -541,14 +567,15 @@ funcionen, es que la instalación no los ofrece.
 - **Cambiar el método o el directorio vale en el intento siguiente**, sin reiniciar nada: el camino de
   entrada lee la base en cada intento (sección 4). Es lo que hace que esto sea configuración y no
   despliegue.
-- **El botón de Configuración se llama «Probar la conexión» y no «Guardar y probar»**: probar no
-  guarda nada, y guardar no prueba nada. Se puede probar con lo que hay en pantalla y luego decidir.
+- **Las pruebas no guardan**: se puede probar con lo que hay en pantalla y luego decidir. En correo,
+  el botón se llama **Enviar correo de prueba** porque completa un envío real; en las demás
+  integraciones conserva **Probar la conexión**.
 - **El asistente de primer arranque reutiliza estas pruebas**, sin duplicarlas: `POST
   /api/setup/entry/test` llama a **`Prober`** para el directorio o Keycloak, y `POST
   /api/setup/mail/test` llama a **`ProberDeCorreo`** para el correo saliente. Son públicas —todavía no
   hay sesión— y las protege **el sello de la instalación**, igual que el resto de `/api/setup/**`, no
-  un permiso de Administrador. La del correo **conecta y autentica sin mandar ningún correo**
-  (`docs/primer-arranque.md`, sección 3.1).
+  un permiso de Administrador. La del correo envía el mensaje técnico al destinatario efímero y
+  aplica su límite público (`docs/primer-arranque.md`, sección 3.1).
 
 ### 5.9 La versión del sistema
 
@@ -702,6 +729,9 @@ con esos dos campos sin texto.
 | `POST /api/settings/brand/logo?variant=claro\|oscuro` | Sube o reemplaza el logo de ese hueco (`multipart`) | Administrador |
 | `DELETE /api/settings/brand/logo?variant=claro\|oscuro` | Quita el propio y vuelve al de fábrica | Administrador |
 | `GET /api/settings/brand/logo?theme=claro\|oscuro` | **El archivo que toca** para ese tema. **Público** | Cualquiera |
+| `POST /api/settings/brand/site-icon` | Sube o reemplaza el icono de la pestaña (`multipart`) | Administrador |
+| `DELETE /api/settings/brand/site-icon` | Quita el icono propio y vuelve al logo claro efectivo | Administrador |
+| `GET /api/settings/brand/site-icon` | El icono propio o el logo claro personalizado. **Público** | Cualquiera |
 | `GET /api/settings/brand?color=%23rrggbb` | **Vista previa**: los mismos colores resueltos, pero **sin guardar nada**. Es lo que permite enseñar cómo va a quedar antes de cambiar el color de la casa | Cualquiera |
 | `GET /api/settings/brand` | **Público.** El **nombre de la instalación**, **la versión del sistema**, el color ya resuelto y si hay logo propio: es lo que la aplicación lee para pintarse antes de que nadie entre | Cualquiera |
 | `POST /api/settings/directory/test` | **Prueba** la configuración del directorio que llega en el cuerpo, **sin guardarla**: conecta con la cuenta de servicio y la cierra. No valida la contraseña de nadie | Administrador |
@@ -1110,3 +1140,98 @@ La API no devuelve UUID, bus PCI, memoria ni trazas. La compilación y las 241 p
 verifican ambos idiomas y el contrato; las pruebas del administrador cubren NVIDIA ausente y el
 respaldo de Auto. La pasada visual específica en PC/móvil y el hardware NVIDIA real quedan para el
 entorno que disponga de Toolkit.
+
+## 22. Configuración de los tres modos SMTP
+
+`installation_settings` reemplaza `smtp_secure boolean` por `smtp_security_mode text`, limitado a
+`starttls`, `tls_direct` o `plain`, y añade `smtp_insecure_ack boolean NOT NULL DEFAULT false`.
+La migración traduce `true` a `tls_direct` y `false` a `starttls`. Sólo los datos de desarrollo de
+Mailpit declaran `plain` y aceptación verdadera; no hay excepción equivalente en producción.
+
+El paso 4 muestra una selección explícita con las tres alternativas. Al elegir `plain`, presenta un
+aviso inequívoco de que credenciales y mensajes viajan sin cifrar y exige una confirmación antes de
+probar o guardar. Cambiar a un modo seguro borra la aceptación; volver a `plain` obliga a aceptarla
+otra vez. El contrato de `/api/setup/mail/test`, del guardado final y de la lectura del asistente
+transporta `securityMode` e `insecureAccepted`; deja de transportar `secure` cuando termine la
+migración coordinada.
+
+El backend rechaza `plain` sin aceptación y también cuando el host resuelve alguna dirección que no
+sea IPv4 RFC1918 o loopback. La misma comprobación se repite al probar y al enviar; no basta con la
+validación de pantalla. Los secretos mantienen su regla actual: se guardan, nunca vuelven por la API
+y un valor vacío conserva el existente donde corresponda.
+
+La configuración pide una dirección institucional propia de Catalina como remitente. No copia el
+remitente ni las credenciales de otra aplicación.
+
+## 23. Destinatario y envío de prueba
+
+El paso 4 y la tarjeta administrativa incorporan **Enviar prueba a** y sustituyen **Probar la
+conexión** por **Enviar correo de prueba**. El campo no es parte de `installation_settings`: sólo
+acompaña esa petición, no se recupera al recargar y no altera los destinatarios de los correos
+funcionales. La acción es opcional y su estado no participa en los requisitos para avanzar o sellar.
+
+Ambas pantallas envían al backend los valores visibles, aunque no se hayan guardado. En la pantalla
+administrativa, una contraseña vacía significa reutilizar el secreto persistido; una contraseña
+nueva se usa para el intento y no se persiste. El resto de validaciones, incluido el consentimiento
+de `plain`, se aplica exactamente como en un envío normal.
+
+`POST /api/setup/mail/test` continúa público sólo antes del sello y se limita a cinco intentos por
+pareja IP–destinatario en quince minutos. La tarjeta autenticada dispone de la acción equivalente
+bajo `/api/settings/**`, protegida por capacidad administrativa. El éxito devuelve el destinatario
+aceptado para construir el toast preciso, sin afirmar entrega final.
+
+## 24. Condición base y atributo de usuario de Active Directory
+
+`directory_settings` añade `attr_username`, con `sAMAccountName` como valor inicial para Active
+Directory; los datos de OpenLDAP usan `uid`. `attr_email` continúa siendo el correo y `attr_id` el
+identificador estable.
+
+`user_filter` pasa a representar exclusivamente la **condición base de seguridad**: clases de
+objeto, ámbito organizativo y exclusión de cuentas deshabilitadas. No recibe texto escrito por una
+persona. Para entrada exacta y búsqueda administrativa, `auth` combina esa condición con otra
+generada y escapada sobre `attr_username` y `attr_email`.
+
+La migración abierta de `v1.0.0.sql` actualiza los valores conocidos de desarrollo y la instalación
+actual sin conservar una plantilla ambigua. Una configuración heredada que aún contenga `%s` se
+rechaza con una clave específica y debe guardarse de nuevo como condición base; nunca se ejecuta
+reinterpretándola silenciosamente. La tarjeta explica el nuevo significado y prueba conexión,
+credenciales de servicio y validez sintáctica del filtro, sin buscar ni exponer personas.
+
+No se añaden campos ni secretos para administración de Keycloak. Hasta disponer de una cuenta de
+servicio autorizada, Configuración conserva OIDC para el acceso y `/users` conserva allí el alta en
+el primer ingreso.
+
+## 25. Icono del sitio configurable
+
+La marca incorpora un **Icono del sitio** independiente de `logo_light` y `logo_dark`. Es opcional y
+se persiste en la nueva columna nullable `site_icon` de `installation_settings`; guarda sólo el
+nombre interno del archivo. Subir otro lo reemplaza de forma transaccional y elimina el anterior
+después de guardar la fila. Restaurar deja la columna nula. Ambas acciones registran actor y fecha
+mediante los campos de auditoría existentes.
+
+Acepta PNG, JPEG, WebP y SVG con la validación por contenido, el máximo de 1 MB y el máximo de 2000
+píxeles ya aplicados a los logos. Además, ambos lados deben medir al menos 32 píxeles. La imagen no
+se recorta ni se estira: el navegador la encaja completa, centrada y conserva su transparencia. Un
+archivo rectangular es válido.
+
+La cascada pública es única: icono propio; si no existe, logo claro personalizado; si tampoco existe,
+`logo-catalina-support-light.png`. Por ello, restaurar el icono o cambiar/restaurar el logo claro
+puede cambiar el favicon efectivo inmediatamente. El antiguo `favicon.ico` queda sólo como respaldo
+estático antes de que arranque la aplicación o si la marca pública no puede leerse.
+
+La marca pública añade `siteIcon.filled` y un sello que cambia al modificar el icono o cualquiera de
+las imágenes que puedan servir como fallback. `GET /api/settings/brand/site-icon` devuelve el icono
+propio o el logo claro personalizado, con su tipo real, `nosniff`, aislamiento para SVG y la misma
+política de caché versionada de los logos. Si ninguno existe responde 404 y el frontend usa el logo
+claro de fábrica. No genera `.ico`: los navegadores actuales aceptan los cuatro formatos decididos.
+
+Configuración añade `POST` y `DELETE /api/settings/brand/site-icon`, reservados a Administrador y con
+el mismo `multipart` y límite del logo. `/setup` ofrece las rutas paralelas antes del sello. La
+respuesta de configuración describe si el hueco propio está lleno, pero nunca expone rutas internas.
+Las claves existentes de formato, contenido y tamaño se reutilizan; una imagen menor de 32 × 32 usa
+`settings.siteIcon.tooSmall` con respuesta 422.
+
+Las pruebas cubrirán validación, reemplazo y limpieza de archivos, fallback en sus tres niveles,
+caché, SVG aislado, permisos, candado del sello y actualización del favicon al cambiar tanto el
+icono como el logo claro. No se añaden manifest, iconos instalables ni `apple-touch-icon`: el alcance
+es exclusivamente la pestaña del navegador.

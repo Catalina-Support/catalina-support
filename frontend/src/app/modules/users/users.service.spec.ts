@@ -116,4 +116,33 @@ describe('UsersService', () => {
     peticion.flush({ user: CUENTA, invited: true });
     await expect(alta).resolves.toEqual({ user: CUENTA, invited: true });
   });
+
+  it('busca en el directorio y prepara sólo la identidad seleccionada', async () => {
+    const busqueda = users.buscarDirectorio('jce');
+    const buscar = http.expectOne(
+      (peticion) => peticion.url === '/api/users/directory' && peticion.params.get('q') === 'jce',
+    );
+    expect(buscar.request.method).toBe('GET');
+    buscar.flush({
+      users: [
+        { username: 'jcestevez', name: 'Juan', lastName: 'Estevez', email: 'juan@ejemplo.com' },
+      ],
+    });
+    await expect(busqueda).resolves.toEqual({
+      users: [
+        { username: 'jcestevez', name: 'Juan', lastName: 'Estevez', email: 'juan@ejemplo.com' },
+      ],
+    });
+
+    const alta = users.crearDesdeDirectorio('jcestevez', 'usuario', false, true);
+    const crear = http.expectOne({ url: '/api/users/directory', method: 'POST' });
+    expect(crear.request.body).toEqual({
+      username: 'jcestevez',
+      role: 'usuario',
+      isAdmin: false,
+      confirmLink: true,
+    });
+    crear.flush({ user: { ...CUENTA, origin: 'ad', hasPassword: false } });
+    await expect(alta).resolves.toEqual({ user: { ...CUENTA, origin: 'ad', hasPassword: false } });
+  });
 });

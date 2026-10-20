@@ -121,14 +121,16 @@ func (p *proberDePrueba) ProbeKeycloak(keycloak config.OIDC) error {
 
 // proberDeCorreoDePrueba recoge el correo con el que se le prueba, sin hablar con nadie.
 type proberDeCorreoDePrueba struct {
-	llamado bool
-	correo  CorreoSaliente
-	err     error
+	llamado      bool
+	correo       CorreoSaliente
+	destinatario string
+	err          error
 }
 
-func (p *proberDeCorreoDePrueba) ProbarCorreo(correo CorreoSaliente) error {
+func (p *proberDeCorreoDePrueba) ProbarCorreo(correo CorreoSaliente, destinatario, _, _ string) error {
 	p.llamado = true
 	p.correo = correo
+	p.destinatario = destinatario
 	return p.err
 }
 
@@ -378,8 +380,9 @@ func TestProbarCorreoIncompleto(t *testing.T) {
 	for _, caso := range casos {
 		t.Run(caso.nombre, func(t *testing.T) {
 			servicio, _ := servicioDePrueba(t)
-
-			if err := servicio.ProbarCorreoDeInstalacion(caso.correo); !errors.Is(err, ErrCorreoIncompleto) {
+			caso.correo.TestRecipient = "destino@empresa.com"
+			_, err := servicio.ProbarCorreoDeInstalacion(caso.correo, t.Name())
+			if !errors.Is(err, ErrCorreoIncompleto) {
 				t.Fatalf("se esperaba %v y llegó %v", ErrCorreoIncompleto, err)
 			}
 		})
@@ -392,15 +395,16 @@ func TestProbarCorreoLlamaAlProber(t *testing.T) {
 	servicio, _ := servicioDePrueba(t)
 	servicio.SetProberDeCorreo(prober)
 
-	err := servicio.ProbarCorreoDeInstalacion(MailInput{
-		Host:      "smtp.empresa.com",
-		Port:      "587",
-		Secure:    true,
-		User:      "mesa",
-		Password:  "secreta",
-		FromName:  "Mesa de ayuda",
-		FromEmail: "mesa@empresa.com",
-	})
+	_, err := servicio.ProbarCorreoDeInstalacion(MailInput{
+		Host:          "smtp.empresa.com",
+		Port:          "587",
+		SecurityMode:  "starttls",
+		User:          "mesa",
+		Password:      "secreta",
+		FromName:      "Mesa de ayuda",
+		FromEmail:     "mesa@empresa.com",
+		TestRecipient: "destino@empresa.com",
+	}, t.Name())
 
 	if err != nil {
 		t.Fatalf("la prueba no debería fallar: %v", err)
@@ -408,7 +412,7 @@ func TestProbarCorreoLlamaAlProber(t *testing.T) {
 	if !prober.llamado {
 		t.Fatal("no se llamó a la prueba del correo")
 	}
-	if prober.correo.Host != "smtp.empresa.com" || prober.correo.Password != "secreta" || !prober.correo.Secure {
+	if prober.correo.Host != "smtp.empresa.com" || prober.correo.Password != "secreta" || prober.correo.SecurityMode != "starttls" {
 		t.Fatalf("el correo que llegó a la prueba no es el esperado: %+v", prober.correo)
 	}
 }
@@ -419,11 +423,12 @@ func TestProbarCorreoUsaLaGuardada(t *testing.T) {
 	servicio := NewService(&repoDePrueba{instalacion: repositories.InstallationSettings{SMTPPassword: "guardada"}}, t.TempDir())
 	servicio.SetProberDeCorreo(prober)
 
-	err := servicio.ProbarCorreoDeInstalacion(MailInput{
-		Host:      "smtp.empresa.com",
-		Port:      "587",
-		FromEmail: "mesa@empresa.com",
-	})
+	_, err := servicio.ProbarCorreoDeInstalacion(MailInput{
+		Host:          "smtp.empresa.com",
+		Port:          "587",
+		FromEmail:     "mesa@empresa.com",
+		TestRecipient: "destino@empresa.com",
+	}, t.Name())
 
 	if err != nil {
 		t.Fatalf("la prueba no debería fallar: %v", err)
@@ -438,11 +443,12 @@ func TestProbarCorreoQueFalla(t *testing.T) {
 	servicio, _ := servicioDePrueba(t)
 	servicio.SetProberDeCorreo(&proberDeCorreoDePrueba{err: errors.New("mail.smtp.connect: dial tcp: refused")})
 
-	err := servicio.ProbarCorreoDeInstalacion(MailInput{
-		Host:      "smtp.empresa.com",
-		Port:      "587",
-		FromEmail: "mesa@empresa.com",
-	})
+	_, err := servicio.ProbarCorreoDeInstalacion(MailInput{
+		Host:          "smtp.empresa.com",
+		Port:          "587",
+		FromEmail:     "mesa@empresa.com",
+		TestRecipient: "destino@empresa.com",
+	}, t.Name())
 
 	if !errors.Is(err, ErrCorreoInalcanzable) {
 		t.Fatalf("se esperaba %v y llegó %v", ErrCorreoInalcanzable, err)
@@ -455,17 +461,40 @@ func TestProbarCorreoSellada(t *testing.T) {
 	servicio := NewService(sellada(), t.TempDir())
 	servicio.SetProberDeCorreo(prober)
 
-	err := servicio.ProbarCorreoDeInstalacion(MailInput{
-		Host:      "smtp.empresa.com",
-		Port:      "587",
-		FromEmail: "mesa@empresa.com",
-	})
+	_, err := servicio.ProbarCorreoDeInstalacion(MailInput{
+		Host:          "smtp.empresa.com",
+		Port:          "587",
+		FromEmail:     "mesa@empresa.com",
+		TestRecipient: "destino@empresa.com",
+	}, t.Name())
 
 	if !errors.Is(err, ErrYaInstalada) {
 		t.Fatalf("se esperaba %v y llegó %v", ErrYaInstalada, err)
 	}
 	if prober.llamado {
 		t.Fatal("no se puede probar nada con la instalación sellada")
+	}
+}
+
+func TestProbarCorreoExigeDestinatarioValido(t *testing.T) {
+	servicio, _ := servicioDePrueba(t)
+	_, err := servicio.ProbarCorreoDeInstalacion(MailInput{Host: "smtp.empresa.com", Port: "587", FromEmail: "mesa@empresa.com", TestRecipient: "no-es-correo"}, t.Name())
+	if !errors.Is(err, ErrCorreoDestinoInvalido) {
+		t.Fatalf("se esperaba destino inválido y llegó %v", err)
+	}
+}
+
+func TestProbarCorreoPublicoLimitaCincoIntentos(t *testing.T) {
+	servicio, _ := servicioDePrueba(t)
+	servicio.SetProberDeCorreo(&proberDeCorreoDePrueba{})
+	entrada := MailInput{Host: "smtp.empresa.com", Port: "587", FromEmail: "mesa@empresa.com", TestRecipient: "destino@empresa.com"}
+	for intento := 1; intento <= 5; intento++ {
+		if _, err := servicio.ProbarCorreoDeInstalacion(entrada, t.Name()); err != nil {
+			t.Fatalf("intento %d: %v", intento, err)
+		}
+	}
+	if _, err := servicio.ProbarCorreoDeInstalacion(entrada, t.Name()); !errors.Is(err, ErrCorreoLimite) {
+		t.Fatalf("el sexto intento debería limitarse y llegó %v", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type { CorreoDeInstalacion, CorreoEscrito, ResultadoDeCorreo } from './setup.service';
 
 /** Un hueco del logo, tal y como lo cuenta la configuración. */
 export interface HuecoDeLogo {
@@ -20,6 +21,7 @@ export interface Directorio {
   readonly bindDn: string;
   readonly searchBase: string;
   readonly userFilter: string;
+  readonly attrUsername?: string;
   readonly attrEmail: string;
   readonly attrName: string;
   readonly attrLastName: string;
@@ -62,6 +64,7 @@ export interface Configuracion {
   readonly entryMethod: string;
   readonly directory: Directorio;
   readonly keycloak: Keycloak;
+  readonly mail: CorreoDeInstalacion;
   readonly language: string;
   readonly primaryColor: string;
   /**
@@ -97,7 +100,11 @@ export interface Configuracion {
   readonly aiUrl: string;
   readonly aiModel: string;
   readonly ai?: ConfiguracionDeIA;
-  readonly brand: { readonly light: HuecoDeLogo; readonly dark: HuecoDeLogo };
+  readonly brand: {
+    readonly light: HuecoDeLogo;
+    readonly dark: HuecoDeLogo;
+    readonly siteIcon: HuecoDeLogo;
+  };
 }
 
 export interface ConfiguracionDeIA {
@@ -110,7 +117,7 @@ export interface ConfiguracionDeIA {
   readonly credentialSet: boolean;
   readonly privacyConfirmed: boolean;
   readonly tested: boolean;
-	readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
+  readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
 }
 
 export type ConfiguracionDeIAEscrita = Omit<ConfiguracionDeIA, 'credentialSet' | 'tested'> & {
@@ -119,28 +126,54 @@ export type ConfiguracionDeIAEscrita = Omit<ConfiguracionDeIA, 'credentialSet' |
 };
 
 export interface ModeloLocalDeIA {
-  readonly id: string; readonly name: string; readonly version: string; readonly license: string;
-  readonly source: string; readonly checksum: string; readonly downloadBytes: number;
-  readonly ramBytes: number; readonly installed: boolean; readonly active: boolean; readonly healthy?: boolean;
-  readonly downloading: boolean; readonly downloadedBytes: number; readonly error?: string;
-  readonly phase: string; readonly partial: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly license: string;
+  readonly source: string;
+  readonly checksum: string;
+  readonly downloadBytes: number;
+  readonly ramBytes: number;
+  readonly installed: boolean;
+  readonly active: boolean;
+  readonly healthy?: boolean;
+  readonly downloading: boolean;
+  readonly downloadedBytes: number;
+  readonly error?: string;
+  readonly phase: string;
+  readonly partial: boolean;
 }
 export interface CatalogoLocalDeIA {
   readonly models: readonly ModeloLocalDeIA[];
   readonly diskAvailableBytes: number;
-	readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
-	readonly effectiveAcceleration: 'cpu' | 'nvidia';
-	readonly deviceName: string;
-	readonly fallbackReason?: string;
-	readonly restarting: boolean;
+  readonly accelerationMode: 'auto' | 'cpu' | 'nvidia';
+  readonly effectiveAcceleration: 'cpu' | 'nvidia';
+  readonly deviceName: string;
+  readonly fallbackReason?: string;
+  readonly restarting: boolean;
 }
-export interface SaludoDeIA { readonly greeting:string; readonly current:string; readonly timeZone:string; readonly modelId:string; readonly modelName:string; readonly accelerationMode:string; readonly effectiveAcceleration:string; readonly deviceName:string; readonly fallbackReason?:string; }
+export interface SaludoDeIA {
+  readonly greeting: string;
+  readonly current: string;
+  readonly timeZone: string;
+  readonly modelId: string;
+  readonly modelName: string;
+  readonly accelerationMode: string;
+  readonly effectiveAcceleration: string;
+  readonly deviceName: string;
+  readonly fallbackReason?: string;
+}
 
 export interface BorradorDeIdioma {
-  readonly key: string; readonly sourceLanguage: string; readonly targetLanguage: string;
-  readonly sourceSubject: string; readonly sourceBody: string;
-  readonly draftSubject: string; readonly draftBody: string;
-  readonly existingSubject: string; readonly existingBody: string;
+  readonly key: string;
+  readonly sourceLanguage: string;
+  readonly targetLanguage: string;
+  readonly sourceSubject: string;
+  readonly sourceBody: string;
+  readonly draftSubject: string;
+  readonly draftBody: string;
+  readonly existingSubject: string;
+  readonly existingBody: string;
   readonly destinationCustomized: boolean;
 }
 
@@ -186,12 +219,23 @@ export class SettingsService {
     return firstValueFrom(this.http.put<Configuracion>('/api/settings', configuracion));
   }
 
-  async borradoresDeIdioma(language: string, options: { manual?: boolean; confirmCommercialCost?: boolean } = {}): Promise<readonly BorradorDeIdioma[]> {
-    const response = await firstValueFrom(this.http.post<{ drafts: readonly BorradorDeIdioma[] }>('/api/mail/language/drafts', { language, ...options }));
+  async borradoresDeIdioma(
+    language: string,
+    options: { manual?: boolean; confirmCommercialCost?: boolean } = {},
+  ): Promise<readonly BorradorDeIdioma[]> {
+    const response = await firstValueFrom(
+      this.http.post<{ drafts: readonly BorradorDeIdioma[] }>('/api/mail/language/drafts', {
+        language,
+        ...options,
+      }),
+    );
     return response.drafts;
   }
 
-  async aplicarIdioma(language: string, templates: readonly { key: string; subject: string; body: string }[]): Promise<void> {
+  async aplicarIdioma(
+    language: string,
+    templates: readonly { key: string; subject: string; body: string }[],
+  ): Promise<void> {
     await firstValueFrom(this.http.post('/api/mail/language/apply', { language, templates }));
   }
 
@@ -208,6 +252,10 @@ export class SettingsService {
   /** Lo mismo con Keycloak: se lee el reino y se comprueba que dice dónde está su pantalla. */
   async probarKeycloak(keycloak: KeycloakEscrito): Promise<void> {
     await firstValueFrom(this.http.post('/api/settings/keycloak/test', keycloak));
+  }
+
+  async probarCorreo(correo: CorreoEscrito): Promise<ResultadoDeCorreo> {
+    return firstValueFrom(this.http.post<ResultadoDeCorreo>('/api/settings/mail/test', correo));
   }
 
   /**
@@ -228,18 +276,36 @@ export class SettingsService {
     return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/settings/ai/models'));
   }
   async descargarModelo(id: string, acceptLicense: boolean): Promise<void> {
-    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense }));
+    await firstValueFrom(
+      this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/download`, {
+        acceptLicense,
+      }),
+    );
   }
   async activarModelo(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/activate`, {}));
+    await firstValueFrom(
+      this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/activate`, {}),
+    );
   }
   async desactivarModelo(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/deactivate`, {}));
+    await firstValueFrom(
+      this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/deactivate`, {}),
+    );
   }
   async eliminarModelo(id: string): Promise<void> {
     await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}`));
   }
-  async cancelarDescarga(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/download`)); }
-  async eliminarParcial(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/partial`)); }
-  async probarModeloActivo():Promise<SaludoDeIA>{return firstValueFrom(this.http.post<SaludoDeIA>('/api/settings/ai/models/active/test',{}));}
+  async cancelarDescarga(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/download`),
+    );
+  }
+  async eliminarParcial(id: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}/partial`),
+    );
+  }
+  async probarModeloActivo(): Promise<SaludoDeIA> {
+    return firstValueFrom(this.http.post<SaludoDeIA>('/api/settings/ai/models/active/test', {}));
+  }
 }

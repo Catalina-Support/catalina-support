@@ -375,27 +375,29 @@
     <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); crear()">
       <p class="text-sm text-apagado">{{ t().usuarios.altaAyuda }}</p>
 
-      <app-campo
-        identificador="alta-nombre"
-        [etiqueta]="t().usuarios.nombre"
-        [valor]="alta().name"
-        (valorChange)="campoDelAlta('name', $event)"
-      />
+      @if (alta().origin === 'local') {
+        <app-campo
+          identificador="alta-nombre"
+          [etiqueta]="t().usuarios.nombre"
+          [valor]="alta().name"
+          (valorChange)="campoDelAlta('name', $event)"
+        />
 
-      <app-campo
-        identificador="alta-apellidos"
-        [etiqueta]="t().usuarios.apellidos"
-        [valor]="alta().lastName"
-        (valorChange)="campoDelAlta('lastName', $event)"
-      />
+        <app-campo
+          identificador="alta-apellidos"
+          [etiqueta]="t().usuarios.apellidos"
+          [valor]="alta().lastName"
+          (valorChange)="campoDelAlta('lastName', $event)"
+        />
 
-      <app-campo
-        identificador="alta-correo"
-        tipo="email"
-        [etiqueta]="t().usuarios.correo"
-        [valor]="alta().email"
-        (valorChange)="campoDelAlta('email', $event)"
-      />
+        <app-campo
+          identificador="alta-correo"
+          tipo="email"
+          [etiqueta]="t().usuarios.correo"
+          [valor]="alta().email"
+          (valorChange)="campoDelAlta('email', $event)"
+        />
+      }
 
       <app-selector
         identificador="alta-papel"
@@ -426,6 +428,42 @@
         (valorChange)="campoDelAltaElegido('origin', $event)"
       />
 
+      @if (alta().origin === 'ad') {
+        <app-campo
+          identificador="alta-directorio"
+          [etiqueta]="t().usuarios.directorioBuscar"
+          [ayuda]="t().usuarios.directorioBuscarAyuda"
+          [valor]="consultaDirectorio()"
+          (valorChange)="buscarEnDirectorio($event)"
+        />
+        @if (buscandoDirectorio()) {
+          <p class="text-sm text-apagado">{{ t().usuarios.directorioBuscando }}</p>
+        } @else if (consultaDirectorio().trim().length >= 3 && !resultadosDirectorio().length) {
+          <p class="text-sm text-apagado">{{ t().usuarios.directorioSinResultados }}</p>
+        }
+        @if (resultadosDirectorio().length) {
+          <ul class="max-h-64 overflow-auto rounded-md border border-borde">
+            @for (persona of resultadosDirectorio(); track persona.username) {
+              <li class="border-b border-borde last:border-0">
+                <button
+                  type="button"
+                  class="w-full px-3 py-3 text-left hover:bg-superficie-suave"
+                  [class.bg-superficie-suave]="personaDirectorio()?.username === persona.username"
+                  (click)="seleccionarPersona(persona)"
+                >
+                  <span class="block font-medium text-texto"
+                    >{{ persona.name }} {{ persona.lastName }}</span
+                  >
+                  <span class="block text-sm text-apagado"
+                    >{{ persona.username }} · {{ persona.email }}</span
+                  >
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+
       <div class="flex flex-wrap gap-2">
         <app-boton
           tipo="submit"
@@ -441,6 +479,25 @@
         />
       </div>
     </form>
+  </app-dialogo>
+  <app-dialogo
+    [titulo]="t().usuarios.directorioVincularTitulo"
+    [abierto]="confirmandoVinculo()"
+    (cerrado)="confirmandoVinculo.set(false)"
+  >
+    <p class="text-sm text-apagado">{{ t().usuarios.directorioVincularAviso }}</p>
+    <div class="mt-4 flex gap-2">
+      <app-boton
+        [texto]="t().usuarios.directorioVincular"
+        [trabajando]="trabajando()"
+        (pulsado)="confirmarVinculo()"
+      />
+      <app-boton
+        forma="secundario"
+        [texto]="t().usuarios.cancelar"
+        (pulsado)="confirmandoVinculo.set(false)"
+      />
+    </div>
   </app-dialogo>
   <!--
     **Mandar el enlace pregunta antes** (decisión del responsable, 2026-09-28): para una cuenta que ya

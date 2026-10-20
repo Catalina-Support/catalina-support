@@ -45,7 +45,8 @@ describe('Las guardas de la instalación', () => {
       mail: {
         host: '',
         port: '',
-        secure: false,
+        securityMode: 'starttls',
+        insecureAccepted: false,
         user: '',
         fromName: '',
         fromEmail: '',
