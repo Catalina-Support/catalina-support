@@ -6,7 +6,6 @@ name: catalina-support-prod
 #
 #   docker compose -f prod.yml --profile build run --rm builder_backend
 #   docker compose -f prod.yml --profile build run --rm builder_frontend
-#   docker compose -f prod.yml --profile migrate run --rm migrate
 #   docker compose -f prod.yml up -d
 #
 # PENDIENTE: los puertos 21001-21003, el dominio, el TLS y las rutas de artefactos
@@ -34,6 +33,9 @@ services:
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
       - ./config/nginx/frontend.prod.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
   backend:
     restart: always
@@ -47,8 +49,8 @@ services:
     working_dir: /app
     command: ["/app/catalina-support"]
     depends_on:
-      database:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - 21002:21002
     volumes:
@@ -76,24 +78,24 @@ services:
       timeout: 5s
       retries: 12
 
-  # En producción la migración es una acción manual y visible. El perfil evita que
-  # `up` la ejecute; `run` puede levantar por sí mismo la base de la que depende.
   migrate:
-    profiles: ["migrate"]
-    image: postgres:18-alpine
+    build:
+      context: .
+      dockerfile: config/dockerfiles/prod_backend_runtime.Dockerfile
+    image: catalina-support-prod-backend-runtime
     env_file:
       - ./config/env/prod.env
+    environment:
+      MIGRATIONS_DIR: /migrations
+      MIGRATION_BACKUP_DIR: /backups
     depends_on:
       database:
         condition: service_healthy
     volumes:
       - ./migrations:/migrations:ro
-    entrypoint: ["sh", "-ec"]
-    command:
-      - |
-        export PGPASSWORD="$$POSTGRES_PASSWORD"
-        psql -h "$$POSTGRES_HOST" -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
-        echo "Migración v1.0.0 aplicada."
+      - ./backend:/app:ro
+      - ./backups:/backups
+    command: ["/app/catalina-migrate"]
 
   builder_frontend:
     profiles: ["build"]
@@ -134,8 +136,11 @@ services:
         set -eu
         rm -f /out/catalina-support.new
         cp /build/catalina-support /out/catalina-support.new
+        cp /build/catalina-migrate /out/catalina-migrate.new
         chmod 755 /out/catalina-support.new
+        chmod 755 /out/catalina-migrate.new
         mv -f /out/catalina-support.new /out/catalina-support
+        mv -f /out/catalina-migrate.new /out/catalina-migrate
         echo "--- artefacto backend ---"
         ls -la /out
 

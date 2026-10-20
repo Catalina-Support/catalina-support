@@ -3,7 +3,9 @@ package controllers
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"strings"
 
 	"catalina-support/backend/modules/settings/dtos"
 	"catalina-support/backend/modules/settings/services"
@@ -184,6 +186,46 @@ func (c *SetupController) DeleteLogo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+func (c *SetupController) UploadSiteIcon(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, services.MaxLogoBytes+1024)
+	file, _, err := r.FormFile("icon")
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+			return
+		}
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
+		return
+	}
+	defer file.Close()
+	if _, err = c.service.SaveSiteIcon(file, auth.Identity{Factory: true}); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SetupController) DeleteSiteIcon(w http.ResponseWriter, r *http.Request) {
+	if installed, err := c.service.EstáInstalada(); err != nil {
+		c.fail(w, err)
+		return
+	} else if installed {
+		c.fail(w, services.ErrYaInstalada)
+		return
+	}
+	if err := c.service.RemoveSiteIcon(auth.Identity{Factory: true}); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 func (c *SetupController) TestActiveAIModel(w http.ResponseWriter, r *http.Request) {
 	if installed, err := c.service.EstáInstalada(); err != nil {
 		c.fail(w, err)
@@ -254,8 +296,7 @@ func (c *SetupController) TestEntry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// TestMail prueba la conexión del correo saliente del paso 4 **con los datos que llegan**. Comprueba
-// la conexión y la autenticación y **no manda ningún correo**: en el asistente no hay destinatario.
+// TestMail envía el mensaje técnico del paso 4 con los datos y el destinatario que llegan.
 func (c *SetupController) TestMail(w http.ResponseWriter, r *http.Request) {
 	var entrada dtos.SetupRequest
 	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
@@ -263,12 +304,24 @@ func (c *SetupController) TestMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.service.ProbarCorreoDeInstalacion(dtos.NewSetupStep(entrada).Mail); err != nil {
+	destinatario, err := c.service.ProbarCorreoDeInstalacion(dtos.NewSetupStep(entrada).Mail, ipDe(r))
+	if err != nil {
 		c.fail(w, err)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "recipient": destinatario})
+}
+
+func ipDe(r *http.Request) string {
+	if reenviada := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]); reenviada != "" {
+		return reenviada
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 // save lee un paso y lo guarda. Los cinco pasos comparten el mismo cuerpo porque comparten la misma
@@ -305,12 +358,24 @@ func (c *SetupController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.step.incomplete")
 	case errors.Is(err, services.ErrCorreoIncompleto):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.incomplete")
+	case errors.Is(err, services.ErrCorreoDestinoInvalido):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.recipientInvalid")
+	case errors.Is(err, services.ErrCorreoLimite):
+		httpx.WriteError(w, http.StatusTooManyRequests, "setup.mail.rateLimited")
 	case errors.Is(err, services.ErrNameTooLong):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.name.tooLong")
 	case errors.Is(err, services.ErrLanguageUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.language.unknown")
 	case errors.Is(err, services.ErrPrimaryColorInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.primaryColor.invalid")
+	case errors.Is(err, services.ErrLogoFormat):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.format")
+	case errors.Is(err, services.ErrLogoInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.logo.invalid")
+	case errors.Is(err, services.ErrLogoTooBig):
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "settings.logo.tooBig")
+	case errors.Is(err, services.ErrSiteIconTooSmall):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.siteIcon.tooSmall")
 	case errors.Is(err, services.ErrMethodUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.method.unknown")
 	case errors.Is(err, services.ErrMethodNotConfigured):

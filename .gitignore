@@ -21,6 +21,10 @@ _logs/*
 _files/*
 !_files/.gitkeep
 
+# Respaldos automáticos previos a migraciones locales
+_backups/*
+!_backups/.gitkeep
+
 # Credenciales: el env de producción nunca se versiona (sólo el ejemplo)
 config/env/prod.env
 

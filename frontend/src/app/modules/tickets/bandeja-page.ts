@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import type { Subscription } from 'rxjs';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { BrandService } from '../../core/services/brand.service';
@@ -78,8 +79,8 @@ const ESTADOS_DE_NAVEGACION = new Map<string, EstadoDeNavegacion>();
  *
  * - **`mios`** (`/tickets`): **lo mío** —lo asignado o lo observado actualmente—. Soporte reúne
  *   principales y Desarrollo internos; la capacidad Admin no cambia el nivel operativo.
- * - **`principal`** (`/tickets/main`) y **`interno`** (`/tickets/internal`): **todo lo que hay**, para
- *   Soporte y Desarrollo, con el tipo fijo por la pantalla misma.
+ * - **`general`** (`/tickets?type=main|internal`): **todo lo que hay**, para Soporte y Desarrollo,
+ *   con ambos tipos en una sola pantalla.
  * - **El Administrador** usa `/tickets` como siempre: los dos tipos, con su chip y **de sólo
  *   lectura** (`docs/interfaz-y-experiencia.md`, sección 4.4).
  *
@@ -143,7 +144,13 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
    * Cuál de las cuatro listas es. Lo trae la ruta (`data.listado`), así que la pantalla es la misma
    * para todas y lo que cambia es esto.
    */
-  readonly listado = input<'mios' | 'principal' | 'interno'>('mios');
+  readonly listado = input<'mios' | 'general'>('mios');
+  private readonly estadosGenerales = new Map<
+    string,
+    { filtros: FiltrosDeBandeja; pagina: PaginaDeTickets }
+  >();
+  private cambiosDeConsulta: Subscription | null = null;
+  private consultaInicializada = false;
 
   private readonly contenedor = viewChild<ElementRef<HTMLElement>>('contenedor');
   private readonly contenedorLista = viewChild<ElementRef<HTMLElement>>('contenedorLista');
@@ -211,15 +218,14 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     ];
   }
 
-  protected readonly conChipDeTipo = computed(
-    () =>
-      this.esAdministradorPuro(),
-  );
+  protected readonly conChipDeTipo = computed(() => this.esAdministradorPuro());
 
   /** Si la lista enseña **todo** (las dos del «todo»), que es lo que decide el botón de crear. */
   protected readonly esListaDelTodo = computed(
     () => this.listado() !== 'mios' && !this.esAdministradorPuro(),
   );
+
+  protected readonly esListaGeneral = computed(() => this.listado() === 'general');
 
   constructor() {
     effect(() => {
@@ -274,11 +280,17 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     const priorities = consulta.getAll('priority').filter(esPrioridad);
     const view =
       consulta.get('view') === 'all' ? '' : (consulta.get('view') ?? this.vistaInicial().view);
+    const tipoPedido = consulta.get('type');
+    const tipoGeneral = tipoPedido === TIPO_INTERNO ? TIPO_INTERNO : TIPO_PRINCIPAL;
     this.filtros.set({
       ...FILTROS_VACIOS,
       ...this.vistaInicial(),
       view,
-      type: consulta.get('type') === 'all' ? '' : (consulta.get('type') ?? this.tipoInicial(view)),
+      type: this.esListaGeneral()
+        ? tipoGeneral
+        : consulta.get('type') === 'all'
+          ? ''
+          : (consulta.get('type') ?? this.tipoInicial(view)),
       state: consulta.get('state') ?? '',
       q: consulta.get('q') ?? '',
       category: consulta.get('category') ?? '',
@@ -309,6 +321,31 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
       void this.cargar();
     }
     void this.cargarCategorias();
+
+    this.consultaInicializada = true;
+    if (this.esListaGeneral() && tipoPedido !== tipoGeneral) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        replaceUrl: true,
+        queryParams: { type: tipoGeneral },
+        queryParamsHandling: 'merge',
+      });
+    }
+    this.cambiosDeConsulta = this.route.queryParamMap.subscribe((parametros) => {
+      if (!this.consultaInicializada || !this.esListaGeneral()) return;
+      const pedido = parametros.get('type');
+      const tipo = pedido === TIPO_INTERNO ? TIPO_INTERNO : TIPO_PRINCIPAL;
+      if (pedido !== tipo) {
+        void this.router.navigate([], {
+          relativeTo: this.route,
+          replaceUrl: true,
+          queryParams: { type: tipo },
+          queryParamsHandling: 'merge',
+        });
+        return;
+      }
+      if (tipo !== this.filtros().type) void this.aplicarTipoGeneral(tipo);
+    });
   }
 
   protected t() {
@@ -340,12 +377,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.esAdministradorPuro()) {
       return this.t().menu.bandeja;
     }
-    if (this.listado() === 'principal') {
-      return this.t().menu.ticketsPrincipales;
-    }
-    if (this.listado() === 'interno') {
-      return this.t().menu.ticketsInternos;
-    }
+    if (this.esListaGeneral()) return this.t().menu.tickets;
 
     return this.t().menu.misTickets;
   }
@@ -362,6 +394,39 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
       { valor: TIPO_INTERNO, etiqueta: this.t().tickets.tipoInterno },
       { valor: '', etiqueta: this.t().tickets.tipoTodos },
     ];
+  }
+
+  protected opcionesDeListaGeneral(): readonly OpcionConmutador[] {
+    return [
+      { valor: TIPO_PRINCIPAL, etiqueta: this.t().tickets.tipoPrincipal },
+      { valor: TIPO_INTERNO, etiqueta: this.t().tickets.tipoInterno },
+    ];
+  }
+
+  protected cambiarTipoGeneral(tipo: string): void {
+    if (tipo !== TIPO_PRINCIPAL && tipo !== TIPO_INTERNO) return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { type: tipo },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  private async aplicarTipoGeneral(tipo: string): Promise<void> {
+    const anterior = this.filtros().type;
+    this.estadosGenerales.set(anterior, { filtros: { ...this.filtros() }, pagina: this.pagina() });
+    const guardado = this.estadosGenerales.get(tipo);
+    this.versionDeConsulta += 1;
+    this.mensaje.set(null);
+    if (guardado) {
+      this.filtros.set({ ...guardado.filtros, type: tipo });
+      this.pagina.set(guardado.pagina);
+      this.cargando.set(false);
+      return;
+    }
+    this.filtros.set({ ...FILTROS_VACIOS, type: tipo, page: 1 });
+    this.pagina.set({ tickets: [], total: 0, page: 1, perPage: 0 });
+    await this.cargar();
   }
 
   /**
@@ -584,12 +649,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
    * principales y Desarrollo internos; una capacidad Admin acumulativa no amplía ese nivel.
    */
   private tipoInicial(_vista = this.filtros().view): string {
-    if (this.listado() === 'principal') {
-      return TIPO_PRINCIPAL;
-    }
-    if (this.listado() === 'interno') {
-      return TIPO_INTERNO;
-    }
+    if (this.esListaGeneral()) return TIPO_PRINCIPAL;
     if (this.esDesarrollo()) {
       return TIPO_INTERNO;
     }
@@ -788,6 +848,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.cambiosDeConsulta?.unsubscribe();
     this.observadorDeCarga?.disconnect();
     this.consultaDeTabla?.removeEventListener('change', this.alCambiarAnchoDeTabla);
     this.observadorDeAncho?.disconnect();

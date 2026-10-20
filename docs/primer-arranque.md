@@ -1,7 +1,21 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 19 incorpora el icono
+> opcional del sitio al paso 1. Las decisiones 1A–14A están cerradas; pasaron 253 pruebas frontend,
+> las fronteras y la compilación de producción.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: mensaje real desde el paso 4.** La sección 18
+> incorpora un destinatario efímero y convierte la prueba SMTP en un envío opcional, limitado y con
+> texto fijo en el idioma global. El responsable cerró y aprobó 1A–14A; pasaron las pruebas
+> focalizadas, las 248 del frontend, fronteras y compilación.
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-19: elección segura del transporte
+> SMTP.** La sección 17 incorpora tres modos en el paso 4, con aceptación explícita y límite de red
+> privada para el modo sin cifrar. El responsable cerró y aprobó 1A–10A; la prueba real autenticó
+> contra el relay interno sin enviar correo.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** La sección 16 incorpora Auto, CPU y NVIDIA
 > al paso 5 cuando el motor vive en este servidor.
@@ -154,14 +168,14 @@ comprueba que estén completos.
 
 ### 3.1 Las pruebas de conexión del asistente
 
-Los dos pasos que configuran algo que hay que comprobar traen su botón de **«Probar la conexión»**,
-como Configuración. **La prueba no guarda nada**: manda lo que hay escrito en pantalla y contesta si
-eso funciona, así que se puede corregir antes de avanzar.
+Los dos pasos que configuran algo que hay que comprobar traen su acción de prueba. En la entrada se
+llama **Probar la conexión**; en correo, **Enviar correo de prueba**. Ninguna guarda: mandan lo escrito
+y permiten corregirlo antes de avanzar.
 
 | Paso | Qué prueba | Qué **no** hace |
 | --- | --- | --- |
 | **2 · Cómo se entra** | **El directorio (AD) o Keycloak, según el método elegido**: con AD abre la conexión y valida la cuenta de servicio; con Keycloak lee el documento del reino. Con el método **local** no hay nada que conectar y el botón no se enseña. | No guarda nada, no valida la contraseña de nadie —eso sólo se sabe cuando alguien entra— y no toca la base. |
-| **4 · El correo** | **La conexión y la autenticación del correo saliente**: host, puerto, TLS, usuario y contraseña. Es la misma conexión y la misma autenticación que usa el envío. | **No manda ningún correo**: no hay MAIL FROM, ni RCPT TO, ni DATA. En el asistente no hay destinatario, y por eso no se puede —ni se debe— probar el envío desde aquí. |
+| **4 · El correo** | La transacción completa: conexión, autenticación, `MAIL FROM`, `RCPT TO` y `DATA`, con el remitente y el destinatario efímero escritos. | No guarda los datos ni afirma entrega final al buzón. |
 
 **Las contesta quien ya sabía hacerlo**, sin duplicar nada: el directorio y Keycloak los prueba el
 módulo `auth` —el mismo que contesta a los botones de Configuración— y el correo lo prueba el módulo
@@ -208,12 +222,12 @@ Producción no declara esas sugerencias y empieza vacía. El módulo `mail` nunc
   nulo**. Guardar dos veces la misma instalación se rechaza con **409** y su clave. Además de los cinco
   caminos que guardan y sellan, están **las dos pruebas** del paso 2 y del paso 4 —`POST
   /api/setup/entry/test` y `POST /api/setup/mail/test`—, que reciben los datos escritos, **no tocan la
-  base**, contestan `{"status":"ok"}` o la clave del fallo, y **con la instalación sellada contestan
+  base**, contestan `{"status":"ok"}` —correo añade `recipient`— o la clave del fallo, y **con la instalación sellada contestan
   también 409** `setup.alreadyInstalled` (§3.1).
 - **Las pruebas**: las unitarias de cada paso y **las dos de los endpoints de prueba** —con dobles, sin
   salir a la red: el 409 con el sello puesto, la validación de los datos malos y que con datos buenos
-  se llama a la prueba del módulo—, la del remitente del correo —que conecta y autentica sin mandar
-  nada— y **la que más importa en la suite de interfaz**: que **una instalación ya configurada no
+  se llama a la prueba del módulo—, la del remitente del correo —que entrega el mensaje fijo— y **la
+  que más importa en la suite de interfaz**: que **una instalación ya configurada no
   enseña el asistente y su API lo rechaza**. El recorrido completo de los cinco pasos se ejecuta
   automáticamente sobre una instalación desechable, en PC y móvil, antes de la suite normal.
 
@@ -355,7 +369,7 @@ El orden nuevo es:
    del asistente; después se pide el nombre. Ese idioma será único para interfaz, fechas, correos e IA.
 2. **Cómo se entra:** conserva local, AD y Keycloak y sus pruebas actuales.
 3. **Dónde está:** conserva zona horaria y dirección pública.
-4. **Correo saliente:** conserva la prueba de conexión y autenticación sin enviar correo.
+4. **Correo saliente:** prueba opcionalmente la transacción completa con un destinatario efímero.
 5. **Inteligencia artificial:** local, servidor propio o proveedor. En local se elige el catálogo,
    se comprueban recursos, se muestra fuente, licencia, tamaño y checksum, se acepta la licencia de
    esa versión, se descarga con progreso y se activa. En externo se escriben conexión y secreto, y
@@ -517,3 +531,46 @@ dispositivo sin identificadores técnicos.
 Auto cae una vez a CPU con aviso. NVIDIA explícito sin la variante Compose rechaza la activación y
 explica cómo levantar `ai-nvidia.yml`; no sella ni guarda una configuración inservible. Reanudar el
 asistente reconstruye modo configurado, modo efectivo y operación `restarting` si existe.
+
+## 17. Transporte SMTP en el paso 4
+
+El paso 4 sustituye la casilla **Conexión cifrada (TLS)** por una selección de tres modos:
+**STARTTLS**, **TLS directo** y **Sin cifrado**. STARTTLS es la opción normal del puerto 587 y exige
+la extensión antes de autenticar; TLS directo corresponde normalmente al 465. La pantalla no elige
+un modo a partir del puerto ni degrada automáticamente una conexión segura.
+
+**Sin cifrado** muestra antes de probar o avanzar que usuario, contraseña y contenido viajarán en
+claro. Requiere una aceptación administrativa que se conserva sólo mientras siga seleccionado ese
+modo. Además, el backend exige que todas las direcciones resueltas sean IPv4 privadas RFC1918 o
+loopback. El toast común cuenta un rechazo por modo, aceptación o destino sin revelar credenciales.
+
+La prueba conecta, autentica y envía el mensaje técnico. El remitente será una dirección
+institucional propia de Catalina; el asistente no propone ni copia la de SIGOC. Las sugerencias de
+desarrollo cambian Mailpit a `plain` sin credenciales y con su excepción local explícita.
+
+## 18. Correo real de prueba en el paso 4
+
+Esta enmienda reemplaza la última frase de la sección 17 y la fila del paso 4 en §3.1: el asistente
+sí pide una dirección **Enviar prueba a** y el botón único **Enviar correo de prueba** ejecuta un
+envío SMTP completo con lo que está escrito. El campo se usa sólo en esa petición; no se guarda ni
+aparece en el resumen.
+
+El mensaje fijo usa el idioma global y explica que valida Catalina-Support, que no requiere acción
+y que no debe responderse. El resultado confirma que el servidor aceptó el mensaje para la dirección
+indicada, sin prometer que llegó a la bandeja. No probar sigue permitiendo avanzar y sellar.
+
+Como el endpoint existe antes de iniciar sesión, limita cada pareja IP–destinatario a cinco intentos
+en quince minutos, responde `429` al excederlos y permanece inaccesible después del sello. Los logs
+ocultan parcialmente el destinatario y excluyen secreto y contenido.
+
+## 19. Icono opcional en el paso 1
+
+Después de los dos logos, el paso 1 presenta la tarjeta **Icono del sitio** definida en
+`docs/interfaz-y-experiencia.md`, sección 50. Subirlo o restaurarlo usa las rutas públicas de
+`/api/setup/brand/site-icon`, disponibles sólo mientras la instalación no esté sellada, y actualiza
+el favicon de todas las pestañas abiertas inmediatamente.
+
+El icono no es obligatorio y no participa en **Siguiente**, en la validación del paso ni en el sello
+final. Si se omite, la pestaña usa el logo claro personalizado y, si éste tampoco existe, el logo
+claro de fábrica. Los errores permanecen en el paso mediante el toast común y no descartan los demás
+datos ya escritos.

@@ -85,6 +85,7 @@ type DirectoryAccount struct {
 	// ExternalID es el identificador allí: el GUID de AD o el `sub` de Keycloak. Es lo que manda
 	// cuando alguien cambia de correo.
 	ExternalID string
+	Username   string
 	Email      string
 	Name       string
 	LastName   string

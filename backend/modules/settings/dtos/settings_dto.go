@@ -19,6 +19,7 @@ type SettingsResponse struct {
 	// Directory y Keycloak van **sin sus secretos**: en su lugar dicen si hay uno puesto.
 	Directory                  DirectoryDto `json:"directory"`
 	Keycloak                   KeycloakDto  `json:"keycloak"`
+	Mail                       MailViewDto  `json:"mail"`
 	Language                   string       `json:"language"`
 	PrimaryColor               string       `json:"primaryColor"`
 	NumberPrefix               string       `json:"numberPrefix"`
@@ -40,8 +41,9 @@ type SettingsResponse struct {
 
 // BrandDto es el estado de la marca: los dos huecos.
 type BrandDto struct {
-	Light LogoDto `json:"light"`
-	Dark  LogoDto `json:"dark"`
+	Light    LogoDto `json:"light"`
+	Dark     LogoDto `json:"dark"`
+	SiteIcon LogoDto `json:"siteIcon"`
 }
 
 // LogoDto es un hueco del logo. `filled` en falso quiere decir que ese hueco usa el de fábrica.
@@ -63,6 +65,7 @@ type DirectoryDto struct {
 	BindDN       string `json:"bindDn"`
 	SearchBase   string `json:"searchBase"`
 	UserFilter   string `json:"userFilter"`
+	AttrUsername string `json:"attrUsername"`
 	AttrEmail    string `json:"attrEmail"`
 	AttrName     string `json:"attrName"`
 	AttrLastName string `json:"attrLastName"`
@@ -198,6 +201,7 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			BindDN:       config.Directory.BindDN,
 			SearchBase:   config.Directory.SearchBase,
 			UserFilter:   config.Directory.UserFilter,
+			AttrUsername: config.Directory.AttrUsername,
 			AttrEmail:    config.Directory.AttrEmail,
 			AttrName:     config.Directory.AttrName,
 			AttrLastName: config.Directory.AttrLastName,
@@ -211,6 +215,10 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			RedirectURI:    config.Keycloak.RedirectURI,
 			SecretSet:      config.Keycloak.SecretSet,
 		},
+		Mail: MailViewDto{Host: config.Mail.Host, Port: config.Mail.Port,
+			SecurityMode: config.Mail.SecurityMode, InsecureAccepted: config.Mail.InsecureAccepted,
+			User: config.Mail.User, FromName: config.Mail.FromName, FromEmail: config.Mail.FromEmail,
+			PasswordSet: config.Mail.PasswordSet},
 		Language:                   config.Language,
 		PrimaryColor:               config.PrimaryColor,
 		NumberPrefix:               config.NumberPrefix,
@@ -227,8 +235,9 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 		AIModel:                    config.AIModel,
 		AI:                         NewAIConfigurationResponse(config.AI),
 		Brand: BrandDto{
-			Light: newLogoDto(config.Brand.Light),
-			Dark:  newLogoDto(config.Brand.Dark),
+			Light:    newLogoDto(config.Brand.Light),
+			Dark:     newLogoDto(config.Brand.Dark),
+			SiteIcon: newLogoDto(config.Brand.SiteIcon),
 		},
 	}
 }
@@ -253,8 +262,9 @@ func NewBrandResponse(public services.Public) BrandResponse {
 			IsDefault: public.Colors.IsDefault,
 		},
 		Logo: BrandDto{
-			Light: LogoDto{Filled: public.HasLight},
-			Dark:  LogoDto{Filled: public.HasDark},
+			Light:    LogoDto{Filled: public.HasLight},
+			Dark:     LogoDto{Filled: public.HasDark},
+			SiteIcon: LogoDto{Filled: public.HasSiteIcon},
 		},
 		LogoVersion: public.LogoVersion,
 	}
@@ -286,6 +296,7 @@ func NewDirectoryInput(dto DirectoryDto) services.DirectoryInput {
 		BindPassword: dto.BindPassword,
 		SearchBase:   dto.SearchBase,
 		UserFilter:   dto.UserFilter,
+		AttrUsername: dto.AttrUsername,
 		AttrEmail:    dto.AttrEmail,
 		AttrName:     dto.AttrName,
 		AttrLastName: dto.AttrLastName,

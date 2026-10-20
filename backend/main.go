@@ -86,17 +86,18 @@ type proberDeCorreo struct {
 	mail *services.Service
 }
 
-// ProbarCorreo prueba la conexión y la autenticación **sin mandar ningún correo**.
-func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente) error {
-	return p.mail.Probar(services.CorreoSaliente{
-		Host:      correo.Host,
-		Port:      correo.Port,
-		Secure:    correo.Secure,
-		User:      correo.User,
-		Password:  correo.Password,
-		FromName:  correo.FromName,
-		FromEmail: correo.FromEmail,
-	})
+// ProbarCorreo entrega el mensaje técnico con los datos todavía no guardados.
+func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente, destinatario, idioma, instalacion string) error {
+	return p.mail.ProbarEnvio(services.CorreoSaliente{
+		Host:             correo.Host,
+		Port:             correo.Port,
+		SecurityMode:     correo.SecurityMode,
+		InsecureAccepted: correo.InsecureAccepted,
+		User:             correo.User,
+		Password:         correo.Password,
+		FromName:         correo.FromName,
+		FromEmail:        correo.FromEmail,
+	}, destinatario, idioma, instalacion)
 }
 
 // resumidorDeIA traduce lo que `tickets` pide a lo que el módulo `ai` ofrece.
@@ -248,12 +249,13 @@ func run() error {
 	settingsService.SetAICredentialKey(cfg.AICredentialKey)
 	settingsService.SetAIManager("http://ai:8081", cfg.AIManagerToken)
 	settingsService.SetCorreoInicial(settingsservices.MailInput{
-		Host:      cfg.SetupMailHost,
-		Port:      cfg.SetupMailPort,
-		Secure:    cfg.SetupMailSecure,
-		User:      cfg.SetupMailUser,
-		FromName:  cfg.SetupMailFromName,
-		FromEmail: cfg.SetupMailFromEmail,
+		Host:             cfg.SetupMailHost,
+		Port:             cfg.SetupMailPort,
+		SecurityMode:     cfg.SetupMailSecurityMode,
+		InsecureAccepted: cfg.SetupMailInsecureAccepted,
+		User:             cfg.SetupMailUser,
+		FromName:         cfg.SetupMailFromName,
+		FromEmail:        cfg.SetupMailFromEmail,
 	})
 
 	usersService := userservices.NewService(userrepositories.NewUserRepository(db))
@@ -285,8 +287,8 @@ func run() error {
 	// directorio y con un reino: probar una conexión es hablar el protocolo, y eso no se duplica.
 	settingsService.SetProber(authService)
 
-	// Y la prueba del correo saliente la contesta `mail`, con la misma conexión y autenticación que
-	// usa para enviar: **sin mandar ningún correo**, que es lo que hace falta en el asistente
+	// Y la prueba del correo saliente la contesta `mail`, con la misma transacción que usa para enviar
+	// el mensaje técnico al destinatario efímero escrito en la pantalla.
 	// (docs/primer-arranque.md, sección 3).
 	settingsService.SetProberDeCorreo(proberDeCorreo{mail: mailService})
 
@@ -361,13 +363,6 @@ func run() error {
 		return middleware.Chain(handler,
 			middleware.Auth(tokens, whoIsCalling),
 			authz.RequireAdmin,
-			globalSettingsHeaders,
-		)
-	}
-	staff := func(handler http.Handler) http.Handler {
-		return middleware.Chain(handler,
-			middleware.Auth(tokens, whoIsCalling),
-			authz.RequireStaff,
 			globalSettingsHeaders,
 		)
 	}
@@ -452,6 +447,8 @@ func run() error {
 	mux.HandleFunc("DELETE /api/setup/ai/models/{id}", setupController.DeleteAIModel)
 	mux.HandleFunc("POST /api/setup/brand/logo", setupController.UploadLogo)
 	mux.HandleFunc("DELETE /api/setup/brand/logo", setupController.DeleteLogo)
+	mux.HandleFunc("POST /api/setup/brand/site-icon", setupController.UploadSiteIcon)
+	mux.HandleFunc("DELETE /api/setup/brand/site-icon", setupController.DeleteSiteIcon)
 	// Las dos pruebas de conexión del asistente: se prueba **lo que hay en pantalla**, antes de
 	// guardarlo, y por eso van por `POST` con los datos en el cuerpo y no tocan la base. El candado es
 	// el mismo que el del resto del asistente: sellada la instalación, contestan **409**
@@ -465,18 +462,17 @@ func run() error {
 	mux.Handle("POST /api/auth/logout", authenticated(http.HandlerFunc(authController.Logout)))
 	mux.Handle("POST /api/auth/password/change", authenticated(http.HandlerFunc(authController.Change)))
 
-	// Dar de alta: Soporte sólo puede crear `usuario`, y eso se comprueba en el servicio, que es quien
-	// sabe con qué datos se está intentando (docs/modules/users.md, sección 5).
-	mux.Handle("POST /api/users", staff(http.HandlerFunc(usersController.Create)))
-	mux.Handle("POST /api/users/{id}/reset-password", staff(http.HandlerFunc(usersController.ResetPassword)))
-
-	// La lista la ven Soporte y Administrador; la ficha de una cuenta, sólo un Administrador, y los
-	// cambios de papel y de origen también (docs/modules/users.md, sección 4).
-	mux.Handle("GET /api/users", staff(http.HandlerFunc(usersController.List)))
+	// La administración de cuentas, incluida la consulta de AD, exige capacidad Admin. Los
+	// buscadores operativos de personas pertenecen a tickets y no pasan por estas rutas.
+	mux.Handle("POST /api/users", admin(http.HandlerFunc(usersController.Create)))
+	mux.Handle("GET /api/users/directory", admin(http.HandlerFunc(usersController.SearchDirectory)))
+	mux.Handle("POST /api/users/directory", admin(http.HandlerFunc(usersController.CreateDirectory)))
+	mux.Handle("POST /api/users/{id}/reset-password", admin(http.HandlerFunc(usersController.ResetPassword)))
+	mux.Handle("GET /api/users", admin(http.HandlerFunc(usersController.List)))
 	mux.Handle("GET /api/users/{id}", admin(http.HandlerFunc(usersController.Show)))
-	mux.Handle("PATCH /api/users/{id}", staff(http.HandlerFunc(usersController.Update)))
-	mux.Handle("POST /api/users/{id}/deactivate", staff(http.HandlerFunc(usersController.Deactivate)))
-	mux.Handle("POST /api/users/{id}/activate", staff(http.HandlerFunc(usersController.Activate)))
+	mux.Handle("PATCH /api/users/{id}", admin(http.HandlerFunc(usersController.Update)))
+	mux.Handle("POST /api/users/{id}/deactivate", admin(http.HandlerFunc(usersController.Deactivate)))
+	mux.Handle("POST /api/users/{id}/activate", admin(http.HandlerFunc(usersController.Activate)))
 	mux.Handle("POST /api/users/{id}/origin", admin(http.HandlerFunc(usersController.ChangeOrigin)))
 
 	// El perfil propio lo cambia cualquiera que haya entrado, y sólo lo suyo.
@@ -510,17 +506,17 @@ func run() error {
 	// caminos literales `categories` y `tags` **no chocan con `{number}`**: el enrutador de Go 1.22
 	// elige el patrón más específico, y un segmento literal gana a un comodín.
 	mux.Handle("GET /api/tickets/categories", authenticated(http.HandlerFunc(ticketsController.ListCategories)))
-	mux.Handle("POST /api/tickets/categories", authenticated(http.HandlerFunc(ticketsController.CreateCategory)))
-	mux.Handle("PATCH /api/tickets/categories/{id}", authenticated(http.HandlerFunc(ticketsController.RenameCategory)))
-	mux.Handle("POST /api/tickets/categories/{id}/state", authenticated(http.HandlerFunc(ticketsController.CategoryState)))
+	mux.Handle("POST /api/tickets/categories", admin(http.HandlerFunc(ticketsController.CreateCategory)))
+	mux.Handle("PATCH /api/tickets/categories/{id}", admin(http.HandlerFunc(ticketsController.RenameCategory)))
+	mux.Handle("POST /api/tickets/categories/{id}/state", admin(http.HandlerFunc(ticketsController.CategoryState)))
 	mux.Handle("GET /api/tickets/tags", authenticated(http.HandlerFunc(ticketsController.Tags)))
 	// El mantenimiento de las etiquetas: el catálogo se crea, se renombra —y el cambio vale para todos
 	// los tickets que la llevan— y se retira —y se quita de ellos— (docs/modules/tickets.md, decisión
 	// 72). El `{tag}` de la ruta es el nombre normalizado, que es único en el catálogo, y va en un
 	// segmento: una etiqueta nunca lleva barra, así que no se come nada de la ruta.
-	mux.Handle("POST /api/tickets/tags", authenticated(http.HandlerFunc(ticketsController.CreateTag)))
-	mux.Handle("PATCH /api/tickets/tags/{tag}", authenticated(http.HandlerFunc(ticketsController.RenameTag)))
-	mux.Handle("DELETE /api/tickets/tags/{tag}", authenticated(http.HandlerFunc(ticketsController.DeleteTag)))
+	mux.Handle("POST /api/tickets/tags", admin(http.HandlerFunc(ticketsController.CreateTag)))
+	mux.Handle("PATCH /api/tickets/tags/{tag}", admin(http.HandlerFunc(ticketsController.RenameTag)))
+	mux.Handle("DELETE /api/tickets/tags/{tag}", admin(http.HandlerFunc(ticketsController.DeleteTag)))
 	// Los observadores se añaden de dos maneras —una mención en un comentario o el botón de la ficha
 	// desde el 2026-09-28— y las dos dejan lo mismo. Añadir y quitar son de Soporte y Desarrollo
 	// (decisión 63), y el servicio comprueba las dos cosas: quién lo pide y que la cuenta valga.
@@ -539,11 +535,13 @@ func run() error {
 	mux.Handle("GET /api/settings", admin(http.HandlerFunc(settingsController.Show)))
 	mux.Handle("PUT /api/settings", admin(http.HandlerFunc(settingsController.Update)))
 	mux.Handle("POST /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.UploadLogo)))
+	mux.Handle("POST /api/settings/brand/site-icon", admin(http.HandlerFunc(settingsController.UploadSiteIcon)))
 	// Las dos pruebas de conexión: se prueba **lo que hay en pantalla**, antes de guardarlo, y por eso
 	// van por `POST` con la configuración en el cuerpo y no leen nada de la base
 	// (docs/modules/settings.md, sección 5.8).
 	mux.Handle("POST /api/settings/directory/test", admin(http.HandlerFunc(settingsController.TestDirectory)))
 	mux.Handle("POST /api/settings/keycloak/test", admin(http.HandlerFunc(settingsController.TestKeycloak)))
+	mux.Handle("POST /api/settings/mail/test", admin(http.HandlerFunc(settingsController.TestMail)))
 	// La prueba del motor de IA: pregunta a su comprobación de salud la dirección que se le manda, o
 	// la que hay guardada si no llega ninguna (docs/modules/ai.md).
 	mux.Handle("POST /api/settings/ai/test", admin(http.HandlerFunc(settingsController.TestAI)))
@@ -558,12 +556,14 @@ func run() error {
 	mux.Handle("POST /api/settings/ai/models/{id}/deactivate", admin(http.HandlerFunc(settingsController.DeactivateAIModel)))
 	mux.Handle("DELETE /api/settings/ai/models/{id}", admin(http.HandlerFunc(settingsController.DeleteAIModel)))
 	mux.Handle("DELETE /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.DeleteLogo)))
+	mux.Handle("DELETE /api/settings/brand/site-icon", admin(http.HandlerFunc(settingsController.DeleteSiteIcon)))
 
 	// Y la marca que necesita la aplicación **antes de que nadie entre**: el color institucional y el
 	// logo. Son públicos a propósito, y sólo devuelven la marca de la institución
 	// (docs/modules/settings.md, sección 5.4).
 	mux.HandleFunc("GET /api/settings/brand", settingsController.Brand)
 	mux.HandleFunc("GET /api/settings/brand/logo", settingsController.LogoFile)
+	mux.HandleFunc("GET /api/settings/brand/site-icon", settingsController.SiteIconFile)
 
 	return serve(cfg, middleware.Chain(mux, aiConfigured, middleware.Recover), func() error {
 		// Se para la cola del motor antes de cerrar la base: un trabajo a medias escribiría en una conexión
@@ -760,12 +760,13 @@ func (i instalacionesDeLaConfiguracion) SMTP() (services.CorreoSaliente, bool) {
 	}
 
 	return services.CorreoSaliente{
-		Host:      correo.Host,
-		Port:      correo.Port,
-		Secure:    correo.Secure,
-		User:      correo.User,
-		Password:  correo.Password,
-		FromName:  correo.FromName,
-		FromEmail: correo.FromEmail,
+		Host:             correo.Host,
+		Port:             correo.Port,
+		SecurityMode:     correo.SecurityMode,
+		InsecureAccepted: correo.InsecureAccepted,
+		User:             correo.User,
+		Password:         correo.Password,
+		FromName:         correo.FromName,
+		FromEmail:        correo.FromEmail,
 	}, true
 }

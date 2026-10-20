@@ -41,7 +41,7 @@ esac
 
 # Los tres directorios que montan los contenedores, y el de las copias de la base que ya
 # usa scripts/backup-db.sh prod (docs/ambientes.md, sección 6).
-mkdir -p "$OUT_DIR/frontend" "$OUT_DIR/backend" "$OUT_DIR/_files" "$OUT_DIR/_logs"
+mkdir -p "$OUT_DIR/frontend" "$OUT_DIR/backend" "$OUT_DIR/_files" "$OUT_DIR/_logs" "$OUT_DIR/backups"
 
 # **El compose y lo que necesita van a la carpeta de despliegue, antes de construir**: las etapas de
 # construcción escriben en `./frontend` y `./backend`, que son relativas al propio `prod.yml`, así que
@@ -84,16 +84,26 @@ rotate() {
   echo "rotado: $target -> ${target}_prev"
 }
 
-build() {
+build_image() {
   local name="$1"
-  rotate "$name"
-  echo "== construyendo y publicando $name =="
+  echo "== construyendo $name sin tocar la instalación activa =="
 
   # **Se construye la imagen del constructor antes de usarla**, y no es un paso de más: `run` sólo
   # construye si la imagen **no existe**, así que a partir del segundo despliegue reutilizaría la de
   # la vez anterior y **publicaría el artefacto viejo sin decir nada**. Se descubrió el 2026-09-26, al
   # reemplazar los logos: el artefacto publicado seguía trayendo los de antes.
   "${COMPOSE[@]}" --profile build build "builder_$name"
+  if [ "$name" = "backend" ]; then
+    # Backend y migrador comparten el runtime; se construye antes de la interrupción para asegurar
+    # que pg_dump/pg_restore tengan la misma versión mayor que PostgreSQL.
+    "${COMPOSE[@]}" build backend
+  fi
+}
+
+publish() {
+  local name="$1"
+  rotate "$name"
+  echo "== publicando $name =="
   "${COMPOSE[@]}" --profile build run --rm "builder_$name"
 }
 
@@ -104,7 +114,8 @@ verify() {
     frontend)
       [ -f "$OUT_DIR/frontend/index.html" ] || { echo "FALTA $OUT_DIR/frontend/index.html" >&2; exit 1; } ;;
     backend)
-      [ -x "$OUT_DIR/backend/catalina-support" ] || { echo "FALTA $OUT_DIR/backend/catalina-support (o no es ejecutable)" >&2; exit 1; } ;;
+      [ -x "$OUT_DIR/backend/catalina-support" ] || { echo "FALTA $OUT_DIR/backend/catalina-support (o no es ejecutable)" >&2; exit 1; }
+      [ -x "$OUT_DIR/backend/catalina-migrate" ] || { echo "FALTA $OUT_DIR/backend/catalina-migrate (o no es ejecutable)" >&2; exit 1; } ;;
   esac
 }
 
@@ -122,7 +133,17 @@ else
 fi
 
 for t in "${TARGETS[@]}"; do
-  build "$t"
+  build_image "$t"
+done
+
+# Hasta aquí la versión anterior continúa sirviendo. Sólo después de compilar todos los
+# componentes empieza la interrupción necesaria para publicar y migrar.
+if [ "$DEPLOY" = "1" ]; then
+  "${COMPOSE[@]}" stop frontend backend >/dev/null 2>&1 || true
+fi
+
+for t in "${TARGETS[@]}"; do
+  publish "$t"
   verify "$t"
   publish_notices "$t"
 done
@@ -140,6 +161,10 @@ cat "$OUT_DIR/BUILD_INFO"
 
 if [ "$DEPLOY" = "1" ]; then
   echo "== levantando/actualizando los contenedores de producción =="
+  # Un servicio one-shot completado se elimina para que cada despliegue vuelva a comprobar el
+  # historial. Si no hay pendientes, sale sin crear una copia ni ejecutar SQL.
+  "${COMPOSE[@]}" rm -f migrate >/dev/null 2>&1 || true
+  "${COMPOSE[@]}" up migrate
   "${COMPOSE[@]}" up -d
   AI_PROJECT_NAME=catalina-support-ai-prod \
     AI_NETWORK_NAME=catalina-support-ai-prod \

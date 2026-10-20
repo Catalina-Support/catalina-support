@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 // **Sólo el tipo**: lo que devuelven subir y restablecer el logo es el documento de configuración
@@ -51,6 +51,7 @@ export interface Marca {
   readonly logo: {
     readonly light: { readonly filled: boolean };
     readonly dark: { readonly filled: boolean };
+    readonly siteIcon: { readonly filled: boolean };
   };
   readonly logoVersion: string;
 }
@@ -94,11 +95,21 @@ export const NOMBRE_DE_FABRICA = 'Catalina Support';
  * Vive en `core` porque es armazón: lo usan la entrada, el menú lateral y Configuración.
  */
 @Injectable({ providedIn: 'root' })
-export class BrandService {
+export class BrandService implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly textos = inject(TranslationService);
 
   private readonly marcaActual = signal<Marca | null>(null);
+  private readonly canal =
+    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('catalina-brand');
+
+  constructor() {
+    this.canal?.addEventListener('message', () => void this.cargar());
+  }
+
+  ngOnDestroy(): void {
+    this.canal?.close();
+  }
 
   /** La marca leída, o nada si todavía no ha llegado (o si la instalación no responde). */
   readonly marca = this.marcaActual.asReadonly();
@@ -168,6 +179,7 @@ export class BrandService {
       const marca = await firstValueFrom(this.http.get<Marca>('/api/settings/brand'));
       this.marcaActual.set(marca);
       this.aplicarColor(marca);
+      this.aplicarFavicon(marca);
       if (marca.language) {
         this.textos.adoptarGlobal(marca.language, marca.settingsVersion ?? 0);
       }
@@ -211,21 +223,58 @@ export class BrandService {
     const datos = new FormData();
     datos.append('logo', archivo, archivo.name);
 
-    return firstValueFrom(
+    const configuracion = await firstValueFrom(
       this.http.post<Configuracion>(
         `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
         datos,
       ),
     );
+    this.notificarCambio();
+    return configuracion;
   }
 
   /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
   async restablecerLogo(oscuro: boolean): Promise<Configuracion> {
-    return firstValueFrom(
+    const configuracion = await firstValueFrom(
       this.http.delete<Configuracion>(
         `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
       ),
     );
+    this.notificarCambio();
+    return configuracion;
+  }
+
+  async subirIcono(archivo: File): Promise<Configuracion> {
+    const datos = new FormData();
+    datos.append('icon', archivo, archivo.name);
+    const configuracion = await firstValueFrom(
+      this.http.post<Configuracion>('/api/settings/brand/site-icon', datos),
+    );
+    this.notificarCambio();
+    return configuracion;
+  }
+
+  async restablecerIcono(): Promise<Configuracion> {
+    const configuracion = await firstValueFrom(
+      this.http.delete<Configuracion>('/api/settings/brand/site-icon'),
+    );
+    this.notificarCambio();
+    return configuracion;
+  }
+
+  /** Aplica la marca aquí y avisa a las demás pestañas para que vuelvan a leerla. */
+  async sincronizar(): Promise<void> {
+    await this.cargar();
+    this.notificarCambio();
+  }
+
+  urlDelIcono(): string {
+    const marca = this.marcaActual();
+    if (!marca || (!marca.logo.siteIcon.filled && !marca.logo.light.filled)) {
+      return LOGO_DE_FABRICA_CLARO;
+    }
+    const version = marca.logoVersion ? `?v=${encodeURIComponent(marca.logoVersion)}` : '';
+    return `/api/settings/brand/site-icon${version}`;
   }
 
   /**
@@ -262,6 +311,21 @@ export class BrandService {
     raiz.setProperty('--institucional-oscuro', marca.colors.dark);
     raiz.setProperty('--institucional-texto-claro', marca.colors.onLight);
     raiz.setProperty('--institucional-texto-oscuro', marca.colors.onDark);
+  }
+
+  private aplicarFavicon(_marca: Marca): void {
+    let enlace = document.head.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+    if (!enlace) {
+      enlace = document.createElement('link');
+      enlace.rel = 'icon';
+      document.head.append(enlace);
+    }
+    enlace.removeAttribute('type');
+    enlace.href = this.urlDelIcono();
+  }
+
+  private notificarCambio(): void {
+    this.canal?.postMessage('changed');
   }
 }
 

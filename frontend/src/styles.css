@@ -275,6 +275,24 @@ body {
 }
 
 /*
+ * El indicador nativo de los desplegables queda casi pegado al borde y no responde al relleno del
+ * control. Se conserva el `<select>` real —y, con él, su interacción nativa—, pero se dibuja el
+ * galón con `currentColor` para que tenga aire a la derecha y funcione en los ocho temas.
+ */
+select:not([multiple]) {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.125rem) calc(50% + 0.125rem),
+    calc(100% - 0.8125rem) calc(50% + 0.125rem);
+  background-size: 0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+}
+
+/*
  * El foco siempre visible: es requisito de accesibilidad y se comprueba al construir cada
  * componente, no al final (docs/interfaz-y-experiencia.md, sección 8).
  */

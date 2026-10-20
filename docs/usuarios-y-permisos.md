@@ -1,7 +1,11 @@
 # Usuarios y permisos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 18 reserva Usuarios
+> y Clasificación a la capacidad Administrador, sin retirar a los equipos los catálogos necesarios
+> para trabajar en tickets. También fija el acceso al módulo unificado Tickets.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 17 incorpora comentarios privados en el principal
 > para Soporte y Desarrollo, sin conceder a Desarrollo respuestas públicas ni exponer contenido al
@@ -510,3 +514,27 @@ privada mediante conversación, búsquedas, resúmenes, adjuntos, correos o resp
 la descarga directa devuelve 404. Desarrollo conserva la prohibición de responder públicamente en
 el principal; la única ampliación es colaborar internamente mediante `private`. Los comentarios de
 movimientos de estado siguen las reglas públicas actuales.
+
+## 18. Módulos administrativos y Tickets unificado
+
+| Módulo o acción | Usuario | Soporte | Desarrollo | Capacidad Administrador |
+| --- | :---: | :---: | :---: | :---: |
+| Mis tickets | Según sus tickets | Sí | Sí | Sólo si además tiene rol operativo |
+| Tickets · Principales | — | Sí | Sí | Sólo si además tiene rol operativo |
+| Tickets · Internos | — | Sí | Sí | Sólo si además tiene rol operativo |
+| Usuarios y consulta AD | — | — | — | Sí |
+| Clasificación: mantenimiento | — | — | — | Sí |
+| Consultar categorías/etiquetas para trabajar | Según formulario | Sí | Sí | Según su rol operativo |
+
+Soporte sin capacidad Admin pierde lista, ficha, alta, edición, activación, desactivación y búsqueda
+AD de cuentas. Conserva únicamente buscadores limitados de personas que formen parte de flujos de
+tickets. Las rutas y endpoints de administración exigen capacidad Admin; ocultar el menú no es la
+medida de seguridad.
+
+Clasificación separa consulta operativa de mantenimiento. Soporte y Desarrollo continúan leyendo y
+asignando categorías y etiquetas existentes dentro del ticket. Sólo la capacidad Admin accede a la
+pantalla administrativa y puede crear, editar, activar o retirar entradas del catálogo.
+
+El Administrador puro conserva su bandeja de sólo lectura, Usuarios, Clasificación y Configuración,
+pero no recibe el módulo operativo Tickets. Una cuenta combinada acumula ambos grupos y ve, en este
+orden: Panel, Mis tickets, Tickets, Clasificación, Usuarios y Configuración.

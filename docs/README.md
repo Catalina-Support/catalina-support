@@ -1,7 +1,43 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-20
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `ambientes.md`,
+> `arquitectura.md` y `prueba-local.md` sustituyen la migración manual de producción por un ejecutor
+> Go automático, versionado, transaccional, con historial, checksum, bloqueo y respaldo previo. El
+> responsable cerró y aprobó las decisiones 1A–25A. No se desplegó producción.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `modules/tickets.md`,
+> `usuarios-y-permisos.md`, `modules/users.md` e `interfaz-y-experiencia.md` unifican las listas
+> generales en **Tickets**, reservan Usuarios y Clasificación a la capacidad Admin y fijan los
+> comentarios privados de Desarrollo en principales. Las decisiones 1A–25A quedaron cerradas con
+> 6B, 12B, 14B, 20B y 25B. Pasaron las suites focales del backend, las 249 pruebas del frontend,
+> las fronteras y la compilación; la suite Go global conserva el fallo ambiental conocido de
+> reportes porque la base local no contiene sus tickets sembrados.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `modules/auth.md`,
+> `modules/users.md`, `modules/settings.md` e `interfaz-y-experiencia.md` corrigen `objectGUID`
+> binario, admiten usuario o correo al entrar por AD y permiten buscar y crear desde `/users` una
+> cuenta AD activa. La búsqueda es parcial desde tres caracteres, devuelve hasta veinte personas y
+> conserva el filtro base que excluye cuentas deshabilitadas. Keycloak mantiene el alta automática
+> hasta disponer de una cuenta de servicio de consulta. El responsable cerró y aprobó 1A–15A, con
+> 6B. Se verificó el acceso real por usuario y correo, pasaron las suites focales de backend y las
+> pruebas y compilación del frontend; la suite Go global conserva un fallo ambiental de reportes
+> porque la base local no contiene sus tickets sembrados.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `modules/mail.md`, `modules/settings.md`,
+> `primer-arranque.md`, `arquitectura.md` y `prueba-local.md` convierten la prueba SMTP en un envío
+> real opcional a una dirección efímera, con `From:` real, límite público, texto fijo y confirmación
+> de aceptación sin prometer entrega. El responsable cerró y aprobó 1A–14A; pasaron las pruebas
+> focalizadas, las 248 del frontend, fronteras y compilación.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/mail.md`,
+> `modules/settings.md`, `primer-arranque.md`, `arquitectura.md` y `prueba-local.md` distinguen
+> STARTTLS, TLS directo y SMTP sin cifrado. El último exige aceptación administrativa, sólo admite
+> IPv4 privada o loopback y no aparece por degradación automática; Mailpit es la única excepción
+> explícita de desarrollo. El responsable cerró y aprobó 1A–10A; el relay real autenticó sin enviar
+> correo y pasaron las pruebas focalizadas, las 247 del frontend, fronteras y compilación.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-19:** `modules/tickets.md`, `usuarios-y-permisos.md`,
 > `interfaz-y-experiencia.md`, `modules/ai.md` y `modules/mail.md` incorporan comentarios privados

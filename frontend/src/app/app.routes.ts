@@ -81,13 +81,14 @@ export const routes: Routes = [
           {
             path: 'dashboard',
             canActivate: [conPapel('soporte', 'desarrollo', 'administrador')],
-            loadComponent: () => import('./modules/dashboard/dashboard-page').then((m) => m.DashboardPage),
+            loadComponent: () =>
+              import('./modules/dashboard/dashboard-page').then((m) => m.DashboardPage),
           },
           {
             // La bandeja: **«lo mío»** para el usuario, Soporte y Desarrollo —asignado, abierto por uno o
             // comentado—, y los dos tipos para el Administrador, de sólo lectura. Es la misma pantalla con
             // el nombre que le toca a cada uno (docs/interfaz-y-experiencia.md, secciones 3.2, 3.3 y 3.7).
-            path: 'tickets',
+            path: 'my-tickets',
             data: { listado: 'mios' },
             loadComponent: () =>
               import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
@@ -96,15 +97,8 @@ export const routes: Routes = [
             // Las dos listas del «todo», sólo para Soporte y Desarrollo, que son los dos papeles que
             // pueden verlo todo (decisión 52 de docs/modules/tickets.md). **Van antes que `tickets/:numero`**:
             // si no, `main` se leería como el número de un ticket.
-            path: 'tickets/main',
-            data: { listado: 'principal' },
-            canActivate: [conPapel('soporte', 'desarrollo')],
-            loadComponent: () =>
-              import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
-          },
-          {
-            path: 'tickets/internal',
-            data: { listado: 'interno' },
+            path: 'tickets',
+            data: { listado: 'general' },
             canActivate: [conPapel('soporte', 'desarrollo')],
             loadComponent: () =>
               import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
@@ -115,7 +109,7 @@ export const routes: Routes = [
             // además retira. **Va antes que `tickets/:numero`**: si no, `categories` se leería como el número
             // de un ticket y el detalle contestaría «ese ticket no existe».
             path: 'tickets/categories',
-            canActivate: [conPapel('soporte', 'administrador')],
+            canActivate: [conPapel('administrador')],
             loadComponent: () =>
               import('./modules/tickets/categorias-page').then((m) => m.CategoriasPage),
           },
@@ -141,9 +135,9 @@ export const routes: Routes = [
             loadComponent: () => import('./modules/users/profile-page').then((m) => m.ProfilePage),
           },
           {
-            // El módulo de usuarios: la lista la ven Soporte y Administrador.
+            // La administración de usuarios exige capacidad Administrador.
             path: 'users',
-            canActivate: [conPapel('soporte', 'administrador')],
+            canActivate: [conPapel('administrador')],
             loadComponent: () => import('./modules/users/users-page').then((m) => m.UsersPage),
           },
           {

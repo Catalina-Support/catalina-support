@@ -653,13 +653,16 @@ export class TicketVista implements OnDestroy {
   }
 
   protected mostrarSelectorDeVisibilidad(): boolean {
-    return !this.ticket().internal && (this.esSoporte() || this.esDesarrollo());
+    return !this.ticket().internal && this.esSoporte();
+  }
+
+  protected etiquetaDelComentario(): string {
+    return this.esDesarrollo() && !this.ticket().internal
+      ? this.t().tickets.comentarioInterno
+      : this.t().tickets.escribirComentario;
   }
 
   protected opcionesDeVisibilidad(): readonly OpcionConmutador[] {
-    if (this.esDesarrollo()) {
-      return [{ valor: 'private', etiqueta: this.t().tickets.privado }];
-    }
     return [
       { valor: 'public', etiqueta: this.t().tickets.publico },
       { valor: 'private', etiqueta: this.t().tickets.privado },
@@ -927,9 +930,8 @@ export class TicketVista implements OnDestroy {
     }
 
     await this.actuar(async () => {
-      const visibilidad = this.esDesarrollo() && !this.ticket().internal
-        ? 'private'
-        : this.visibilidadComentario();
+      const visibilidad =
+        this.esDesarrollo() && !this.ticket().internal ? 'private' : this.visibilidadComentario();
       const respuesta = await this.tickets.comentar(this.ticket().number, texto, visibilidad);
       const fallidos = await this.subirLosDelComentario(respuesta.comment.id, archivos);
 

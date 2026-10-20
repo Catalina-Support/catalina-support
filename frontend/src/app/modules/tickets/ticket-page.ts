@@ -215,7 +215,7 @@ export class TicketPage implements OnInit, OnDestroy {
   }
 
   protected irALaBandeja(): void {
-    void this.router.navigate(['/tickets']);
+    void this.router.navigate(['/my-tickets']);
   }
 
   /** Vuelve a leer el ticket y su interno, después de cualquier cambio. */

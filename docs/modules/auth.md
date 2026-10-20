@@ -1,7 +1,13 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20.** Corrige la entrada contra Active
+> Directory real: admite nombre de usuario o correo, conserva el filtro base de la instalación y
+> convierte `objectGUID` binario a su representación GUID canónica antes de consultar o persistirlo.
+> El hallazgo reproducido es que AD sí aceptó las credenciales, pero PostgreSQL rechazó los bytes
+> del GUID como UTF-8. Las decisiones 1A–15A, salvo 6B, quedaron cerradas por el responsable.
 >
 > **Implementado el 2026-10-18.** La identidad resuelve por separado papel operativo y capacidad administrativa,
 > conservando la cuenta de fábrica como Administrador puro.
@@ -73,11 +79,11 @@ y los contenedores con los que se prueba.
 > emisor sea uno solo** y no dos direcciones que puedan discrepar (sección 11). Las decisiones
 > 36 a 40 recogen lo que se decidió al implementarlo.
 >
-> **Enmendado el 2026-09-25**, al implementar el camino de AD, con una **corrección del responsable**:
+> **Antecedente del 2026-09-25, enmendado el 2026-10-20**, al implementar el camino de AD:
 > le llevé el vínculo como una pregunta con dos opciones y él contestó lo que de verdad quiere —
 > «con AD o con Keycloak quisiera que los usuarios puedan ingresar directamente, **sin el proceso de
-> alta manual** por un administrador o técnico»—. Se aplica: **nadie da de alta a nadie** que esté en
-> el directorio; entra y su cuenta nace sola (sección 5.4). Lo que un administrador sigue decidiendo
+> alta manual** por un administrador o técnico»—. La entrada directa se conserva; desde el 2026-10-20
+> también se puede preparar una cuenta de AD consultándolo desde `/users`. Lo que una persona sigue decidiendo
 > es el **papel**, porque eso no lo dice ningún directorio. Queda anotado como corrección en el
 > registro (31 a 35), junto con el disparador del vínculo y lo que la pantalla de entrada no cambia.
 >
@@ -248,12 +254,11 @@ cuenta de directorio, donde no hay contraseña que demostrar: allí se dice lo m
 decide por dónde validar es el backend, que es el único que sabe de qué es cada cuenta
 (sección 5.1).
 
-**Y nadie da de alta a nadie**: quien está en el directorio **entra directamente**, con la contraseña
-que ya tiene, y su cuenta nace en ese primer acceso con lo que el directorio dice de él
-(sección 5.4). No hay un alta previa de un administrador ni de Soporte, ni hay que avisar a nadie
-para empezar a usarlo: es la corrección del responsable del 2026-09-25 y la razón de ser de este
-camino. Lo que sí sigue decidiendo una persona es el **papel** de esa cuenta —`usuario` de entrada,
-y otro si le toca—, porque el directorio no sabe nada de eso.
+Quien está en el directorio **entra directamente**, con la contraseña que ya tiene, y su cuenta nace
+en ese primer acceso con lo que el directorio dice de él (sección 5.4). Además, Soporte o un
+Administrador pueden prepararla antes desde `/users`, siempre consultando AD; no escriben sus datos
+a mano ni fijan una contraseña. Allí se decide el **papel** de la cuenta, porque el directorio no
+sabe nada de eso.
 
 
 **Cómo se valida**: con una **cuenta de servicio** de sólo lectura. Se busca a la persona y se
@@ -262,7 +267,7 @@ patrón predecible y construir el nombre completo a mano falla el día que algui
 departamento.
 
 1. El backend se conecta al directorio **con la cuenta de servicio**.
-2. Busca a la persona por su correo con el filtro configurado.
+2. Busca a la persona por su nombre de usuario o correo, combinados con la condición base configurada.
 3. Si no aparece, `auth.invalidCredentials`.
 4. Si aparece, **se conecta con su nombre completo y su contraseña**. Ese intento es la validación: si
    el directorio lo acepta, es quien dice ser.
@@ -279,8 +284,8 @@ departamento.
 | `use_tls` | Cifrar la conexión. **Sí en producción**: por ahí viajan credenciales |
 | `bind_dn`, `bind_password` | La cuenta de servicio. **El secreto se guarda en la base y no se devuelve nunca por la API** |
 | `search_base` | Dónde buscar |
-| `user_filter` | El filtro, con `%s` donde va el correo |
-| `attr_email`, `attr_name`, `attr_last_name`, `attr_id` | Qué atributo es cada dato |
+| `user_filter` | Condición base que limita las personas admitidas; no contiene `%s` |
+| `attr_username`, `attr_email`, `attr_name`, `attr_last_name`, `attr_id` | Qué atributo es cada dato |
 
 - **El camino de AD se ofrece si el método puesto es `ad`** (sección 5.0), y **no se puede elegir ese
   método sin que el directorio esté configurado**: el backend lo rechaza con
@@ -805,3 +810,29 @@ persona puede cerrarlos mediante el endpoint dueño de `users`.
 No se renueva el token: la concesión o retirada vale en la siguiente petición. Los tres métodos de
 entrada quedan intactos y la sincronización de AD o Keycloak conserva `isAdmin` como dato local.
 Las pruebas de autenticación, identidad y autorización pasaron el 2026-10-18.
+
+## 17. Active Directory real, usuario o correo y `objectGUID`
+
+El hallazgo reproducido el 2026-10-20 no es una contraseña rechazada. Active Directory encontró a
+`jcestevez` y aceptó sus credenciales; después devolvió `objectGUID` como dieciséis bytes y el
+backend los convirtió directamente a `string`. PostgreSQL rechazó esa cadena porque no era UTF-8.
+Los intentos con correo no encontraron a la persona porque la instalación estaba filtrando sólo por
+`sAMAccountName`.
+
+La entrada de AD acepta **nombre de usuario o correo**. La condición base configurada sigue
+limitando el universo permitido —incluida la exclusión de cuentas deshabilitadas— y la aplicación
+añade una condición escapada que compara el identificador con el atributo de usuario configurado
+y con el atributo de correo. No se interpolará texto recibido como filtro LDAP. La búsqueda exacta
+de entrada y la búsqueda parcial administrativa compartirán la misma composición y los mismos
+atributos; sólo cambiarán la coincidencia exacta o parcial.
+
+Cuando `attr_id` sea `objectGUID`, se leerá el valor binario y se convertirá respetando el orden de
+bytes de Active Directory al GUID canónico en minúsculas
+`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`. Cualquier otro atributo identificador conservará su texto,
+lo que mantiene OpenLDAP y configuraciones personalizadas. Un valor vacío o un `objectGUID` que no
+tenga dieciséis bytes no se persistirá como basura: se usará el DN como respaldo, igual que hoy.
+
+La normalización se aplica antes de buscar por `external_id`, vincular o crear. Las pruebas cubren
+un GUID binario real, un identificador textual, usuario corto, correo, caracteres que necesitan
+escape LDAP, cuenta deshabilitada y contraseña rechazada. Ningún log incluirá contraseñas ni el
+filtro con datos sin enmascarar.

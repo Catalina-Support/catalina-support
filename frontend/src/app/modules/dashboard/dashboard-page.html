@@ -1,50 +1,208 @@
-<main class="flex h-full min-h-0 flex-col gap-4 overflow-auto px-4 py-3 lg:px-6" aria-labelledby="dashboard-title">
+<main
+  class="flex h-full min-h-0 flex-col gap-4 overflow-auto px-4 py-3 lg:px-6"
+  aria-labelledby="dashboard-title"
+>
   <header class="flex flex-wrap items-center justify-between gap-3">
-    <div><h1 id="dashboard-title" class="text-2xl font-semibold text-texto">{{t().title}}</h1><p class="text-sm text-apagado">{{t().help}}</p></div>
-    <div class="flex gap-2"><button class="rounded-md border border-borde-fuerte px-4 py-2" type="button" (click)="refresh()">{{t().refresh}}</button><button class="rounded-md bg-primario px-4 py-2 text-primario-texto" type="button" (click)="exportXlsx()">XLSX</button></div>
+    <div>
+      <h1 id="dashboard-title" class="text-2xl font-semibold text-texto">{{ t().title }}</h1>
+      <p class="text-sm text-apagado">{{ t().help }}</p>
+    </div>
+    <div class="flex gap-2">
+      <button
+        class="rounded-md border border-borde-fuerte px-4 py-2"
+        type="button"
+        (click)="refresh()"
+      >
+        {{ t().refresh }}</button
+      ><button
+        class="inline-flex items-center gap-2 rounded-md bg-primario px-4 py-2 text-primario-texto"
+        type="button"
+        (click)="exportXlsx()"
+      >
+        <app-icono nombre="descargar" />XLSX
+      </button>
+    </div>
   </header>
-  <form class="grid gap-3 rounded-lg border border-borde bg-superficie p-3 sm:grid-cols-2 lg:grid-cols-6" (submit)="$event.preventDefault(); refresh()">
-    <label class="text-sm">{{t().from}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="date" name="from" [(ngModel)]="from"></label>
-    <label class="text-sm">{{t().to}}<input class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" type="date" name="to" [(ngModel)]="to"></label>
-    <label class="text-sm">{{t().type}}<select class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" name="type" [(ngModel)]="type"><option value="">{{t().all}}</option><option value="main">{{t().main}}</option><option value="internal">{{t().internal}}</option></select></label>
-    <label class="text-sm">{{t().state}}<select class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" name="state" [(ngModel)]="state"><option value="">{{t().all}}</option><option value="nuevo">{{t().new}}</option><option value="en progreso">{{t().inProgress}}</option><option value="en espera">{{t().waiting}}</option><option value="resuelto">{{t().resolved}}</option><option value="cerrado">{{t().closed}}</option></select></label>
-    <label class="text-sm">{{t().priority}}<select class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3" name="priority" [(ngModel)]="priority"><option value="">{{t().all}}</option><option value="critical">{{t().priorityCritical}}</option><option value="high">{{t().priorityHigh}}</option><option value="medium">{{t().priorityMedium}}</option><option value="low">{{t().priorityLow}}</option></select></label>
-    <button class="self-end rounded-md bg-primario px-4 py-3 text-primario-texto" type="submit">{{t().apply}}</button>
+  <form
+    class="grid gap-3 rounded-lg border border-borde bg-superficie p-3 sm:grid-cols-2 lg:grid-cols-6"
+    (submit)="$event.preventDefault(); refresh()"
+  >
+    <label class="text-sm"
+      >{{ t().from
+      }}<input
+        class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3"
+        type="date"
+        name="from"
+        [(ngModel)]="from"
+    /></label>
+    <label class="text-sm"
+      >{{ t().to
+      }}<input
+        class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3"
+        type="date"
+        name="to"
+        [(ngModel)]="to"
+    /></label>
+    <label class="text-sm"
+      >{{ t().type
+      }}<select
+        class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3"
+        name="type"
+        [(ngModel)]="type"
+      >
+        <option value="">{{ t().all }}</option>
+        <option value="main">{{ t().main }}</option>
+        <option value="internal">{{ t().internal }}</option>
+      </select></label
+    >
+    <label class="text-sm"
+      >{{ t().state
+      }}<select
+        class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3"
+        name="state"
+        [(ngModel)]="state"
+      >
+        <option value="">{{ t().all }}</option>
+        <option value="nuevo">{{ t().new }}</option>
+        <option value="en progreso">{{ t().inProgress }}</option>
+        <option value="en espera">{{ t().waiting }}</option>
+        <option value="resuelto">{{ t().resolved }}</option>
+        <option value="cerrado">{{ t().closed }}</option>
+      </select></label
+    >
+    <label class="text-sm"
+      >{{ t().priority
+      }}<select
+        class="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo px-3"
+        name="priority"
+        [(ngModel)]="priority"
+      >
+        <option value="">{{ t().all }}</option>
+        <option value="critical">{{ t().priorityCritical }}</option>
+        <option value="high">{{ t().priorityHigh }}</option>
+        <option value="medium">{{ t().priorityMedium }}</option>
+        <option value="low">{{ t().priorityLow }}</option>
+      </select></label
+    >
+    <button class="self-end rounded-md bg-primario px-4 py-3 text-primario-texto" type="submit">
+      {{ t().apply }}
+    </button>
   </form>
-  @if(error()){<p class="rounded-md border border-peligro p-3 text-peligro" role="alert">{{t().error}}</p>}
-  @if(summary();as s){
+  @if (error()) {
+    <p class="rounded-md border border-peligro p-3 text-peligro" role="alert">{{ t().error }}</p>
+  }
+  @if (summary(); as s) {
     <section class="grid grid-cols-2 gap-3 lg:grid-cols-6" [attr.aria-label]="t().metrics">
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().open}}</p><strong class="text-2xl">{{s.open.value}}</strong><small class="block text-apagado">{{compare(s.open)}}</small></article>
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().critical}}</p><strong class="text-2xl">{{s.openCritical.value}}</strong><small class="block text-apagado">{{compare(s.openCritical)}}</small></article>
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().overdue}}</p><strong class="text-2xl">{{s.overdue.value}}</strong><small class="block text-apagado">{{compare(s.overdue)}}</small></article>
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().firstResponse}}</p><strong>{{duration(s.averageFirstResponseMinutes)}}</strong><small class="block text-apagado">{{s.unanswered}} {{t().unanswered}}</small></article>
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().resolution}}</p><strong>{{duration(s.averageResolutionMinutes)}}</strong></article>
-      <article class="rounded-lg border border-borde bg-superficie p-3"><p class="text-xs text-apagado">{{t().reopens}}</p><strong class="text-2xl">{{s.reopens.value}}</strong><small class="block text-apagado">{{compare(s.reopens)}}</small></article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().open }}</p>
+        <strong class="text-2xl">{{ s.open.value }}</strong
+        ><small class="block text-apagado">{{ compare(s.open) }}</small>
+      </article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().critical }}</p>
+        <strong class="text-2xl">{{ s.openCritical.value }}</strong
+        ><small class="block text-apagado">{{ compare(s.openCritical) }}</small>
+      </article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().overdue }}</p>
+        <strong class="text-2xl">{{ s.overdue.value }}</strong
+        ><small class="block text-apagado">{{ compare(s.overdue) }}</small>
+      </article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().firstResponse }}</p>
+        <strong>{{ duration(s.averageFirstResponseMinutes) }}</strong
+        ><small class="block text-apagado">{{ s.unanswered }} {{ t().unanswered }}</small>
+      </article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().resolution }}</p>
+        <strong>{{ duration(s.averageResolutionMinutes) }}</strong>
+      </article>
+      <article class="rounded-lg border border-borde bg-superficie p-3">
+        <p class="text-xs text-apagado">{{ t().reopens }}</p>
+        <strong class="text-2xl">{{ s.reopens.value }}</strong
+        ><small class="block text-apagado">{{ compare(s.reopens) }}</small>
+      </article>
     </section>
     <section class="grid min-w-0 gap-3 pb-4 lg:grid-cols-2">
       <article class="min-w-0 rounded-lg border border-borde bg-superficie p-4 lg:col-span-2">
-        <h2 class="font-semibold">{{t().createdClosed}}</h2>
-        <div class="mt-3 flex min-h-40 max-w-full items-end gap-2" [attr.aria-label]="t().createdClosed">
-          @for(p of s.createdClosed;track p.key;let i=$index){
+        <h2 class="font-semibold">{{ t().createdClosed }}</h2>
+        <div
+          class="mt-3 flex min-h-40 max-w-full items-end gap-2"
+          [attr.aria-label]="t().createdClosed"
+        >
+          @for (p of s.createdClosed; track p.key; let i = $index) {
             <div class="grid min-w-0 flex-1 grid-cols-2 items-end gap-1 text-center text-xs">
-              <span class="flex min-w-0 flex-col justify-end" [attr.title]="p.key+' · '+t().created+': '+p.value" [attr.aria-label]="p.key+' · '+t().created+': '+p.value">
-                <span class="mb-1 font-medium text-texto" aria-hidden="true">{{p.value}}</span>
-                <span class="block min-h-px rounded-t bg-dashboard-created" [style.height.px]="p.value*120/max(s.createdClosed)" aria-hidden="true"></span>
+              <span
+                class="flex min-w-0 flex-col justify-end"
+                [attr.title]="p.key + ' · ' + t().created + ': ' + p.value"
+                [attr.aria-label]="p.key + ' · ' + t().created + ': ' + p.value"
+              >
+                <span class="mb-1 font-medium text-texto" aria-hidden="true">{{ p.value }}</span>
+                <span
+                  class="block min-h-px rounded-t bg-dashboard-created"
+                  [style.height.px]="(p.value * 120) / max(s.createdClosed)"
+                  aria-hidden="true"
+                ></span>
               </span>
-              <span class="flex min-w-0 flex-col justify-end" [attr.title]="p.key+' · '+t().closedCount+': '+(p.secondary??0)" [attr.aria-label]="p.key+' · '+t().closedCount+': '+(p.secondary??0)">
-                <span class="mb-1 font-medium text-texto" aria-hidden="true">{{p.secondary??0}}</span>
-                <span class="block min-h-px rounded-t bg-dashboard-closed" [style.height.px]="(p.secondary??0)*120/max(s.createdClosed)" aria-hidden="true"></span>
+              <span
+                class="flex min-w-0 flex-col justify-end"
+                [attr.title]="p.key + ' · ' + t().closedCount + ': ' + (p.secondary ?? 0)"
+                [attr.aria-label]="p.key + ' · ' + t().closedCount + ': ' + (p.secondary ?? 0)"
+              >
+                <span class="mb-1 font-medium text-texto" aria-hidden="true">{{
+                  p.secondary ?? 0
+                }}</span>
+                <span
+                  class="block min-h-px rounded-t bg-dashboard-closed"
+                  [style.height.px]="((p.secondary ?? 0) * 120) / max(s.createdClosed)"
+                  aria-hidden="true"
+                ></span>
               </span>
-              <span class="col-span-2 truncate sm:hidden">{{showTimelineLabel(i,s.createdClosed.length,3)?p.key:''}}</span>
-              <span class="col-span-2 hidden truncate sm:block">{{showTimelineLabel(i,s.createdClosed.length,8)?p.key:''}}</span>
+              <span class="col-span-2 truncate sm:hidden">{{
+                showTimelineLabel(i, s.createdClosed.length, 3) ? p.key : ''
+              }}</span>
+              <span class="col-span-2 hidden truncate sm:block">{{
+                showTimelineLabel(i, s.createdClosed.length, 8) ? p.key : ''
+              }}</span>
             </div>
           }
         </div>
-        <p class="mt-2 text-xs text-apagado"><span class="text-dashboard-created">■</span> {{t().created}} · <span class="text-dashboard-closed">■</span> {{t().closedCount}}</p>
-        @if(!hasClosedTickets(s.createdClosed)){<p class="mt-2 text-sm text-apagado">{{t().noClosed}}</p>}
+        <p class="mt-2 text-xs text-apagado">
+          <span class="text-dashboard-created">■</span> {{ t().created }} ·
+          <span class="text-dashboard-closed">■</span> {{ t().closedCount }}
+        </p>
+        @if (!hasClosedTickets(s.createdClosed)) {
+          <p class="mt-2 text-sm text-apagado">{{ t().noClosed }}</p>
+        }
       </article>
-      @for(chart of [{kind:'state',title:t().state,points:s.byState},{kind:'priority',title:t().priority,points:s.byPriority},{kind:'category',title:t().category,points:s.byCategory},{kind:'assignee',title:t().assignee,points:s.byAssignee}];track chart.title){
-        <article class="min-w-0 rounded-lg border border-borde bg-superficie p-4"><h2 class="font-semibold">{{chart.title}}</h2><div class="mt-3 space-y-2">@for(p of chart.points;track p.key){<div class="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_3rem] items-center gap-2 text-sm"><span class="truncate">{{label(chart.kind,p.key)}}</span><span class="h-3 rounded bg-superficie-suave"><span class="block h-full rounded bg-primario" [style.width.%]="p.value*100/max(chart.points)" [attr.title]="label(chart.kind,p.key)+': '+p.value"></span></span><span class="text-right">{{p.value}}</span></div>}</div></article>
+      @for (
+        chart of [
+          { kind: 'state', title: t().state, points: s.byState },
+          { kind: 'priority', title: t().priority, points: s.byPriority },
+          { kind: 'category', title: t().category, points: s.byCategory },
+          { kind: 'assignee', title: t().assignee, points: s.byAssignee },
+        ];
+        track chart.title
+      ) {
+        <article class="min-w-0 rounded-lg border border-borde bg-superficie p-4">
+          <h2 class="font-semibold">{{ chart.title }}</h2>
+          <div class="mt-3 space-y-2">
+            @for (p of chart.points; track p.key) {
+              <div
+                class="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_3rem] items-center gap-2 text-sm"
+              >
+                <span class="truncate">{{ label(chart.kind, p.key) }}</span
+                ><span class="h-3 rounded bg-superficie-suave"
+                  ><span
+                    class="block h-full rounded bg-primario"
+                    [style.width.%]="(p.value * 100) / max(chart.points)"
+                    [attr.title]="label(chart.kind, p.key) + ': ' + p.value"
+                  ></span></span
+                ><span class="text-right">{{ p.value }}</span>
+              </div>
+            }
+          </div>
+        </article>
       }
     </section>
   }

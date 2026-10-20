@@ -36,7 +36,10 @@ var (
 	ErrDirectoryActivatesItself = errors.New("users.directory.activatesItself")
 	// ErrDirectoryUnavailable: no se puede comprobar con el directorio ahora mismo, o esta instalación
 	// no tiene ninguno conectado. Es un 503: el fallo no es de quien pide la reactivación.
-	ErrDirectoryUnavailable = errors.New("users.directory.unavailable")
+	ErrDirectoryUnavailable      = errors.New("users.directory.unavailable")
+	ErrDirectoryQueryShort       = errors.New("users.directory.queryShort")
+	ErrDirectoryLinkConfirmation = errors.New("users.directory.linkConfirmation")
+	ErrDirectoryAlreadyExists    = errors.New("users.directory.alreadyExists")
 )
 
 // PasswordLinks es lo que este módulo necesita de `auth`: emitir el enlace y mandar el correo.
@@ -64,6 +67,16 @@ type Directory interface {
 	Knows(email string) (bool, error)
 }
 
+type DirectorySearch interface {
+	SearchDirectory(query string, partial bool, limit int) ([]auth.DirectoryAccount, error)
+	DirectoryEnabled() bool
+}
+
+func (s *Service) DirectoryEnabled() bool {
+	buscador, ok := s.directory.(DirectorySearch)
+	return ok && buscador.DirectoryEnabled()
+}
+
 // Service son las cuentas.
 type Service struct {
 	repo      *repositories.UserRepository
@@ -87,6 +100,89 @@ func (s *Service) SetPasswordLinks(links PasswordLinks) { s.links = links }
 // una cuenta de AD sigue estando allí antes de reactivarla. Sin él, ese camino no existe y la
 // reactivación de una cuenta de AD se rechaza diciendo que no se puede comprobar.
 func (s *Service) SetDirectory(directory Directory) { s.directory = directory }
+
+func (s *Service) SearchDirectory(query string) ([]auth.DirectoryAccount, error) {
+	query = strings.TrimSpace(query)
+	if len([]rune(query)) < 3 {
+		return nil, ErrDirectoryQueryShort
+	}
+	buscador, ok := s.directory.(DirectorySearch)
+	if !ok {
+		return nil, ErrDirectoryUnavailable
+	}
+	personas, err := buscador.SearchDirectory(query, true, 20)
+	if err != nil {
+		return nil, ErrDirectoryUnavailable
+	}
+	return personas, nil
+}
+
+// CreateFromDirectory vuelve a consultar la selección y nunca confía en los datos personales del
+// navegador. La cuenta queda activa y sin contraseña local.
+func (s *Service) CreateFromDirectory(username, role string, isAdmin, confirmLink bool, actor auth.Identity) (auth.Account, error) {
+	username, role = strings.TrimSpace(username), strings.TrimSpace(role)
+	if !auth.RoleIsValid(role) || !CanAssignRole(actor, role) ||
+		(isAdmin && (!actor.IsAdministrator() || (role != auth.RoleSoporte && role != auth.RoleDesarrollo))) {
+		return auth.Account{}, ErrRoleNotAllowed
+	}
+	buscador, ok := s.directory.(DirectorySearch)
+	if !ok {
+		return auth.Account{}, ErrDirectoryUnavailable
+	}
+	personas, err := buscador.SearchDirectory(username, false, 20)
+	if err != nil {
+		return auth.Account{}, ErrDirectoryUnavailable
+	}
+	var datos auth.DirectoryAccount
+	for _, persona := range personas {
+		if strings.EqualFold(persona.Username, username) {
+			datos = persona
+			break
+		}
+	}
+	if datos.ExternalID == "" {
+		return auth.Account{}, ErrDirectoryNotFound
+	}
+	if _, err := s.repo.FindByExternalID(auth.OriginAD, datos.ExternalID); err == nil {
+		return auth.Account{}, ErrDirectoryAlreadyExists
+	} else if !errors.Is(err, repositories.ErrUserNotFound) {
+		return auth.Account{}, err
+	}
+	existente, err := s.repo.FindByEmail(datos.Email)
+	enlace := false
+	if err == nil {
+		if existente.Origin != auth.OriginLocal {
+			return auth.Account{}, ErrEmailDuplicated
+		}
+		if !confirmLink {
+			return auth.Account{}, ErrDirectoryLinkConfirmation
+		}
+		enlace = true
+	} else if !errors.Is(err, repositories.ErrUserNotFound) {
+		return auth.Account{}, err
+	}
+	cuenta, err := s.UpsertFromDirectory(datos)
+	if err != nil {
+		return auth.Account{}, err
+	}
+	if cuenta.Role != role || cuenta.IsAdmin != isAdmin {
+		if err := s.repo.UpdateFields(cuenta.ID, map[string]any{"role": role, "is_admin": isAdmin}); err != nil {
+			return auth.Account{}, err
+		}
+		cuenta, err = s.ByID(cuenta.ID)
+		if err != nil {
+			return auth.Account{}, err
+		}
+	}
+	action := "created"
+	if enlace {
+		action = "linked"
+	}
+	if err := s.repo.RecordDirectoryEvent(cuenta.ID, actorID(actor), actor.FullName(), action); err != nil {
+		return auth.Account{}, err
+	}
+	return cuenta, nil
+}
 
 // CreateInput es lo que llega para dar de alta una cuenta.
 type CreateInput struct {

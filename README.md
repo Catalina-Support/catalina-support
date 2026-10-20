@@ -233,25 +233,25 @@ At minimum:
 3. Provide persistent storage for PostgreSQL, `_files`, `_logs` and local AI models when used.
 4. Build and publish from a clean, reviewed revision. The bundled script publishes to
    `/srv/catalina-support`; inspect and adapt that assumption before running it.
-5. Apply version migrations manually and visibly. Never apply `*_dev.sql` or run the seeder.
+5. Let the one-shot migration service apply signed-off version migrations before the application
+   starts. It never discovers `*_dev.sql` and never runs the seeder.
 6. Complete `/setup` before exposing the service, configure real SMTP and replace every test value.
 7. Put the application behind HTTPS, restrict direct container ports and verify CSP and health.
 8. Back up and test restoration of both the database **and attachments**. The bundled database
    backup does not include `_files`.
 
-The current build/migration order is:
+For the first deployment, build and start the stack:
 
 ```bash
-./scripts/prod-build.sh --no-deploy
-cd /srv/catalina-support
-docker compose -f prod.yml --profile migrate run --rm migrate
-docker compose -f prod.yml up -d
+./scripts/prod-build.sh
 ```
 
-`prod-build.sh` copies migrations but does not run them. The migration service is behind the
-`migrate` profile, so an ordinary `up -d` never changes the schema. Verify the exact domain, nginx
-configuration, exposed ports, artifact paths and rollback plan for your installation; the files in
-this repository include assumptions from the reference server and are not a universal installer.
+For later published updates, use `./scripts/update.sh` from a clean `main` branch. It only accepts a
+fast-forward from `origin/main`, builds before interrupting the active version, creates and verifies
+a database backup when migrations are pending, and starts the application only after they succeed.
+Applied filenames and SHA-256 checksums live in `schema_migrations`; released migrations are
+immutable. Verify the exact domain, nginx configuration, exposed ports, artifact paths and recovery
+plan for your installation; the files include assumptions from the reference server.
 
 ## Tests
 

@@ -25,6 +25,8 @@ export type NombreDeIcono =
   | 'editar'
   // El destello identifica la ayuda de redacción con IA sin depender de una biblioteca externa.
   | 'ia'
+  // Flecha de descarga para acciones que generan un archivo.
+  | 'descargar'
   // **La flecha de volver** (quinta enmienda del 2026-09-29): una flecha hacia la izquierda, cuadrada,
   // para el botón de volver del ticket y de la ficha de una cuenta.
   | 'volver';
@@ -111,6 +113,11 @@ export type NombreDeIcono =
           <path d="M12 3l1.1 3.4L16.5 7.5l-3.4 1.1L12 12l-1.1-3.4-3.4-1.1 3.4-1.1z" />
           <path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z" />
           <path d="M6 14l.7 1.8 1.8.7-1.8.7L6 19l-.7-1.8-1.8-.7 1.8-.7z" />
+        }
+        @case ('descargar') {
+          <path d="M12 3v12" />
+          <path d="m7 10 5 5 5-5" />
+          <path d="M5 20h14" />
         }
         @case ('volver') {
           <!-- **Una flecha hacia la izquierda**: el mismo trazo de los demás svg del proyecto, con su

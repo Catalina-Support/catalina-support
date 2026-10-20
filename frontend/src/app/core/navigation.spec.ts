@@ -8,9 +8,8 @@ describe('entradasPara', () => {
 
     expect(rutas).toEqual([
       '/dashboard',
+      '/my-tickets',
       '/tickets',
-      '/tickets/main',
-      '/tickets/internal',
       '/tickets/categories',
       '/users',
       '/settings',
@@ -18,41 +17,35 @@ describe('entradasPara', () => {
   });
 
   it('cada papel tiene sus entradas, y ninguna de más', () => {
-    expect(entradasPara('usuario').map((entrada) => entrada.ruta)).toEqual(['/tickets']);
+    expect(entradasPara('usuario').map((entrada) => entrada.ruta)).toEqual(['/my-tickets']);
 
     expect(entradasPara('soporte').map((entrada) => entrada.ruta)).toEqual([
       '/dashboard',
+      '/my-tickets',
       '/tickets',
-      '/tickets/main',
-      '/tickets/internal',
-      '/tickets/categories',
-      '/users',
     ]);
 
     expect(entradasPara('desarrollo').map((entrada) => entrada.ruta)).toEqual([
       '/dashboard',
+      '/my-tickets',
       '/tickets',
-      '/tickets/main',
-      '/tickets/internal',
     ]);
 
     expect(entradasPara('administrador').map((entrada) => entrada.ruta)).toEqual([
       '/dashboard',
-      '/tickets',
+      '/my-tickets',
       '/tickets/categories',
       '/users',
       '/settings',
     ]);
   });
 
-  it('«Categorías y etiquetas» la ven Soporte y el Administrador', () => {
-    // El catálogo es de `tickets` y **no una sección de Configuración** (decisión 64): Soporte lo
-    // mantiene y el Administrador, además, retira. Desarrollo y el usuario no lo ven.
+  it('Clasificación la ve sólo quien tiene capacidad Administrador', () => {
     const entrada = ENTRADAS.find((candidata) => candidata.ruta === '/tickets/categories');
 
     expect(entrada?.clave).toBe('categorias');
-    expect(entrada?.papeles).toEqual(['soporte', 'administrador']);
-    for (const papel of ['usuario', 'desarrollo']) {
+    expect(entrada?.papeles).toEqual(['administrador']);
+    for (const papel of ['usuario', 'soporte', 'desarrollo']) {
       expect(entradasPara(papel).map((candidata) => candidata.ruta)).not.toContain(
         '/tickets/categories',
       );
@@ -63,7 +56,7 @@ describe('entradasPara', () => {
     // Una sola pantalla con dos nombres —«Mis tickets» para los tres que tienen tickets propios, y
     // «Bandeja» para el Administrador, que no tiene—, y el menú no se inventa dos entradas que llevan
     // al mismo sitio.
-    const bandeja = ENTRADAS.find((entrada) => entrada.ruta === '/tickets')!;
+    const bandeja = ENTRADAS.find((entrada) => entrada.ruta === '/my-tickets')!;
 
     expect(claveDeEntrada(bandeja, 'usuario')).toBe('misTickets');
     expect(claveDeEntrada(bandeja, 'desarrollo')).toBe('misTickets');
@@ -71,15 +64,13 @@ describe('entradasPara', () => {
     expect(claveDeEntrada(bandeja, 'administrador')).toBe('bandeja');
   });
 
-  it('las dos listas del «todo» son de Soporte y Desarrollo', () => {
-    // Son los dos papeles que pueden verlo todo (`docs/modules/tickets.md`, decisión 52).
-    for (const ruta of ['/tickets/main', '/tickets/internal']) {
-      const entrada = ENTRADAS.find((candidata) => candidata.ruta === ruta);
-
-      expect(entrada?.papeles).toEqual(['soporte', 'desarrollo']);
-      expect(entradasPara('usuario').map((candidata) => candidata.ruta)).not.toContain(ruta);
-      expect(entradasPara('administrador').map((candidata) => candidata.ruta)).not.toContain(ruta);
-    }
+  it('la lista general unificada es de Soporte y Desarrollo', () => {
+    const entrada = ENTRADAS.find((candidata) => candidata.ruta === '/tickets');
+    expect(entrada?.papeles).toEqual(['soporte', 'desarrollo']);
+    expect(entradasPara('usuario').map((candidata) => candidata.ruta)).not.toContain('/tickets');
+    expect(entradasPara('administrador').map((candidata) => candidata.ruta)).not.toContain(
+      '/tickets',
+    );
   });
 
   it('Configuración sólo la ve un administrador', () => {
@@ -93,9 +84,8 @@ describe('entradasPara', () => {
   it('acumula las entradas administrativas sin perder las del papel operativo', () => {
     expect(entradasPara('soporte', true).map((entrada) => entrada.ruta)).toEqual([
       '/dashboard',
+      '/my-tickets',
       '/tickets',
-      '/tickets/main',
-      '/tickets/internal',
       '/tickets/categories',
       '/users',
       '/settings',
@@ -103,9 +93,8 @@ describe('entradasPara', () => {
 
     expect(entradasPara('desarrollo', true).map((entrada) => entrada.ruta)).toEqual([
       '/dashboard',
+      '/my-tickets',
       '/tickets',
-      '/tickets/main',
-      '/tickets/internal',
       '/tickets/categories',
       '/users',
       '/settings',
@@ -113,7 +102,7 @@ describe('entradasPara', () => {
   });
 
   it('no convierte a un usuario en administrador desde la navegación', () => {
-    expect(entradasPara('usuario', true).map((entrada) => entrada.ruta)).toEqual(['/tickets']);
+    expect(entradasPara('usuario', true).map((entrada) => entrada.ruta)).toEqual(['/my-tickets']);
   });
 
   it('crear un ticket no está en el menú, para nadie', () => {
@@ -138,17 +127,16 @@ describe('entradasPara', () => {
 });
 
 describe('rutaDeMenuActiva', () => {
-  it('activa exactamente una lista de tickets, sin convertir la bandeja en prefijo', () => {
+  it('activa exactamente la bandeja personal o la lista general', () => {
+    expect(rutaDeMenuActiva('/my-tickets')).toBe('/my-tickets');
     expect(rutaDeMenuActiva('/tickets')).toBe('/tickets');
-    expect(rutaDeMenuActiva('/tickets/main')).toBe('/tickets/main');
-    expect(rutaDeMenuActiva('/tickets/internal')).toBe('/tickets/internal');
     expect(rutaDeMenuActiva('/tickets/categories')).toBe('/tickets/categories');
   });
 
   it('mantiene las pantallas auxiliares dentro de su módulo acordado', () => {
-    expect(rutaDeMenuActiva('/tickets/new')).toBe('/tickets');
-    expect(rutaDeMenuActiva('/tickets/CS-2026-0001')).toBe('/tickets');
-    expect(rutaDeMenuActiva('/tickets/INT-CS-2026-0001?view=both')).toBe('/tickets');
+    expect(rutaDeMenuActiva('/tickets/new')).toBe('/my-tickets');
+    expect(rutaDeMenuActiva('/tickets/CS-2026-0001')).toBe('/my-tickets');
+    expect(rutaDeMenuActiva('/tickets/INT-CS-2026-0001?view=both')).toBe('/my-tickets');
     expect(rutaDeMenuActiva('/users/42')).toBe('/users');
     expect(rutaDeMenuActiva('/mail')).toBe('/settings');
   });
