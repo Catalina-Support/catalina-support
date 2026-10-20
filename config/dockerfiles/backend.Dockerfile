@@ -3,7 +3,7 @@
 FROM golang:1.27-alpine
 
 # git lo necesita "go mod" para resolver dependencias.
-RUN apk add --no-cache git
+RUN apk add --no-cache git postgresql-client
 
 RUN go install github.com/air-verse/air@v1.67.4
 

@@ -25,6 +25,14 @@ export interface PaginaDeCuentas {
   readonly total: number;
   readonly page: number;
   readonly perPage: number;
+  readonly directoryEnabled: boolean;
+}
+
+export interface PersonaDeDirectorio {
+  readonly username: string;
+  readonly name: string;
+  readonly lastName: string;
+  readonly email: string;
 }
 
 /** Lo que contestan el alta y las acciones: la cuenta, y lo que conviene saber de lo que pasó. */
@@ -132,6 +140,30 @@ export class UsersService {
   /** Da de alta una cuenta. Si es local, el enlace de alta sale en el mismo momento. */
   crear(alta: AltaDeCuenta): Promise<RespuestaDeCuenta> {
     return firstValueFrom(this.http.post<RespuestaDeCuenta>('/api/users', alta));
+  }
+
+  buscarDirectorio(query: string): Promise<{ readonly users: readonly PersonaDeDirectorio[] }> {
+    return firstValueFrom(
+      this.http.get<{ readonly users: readonly PersonaDeDirectorio[] }>('/api/users/directory', {
+        params: { q: query },
+      }),
+    );
+  }
+
+  crearDesdeDirectorio(
+    username: string,
+    role: string,
+    isAdmin: boolean,
+    confirmLink = false,
+  ): Promise<RespuestaDeCuenta> {
+    return firstValueFrom(
+      this.http.post<RespuestaDeCuenta>('/api/users/directory', {
+        username,
+        role,
+        isAdmin,
+        confirmLink,
+      }),
+    );
   }
 
   /** Cambia una cuenta: es de Administrador, salvo el nombre y los apellidos, que Soporte también. */

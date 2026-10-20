@@ -1,11 +1,10 @@
 -- Catalina-Support — esquema de la versión 1.0.0
 --
 -- Este archivo es la ÚNICA vía para crear el esquema, **en desarrollo y en producción**
--- (docs/ambientes.md, sección 5). Es transaccional (todo va entre BEGIN y COMMIT, de modo que un
--- fallo a mitad no deja nada a medias) e idempotente (se puede aplicar tantas veces como haga falta
--- sin romper nada), y se aplica con:
---
---   psql -v ON_ERROR_STOP=1 -U catalina_support -d catalina_support -p 11003 < backend/migrations/v1.0.0.sql
+-- (docs/ambientes.md, sección 27). Es idempotente y el ejecutor de migraciones es dueño de la
+-- transacción que incluye tanto este contenido como su registro en `schema_migrations`.
+-- No se aplica directamente: `cmd/migrate` la descubre, respalda la base y la ejecuta de forma
+-- atómica.
 --
 -- **Lleva también los datos sin los cuales la aplicación no funciona** —las dos filas de
 -- configuración y las veintiséis plantillas de correo—, porque eso no es un dato de ejemplo: en una
@@ -16,8 +15,6 @@
 -- desarrollo y nunca en producción.
 --
 -- Va por secciones, una por módulo, en el orden en que se implementan.
-
-BEGIN;
 
 -- ============================================================================
 -- mail — las plantillas de los correos (docs/modules/mail.md)
@@ -292,6 +289,20 @@ CREATE TABLE IF NOT EXISTS user_admin_events (
 CREATE INDEX IF NOT EXISTS user_admin_events_user_created_idx
     ON user_admin_events (user_id, created_at DESC);
 
+-- Deja constancia de las altas preparadas desde /users y, sobre todo, de la decisión explícita de
+-- enlazar una cuenta local existente con la identidad que devolvió Active Directory.
+CREATE TABLE IF NOT EXISTS user_directory_events (
+    id            bigserial PRIMARY KEY,
+    user_id       bigint      NOT NULL REFERENCES users(id),
+    actor_user_id bigint      REFERENCES users(id),
+    actor_label   text        NOT NULL,
+    action        text        NOT NULL,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT user_directory_events_action_check CHECK (action IN ('created', 'linked'))
+);
+CREATE INDEX IF NOT EXISTS user_directory_events_user_created_idx
+    ON user_directory_events (user_id, created_at DESC);
+
 -- La clave ajena que faltaba en mail_templates, ahora que existe la tabla de cuentas.
 DO $$
 BEGIN
@@ -368,7 +379,8 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- por la API**.
     smtp_host      text NOT NULL DEFAULT '',
     smtp_port      text NOT NULL DEFAULT '',
-    smtp_secure    boolean NOT NULL DEFAULT false,
+    smtp_security_mode text NOT NULL DEFAULT 'starttls',
+    smtp_insecure_ack boolean NOT NULL DEFAULT false,
     smtp_user      text NOT NULL DEFAULT '',
     smtp_password  text NOT NULL DEFAULT '',
     smtp_from_name  text NOT NULL DEFAULT '',
@@ -382,6 +394,8 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- Nulo es «no hay logo propio» y se usa el de fábrica que trae la aplicación.
     logo_light    text,
     logo_dark     text,
+    -- Icono propio de la pestaña. Nulo cae al logo claro efectivo.
+    site_icon     text,
     updated_at    timestamptz NOT NULL DEFAULT now(),
     updated_by_id bigint      REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT installation_settings_language_check CHECK (language IN ('es', 'en')),
@@ -405,6 +419,7 @@ COMMENT ON TABLE installation_settings IS
 -- instalación existente, así que su idioma se conserva al volver a aplicar la migración.
 ALTER TABLE installation_settings ALTER COLUMN language SET DEFAULT 'en';
 ALTER TABLE installation_settings ADD COLUMN IF NOT EXISTS settings_version bigint NOT NULL DEFAULT 1;
+ALTER TABLE installation_settings ADD COLUMN IF NOT EXISTS site_icon text;
 
 -- La integración de IA tiene forma propia: modalidad, proveedor, autenticación y credencial
 -- cifrada. Nunca se devuelve credential_ciphertext por la API.
@@ -475,8 +490,9 @@ CREATE TABLE IF NOT EXISTS directory_settings (
     bind_dn        text        NOT NULL DEFAULT '',
     bind_password  text        NOT NULL DEFAULT '',
     search_base    text        NOT NULL DEFAULT '',
-    -- El filtro, con `%s` donde va el correo de quien entra.
-    user_filter    text        NOT NULL DEFAULT '(mail=%s)',
+    -- Condición base de seguridad; la aplicación añade usuario/correo con escape LDAP.
+    user_filter    text        NOT NULL DEFAULT '(objectClass=person)',
+    attr_username  text        NOT NULL DEFAULT 'sAMAccountName',
     attr_email     text        NOT NULL DEFAULT 'mail',
     attr_name      text        NOT NULL DEFAULT 'givenName',
     attr_last_name text        NOT NULL DEFAULT 'sn',
@@ -487,6 +503,20 @@ CREATE TABLE IF NOT EXISTS directory_settings (
 
 COMMENT ON TABLE directory_settings IS
     'La configuración del directorio de la organización (AD por LDAP): una sola fila, editable desde la pantalla.';
+
+ALTER TABLE directory_settings ADD COLUMN IF NOT EXISTS attr_username text NOT NULL DEFAULT 'sAMAccountName';
+
+-- Transición de las plantillas antiguas al filtro base. Los dos valores conocidos se convierten sin
+-- perder la condición que excluye cuentas deshabilitadas; una plantilla personalizada permanece
+-- visible para que Configuración la rechace y el administrador la corrija explícitamente.
+UPDATE directory_settings
+SET user_filter = CASE
+    WHEN user_filter = '(mail=%s)' THEN '(objectClass=person)'
+    WHEN user_filter LIKE '%(sAMAccountName=%s)%' THEN replace(user_filter, '(sAMAccountName=%s)', '')
+    ELSE user_filter
+END,
+attr_username = CASE WHEN attr_username = '' THEN 'sAMAccountName' ELSE attr_username END
+WHERE user_filter IN ('(mail=%s)') OR user_filter LIKE '%(sAMAccountName=%s)%' OR attr_username = '';
 
 -- Keycloak (OIDC). Igual: el emisor vacío es «no hay este camino», y el secreto del cliente no sale
 -- nunca por la API.
@@ -595,11 +625,34 @@ ALTER TABLE installation_settings
 ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS smtp_host text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_port text NOT NULL DEFAULT '',
-    ADD COLUMN IF NOT EXISTS smtp_secure boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS smtp_security_mode text NOT NULL DEFAULT 'starttls',
+    ADD COLUMN IF NOT EXISTS smtp_insecure_ack boolean NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS smtp_user text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_password text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_from_name text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_from_email text NOT NULL DEFAULT '';
+
+-- La migración no degrada conexiones existentes: el booleano anterior sólo puede convertirse en
+-- STARTTLS o TLS directo. El modo sin cifrar se elige después de forma explícita.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = 'installation_settings'
+           AND column_name = 'smtp_secure'
+    ) THEN
+        UPDATE installation_settings
+           SET smtp_security_mode = CASE WHEN smtp_secure THEN 'tls_direct' ELSE 'starttls' END,
+               smtp_insecure_ack = false;
+        ALTER TABLE installation_settings DROP COLUMN smtp_secure;
+    END IF;
+END
+$$;
+ALTER TABLE installation_settings DROP CONSTRAINT IF EXISTS installation_settings_smtp_security_mode_check;
+ALTER TABLE installation_settings
+    ADD CONSTRAINT installation_settings_smtp_security_mode_check
+    CHECK (smtp_security_mode IN ('starttls', 'tls_direct', 'plain'));
 
 -- Las restricciones se quitan y se vuelven a poner: no hay `ADD CONSTRAINT IF NOT EXISTS`, y quitarla
 -- antes es lo que hace que se pueda aplicar el archivo dos veces.
@@ -1223,5 +1276,3 @@ END $$;
 
 -- El índice por `tag_id`: es como se cuentan los tickets que llevan una etiqueta y como se filtran.
 CREATE INDEX IF NOT EXISTS ticket_tags_tag_id_idx ON ticket_tags (tag_id);
-
-COMMIT;

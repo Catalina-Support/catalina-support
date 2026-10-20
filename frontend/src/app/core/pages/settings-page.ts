@@ -5,6 +5,7 @@ import { TranslationService } from '../i18n/translation.service';
 import { BrandService, logoDeFabrica, type Marca } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
 import { SetupService } from '../services/setup.service';
+import type { CorreoEscrito } from '../services/setup.service';
 import {
   SettingsService,
   type Configuracion,
@@ -156,6 +157,7 @@ export class SettingsPage implements OnDestroy {
   protected readonly dirContrasena = signal('');
   protected readonly dirBase = signal('');
   protected readonly dirFiltro = signal('');
+  protected readonly dirUsuario = signal('');
   protected readonly dirCorreo = signal('');
   protected readonly dirNombre = signal('');
   protected readonly dirApellidos = signal('');
@@ -165,6 +167,15 @@ export class SettingsPage implements OnDestroy {
   protected readonly kcCliente = signal('');
   protected readonly kcSecreto = signal('');
   protected readonly kcVuelta = signal('');
+  protected readonly correoHost = signal('');
+  protected readonly correoPuerto = signal('');
+  protected readonly correoModo = signal<'starttls' | 'tls_direct' | 'plain'>('starttls');
+  protected readonly correoInseguroAceptado = signal(false);
+  protected readonly correoUsuario = signal('');
+  protected readonly correoContrasena = signal('');
+  protected readonly correoNombre = signal('');
+  protected readonly correoCorreo = signal('');
+  protected readonly correoDestinoPrueba = signal('');
 
   /** Indica si los campos escritos están completos y permite mostrar el aviso antes de guardar. */
   protected readonly directorioConfigurado = computed(
@@ -196,6 +207,7 @@ export class SettingsPage implements OnDestroy {
       this.dirCuenta().trim() !== configuracion.directory.bindDn ||
       this.dirBase().trim() !== configuracion.directory.searchBase ||
       this.dirFiltro().trim() !== configuracion.directory.userFilter ||
+      this.dirUsuario().trim() !== (configuracion.directory.attrUsername ?? '') ||
       this.dirCorreo().trim() !== configuracion.directory.attrEmail ||
       this.dirNombre().trim() !== configuracion.directory.attrName ||
       this.dirApellidos().trim() !== configuracion.directory.attrLastName ||
@@ -340,7 +352,13 @@ export class SettingsPage implements OnDestroy {
   protected readonly reporteBaja = signal(120);
   protected readonly cambioDeReporteriaPendiente = computed(() => {
     const c = this.configuracion();
-    return !!c && (this.reporteCritica() !== c.reportOverdueCriticalHours || this.reporteAlta() !== c.reportOverdueHighHours || this.reporteMedia() !== c.reportOverdueMediumHours || this.reporteBaja() !== c.reportOverdueLowHours);
+    return (
+      !!c &&
+      (this.reporteCritica() !== c.reportOverdueCriticalHours ||
+        this.reporteAlta() !== c.reportOverdueHighHours ||
+        this.reporteMedia() !== c.reportOverdueMediumHours ||
+        this.reporteBaja() !== c.reportOverdueLowHours)
+    );
   });
 
   /** **Si hay algo que guardar en la región y la dirección**: es la otra tarjeta, con su botón. */
@@ -404,6 +422,14 @@ export class SettingsPage implements OnDestroy {
     return oscuro ? configuracion.brand.dark.filled : configuracion.brand.light.filled;
   }
 
+  protected hayIconoPropio(): boolean {
+    return this.configuracion()?.brand.siteIcon.filled ?? false;
+  }
+
+  protected vistaPreviaIcono(): string {
+    return this.marca.urlDelIcono();
+  }
+
   /** Un tamaño en algo que se lee: «203 KB», «1,2 MB». */
   protected peso(bytes: number | undefined): string {
     if (!bytes) {
@@ -424,13 +450,30 @@ export class SettingsPage implements OnDestroy {
     void this.pedir(
       () => this.marca.subirLogo(oscuro, archivo),
       this.t().configuracion.logoSubido,
-      () => { entrada.value = ''; },
+      () => {
+        entrada.value = '';
+      },
     );
   }
 
   /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
   protected async volverAlDeFabrica(oscuro: boolean): Promise<void> {
     await this.pedir(() => this.marca.restablecerLogo(oscuro), this.t().configuracion.logoQuitado);
+  }
+
+  protected elegirIcono(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.[0] ?? null;
+    if (!archivo) return;
+    void this.pedir(
+      () => this.marca.subirIcono(archivo),
+      this.t().configuracion.iconoSubido,
+      () => (entrada.value = ''),
+    );
+  }
+
+  protected async restaurarIcono(): Promise<void> {
+    await this.pedir(() => this.marca.restablecerIcono(), this.t().configuracion.iconoQuitado);
   }
 
   /**
@@ -498,10 +541,14 @@ export class SettingsPage implements OnDestroy {
     if (this.idioma() !== configuracion.language) {
       if (this.nombreElegido().trim() !== configuracion.name) {
         try {
-          const saved = await this.ajustes.guardar({ ...configuracion, name: this.nombreElegido().trim(), language: configuracion.language });
+          const saved = await this.ajustes.guardar({
+            ...configuracion,
+            name: this.nombreElegido().trim(),
+            language: configuracion.language,
+          });
           this.configuracion.set(saved);
         } catch (error) {
-          this.mensaje.set({ forma:'error', texto:this.textoDelError(error) });
+          this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
           return;
         }
       }
@@ -521,30 +568,57 @@ export class SettingsPage implements OnDestroy {
   }
 
   protected async prepararIdioma(manual: boolean, confirmarCosto: boolean): Promise<void> {
-    this.guardando.set(true); this.mensaje.set(null); this.confirmacionCosto.set(false);
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    this.confirmacionCosto.set(false);
     try {
-      this.borradoresIdioma.set(await this.ajustes.borradoresDeIdioma(this.idioma(), { manual, confirmCommercialCost: confirmarCosto }));
+      this.borradoresIdioma.set(
+        await this.ajustes.borradoresDeIdioma(this.idioma(), {
+          manual,
+          confirmCommercialCost: confirmarCosto,
+        }),
+      );
     } catch (error) {
-      if (claveDelError(error) === 'mail.translation.costConfirmationRequired') this.confirmacionCosto.set(true);
+      if (claveDelError(error) === 'mail.translation.costConfirmationRequired')
+        this.confirmacionCosto.set(true);
       else this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
-    } finally { this.guardando.set(false); }
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   protected editarBorrador(index: number, field: 'subject' | 'body', value: string): void {
-    this.borradoresIdioma.update((items) => items.map((item, i) => i === index ? { ...item, [field === 'subject' ? 'draftSubject' : 'draftBody']: value } : item));
+    this.borradoresIdioma.update((items) =>
+      items.map((item, i) =>
+        i === index
+          ? { ...item, [field === 'subject' ? 'draftSubject' : 'draftBody']: value }
+          : item,
+      ),
+    );
   }
 
   protected async aplicarCambioDeIdioma(): Promise<void> {
-    this.guardando.set(true); this.mensaje.set(null);
+    this.guardando.set(true);
+    this.mensaje.set(null);
     try {
-      await this.ajustes.aplicarIdioma(this.idioma(), this.borradoresIdioma().map((d) => ({ key:d.key, subject:d.draftSubject, body:d.draftBody })));
+      await this.ajustes.aplicarIdioma(
+        this.idioma(),
+        this.borradoresIdioma().map((d) => ({
+          key: d.key,
+          subject: d.draftSubject,
+          body: d.draftBody,
+        })),
+      );
       const current = this.configuracion();
       if (current) this.configuracion.set({ ...current, language: this.idioma() });
       this.borradoresIdioma.set([]);
       await this.marca.cargar();
-      this.mensaje.set({ forma:'exito', texto: this.t().configuracion.instalacionGuardada });
-    } catch (error) { this.mensaje.set({ forma:'error', texto:this.textoDelError(error) }); }
-    finally { this.guardando.set(false); }
+      this.mensaje.set({ forma: 'exito', texto: this.t().configuracion.instalacionGuardada });
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   /**
@@ -576,17 +650,25 @@ export class SettingsPage implements OnDestroy {
     this.mensaje.set(null);
     try {
       const ia = await this.ajustes.probarYActivarIA({
-        mode: this.iaModo(), provider: this.iaProveedor(), baseUrl: this.iaDireccion().trim(),
-        model: this.iaModelo().trim(), authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
+        mode: this.iaModo(),
+        provider: this.iaProveedor(),
+        baseUrl: this.iaDireccion().trim(),
+        model: this.iaModelo().trim(),
+        authType: this.iaAutenticacion(),
+        authHeader: this.iaCabecera().trim(),
         credential: this.iaCredencial(),
-        privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(), language: this.configuracion()?.language ?? this.idioma(),
+        privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(),
+        language: this.configuracion()?.language ?? this.idioma(),
         accelerationMode: this.iaAceleracion(),
       });
       this.ponerConfiguracionDeIA(ia);
       this.setup.marcarIAConfigurada();
       this.mensaje.set({ forma: 'exito', texto: this.t().configuracion.motorGuardado });
-    } catch (error) { this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) }); }
-    finally { this.guardando.set(false); }
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   /**
@@ -718,6 +800,61 @@ export class SettingsPage implements OnDestroy {
     ];
   }
 
+  protected opcionesDeCorreo(): readonly OpcionSelector[] {
+    return [
+      {
+        valor: 'starttls',
+        etiqueta: this.t().instalacion.correoStarttls,
+        grupo: this.t().instalacion.correoSeguridad,
+      },
+      {
+        valor: 'tls_direct',
+        etiqueta: this.t().instalacion.correoTlsDirecto,
+        grupo: this.t().instalacion.correoSeguridad,
+      },
+      {
+        valor: 'plain',
+        etiqueta: this.t().instalacion.correoSinCifrar,
+        grupo: this.t().instalacion.correoSeguridad,
+      },
+    ];
+  }
+
+  protected cambiarModoCorreo(valor: string): void {
+    this.correoModo.set(valor as 'starttls' | 'tls_direct' | 'plain');
+    if (valor !== 'plain') this.correoInseguroAceptado.set(false);
+  }
+
+  protected async probarCorreo(): Promise<void> {
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      const resultado = await this.ajustes.probarCorreo(this.correoEscrito());
+      this.mensaje.set({
+        forma: 'exito',
+        texto: interpolar(this.t().instalacion.correoOk, { destinatario: resultado.recipient }),
+      });
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  private correoEscrito(): CorreoEscrito {
+    return {
+      host: this.correoHost().trim(),
+      port: this.correoPuerto().trim(),
+      securityMode: this.correoModo(),
+      insecureAccepted: this.correoModo() === 'plain' && this.correoInseguroAceptado(),
+      user: this.correoUsuario().trim(),
+      password: this.correoContrasena(),
+      fromName: this.correoNombre().trim(),
+      fromEmail: this.correoCorreo().trim(),
+      testRecipient: this.correoDestinoPrueba().trim(),
+    };
+  }
+
   /** La explicación del método que está elegido, para que se lea qué significa. */
   protected ayudaDelMetodo(): string {
     switch (this.metodo()) {
@@ -787,15 +924,31 @@ export class SettingsPage implements OnDestroy {
     await this.guardarIA();
   }
 
-  protected opcionesDeModoIA(): readonly OpcionSelector[] { return [
-    { valor: 'local', etiqueta: this.t().configuracion.iaLocal, grupo: this.t().configuracion.motorDeIA },
-    { valor: 'remote', etiqueta: this.t().configuracion.iaRemota, grupo: this.t().configuracion.motorDeIA },
-    { valor: 'provider', etiqueta: this.t().configuracion.iaProveedor, grupo: this.t().configuracion.motorDeIA },
-  ]; }
+  protected opcionesDeModoIA(): readonly OpcionSelector[] {
+    return [
+      {
+        valor: 'local',
+        etiqueta: this.t().configuracion.iaLocal,
+        grupo: this.t().configuracion.motorDeIA,
+      },
+      {
+        valor: 'remote',
+        etiqueta: this.t().configuracion.iaRemota,
+        grupo: this.t().configuracion.motorDeIA,
+      },
+      {
+        valor: 'provider',
+        etiqueta: this.t().configuracion.iaProveedor,
+        grupo: this.t().configuracion.motorDeIA,
+      },
+    ];
+  }
   protected cambiarModoIA(valor: string): void {
-    const modo = valor as 'local'|'remote'|'provider';
+    const modo = valor as 'local' | 'remote' | 'provider';
     this.iaModo.set(modo);
-    this.iaProveedor.set(modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai');
+    this.iaProveedor.set(
+      modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai',
+    );
     if (modo === 'local') {
       this.iaDireccion.set('http://ai:8080');
       this.iaModelo.set('qwen2.5-1.5b-instruct');
@@ -807,28 +960,67 @@ export class SettingsPage implements OnDestroy {
       this.iaAutenticacion.set('bearer');
     }
   }
-  protected opcionesDeProveedorIA(): readonly OpcionSelector[] { return ['openai','claude','deepseek','openai-compatible'].map(valor => ({valor, etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor, grupo: this.t().configuracion.iaProveedor})); }
-  protected opcionesDeAceleracionIA(): readonly OpcionSelector[] { const t=this.t().configuracion; return [
-    {valor:'auto',etiqueta:t.iaAceleracionAuto,grupo:t.iaAceleracion},
-    {valor:'cpu',etiqueta:t.iaAceleracionCPU,grupo:t.iaAceleracion},
-    {valor:'nvidia',etiqueta:t.iaAceleracionNVIDIA,grupo:t.iaAceleracion},
-  ]; }
-  protected opcionesDeModeloLocal(): readonly OpcionSelector[] { return [
-    {valor:'qwen2.5-1.5b-instruct',etiqueta:'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',grupo:this.t().configuracion.iaLocal},
-    {valor:'qwen2.5-3b-instruct',etiqueta:'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',grupo:this.t().configuracion.iaLocal},
-    {valor:'qwen2.5-7b-instruct',etiqueta:'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB',grupo:this.t().configuracion.iaLocal},
-  ]; }
-  protected opcionesDeAuthIA(): readonly OpcionSelector[] { const t=this.t().configuracion; return [
-    {valor:'none',etiqueta:t.iaAuth_none,grupo:t.iaAutenticacion},{valor:'bearer',etiqueta:t.iaAuth_bearer,grupo:t.iaAutenticacion},
-    {valor:'header',etiqueta:t.iaAuth_header,grupo:t.iaAutenticacion},{valor:'basic',etiqueta:t.iaAuth_basic,grupo:t.iaAutenticacion},
-  ]; }
-  protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected opcionesDeProveedorIA(): readonly OpcionSelector[] {
+    return ['openai', 'claude', 'deepseek', 'openai-compatible'].map((valor) => ({
+      valor,
+      etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor,
+      grupo: this.t().configuracion.iaProveedor,
+    }));
+  }
+  protected opcionesDeAceleracionIA(): readonly OpcionSelector[] {
+    const t = this.t().configuracion;
+    return [
+      { valor: 'auto', etiqueta: t.iaAceleracionAuto, grupo: t.iaAceleracion },
+      { valor: 'cpu', etiqueta: t.iaAceleracionCPU, grupo: t.iaAceleracion },
+      { valor: 'nvidia', etiqueta: t.iaAceleracionNVIDIA, grupo: t.iaAceleracion },
+    ];
+  }
+  protected opcionesDeModeloLocal(): readonly OpcionSelector[] {
+    return [
+      {
+        valor: 'qwen2.5-1.5b-instruct',
+        etiqueta: 'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
+      {
+        valor: 'qwen2.5-3b-instruct',
+        etiqueta: 'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
+      {
+        valor: 'qwen2.5-7b-instruct',
+        etiqueta: 'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB',
+        grupo: this.t().configuracion.iaLocal,
+      },
+    ];
+  }
+  protected opcionesDeAuthIA(): readonly OpcionSelector[] {
+    const t = this.t().configuracion;
+    return [
+      { valor: 'none', etiqueta: t.iaAuth_none, grupo: t.iaAutenticacion },
+      { valor: 'bearer', etiqueta: t.iaAuth_bearer, grupo: t.iaAutenticacion },
+      { valor: 'header', etiqueta: t.iaAuth_header, grupo: t.iaAutenticacion },
+      { valor: 'basic', etiqueta: t.iaAuth_basic, grupo: t.iaAutenticacion },
+    ];
+  }
+  protected formatoBytes(bytes: number): string {
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`;
+  }
   protected descripcionAceleracion(catalogo: CatalogoLocalDeIA): string {
-    const configured = catalogo.accelerationMode === 'auto' ? this.t().configuracion.iaAceleracionAuto : catalogo.accelerationMode === 'nvidia' ? 'NVIDIA' : 'CPU';
+    const configured =
+      catalogo.accelerationMode === 'auto'
+        ? this.t().configuracion.iaAceleracionAuto
+        : catalogo.accelerationMode === 'nvidia'
+          ? 'NVIDIA'
+          : 'CPU';
     const effective = catalogo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU';
     return `${configured} · ${effective}${catalogo.deviceName && catalogo.deviceName !== effective ? ` · ${catalogo.deviceName}` : ''}`;
   }
-  protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
+  protected aceptarLicencia(id: string, accepted: boolean): void {
+    const next = new Set(this.licenciasAceptadas());
+    accepted ? next.add(id) : next.delete(id);
+    this.licenciasAceptadas.set(next);
+  }
   protected async cargarCatalogoIA(): Promise<void> {
     if (this.refrescandoCatalogo()) return;
     this.refrescandoCatalogo.set(true);
@@ -841,18 +1033,101 @@ export class SettingsPage implements OnDestroy {
       this.refrescandoCatalogo.set(false);
     }
   }
-  protected async descargarModelo(id: string): Promise<void> { await this.accionIA(async()=>{this.iaModelo.set(id);await this.ajustes.descargarModelo(id,this.licenciasAceptadas().has(id));await this.refrescarCatalogo();}); }
-  protected async activarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
-  protected async desactivarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.desactivarModelo(id);this.iaModelo.set('');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
-  protected pedirEliminarModelo(id: string): void { this.confirmacionModelo.set({ id, parcial: false }); }
-  protected async cancelarDescarga(id:string):Promise<void>{await this.accionIA(async()=>{await this.ajustes.cancelarDescarga(id);await this.refrescarCatalogo();});}
-  protected pedirEliminarParcial(id:string):void{this.confirmacionModelo.set({id,parcial:true});}
-  protected async confirmarEliminacion():Promise<void>{const pendiente=this.confirmacionModelo();if(!pendiente)return;this.confirmacionModelo.set(null);await this.accionIA(async()=>{if(pendiente.parcial){await this.ajustes.eliminarParcial(pendiente.id);await this.refrescarCatalogo();}else{await this.ajustes.eliminarModelo(pendiente.id);this.catalogoIA.set(await this.ajustes.modelosLocales());}});}
-  protected async probarModeloActivo():Promise<void>{await this.accionIA(async()=>{const saludo=await this.ajustes.probarModeloActivo();this.mensaje.set({forma:'exito',texto:this.interpolar(this.t().configuracion.iaSaludo,{modelo:saludo.modelName,saludo:saludo.greeting,aceleracion:`${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`})});});}
-  protected progreso(modelo:{downloadedBytes:number;downloadBytes:number}):number{return modelo.downloadBytes>0?Math.min(100,Math.round(modelo.downloadedBytes*100/modelo.downloadBytes)):0;}
-  private async refrescarCatalogo():Promise<void>{const c=await this.ajustes.modelosLocales();this.catalogoIA.set(c);const activo=c.models.find(m=>m.active);if(activo)this.iaModelo.set(activo.id);const busy=c.models.some(m=>['downloading','validating','activating','testing'].includes(m.phase));if(busy&&!this.refrescoIA)this.refrescoIA=setInterval(()=>void this.refrescarCatalogo(),1000);if(!busy&&this.refrescoIA){clearInterval(this.refrescoIA);this.refrescoIA=null;}}
-  ngOnDestroy():void{if(this.refrescoIA)clearInterval(this.refrescoIA);}
-  private async accionIA(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
+  protected async descargarModelo(id: string): Promise<void> {
+    await this.accionIA(async () => {
+      this.iaModelo.set(id);
+      await this.ajustes.descargarModelo(id, this.licenciasAceptadas().has(id));
+      await this.refrescarCatalogo();
+    });
+  }
+  protected async activarModelo(id: string): Promise<void> {
+    await this.accionIA(async () => {
+      await this.ajustes.activarModelo(id);
+      this.iaModelo.set(id);
+      this.iaDireccion.set('http://ai:8080');
+      this.catalogoIA.set(await this.ajustes.modelosLocales());
+    });
+  }
+  protected async desactivarModelo(id: string): Promise<void> {
+    await this.accionIA(async () => {
+      await this.ajustes.desactivarModelo(id);
+      this.iaModelo.set('');
+      this.catalogoIA.set(await this.ajustes.modelosLocales());
+    });
+  }
+  protected pedirEliminarModelo(id: string): void {
+    this.confirmacionModelo.set({ id, parcial: false });
+  }
+  protected async cancelarDescarga(id: string): Promise<void> {
+    await this.accionIA(async () => {
+      await this.ajustes.cancelarDescarga(id);
+      await this.refrescarCatalogo();
+    });
+  }
+  protected pedirEliminarParcial(id: string): void {
+    this.confirmacionModelo.set({ id, parcial: true });
+  }
+  protected async confirmarEliminacion(): Promise<void> {
+    const pendiente = this.confirmacionModelo();
+    if (!pendiente) return;
+    this.confirmacionModelo.set(null);
+    await this.accionIA(async () => {
+      if (pendiente.parcial) {
+        await this.ajustes.eliminarParcial(pendiente.id);
+        await this.refrescarCatalogo();
+      } else {
+        await this.ajustes.eliminarModelo(pendiente.id);
+        this.catalogoIA.set(await this.ajustes.modelosLocales());
+      }
+    });
+  }
+  protected async probarModeloActivo(): Promise<void> {
+    await this.accionIA(async () => {
+      const saludo = await this.ajustes.probarModeloActivo();
+      this.mensaje.set({
+        forma: 'exito',
+        texto: this.interpolar(this.t().configuracion.iaSaludo, {
+          modelo: saludo.modelName,
+          saludo: saludo.greeting,
+          aceleracion: `${saludo.effectiveAcceleration === 'nvidia' ? 'NVIDIA' : 'CPU'} · ${saludo.deviceName}`,
+        }),
+      });
+    });
+  }
+  protected progreso(modelo: { downloadedBytes: number; downloadBytes: number }): number {
+    return modelo.downloadBytes > 0
+      ? Math.min(100, Math.round((modelo.downloadedBytes * 100) / modelo.downloadBytes))
+      : 0;
+  }
+  private async refrescarCatalogo(): Promise<void> {
+    const c = await this.ajustes.modelosLocales();
+    this.catalogoIA.set(c);
+    const activo = c.models.find((m) => m.active);
+    if (activo) this.iaModelo.set(activo.id);
+    const busy = c.models.some((m) =>
+      ['downloading', 'validating', 'activating', 'testing'].includes(m.phase),
+    );
+    if (busy && !this.refrescoIA)
+      this.refrescoIA = setInterval(() => void this.refrescarCatalogo(), 1000);
+    if (!busy && this.refrescoIA) {
+      clearInterval(this.refrescoIA);
+      this.refrescoIA = null;
+    }
+  }
+  ngOnDestroy(): void {
+    if (this.refrescoIA) clearInterval(this.refrescoIA);
+  }
+  private async accionIA(action: () => Promise<void>): Promise<void> {
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      await action();
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally {
+      this.guardando.set(false);
+    }
+  }
 
   /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
   private directorioEscrito(): DirectorioEscrito {
@@ -863,6 +1138,7 @@ export class SettingsPage implements OnDestroy {
       bindDn: this.dirCuenta().trim(),
       searchBase: this.dirBase().trim(),
       userFilter: this.dirFiltro().trim(),
+      attrUsername: this.dirUsuario().trim(),
       attrEmail: this.dirCorreo().trim(),
       attrName: this.dirNombre().trim(),
       attrLastName: this.dirApellidos().trim(),
@@ -921,6 +1197,7 @@ export class SettingsPage implements OnDestroy {
       const configuracion = await this.ajustes.cargar();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
+      this.ponerCorreo(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
@@ -952,6 +1229,7 @@ export class SettingsPage implements OnDestroy {
       const configuracion = await peticion();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
+      this.ponerCorreo(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
@@ -992,12 +1270,29 @@ export class SettingsPage implements OnDestroy {
     this.iaModelo.set(configuracion.aiModel ?? '');
   }
 
-  private ponerConfiguracionDeIA(ia: import('../services/settings.service').ConfiguracionDeIA): void {
+  private ponerCorreo(configuracion: Configuracion): void {
+    this.correoHost.set(configuracion.mail.host);
+    this.correoPuerto.set(configuracion.mail.port);
+    this.correoModo.set(configuracion.mail.securityMode || 'starttls');
+    this.correoInseguroAceptado.set(configuracion.mail.insecureAccepted);
+    this.correoUsuario.set(configuracion.mail.user);
+    this.correoContrasena.set('');
+    this.correoNombre.set(configuracion.mail.fromName);
+    this.correoCorreo.set(configuracion.mail.fromEmail);
+  }
+
+  private ponerConfiguracionDeIA(
+    ia: import('../services/settings.service').ConfiguracionDeIA,
+  ): void {
     if (ia.mode) this.iaModo.set(ia.mode);
     this.iaProveedor.set(ia.provider || (ia.mode === 'provider' ? 'openai' : 'local'));
-    this.iaDireccion.set(ia.baseUrl || this.iaDireccion()); this.iaModelo.set(ia.model || this.iaModelo());
-    this.iaAutenticacion.set(ia.authType); this.iaCabecera.set(ia.authHeader); this.iaCredencial.set('');
-    this.iaCredencialPuesta.set(ia.credentialSet); this.iaPrivacidad.set(ia.privacyConfirmed);
+    this.iaDireccion.set(ia.baseUrl || this.iaDireccion());
+    this.iaModelo.set(ia.model || this.iaModelo());
+    this.iaAutenticacion.set(ia.authType);
+    this.iaCabecera.set(ia.authHeader);
+    this.iaCredencial.set('');
+    this.iaCredencialPuesta.set(ia.credentialSet);
+    this.iaPrivacidad.set(ia.privacyConfirmed);
     this.iaAceleracion.set(ia.accelerationMode || 'auto');
   }
 
@@ -1016,6 +1311,7 @@ export class SettingsPage implements OnDestroy {
     this.dirContrasena.set('');
     this.dirBase.set(configuracion.directory.searchBase);
     this.dirFiltro.set(configuracion.directory.userFilter);
+    this.dirUsuario.set(configuracion.directory.attrUsername ?? '');
     this.dirCorreo.set(configuracion.directory.attrEmail);
     this.dirNombre.set(configuracion.directory.attrName);
     this.dirApellidos.set(configuracion.directory.attrLastName);
@@ -1041,7 +1337,8 @@ export class SettingsPage implements OnDestroy {
     const memory = memoriaDelError(error);
     if (key === 'settings.ai.insufficientMemory' && memory) {
       return interpolar(this.textos.error(key), {
-        requerida: this.formatoBytes(memory.requiredBytes), disponible: this.formatoBytes(memory.availableBytes),
+        requerida: this.formatoBytes(memory.requiredBytes),
+        disponible: this.formatoBytes(memory.availableBytes),
       });
     }
     return this.textos.error(key);

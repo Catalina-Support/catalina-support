@@ -1,7 +1,13 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-18
+> **Última actualización:** 2026-10-20
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-20: actualización autosuficiente y
+> migraciones versionadas.** La sección 27 sustituye la migración manual en producción y la ausencia
+> de historial. El responsable cerró y aprobó las decisiones 1A–25A. El ejecutor pasó pruebas
+> unitarias, adopción de una base existente, base nueva, segundo arranque, rollback y compilación de
+> producción; no se desplegó producción.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** Se añadió `ai-nvidia.yml` para Linux con
 > NVIDIA Container Toolkit sin alterar el despliegue CPU portable.
@@ -681,9 +687,10 @@ Lo que hay que tener presente es que **las copias anteriores a ese día tienen e
 restauración vieja se vería igual, sin formato, y hay que volver a aplicar la migración para ponerla al
 día.
 
-**Sin tabla de control**: no hace falta, porque los archivos son idempotentes. Aplicar dos veces el
-mismo no rompe nada, así que la forma de trabajar es sencilla: **se aplican todos los archivos hasta
-la versión publicada**, en orden, y los que ya estaban aplicados no hacen nada.
+**Con tabla de control**: `schema_migrations` registra versión, archivo, SHA-256 y fecha. Los archivos
+siguen siendo idempotentes, pero sólo se aplican los pendientes; el checksum impide cambiar una
+versión publicada. La excepción es la versión actual mientras `Development=true`, que puede
+reaplicarse durante su construcción.
 
 Y para saber qué versión está publicada no hay que adivinar: lo dicen **la etiqueta de git y el
 `BUILD_INFO`** del despliegue (sección 4.2). Aplicar de más es inofensivo; aplicar de menos se ve
@@ -943,7 +950,7 @@ eliminó contenedores, red y volúmenes. `docker compose -f tests.yml ps -a` que
 | 2 | **La base de las pruebas del backend** | Una base aparte, `catalina_support_test`, en el mismo contenedor: las pruebas la vacían y no tocan los datos de desarrollo |
 | 3 | **Copias de seguridad** | `pg_dump` diario, con retención (14 días) y un script en `scripts/`, programado en el `cron` del servidor. **Corrección del responsable (2026-09-25)**: el script **no copia `_files`** —los adjuntos y los documentos se copian a mano cuando Soporte lo pida—, y **los adjuntos no se borran nunca**. Está en la sección 6 |
 | 4 | **Integración continua** | **Ninguna** en la 1.0.0: las pruebas se ejecutan a mano en los contenedores, como parte del trabajo |
-| 5 | **Las migraciones** | **Un archivo por versión**, con tres dígitos (`v1.0.0.sql`, `v1.1.0.sql`…), aplicados **en orden** y **sin tabla de control**: son idempotentes y se aplican todos hasta la versión publicada |
+| 5 | **Las migraciones** | Un archivo por versión, tres dígitos, orden SemVer, historial y checksum en `schema_migrations`; el ejecutor aplica pendientes antes de arrancar la aplicación |
 | 6 | **Los datos de ejemplo, aparte** | **Decisión del responsable, 2026-09-25**: la 1.0.0 se cierra con **dos archivos** —`v1.0.0.sql`, con las tablas y lo que la aplicación necesita para funcionar en los dos entornos, y `v1.0.0_dev.sql`, con once cuentas y 25 tickets que **sólo se aplican en desarrollo**—. Lo que la aplicación necesita para arrancar (las dos filas de configuración y las veinte plantillas de correo) **no es un dato de ejemplo** y se queda en el primero, porque en producción no hay quien lo siembre por otra vía |
 | 7 | **La limpieza de los logs** | **Manual**: `go-logs` no rota y no se le añade un script |
 
@@ -1165,7 +1172,7 @@ fronteras: nombres explícitos, sin poda global, sin respaldo de los datos desec
 producción. Un nuevo hallazgo funcional vuelve a detener y limpiar la pasada antes de cualquier
 cambio de código.
 
-## 20. Disponibilidad TCP y migración manual de producción
+## 20. Disponibilidad TCP e historia de la migración manual
 
 La segunda pasada del bloque 8 sobre `main` (`80e01a75c7bc3b284778bcd214850efb0690714b`) se detuvo en el primer `docker compose -f dev.yml up -d --build`. El healthcheck declaró saludable a PostgreSQL mientras su servidor temporal de inicialización respondía por el socket local; `migrate`, que conecta por TCP, arrancó durante el cambio al servidor definitivo y recibió `connection refused`. El entorno y el clon se eliminaron por completo antes de proponer cambios.
 
@@ -1186,17 +1193,9 @@ recursos nuevos. La inspección final exigirá que los recorridos exitosos no pr
 de ausencia y que los errores reales sigan siendo visibles. Se mantienen tiempos, conteos, limpieza
 y todas las exclusiones ya aprobadas.
 
-Producción conserva migraciones manuales. `prod.yml` añade un servicio `migrate` bajo el perfil
-`migrate`, por lo que `up` nunca lo ejecuta implícitamente. El comando explícito será
-`docker compose -f prod.yml --profile migrate run --rm migrate`; durante la 1.0.0 aplica únicamente
-`migrations/v1.0.0.sql` con `ON_ERROR_STOP=1`. Su dependencia puede levantar `database` si estaba
-detenida y espera a que acepte TCP. `prod-build.sh` publica `backend/migrations/` en
-`/srv/catalina-support/migrations`, que el servicio monta en sólo lectura, pero no ejecuta ni
-pregunta por la migración.
-
-El runbook y el README separan el orden: construir y publicar artefactos sin desplegar, levantar la
-base —o dejar que el comando manual lo haga—, ejecutar `migrate` y sólo después desplegar o reiniciar
-la aplicación. No se presenta `prod-build.sh` como ejecutor de SQL.
+La migración manual descrita originalmente en esta sección fue sustituida el 2026-10-20 por el
+ejecutor de la sección 27. Se conserva este apartado como registro del hallazgo TCP que originó los
+healthchecks por `127.0.0.1`; ya no describe la operación vigente de producción.
 
 El seeder sigue siendo una acción voluntaria y aplica primero el esquema idempotente. No cambian los datos de ejemplo ni la política futura de un archivo por versión. Cuando exista una migración posterior se actualizarán el servicio y el runbook mediante su propio ciclo documental.
 
@@ -1299,3 +1298,68 @@ La UI no instala controladores ni reinicia Compose. Si se solicita NVIDIA sin es
 administrador responde capacidad ausente y la interfaz muestra el comando de despliegue. Auto usa
 CPU en el Compose normal y NVIDIA cuando la variante está disponible. Producción sólo cambia cuando
 su operador decide usar esa variante; este trabajo no la despliega.
+
+## 27. Actualización autosuficiente y migraciones por versión
+
+La distribución instalable tendrá un único camino oficial de actualización: `scripts/update.sh`.
+El guion exige la rama `main`, un árbol limpio y una relación que pueda avanzar de forma rápida
+desde `origin/main`; si alguna condición no se cumple, se detiene sin cambiar archivos. Ejecuta
+`git fetch`, prepara y compila la nueva versión fuera de la instalación activa y conserva intacta
+la versión que está sirviendo si falla antes de migrar. No crea merges, no descarta cambios y no
+instala una rama distinta. La versión continúa siendo la constante indicada por el responsable;
+hoy permanece en `1.0.0`.
+
+El despliegue incorpora un contenedor de una sola ejecución construido con un comando pequeño en
+Go. Backend y frontend sólo arrancan después de que ese contenedor termine correctamente. En cada
+arranque, el ejecutor toma un advisory lock de PostgreSQL, lee exclusivamente archivos cuyo nombre
+sea `vMAJOR.MINOR.PATCH.sql`, valida su orden SemVer y sólo considera los que no superen la versión
+de la aplicación. Un archivo con versión posterior vuelve incoherente el paquete y bloquea el
+arranque. Los archivos `*_dev.sql` nunca son migraciones de producción y el seeder continúa siendo
+separado, opcional y explícito.
+
+`schema_migrations` registra una fila por versión con versión, nombre del archivo, SHA-256 y fecha
+de aplicación. Sólo existe un archivo por versión. El ejecutor es dueño de la transacción: cada SQL
+de esquema deja de incluir `BEGIN` y `COMMIT`; ejecutar su contenido y registrar la fila forman una
+única transacción. Si falla, revierte completa esa versión, no la registra, detiene la aplicación y
+escribe el archivo y el error sin revelar secretos. Para adoptar el control en bases existentes,
+`v1.0.0.sql` se vuelve a ejecutar idempotentemente y se registra; no se infiere ni marca una base
+incompleta como válida.
+
+Mientras `shared/version.Development` sea verdadero, el único archivo que puede cambiar es el de la
+versión actual. Si cambia su checksum, el ejecutor lo vuelve a aplicar idempotentemente y actualiza
+el registro dentro de la misma transacción. Al publicar la versión (`Development=false`), todos sus
+archivos son inmutables: cualquier checksum diferente bloquea el arranque. Una base que registre
+una versión superior a la aplicación también bloquea el arranque; no se admite degradación
+automática.
+
+Antes de la primera migración pendiente —y sólo entonces— se crea un `pg_dump -Fc`, se comprueba
+que puede leerse y se guarda en `/srv/catalina-support/backups/` con las versiones de origen y
+destino en el nombre. Usa la retención vigente de catorce días. Si el respaldo falla no se ejecuta
+SQL. Esta protección pertenece al propio camino de migración, por lo que también opera si alguien
+inicia Compose directamente y no sólo desde `update.sh`.
+
+Las migraciones publicadas son compatibles hacia atrás: retirar o renombrar una estructura se
+pospone al menos a una versión posterior a aquella en la que dejó de usarse. Así, si la migración
+termina pero la aplicación nueva no arranca, el operador puede restaurar temporalmente la versión
+anterior mientras diagnostica. No se restaura automáticamente la base: una restauración que
+sobrescriba datos requiere una decisión humana y el procedimiento documentado de la sección 6.
+
+Durante la preparación continúa sirviendo la versión anterior. La interrupción empieza, después de
+compilar todo, justo antes de publicar los artefactos y ejecutar respaldo y migración; la aplicación
+nueva sólo se activa después de que terminen correctamente. El registro de actualización incluye
+inicio y fin, versiones anterior y nueva, ruta del respaldo, migraciones y resultado. Excluye
+credenciales, contenido SQL sensible y variables secretas.
+
+Esta implementación sustituye la migración manual del perfil `migrate`, el orden manual del README
+y la detección de esquema pendiente como flujo normal. Conserva la salud como
+defensa diagnóstica, el respaldo diario existente, los datos de desarrollo separados y la política
+de un archivo por versión. El usuario podrá actualizar una instalación publicada sincronizando
+`main` mediante el guion y reconstruyendo los contenedores; reinicios posteriores sólo validarán el
+historial y no crearán respaldos ni repetirán migraciones sin cambios.
+
+La verificación real adoptó la base de desarrollo existente y dejó un único respaldo válido; una
+segunda ejecución no creó otro. Una base desechable nació desde cero, registró un checksum de 64
+caracteres y también quedó sin trabajo en el segundo arranque. Una migración deliberadamente rota
+creó su respaldo, falló, revirtió la tabla de prueba y conservó el checksum anterior. Pasaron las
+pruebas unitarias del ejecutor y la suite backend salvo el fallo ambiental ya conocido de reportería
+sin tickets sembrados. Los dos binarios de producción compilaron y el runtime confirmó `pg_dump 18`.

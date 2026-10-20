@@ -401,6 +401,32 @@ func (s *Service) Knows(email string) (bool, error) {
 	return s.directorioDe(acceso.Directory).Knows(email)
 }
 
+// SearchDirectory busca personas en AD para el alta administrativa de users. Sólo existe cuando AD
+// es el método vigente; Keycloak no ofrece consulta sin una cuenta de servicio administrativa.
+func (s *Service) SearchDirectory(query string, partial bool, limit int) ([]auth.DirectoryAccount, error) {
+	acceso, err := s.acceso()
+	if err != nil {
+		return nil, err
+	}
+	if acceso.Method != auth.MethodAD || !acceso.Directory.Configured() {
+		return nil, ErrDirectoryUnavailable
+	}
+	if limit < 1 || limit > 20 {
+		limit = 20
+	}
+	if buscador, ok := s.directorioDe(acceso.Directory).(interface {
+		Search(string, bool, int) ([]auth.DirectoryAccount, error)
+	}); ok {
+		return buscador.Search(query, partial, limit)
+	}
+	return nil, ErrDirectoryUnavailable
+}
+
+func (s *Service) DirectoryEnabled() bool {
+	acceso, err := s.acceso()
+	return err == nil && acceso.Method == auth.MethodAD && acceso.Directory.Configured()
+}
+
 // sesionDeCuenta firma la sesión de una cuenta local y apunta la entrada.
 func (s *Service) sesionDeCuenta(account auth.Account) (Session, error) {
 	now := s.now()

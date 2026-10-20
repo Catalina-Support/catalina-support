@@ -54,9 +54,7 @@ export class Armazon {
   );
 
   protected readonly esListadoOperativo = computed(() =>
-    ['/dashboard', '/tickets', '/tickets/main', '/tickets/internal', '/users'].includes(
-      this.rutaActiva(),
-    ),
+    ['/dashboard', '/my-tickets', '/tickets', '/users'].includes(this.rutaActiva()),
   );
 
   protected readonly usuario = this.sesion.usuario;

@@ -2,7 +2,9 @@ package services
 
 import (
 	"errors"
+	"net/mail"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/juanky-estevez/go-logs"
@@ -25,6 +27,8 @@ var ErrCorreoIncompleto = errors.New("setup.mail.incomplete")
 // ErrCorreoInalcanzable: el servidor de correo no ha contestado, o no ha aceptado la autenticación.
 // El detalle queda en el log; a la pantalla le llega que esa configuración no sirve.
 var ErrCorreoInalcanzable = errors.New("setup.mail.unreachable")
+var ErrCorreoDestinoInvalido = errors.New("setup.mail.recipientInvalid")
+var ErrCorreoLimite = errors.New("setup.mail.rateLimited")
 
 // ProberDeIA es lo que este módulo necesita para poder decir si el motor de IA responde, y para
 // probarlo desde Configuración. Lo declara quien lo usa y lo cumple el módulo `ai`, que es el que
@@ -43,20 +47,21 @@ type ProberDeIA interface {
 // no entrega ningún mensaje. Lo declara quien lo usa y lo cumple el módulo `mail`, que es el que sabe
 // hablar con un servidor de correo (docs/primer-arranque.md, sección 3).
 type ProberDeCorreo interface {
-	ProbarCorreo(correo CorreoSaliente) error
+	ProbarCorreo(correo CorreoSaliente, destinatario, idioma, instalacion string) error
 }
 
 // CorreoSaliente es el correo saliente **con sus secretos**, para probarlo: lo que se le manda al
 // módulo de correo es lo que hay en pantalla, no lo que esté guardado. Declarado aquí y traducido en
 // el cableado, como todo lo que cruza de un módulo a otro.
 type CorreoSaliente struct {
-	Host      string
-	Port      string
-	Secure    bool
-	User      string
-	Password  string
-	FromName  string
-	FromEmail string
+	Host             string
+	Port             string
+	SecurityMode     string
+	InsecureAccepted bool
+	User             string
+	Password         string
+	FromName         string
+	FromEmail        string
 }
 
 // EstadoDeInstalacion es lo que la vista de instalación necesita para empezar: si ya está instalada
@@ -78,13 +83,14 @@ type EstadoDeInstalacion struct {
 	Keycloak  KeycloakView
 
 	// Mail dice si el correo saliente ya está puesto, y con qué remitente.
-	MailSet       bool
-	MailHost      string
-	MailPort      string
-	MailSecure    bool
-	MailUser      string
-	MailFromName  string
-	MailFromEmail string
+	MailSet              bool
+	MailHost             string
+	MailPort             string
+	MailSecurityMode     string
+	MailInsecureAccepted bool
+	MailUser             string
+	MailFromName         string
+	MailFromEmail        string
 
 	// AiAvailable es el estado actual del motor. Una caída posterior no deshace la activación válida
 	// guardada ni impide sellar la instalación (docs/primer-arranque.md, sección 11).
@@ -115,14 +121,26 @@ type PasoDeInstalacion struct {
 // MailInput es el correo saliente tal y como llega de la pantalla. `Password` vacío quiere decir
 // **«no la cambies»**, como en el directorio: la contraseña guardada no sale nunca por la API.
 type MailInput struct {
-	Host      string
-	Port      string
-	Secure    bool
-	User      string
-	Password  string
-	FromName  string
-	FromEmail string
+	Host             string
+	Port             string
+	SecurityMode     string
+	InsecureAccepted bool
+	User             string
+	Password         string
+	FromName         string
+	FromEmail        string
+	TestRecipient    string
 }
+
+type intentoCorreo struct {
+	desde time.Time
+	usos  int
+}
+
+var limitesCorreo = struct {
+	sync.Mutex
+	porClave map[string]intentoCorreo
+}{porClave: make(map[string]intentoCorreo)}
 
 // EstáInstalada dice si el asistente ya se terminó.
 func (s *Service) EstáInstalada() (bool, error) {
@@ -150,27 +168,29 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 	}
 
 	estado := EstadoDeInstalacion{
-		Installed:     instalacion.InstalledAt != nil,
-		Name:          nombreDeLaInstalacion(instalacion.InstallationName),
-		Language:      instalacion.Language,
-		PrimaryColor:  colorDeInstalacion(instalacion.PrimaryColor),
-		EntryMethod:   instalacion.EntryMethod,
-		TimeZone:      zonaHorariaDe(instalacion.TimeZone),
-		PublicAppURL:  direccionPublicaDe(instalacion.PublicAppURL),
-		Directory:     vistaDeDirectorio(directorio),
-		Keycloak:      vistaDeKeycloak(keycloak),
-		MailHost:      instalacion.SMTPHost,
-		MailPort:      instalacion.SMTPPort,
-		MailSecure:    instalacion.SMTPSecure,
-		MailUser:      instalacion.SMTPUser,
-		MailFromName:  instalacion.SMTPFromName,
-		MailFromEmail: instalacion.SMTPFromEmail,
-		MailSet:       strings.TrimSpace(instalacion.SMTPHost) != "",
+		Installed:            instalacion.InstalledAt != nil,
+		Name:                 nombreDeLaInstalacion(instalacion.InstallationName),
+		Language:             instalacion.Language,
+		PrimaryColor:         colorDeInstalacion(instalacion.PrimaryColor),
+		EntryMethod:          instalacion.EntryMethod,
+		TimeZone:             zonaHorariaDe(instalacion.TimeZone),
+		PublicAppURL:         direccionPublicaDe(instalacion.PublicAppURL),
+		Directory:            vistaDeDirectorio(directorio),
+		Keycloak:             vistaDeKeycloak(keycloak),
+		MailHost:             instalacion.SMTPHost,
+		MailPort:             instalacion.SMTPPort,
+		MailSecurityMode:     instalacion.SMTPSecurityMode,
+		MailInsecureAccepted: instalacion.SMTPInsecureAck,
+		MailUser:             instalacion.SMTPUser,
+		MailFromName:         instalacion.SMTPFromName,
+		MailFromEmail:        instalacion.SMTPFromEmail,
+		MailSet:              strings.TrimSpace(instalacion.SMTPHost) != "",
 	}
 	if !estado.Installed && !estado.MailSet && strings.TrimSpace(s.correoInicial.Host) != "" {
 		estado.MailHost = s.correoInicial.Host
 		estado.MailPort = s.correoInicial.Port
-		estado.MailSecure = s.correoInicial.Secure
+		estado.MailSecurityMode = s.correoInicial.SecurityMode
+		estado.MailInsecureAccepted = s.correoInicial.InsecureAccepted
 		estado.MailUser = s.correoInicial.User
 		estado.MailFromName = s.correoInicial.FromName
 		estado.MailFromEmail = s.correoInicial.FromEmail
@@ -265,35 +285,109 @@ func (s *Service) ProbarPasoDeLaEntrada(entrada PasoDeInstalacion) error {
 	return nil
 }
 
-// ProbarCorreoDeInstalacion prueba **el correo saliente con los datos que llegan**, sin guardarlo y
-// **sin mandar ningún correo**: comprueba la conexión y la autenticación —host, puerto, TLS, usuario y
-// contraseña—, que es lo que hace falta en el paso 4, donde no hay destinatario.
+// ProbarCorreoDeInstalacion envía el mensaje técnico con los datos y el destinatario efímero que
+// llegan, sin guardar nada.
 //
 // Los datos se validan **igual que al guardar**: sin servidor, sin puerto o sin remitente con arroba
 // se contesta la misma clave que guardaría.
-func (s *Service) ProbarCorreoDeInstalacion(entrada MailInput) error {
+func (s *Service) ProbarCorreoDeInstalacion(entrada MailInput, ip string) (string, error) {
 	if instalada, err := s.EstáInstalada(); err != nil {
-		return err
+		return "", err
 	} else if instalada {
-		return ErrYaInstalada
+		return "", ErrYaInstalada
 	}
-
 	correo, err := s.correoDeInput(entrada, true)
 	if err != nil {
-		return err
+		return "", err
+	}
+	destinatario, err := validarDestinatario(entrada.TestRecipient)
+	if err != nil {
+		return "", err
+	}
+	if !s.admitirPruebaCorreo(ip, destinatario) {
+		return "", ErrCorreoLimite
 	}
 	if s.correo == nil {
-		return errors.New("no hay quien pruebe el correo")
+		return "", errors.New("no hay quien pruebe el correo")
 	}
-
-	if err := s.correo.ProbarCorreo(correo); err != nil {
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return "", traducir(err)
+	}
+	if err := s.correo.ProbarCorreo(correo, destinatario, instalacion.Language, nombreDeLaInstalacion(instalacion.InstallationName)); err != nil {
 		// El motivo —no contesta, o no acepta las credenciales— va al log, que es donde lo ve quien
 		// administra. A la pantalla le llega una clave, nunca un secreto.
-		logs.LogWarning("la prueba del correo del asistente ha fallado: " + err.Error())
-		return ErrCorreoInalcanzable
+		logs.LogWarning("prueba SMTP fallida servidor=" + correo.Host + " ip=" + strings.TrimSpace(ip) + " destino=" + ocultarCorreo(destinatario) + ": " + err.Error())
+		return "", ErrCorreoInalcanzable
 	}
+	logs.LogSuccess("prueba SMTP aceptada servidor=" + correo.Host + " ip=" + strings.TrimSpace(ip) + " destino=" + ocultarCorreo(destinatario))
+	return destinatario, nil
+}
 
-	return nil
+// ProbarCorreoDeConfiguracion ejecuta la misma prueba real desde la ruta administrativa, sin el
+// límite del endpoint público y sin guardar los valores escritos.
+func (s *Service) ProbarCorreoDeConfiguracion(entrada MailInput, ip string) (string, error) {
+	destinatario, err := validarDestinatario(entrada.TestRecipient)
+	if err != nil {
+		return "", err
+	}
+	correo, err := s.correoDeInput(entrada, true)
+	if err != nil {
+		return "", err
+	}
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return "", traducir(err)
+	}
+	if s.correo == nil {
+		return "", errors.New("no hay quien pruebe el correo")
+	}
+	if err := s.correo.ProbarCorreo(correo, destinatario, instalacion.Language, nombreDeLaInstalacion(instalacion.InstallationName)); err != nil {
+		logs.LogWarning("prueba SMTP administrativa fallida servidor=" + correo.Host + " ip=" + strings.TrimSpace(ip) + " destino=" + ocultarCorreo(destinatario) + ": " + err.Error())
+		return "", ErrCorreoInalcanzable
+	}
+	logs.LogSuccess("prueba SMTP administrativa aceptada servidor=" + correo.Host + " ip=" + strings.TrimSpace(ip) + " destino=" + ocultarCorreo(destinatario))
+	return destinatario, nil
+}
+
+func validarDestinatario(valor string) (string, error) {
+	valor = strings.TrimSpace(valor)
+	direccion, err := mail.ParseAddress(valor)
+	if err != nil || direccion.Address != valor {
+		return "", ErrCorreoDestinoInvalido
+	}
+	return direccion.Address, nil
+}
+
+func (s *Service) admitirPruebaCorreo(ip, destinatario string) bool {
+	ahora := s.now()
+	clave := strings.TrimSpace(ip) + "\x00" + strings.ToLower(destinatario)
+	limitesCorreo.Lock()
+	defer limitesCorreo.Unlock()
+	for guardada, intento := range limitesCorreo.porClave {
+		if ahora.Sub(intento.desde) >= 15*time.Minute {
+			delete(limitesCorreo.porClave, guardada)
+		}
+	}
+	intento := limitesCorreo.porClave[clave]
+	if intento.desde.IsZero() || ahora.Sub(intento.desde) >= 15*time.Minute {
+		limitesCorreo.porClave[clave] = intentoCorreo{desde: ahora, usos: 1}
+		return true
+	}
+	if intento.usos >= 5 {
+		return false
+	}
+	intento.usos++
+	limitesCorreo.porClave[clave] = intento
+	return true
+}
+
+func ocultarCorreo(valor string) string {
+	partes := strings.SplitN(valor, "@", 2)
+	if len(partes) != 2 || partes[0] == "" {
+		return "***"
+	}
+	return string([]rune(partes[0])[0]) + "***@" + partes[1]
 }
 
 // correoDeInput arma el correo saliente a partir de lo que llega de la pantalla.
@@ -303,13 +397,17 @@ func (s *Service) ProbarCorreoDeInstalacion(entrada MailInput) error {
 // decir «no la cambies» y se resuelve en el propio paso.
 func (s *Service) correoDeInput(input MailInput, usarLaGuardada bool) (CorreoSaliente, error) {
 	correo := CorreoSaliente{
-		Host:      strings.TrimSpace(input.Host),
-		Port:      strings.TrimSpace(input.Port),
-		Secure:    input.Secure,
-		User:      strings.TrimSpace(input.User),
-		Password:  strings.TrimSpace(input.Password),
-		FromName:  strings.TrimSpace(input.FromName),
-		FromEmail: strings.TrimSpace(input.FromEmail),
+		Host:             strings.TrimSpace(input.Host),
+		Port:             strings.TrimSpace(input.Port),
+		SecurityMode:     strings.TrimSpace(input.SecurityMode),
+		InsecureAccepted: input.InsecureAccepted,
+		User:             strings.TrimSpace(input.User),
+		Password:         strings.TrimSpace(input.Password),
+		FromName:         strings.TrimSpace(input.FromName),
+		FromEmail:        strings.TrimSpace(input.FromEmail),
+	}
+	if correo.SecurityMode == "" {
+		correo.SecurityMode = "starttls"
 	}
 
 	if usarLaGuardada && correo.Password == "" {
@@ -323,6 +421,12 @@ func (s *Service) correoDeInput(input MailInput, usarLaGuardada bool) (CorreoSal
 	// Sin servidor, sin puerto y sin remitente con arroba no hay nada que probar: es la misma
 	// condición que exige el guardado.
 	if correo.Host == "" || correo.Port == "" || !strings.Contains(correo.FromEmail, "@") {
+		return CorreoSaliente{}, ErrCorreoIncompleto
+	}
+	if correo.SecurityMode != "starttls" && correo.SecurityMode != "tls_direct" && correo.SecurityMode != "plain" {
+		return CorreoSaliente{}, ErrCorreoIncompleto
+	}
+	if correo.SecurityMode == "plain" && !correo.InsecureAccepted {
 		return CorreoSaliente{}, ErrCorreoIncompleto
 	}
 
@@ -506,12 +610,13 @@ func (s *Service) guardarPasoDelCorreo(entrada PasoDeInstalacion) error {
 	}
 
 	cambios := map[string]any{
-		"smtp_host":       anfitrion,
-		"smtp_port":       strings.TrimSpace(correo.Port),
-		"smtp_secure":     correo.Secure,
-		"smtp_user":       strings.TrimSpace(correo.User),
-		"smtp_from_name":  strings.TrimSpace(correo.FromName),
-		"smtp_from_email": puesto,
+		"smtp_host":          anfitrion,
+		"smtp_port":          strings.TrimSpace(correo.Port),
+		"smtp_security_mode": correo.SecurityMode,
+		"smtp_insecure_ack":  correo.SecurityMode == "plain" && correo.InsecureAccepted,
+		"smtp_user":          strings.TrimSpace(correo.User),
+		"smtp_from_name":     strings.TrimSpace(correo.FromName),
+		"smtp_from_email":    puesto,
 	}
 	// **Vacío es «no la cambies»**, como en el directorio: la contraseña guardada no sale por la API.
 	if contrasena := strings.TrimSpace(correo.Password); contrasena != "" {
@@ -531,14 +636,15 @@ func (s *Service) SMTP() (SMTPResuelto, error) {
 	}
 	if strings.TrimSpace(instalacion.SMTPHost) != "" {
 		return SMTPResuelto{
-			Host:      instalacion.SMTPHost,
-			Port:      instalacion.SMTPPort,
-			Secure:    instalacion.SMTPSecure,
-			User:      instalacion.SMTPUser,
-			Password:  instalacion.SMTPPassword,
-			FromName:  instalacion.SMTPFromName,
-			FromEmail: instalacion.SMTPFromEmail,
-			Set:       true,
+			Host:             instalacion.SMTPHost,
+			Port:             instalacion.SMTPPort,
+			SecurityMode:     instalacion.SMTPSecurityMode,
+			InsecureAccepted: instalacion.SMTPInsecureAck,
+			User:             instalacion.SMTPUser,
+			Password:         instalacion.SMTPPassword,
+			FromName:         instalacion.SMTPFromName,
+			FromEmail:        instalacion.SMTPFromEmail,
+			Set:              true,
 		}, nil
 	}
 
@@ -548,14 +654,15 @@ func (s *Service) SMTP() (SMTPResuelto, error) {
 // SMTPResuelto es el correo saliente que se le da al módulo de correo. `Set` en falso quiere decir
 // «no hay nada configurado»: el módulo usa entonces lo del entorno.
 type SMTPResuelto struct {
-	Host      string
-	Port      string
-	Secure    bool
-	User      string
-	Password  string
-	FromName  string
-	FromEmail string
-	Set       bool
+	Host             string
+	Port             string
+	SecurityMode     string
+	InsecureAccepted bool
+	User             string
+	Password         string
+	FromName         string
+	FromEmail        string
+	Set              bool
 }
 
 // El sello lo pone el asistente, y **con la identidad de nadie**: no hay sesión todavía. Se marca el

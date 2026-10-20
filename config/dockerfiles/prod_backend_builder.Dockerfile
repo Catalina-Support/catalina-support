@@ -11,4 +11,5 @@ RUN go mod download
 
 COPY backend/ ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o /build/catalina-support .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o /build/catalina-support . && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o /build/catalina-migrate ./cmd/migrate

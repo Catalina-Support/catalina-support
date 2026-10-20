@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/smtp"
+	"strings"
 	"time"
 )
 
@@ -22,8 +23,8 @@ type Sender struct {
 	password  string
 	fromName  string
 	fromEmail string
-	secure    bool
 	timeout   time.Duration
+	lookupIP  func(string) ([]net.IP, error)
 	// instalacion da el correo saliente: **vive en la configuración**, como el directorio y Keycloak.
 	// Ya no hay respaldo en el entorno (decisión del responsable, 2026-09-30).
 	instalacion Instalacion
@@ -31,7 +32,7 @@ type Sender struct {
 
 // NewSender construye el remitente a partir de la configuración del entorno.
 func NewSender() *Sender {
-	return &Sender{timeout: 15 * time.Second}
+	return &Sender{timeout: 15 * time.Second, lookupIP: net.LookupIP}
 }
 
 // SetInstalacion fija de dónde sale el correo saliente cuando la instalación tiene uno puesto. Lo
@@ -78,21 +79,7 @@ func (s *Sender) Send(to []string, subject, htmlBody string) error {
 		return err
 	}
 
-	address := net.JoinHostPort(correo.Host, correo.Port)
-
-	// Conexión cifrada desde el principio (el puerto 465 de siempre).
-	if correo.Secure {
-		return s.sendSecure(to, message, correo)
-	}
-
-	// Sin cifrado explícito se usa el camino de la biblioteca estándar, que negocia STARTTLS si el
-	// servidor lo ofrece.
-	var auth smtp.Auth
-	if correo.User != "" {
-		auth = smtp.PlainAuth("", correo.User, correo.Password, correo.Host)
-	}
-
-	return smtp.SendMail(address, auth, correo.FromEmail, to, message)
+	return s.send(to, message, correo)
 }
 
 // Probar abre la conexión y **valida la autenticación, sin mandar ningún correo**: no hay MAIL FROM,
@@ -115,12 +102,26 @@ func (s *Sender) Probar(correo CorreoSaliente) error {
 	return cliente.Quit()
 }
 
+// SendWithConfig entrega un mensaje con una configuración todavía no guardada. Es el camino de la
+// prueba real del asistente y de Configuración; no modifica la configuración activa del Sender.
+func (s *Sender) SendWithConfig(to []string, subject, htmlBody string, correo CorreoSaliente) error {
+	if correo.Host == "" || correo.Port == "" || correo.FromEmail == "" {
+		return ErrNotConfigured
+	}
+	if len(to) == 0 {
+		return errors.New("mail.to.empty")
+	}
+	message, err := Build(correo.FromName, correo.FromEmail, to, subject, htmlBody)
+	if err != nil {
+		return err
+	}
+	return s.send(to, message, correo)
+}
+
 // conectar deja un cliente SMTP **ya conectado y autenticado**, listo para entregar un mensaje o para
 // comprobar la conexión. El cifrado directo (puerto 465) y STARTTLS (587) se resuelven aquí, con el
 // mismo tiempo límite: un servidor que no responde no puede dejar colgada una petición.
 func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
-	address := net.JoinHostPort(correo.Host, correo.Port)
-
 	espera := s.timeout
 	if espera == 0 {
 		espera = 15 * time.Second
@@ -128,7 +129,8 @@ func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
 
 	var cliente *smtp.Client
 
-	if correo.Secure {
+	if correo.SecurityMode == "tls_direct" {
+		address := net.JoinHostPort(correo.Host, correo.Port)
 		conexion, err := tls.DialWithDialer(
 			&net.Dialer{Timeout: espera},
 			"tcp",
@@ -145,6 +147,17 @@ func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
 			return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
 		}
 	} else {
+		address := net.JoinHostPort(correo.Host, correo.Port)
+		if correo.SecurityMode == "plain" {
+			if !correo.InsecureAccepted {
+				return nil, fmt.Errorf("mail.smtp.connect: insecure mode not accepted")
+			}
+			var err error
+			address, err = direccionPrivada(correo.Host, correo.Port, s.lookupIP)
+			if err != nil {
+				return nil, fmt.Errorf("mail.smtp.connect: %w", err)
+			}
+		}
 		conexion, err := net.DialTimeout("tcp", address, espera)
 		if err != nil {
 			return nil, fmt.Errorf("mail.smtp.connect: %w", err)
@@ -156,8 +169,12 @@ func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
 			return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
 		}
 
-		// Si el servidor ofrece STARTTLS, se sube la conexión antes de mandar credenciales.
-		if soportado, _ := cliente.Extension("STARTTLS"); soportado {
+		if correo.SecurityMode == "starttls" {
+			soportado, _ := cliente.Extension("STARTTLS")
+			if !soportado {
+				cliente.Close()
+				return nil, fmt.Errorf("mail.smtp.handshake: STARTTLS not supported")
+			}
 			if err := cliente.StartTLS(&tls.Config{ServerName: correo.Host, MinVersion: tls.VersionTLS12}); err != nil {
 				cliente.Close()
 				return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
@@ -166,7 +183,11 @@ func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
 	}
 
 	if correo.User != "" {
-		if err := cliente.Auth(smtp.PlainAuth("", correo.User, correo.Password, correo.Host)); err != nil {
+		auth := smtp.PlainAuth("", correo.User, correo.Password, correo.Host)
+		if correo.SecurityMode == "plain" {
+			auth = loginAuth{user: correo.User, password: correo.Password}
+		}
+		if err := cliente.Auth(auth); err != nil {
 			cliente.Close()
 			return nil, fmt.Errorf("mail.smtp.auth: %w", err)
 		}
@@ -175,7 +196,30 @@ func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
 	return cliente, nil
 }
 
-func (s *Sender) sendSecure(to []string, message []byte, correo CorreoSaliente) error {
+// loginAuth implementa el mecanismo LOGIN que anuncia el relay interno heredado. Sólo se selecciona
+// después de validar el modo `plain`, su aceptación y la dirección privada; los modos cifrados
+// conservan PLAIN dentro de TLS.
+type loginAuth struct {
+	user     string
+	password string
+}
+
+func (a loginAuth) Start(*smtp.ServerInfo) (string, []byte, error) {
+	return "LOGIN", []byte(a.user), nil
+}
+
+func (a loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+	if !more {
+		return nil, nil
+	}
+	prompt := strings.ToLower(string(fromServer))
+	if strings.Contains(prompt, "password") || strings.Contains(prompt, "pass") {
+		return []byte(a.password), nil
+	}
+	return nil, errors.New("unexpected SMTP AUTH LOGIN challenge")
+}
+
+func (s *Sender) send(to []string, message []byte, correo CorreoSaliente) error {
 	cliente, err := s.conectar(correo)
 	if err != nil {
 		return err
@@ -203,4 +247,27 @@ func (s *Sender) sendSecure(to []string, message []byte, correo CorreoSaliente) 
 	}
 
 	return cliente.Quit()
+}
+
+// direccionPrivada resuelve una sola vez y devuelve una de las direcciones ya comprobadas. Todas
+// deben ser IPv4 privadas o loopback: una respuesta DNS mixta no puede sacar credenciales de la red.
+func direccionPrivada(host, port string, lookup func(string) ([]net.IP, error)) (string, error) {
+	direcciones, err := lookup(host)
+	if err != nil {
+		return "", err
+	}
+	if len(direcciones) == 0 {
+		return "", errors.New("host without addresses")
+	}
+	var elegida net.IP
+	for _, direccion := range direcciones {
+		ipv4 := direccion.To4()
+		if ipv4 == nil || (!ipv4.IsPrivate() && !ipv4.IsLoopback()) {
+			return "", errors.New("unencrypted SMTP requires a private IPv4 destination")
+		}
+		if elegida == nil {
+			elegida = ipv4
+		}
+	}
+	return net.JoinHostPort(elegida.String(), port), nil
 }

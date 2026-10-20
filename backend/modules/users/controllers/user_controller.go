@@ -77,6 +77,33 @@ func (c *UserController) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (c *UserController) SearchDirectory(w http.ResponseWriter, r *http.Request) {
+	personas, err := c.service.SearchDirectory(r.URL.Query().Get("q"))
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	respuesta := make([]dtos.DirectoryPersonResponse, 0, len(personas))
+	for _, p := range personas {
+		respuesta = append(respuesta, dtos.DirectoryPersonResponse{Username: p.Username, Name: p.Name, LastName: p.LastName, Email: p.Email})
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.DirectorySearchResponse{Users: respuesta})
+}
+
+func (c *UserController) CreateDirectory(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.DirectoryCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	cuenta, err := c.service.CreateFromDirectory(entrada.Username, entrada.Role, entrada.IsAdmin, entrada.ConfirmLink, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, dtos.UserEnvelope{User: dtos.NewUserResponse(cuenta)})
+}
+
 // ResetPassword lanza el enlace otra vez: es la salida para quien no recibió el primero, y no hace
 // falta borrar y volver a crear nada.
 func (c *UserController) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +150,9 @@ func (c *UserController) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, dtos.NewUsersResponse(resultado))
+	respuesta := dtos.NewUsersResponse(resultado)
+	respuesta.DirectoryEnabled = c.service.DirectoryEnabled()
+	httpx.WriteJSON(w, http.StatusOK, respuesta)
 }
 
 // Show devuelve la ficha de una cuenta. Es de administrador: Soporte necesita la lista para buscar a
@@ -345,6 +374,12 @@ func (c *UserController) fail(w http.ResponseWriter, r *http.Request, err error)
 	case errors.Is(err, services.ErrDirectoryUnavailable):
 		// No se pudo comprobar con el directorio: es un fallo del servidor y no de quien lo pide.
 		httpx.WriteError(w, http.StatusServiceUnavailable, "users.directory.unavailable")
+	case errors.Is(err, services.ErrDirectoryQueryShort):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "users.directory.queryShort")
+	case errors.Is(err, services.ErrDirectoryLinkConfirmation):
+		httpx.WriteError(w, http.StatusConflict, "users.directory.linkConfirmation")
+	case errors.Is(err, services.ErrDirectoryAlreadyExists):
+		httpx.WriteError(w, http.StatusConflict, "users.directory.alreadyExists")
 	case errors.Is(err, services.ErrSelfDeactivation):
 		// Desactivarse es quedarse fuera al instante y sin poder volver.
 		httpx.WriteError(w, http.StatusForbidden, "users.selfDeactivation")

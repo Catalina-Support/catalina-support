@@ -30,7 +30,13 @@ describe('DashboardPage timeline', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
-        { provide: DashboardService, useValue: { summary: () => Promise.resolve(summary(closed)), export: () => Promise.resolve(new Blob()) } },
+        {
+          provide: DashboardService,
+          useValue: {
+            summary: () => Promise.resolve(summary(closed)),
+            export: () => Promise.resolve(new Blob()),
+          },
+        },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
         { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
       ],
@@ -49,7 +55,9 @@ describe('DashboardPage timeline', () => {
     const fixture = await mount(0);
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('[aria-label="2026-10-19 · Created: 3"]')?.textContent).toContain('3');
+    expect(root.querySelector('[aria-label="2026-10-19 · Created: 3"]')?.textContent).toContain(
+      '3',
+    );
     expect(root.querySelector('[aria-label="2026-10-19 · Closed: 0"]')?.textContent).toContain('0');
     expect(root.textContent).toContain('No tickets closed in this period.');
     expect(root.querySelector('.bg-dashboard-created')).not.toBeNull();
@@ -62,5 +70,14 @@ describe('DashboardPage timeline', () => {
 
     expect(root.querySelector('[aria-label="2026-10-19 · Closed: 2"]')?.textContent).toContain('2');
     expect(root.textContent).not.toContain('No tickets closed in this period.');
+  });
+
+  it('shows a download icon before the XLSX export label', async () => {
+    const fixture = await mount(0);
+    const button = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((candidate) => candidate.textContent?.trim() === 'XLSX');
+
+    expect(button?.querySelector('[data-icono="descargar"]')).not.toBeNull();
   });
 });
