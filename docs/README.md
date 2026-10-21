@@ -1,7 +1,11 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-21
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-21:** `demo.md` y los
+> documentos relacionados describen la demo pública aislada, sus defensas configurables y su
+> operación privada con restauración A/B diaria. La instalación real quedó publicada por HTTPS.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `ambientes.md`,
 > `arquitectura.md` y `prueba-local.md` sustituyen la migración manual de producción por un ejecutor
@@ -548,7 +552,7 @@ escribe código sin un documento aprobado antes.
 | `modules/ai.md` | **as-built** | Summary y Last action separados por audiencia |
 | `modules/tickets.md` | **as-built** | Comentarios privados, adjuntos, búsqueda y auditoría del principal |
 | `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
-| `demo.md` | **propuesta** | Despliegue, restauración, seguridad y operación de la demo pública |
+| `demo.md` | **as-built** | Despliegue, restauración, seguridad y operación de la demo pública |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
