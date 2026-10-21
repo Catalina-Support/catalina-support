@@ -31,6 +31,9 @@ export interface Marca {
   readonly development?: boolean;
   readonly language?: string;
   readonly settingsVersion?: number;
+  readonly sharedEnvironment?: boolean;
+  readonly sharedNotice?: string;
+  readonly sharedReset?: string;
   /**
    * La zona horaria de la instalación, **en nombre IANA** (`America/Guayaquil`).
    *
@@ -167,6 +170,10 @@ export class BrandService implements OnDestroy {
    * navegador (`shared/fechas.ts`).
    */
   readonly zonaHoraria = computed(() => this.marcaActual()?.timeZone?.trim() ?? '');
+
+  readonly entornoCompartido = computed(() => this.marcaActual()?.sharedEnvironment === true);
+  readonly avisoCompartido = computed(() => this.marcaActual()?.sharedNotice?.trim() ?? '');
+  readonly reinicioCompartido = computed(() => this.marcaActual()?.sharedReset?.trim() ?? '');
 
   /**
    * Lee la marca y la aplica.

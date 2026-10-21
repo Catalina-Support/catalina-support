@@ -101,8 +101,11 @@ type Config struct {
 	// TokenSecret firma el `state` de OIDC. Es el mismo secreto que firma el token de sesión: el
 	// `state` es un valor que emitimos nosotros y hay que poder reconocer, y no hace falta un segundo
 	// secreto para eso (docs/modules/auth.md, sección 5.3).
-	TokenSecret string
+	TokenSecret          string
+	ProtectedEmailSuffix string
 }
+
+var ErrSharedAccountProtected = errors.New("auth.password.sharedAccount")
 
 // Service es el módulo.
 type Service struct {
@@ -677,6 +680,9 @@ func (s *Service) Invite(account auth.Account, requestedBy *int64) error {
 
 // Recovery emite el enlace de recuperación (1 hora) y manda el correo.
 func (s *Service) Recovery(account auth.Account, requestedBy *int64) error {
+	if s.protectedAccount(account.Email) {
+		return ErrSharedAccountProtected
+	}
 	return s.sendLink(account, repositories.PurposeRecovery, TemplateRecovery, RecoveryDuration, requestedBy)
 }
 
@@ -697,6 +703,9 @@ func (s *Service) ForgotPassword(email string) error {
 
 	// A una cuenta de directorio no se le manda nada: su contraseña no está aquí.
 	if account.IsDirectory() || !account.IsActive {
+		return nil
+	}
+	if s.protectedAccount(account.Email) {
 		return nil
 	}
 
@@ -724,6 +733,9 @@ func (s *Service) ResetPassword(token, password, ip string) error {
 	if err != nil {
 		return err
 	}
+	if s.protectedAccount(account.Email) {
+		return ErrSharedAccountProtected
+	}
 
 	if err := s.accounts.SetPasswordHash(account.ID, hash); err != nil {
 		return err
@@ -747,6 +759,9 @@ func (s *Service) ChangePassword(identity auth.Identity, current, password, ip s
 	if err != nil {
 		return err
 	}
+	if s.protectedAccount(account.Email) {
+		return ErrSharedAccountProtected
+	}
 
 	if account.IsDirectory() {
 		return ErrPasswordNotLocal
@@ -768,6 +783,11 @@ func (s *Service) ChangePassword(identity auth.Identity, current, password, ip s
 	s.notifyPasswordChanged(account, ip)
 
 	return nil
+}
+
+func (s *Service) protectedAccount(email string) bool {
+	suffix := strings.ToLower(strings.TrimSpace(s.cfg.ProtectedEmailSuffix))
+	return suffix != "" && strings.HasSuffix(strings.ToLower(strings.TrimSpace(email)), suffix)
 }
 
 // sendLink emite el enlace, lo guarda y manda el correo.

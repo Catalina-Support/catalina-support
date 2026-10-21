@@ -91,6 +91,14 @@ func (s *Service) Attach(number string, file multipart.File, cabecera *multipart
 	if cabecera.Size > MaxAttachmentBytes {
 		return Attachment{}, ErrAttachmentTooBig
 	}
+	if s.attachmentScanner != nil {
+		if err := s.attachmentScanner.Scan(file); err != nil {
+			return Attachment{}, err
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return Attachment{}, ErrAttachmentScanUnavailable
+		}
+	}
 
 	guardado, tamano, err := s.guardarArchivo(file, nombre, carpeta)
 	if err != nil {

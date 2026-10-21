@@ -35,6 +35,10 @@ import { Tarjeta } from '../../shared/components/tarjeta';
         -->
         <app-logo class="w-full" tamano="entrada" />
 
+        @if (avisoCompartido(); as aviso) {
+          <app-aviso class="w-full" forma="informacion" [texto]="aviso" />
+        }
+
         <!-- El ancho también aquí: si no, la tarjeta encoge a lo que mida su contenido y queda más
              estrecha que el logo y los controles (medido: 329 contra 380). -->
         <app-tarjeta class="w-full" [titulo]="t().entrada.titulo" [descripcion]="nombre()">
@@ -101,7 +105,7 @@ import { Tarjeta } from '../../shared/components/tarjeta';
               contraseña no es de aquí, y un enlace que manda un correo para cambiarla sería mentira
               (docs/modules/auth.md, sección 5.2).
             -->
-            @if (caminos().local) {
+            @if (caminos().local && !entornoCompartido()) {
               <a routerLink="/forgot-password" class="text-center text-sm text-primario underline">
                 {{ t().entrada.olvidada }}
               </a>
@@ -165,7 +169,8 @@ import { Tarjeta } from '../../shared/components/tarjeta';
               [href]="fuente.url"
               target="_blank"
               rel="noopener noreferrer"
-            >{{ t().entrada.codigoFuente }} · {{ fuente.licencia }}</a>
+              >{{ t().entrada.codigoFuente }} · {{ fuente.licencia }}</a
+            >
           }
         </div>
       </div>
@@ -178,6 +183,8 @@ export class LoginPage implements OnInit {
   private readonly marca = inject(BrandService);
   private readonly router = inject(Router);
   private readonly ruta = inject(ActivatedRoute);
+  protected readonly avisoCompartido = this.marca.avisoCompartido;
+  protected readonly entornoCompartido = this.marca.entornoCompartido;
 
   protected readonly email = signal('');
   protected readonly password = signal('');
