@@ -1,12 +1,7 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-21
->
-> **Enmienda coordinada implementada y verificada el 2026-10-21: demo pública alojada.** La demo
-> usa capacidades genéricas opt-in del producto y operación concreta en el repositorio privado;
-> quedó publicada por HTTPS, con IA local, antivirus, cuotas y restauración A/B diaria. Producción
-> no se modificó.
+> **Última actualización:** 2026-10-20
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 50 añade la tarjeta **Icono del sitio** y define
 > la actualización inmediata del favicon en todas las pestañas. El responsable cerró 1A–14A y
