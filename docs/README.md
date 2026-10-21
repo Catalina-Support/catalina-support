@@ -548,7 +548,7 @@ escribe código sin un documento aprobado antes.
 | `modules/ai.md` | **as-built** | Summary y Last action separados por audiencia |
 | `modules/tickets.md` | **as-built** | Comentarios privados, adjuntos, búsqueda y auditoría del principal |
 | `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
-| `demo.md` | **propuesta** | Despliegue, restauración, seguridad y operación de la demo pública |
+| `entornos-compartidos.md` | **as-built** | Capacidades genéricas para instalaciones públicas compartidas |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
