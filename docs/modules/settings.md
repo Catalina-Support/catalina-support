@@ -1,12 +1,7 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-21
->
-> **Enmienda coordinada implementada y verificada el 2026-10-21: demo pública alojada.** La demo
-> usa capacidades genéricas opt-in del producto y operación concreta en el repositorio privado;
-> quedó publicada por HTTPS, con IA local, antivirus, cuotas y restauración A/B diaria. Producción
-> no se modificó.
+> **Última actualización:** 2026-10-20
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: icono del sitio configurable.** La sección 25 incorpora un
 > favicon propio e independiente de los dos logos, con administración en `/setup` y Configuración,

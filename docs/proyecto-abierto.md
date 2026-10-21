@@ -1,12 +1,7 @@
 # Proyecto abierto, contribuciones y marca
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-21
->
-> **Enmienda coordinada implementada y verificada el 2026-10-21: demo pública alojada.** La demo
-> usa capacidades genéricas opt-in del producto y operación concreta en el repositorio privado;
-> quedó publicada por HTTPS, con IA local, antivirus, cuotas y restauración A/B diaria. Producción
-> no se modificó.
+> **Última actualización:** 2026-10-20
 >
 > **Novena enmienda implementada el 2026-10-20: traslado del repositorio.** El código fuente se
 > trasladó a la organización `Catalina-Support`, bajo
@@ -615,10 +610,9 @@ locales del seeder y su contraseña común, agrupadas por Usuario, Soporte y Des
 ni ofrece la cuenta `admin`**. Un recorrido corto propone crear como Usuario, atender y escalar como
 Soporte y resolver como Desarrollo.
 
-Los datos de la demo se restauran diariamente a las 03:00 de `America/Guayaquil`. El README explica
-que los cambios pueden desaparecer; el script A/B, su calendario y la infraestructura concreta
-viven fuera de este repositorio público, en `Catalina-Support/demo`. El producto sólo contiene las
-capacidades genéricas que permiten presentar y limitar cualquier entorno compartido.
+Los datos de la demo se restaurarán periódicamente mediante una operación del servidor. El README
+sólo explica que los cambios pueden desaparecer: el script, su implementación, su frecuencia y la
+infraestructura que lo ejecuta quedan fuera de este repositorio y de esta propuesta.
 
 ### 17.3 Instalación y documentación vinculada
 

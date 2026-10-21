@@ -100,7 +100,7 @@ completo.
 | `docs/prueba-local.md` | **as-built**: verificación de aceleración, respaldo y rollback |
 | `docs/proyecto-abierto.md` | **as-built**: portada bilingüe, sitio oficial, demo y Ko-fi |
 | `docs/modules/dashboard.md` | **as-built**: Dashboard agregado, reportería y exportación XLSX |
-| `docs/demo.md` | **as-built**: despliegue, restauración, seguridad y operación de la demo pública |
+| `docs/entornos-compartidos.md` | **as-built**: aviso, cuotas, cuentas protegidas y antivirus configurables |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
