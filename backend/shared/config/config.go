@@ -121,6 +121,20 @@ type Config struct {
 	// (docs/modules/mail.md, sección 4).
 	PublicAppURL string
 
+	// SharedEnvironment presenta una instalación pública y desechable. Los valores vacíos mantienen
+	// el comportamiento de una instalación normal; la demo los define desde su repositorio privado.
+	SharedEnvironment       bool
+	SharedEnvironmentNotice string
+	SharedEnvironmentReset  string
+	ProtectedEmailSuffix    string
+	AntivirusAddress        string
+	LoginPerMinute          int
+	AIPerMinute             int
+	AIPerDay                int
+	CommentsPerMinute       int
+	AttachmentBytesPerDay   int
+	ExportsPerHour          int
+
 	// AI es el motor de IA que redacta el motivo y la última acción del ticket
 	// (docs/modules/ai.md). **Puede faltar**: sin motor, los dos campos se quedan sin texto y la
 	// mesa de ayuda funciona entera; es la condición que manda sobre este módulo.
@@ -154,18 +168,29 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg := Config{
-		Environment:     get("ENVIRONMENT", "dev"),
-		AppPort:         get("APP_PORT", "11002"),
-		LogsFolder:      get("LOGS_FOLDER", "/logs"),
-		FilesPath:       get("FILES_PATH", "/files"),
-		TokenSecret:     strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
-		AICredentialKey: aiCredentialKey,
-		AIManagerToken:  strings.TrimSpace(os.Getenv("AI_MANAGER_TOKEN")),
-		AdminPassword:   os.Getenv("ADMIN_PASSWORD"),
-		PublicAppURL:    strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
-		AIURL:           strings.TrimSpace(os.Getenv("AI_URL")),
-		AIModel:         get("AI_MODEL", "qwen2.5-1.5b-instruct"),
-		AIPalabras:      getInt("AI_PALABRAS", 40),
+		Environment:             get("ENVIRONMENT", "dev"),
+		AppPort:                 get("APP_PORT", "11002"),
+		LogsFolder:              get("LOGS_FOLDER", "/logs"),
+		FilesPath:               get("FILES_PATH", "/files"),
+		TokenSecret:             strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
+		AICredentialKey:         aiCredentialKey,
+		AIManagerToken:          strings.TrimSpace(os.Getenv("AI_MANAGER_TOKEN")),
+		AdminPassword:           os.Getenv("ADMIN_PASSWORD"),
+		PublicAppURL:            strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
+		SharedEnvironment:       getBool("SHARED_ENVIRONMENT", false),
+		SharedEnvironmentNotice: strings.TrimSpace(os.Getenv("SHARED_ENVIRONMENT_NOTICE")),
+		SharedEnvironmentReset:  strings.TrimSpace(os.Getenv("SHARED_ENVIRONMENT_RESET")),
+		ProtectedEmailSuffix:    strings.ToLower(strings.TrimSpace(os.Getenv("PROTECTED_EMAIL_SUFFIX"))),
+		AntivirusAddress:        strings.TrimSpace(os.Getenv("ANTIVIRUS_ADDRESS")),
+		LoginPerMinute:          getInt("LIMIT_LOGIN_PER_MINUTE", 0),
+		AIPerMinute:             getInt("LIMIT_AI_PER_MINUTE", 0),
+		AIPerDay:                getInt("LIMIT_AI_PER_DAY", 0),
+		CommentsPerMinute:       getInt("LIMIT_COMMENTS_PER_MINUTE", 0),
+		AttachmentBytesPerDay:   getInt("LIMIT_ATTACHMENT_BYTES_PER_DAY", 0),
+		ExportsPerHour:          getInt("LIMIT_EXPORTS_PER_HOUR", 0),
+		AIURL:                   strings.TrimSpace(os.Getenv("AI_URL")),
+		AIModel:                 get("AI_MODEL", "qwen2.5-1.5b-instruct"),
+		AIPalabras:              getInt("AI_PALABRAS", 40),
 		// **Cuatro minutos por defecto**, y no es un número redondo: medido, un ticket de 6 000
 		// caracteres tarda ~82 s sólo en leerse y luego redacta a 5-9 palabras por segundo
 		// (`docs/modules/ai.md`, sección 2). Un tiempo corto haría fallar justo los tickets largos.

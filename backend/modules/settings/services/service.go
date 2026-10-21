@@ -124,15 +124,27 @@ type Service struct {
 	correo ProberDeCorreo
 	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
 	// envío: el módulo mail sigue leyendo la configuración persistida.
-	correoInicial   MailInput
-	aiCredentialKey []byte
-	aiManagerURL    string
-	aiManagerToken  string
+	correoInicial     MailInput
+	aiCredentialKey   []byte
+	aiManagerURL      string
+	aiManagerToken    string
+	publicEnvironment PublicEnvironment
+}
+
+// PublicEnvironment contiene únicamente datos seguros para mostrar antes de iniciar sesión.
+type PublicEnvironment struct {
+	Shared bool
+	Notice string
+	Reset  string
 }
 
 // NewService construye el servicio.
 func NewService(repo Repositorio, filesPath string) *Service {
 	return &Service{repo: repo, filesPath: filesPath, now: time.Now}
+}
+
+func (s *Service) SetPublicEnvironment(environment PublicEnvironment) {
+	s.publicEnvironment = environment
 }
 
 // SetCorreoInicial fija las sugerencias editables del paso de correo en una instalación vacía.
@@ -727,7 +739,10 @@ type Public struct {
 	// **TimeZone es la zona horaria de la instalacion** (nombre IANA): con ella se leen todas las
 	// fechas de la interfaz. Viaja en la marca porque la entrada se pinta antes de entrar y porque
 	// cualquier pantalla necesita formatear una fecha (docs/modules/settings.md, decision 15).
-	TimeZone string
+	TimeZone          string
+	SharedEnvironment bool
+	SharedNotice      string
+	SharedReset       string
 }
 
 // ResolveColors resuelve un color **sin guardarlo**, para la vista previa de la pantalla.
@@ -746,19 +761,22 @@ func (s *Service) PublicBrand() (Public, error) {
 	}
 
 	publico := Public{
-		Name:            nombreDeLaInstalacion(instalacion.InstallationName),
-		Version:         version.Version,
-		License:         version.License,
-		SourceURL:       version.SourceURL,
-		Development:     version.Development,
-		Language:        instalacion.Language,
-		SettingsVersion: instalacion.SettingsVersion,
-		Colors:          colorsFrom(instalacion.PrimaryColor),
-		HasLight:        instalacion.LogoLight != nil,
-		HasDark:         instalacion.LogoDark != nil,
-		HasSiteIcon:     instalacion.SiteIcon != nil,
-		LogoVersion:     s.versionDe(instalacion),
-		TimeZone:        zonaHorariaDe(instalacion.TimeZone),
+		Name:              nombreDeLaInstalacion(instalacion.InstallationName),
+		Version:           version.Version,
+		License:           version.License,
+		SourceURL:         version.SourceURL,
+		Development:       version.Development,
+		Language:          instalacion.Language,
+		SettingsVersion:   instalacion.SettingsVersion,
+		Colors:            colorsFrom(instalacion.PrimaryColor),
+		HasLight:          instalacion.LogoLight != nil,
+		HasDark:           instalacion.LogoDark != nil,
+		HasSiteIcon:       instalacion.SiteIcon != nil,
+		LogoVersion:       s.versionDe(instalacion),
+		SharedEnvironment: s.publicEnvironment.Shared,
+		SharedNotice:      s.publicEnvironment.Notice,
+		SharedReset:       s.publicEnvironment.Reset,
+		TimeZone:          zonaHorariaDe(instalacion.TimeZone),
 	}
 
 	return publico, nil

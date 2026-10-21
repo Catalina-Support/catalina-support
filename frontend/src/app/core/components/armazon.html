@@ -1,6 +1,14 @@
 <!--
   El armazón: el menú lateral y el contenido, sin barra superior (interfaz-y-experiencia, 3.1).
 -->
+@if (avisoCompartido(); as aviso) {
+  <div
+    class="sticky top-0 z-[60] border-b border-borde bg-superficie px-4 py-2 text-center text-sm text-texto"
+    role="status"
+  >
+    {{ aviso }}
+  </div>
+}
 <div class="flex min-h-dvh">
   @if (avisoAdministrativo()) {
     <div class="fixed right-4 top-4 z-[70] max-w-md">

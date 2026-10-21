@@ -166,16 +166,19 @@ type BrandResponse struct {
 	// Version es la versión del software, **sin la `v`**: la `v` la pone la interfaz. Va aquí porque
 	// la marca es lo que la aplicación pide al arrancar, y así el menú y la pantalla de entrada la
 	// tienen sin una segunda llamada (docs/modules/settings.md, sección 5.9).
-	Version         string    `json:"version"`
-	License         string    `json:"license"`
-	SourceURL       string    `json:"sourceUrl"`
-	Development     bool      `json:"development"`
-	Language        string    `json:"language"`
-	SettingsVersion int64     `json:"settingsVersion"`
-	PrimaryColor    string    `json:"primaryColor"`
-	Colors          ColorsDto `json:"colors"`
-	Logo            BrandDto  `json:"logo"`
-	LogoVersion     string    `json:"logoVersion"`
+	Version           string    `json:"version"`
+	License           string    `json:"license"`
+	SourceURL         string    `json:"sourceUrl"`
+	Development       bool      `json:"development"`
+	Language          string    `json:"language"`
+	SettingsVersion   int64     `json:"settingsVersion"`
+	PrimaryColor      string    `json:"primaryColor"`
+	Colors            ColorsDto `json:"colors"`
+	Logo              BrandDto  `json:"logo"`
+	LogoVersion       string    `json:"logoVersion"`
+	SharedEnvironment bool      `json:"sharedEnvironment"`
+	SharedNotice      string    `json:"sharedNotice"`
+	SharedReset       string    `json:"sharedReset"`
 }
 
 // ColorsDto son los cuatro valores del color institucional, ya resueltos.
@@ -266,7 +269,10 @@ func NewBrandResponse(public services.Public) BrandResponse {
 			Dark:     LogoDto{Filled: public.HasDark},
 			SiteIcon: LogoDto{Filled: public.HasSiteIcon},
 		},
-		LogoVersion: public.LogoVersion,
+		LogoVersion:       public.LogoVersion,
+		SharedEnvironment: public.SharedEnvironment,
+		SharedNotice:      public.SharedNotice,
+		SharedReset:       public.SharedReset,
 	}
 }
 

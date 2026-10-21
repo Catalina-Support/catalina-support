@@ -1077,6 +1077,7 @@ export const ES = {
    */
   errores: {
     'error interno': 'Algo ha fallado por nuestra parte. Vuelve a intentarlo en un momento.',
+    'rateLimit.exceeded': 'Has alcanzado el límite temporal de uso. Inténtalo más tarde.',
 
     // El motor de IA (docs/modules/ai.md): o no está, o contestó algo que no vale.
     'ai.unavailable': 'El motor de resúmenes no está disponible. Los tickets funcionan igual.',
@@ -1094,6 +1095,8 @@ export const ES = {
     'auth.session.invalid': 'Tu sesión no vale. Entra otra vez.',
     'auth.session.expired': 'Tu sesión ha caducado. Entra otra vez.',
     'auth.forbidden': 'Tu cuenta no tiene permiso para eso.',
+    'auth.password.sharedAccount':
+      'Las contraseñas de las cuentas de la demo pública son fijas y se restauran cada día.',
     'auth.token.expired': 'Ese enlace ha caducado. Pide otro.',
     'auth.token.used':
       'Ese enlace ya no vale: puede que se haya usado ya, o que lo sustituyera otro más nuevo.',
@@ -1226,6 +1229,9 @@ export const ES = {
     'tickets.attachment.extension': 'Ese tipo de archivo no se admite.',
     'tickets.attachment.tooBig': 'Ese archivo pesa demasiado: el máximo son 25 MB.',
     'tickets.attachment.invalid': 'No se ha podido leer el archivo.',
+    'tickets.attachment.unsafe': 'El adjunto fue rechazado porque puede ser inseguro.',
+    'tickets.attachment.scanUnavailable':
+      'El escáner de adjuntos no está disponible. Inténtalo más tarde.',
     'tickets.attachment.notFound': 'Ese adjunto no existe.',
 
     // Las claves de la categoría y de la etiqueta (docs/modules/tickets.md, sección 2.3.2).
