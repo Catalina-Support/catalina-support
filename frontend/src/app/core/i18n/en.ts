@@ -1036,6 +1036,7 @@ export const EN: Textos = {
 
   errores: {
     'error interno': 'Something failed on our side. Please try again in a moment.',
+    'rateLimit.exceeded': 'You have reached the temporary usage limit. Try again later.',
 
     'ai.unavailable': 'The summary engine is not available. Tickets work just the same.',
     'ai.invalid': 'The summary engine answered something we cannot read.',
@@ -1052,6 +1053,8 @@ export const EN: Textos = {
     'auth.session.invalid': 'Your session is not valid. Sign in again.',
     'auth.session.expired': 'Your session has expired. Sign in again.',
     'auth.forbidden': 'Your account is not allowed to do that.',
+    'auth.password.sharedAccount':
+      'Passwords for public demo accounts are fixed and reset every day.',
     'auth.token.expired': 'That link has expired. Ask for a new one.',
     'auth.token.used':
       'That link no longer works: it may have been used already, or replaced by a newer one.',
@@ -1182,6 +1185,8 @@ export const EN: Textos = {
     'tickets.attachment.extension': 'That kind of file is not allowed.',
     'tickets.attachment.tooBig': 'That file is too heavy: the maximum is 25 MB.',
     'tickets.attachment.invalid': 'The file could not be read.',
+    'tickets.attachment.unsafe': 'The attachment was rejected because it may be unsafe.',
+    'tickets.attachment.scanUnavailable': 'The attachment scanner is unavailable. Try again later.',
     'tickets.attachment.notFound': 'That attachment does not exist.',
 
     // The category and tag keys (docs/modules/tickets.md, section 2.3.2).

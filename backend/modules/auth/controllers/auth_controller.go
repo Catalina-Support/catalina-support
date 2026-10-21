@@ -204,6 +204,8 @@ func (c *AuthController) fail(w http.ResponseWriter, r *http.Request, err error)
 		httpx.WriteError(w, http.StatusUnauthorized, "auth.password.wrong")
 	case errors.Is(err, services.ErrPasswordNotLocal):
 		httpx.WriteError(w, http.StatusUnauthorized, "auth.password.notLocal")
+	case errors.Is(err, services.ErrSharedAccountProtected):
+		httpx.WriteError(w, http.StatusForbidden, "auth.password.sharedAccount")
 	default:
 		// Ni un detalle de dentro: al log y 500.
 		logs.LogError("error inesperado en auth: " + err.Error())

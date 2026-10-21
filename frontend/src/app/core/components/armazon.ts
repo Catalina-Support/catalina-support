@@ -84,6 +84,7 @@ export class Armazon {
 
   /** La versión del sistema, con su `v`: se lee en la fila de salir, alineada a la derecha. */
   protected readonly versionDelSistema = this.marca.versionDelSistema;
+  protected readonly avisoCompartido = this.marca.avisoCompartido;
 
   /** Si el menú está recogido: la tira de iconos. Es una elección, y se recuerda. */
   private readonly plegado = signal(leerPlegado());
