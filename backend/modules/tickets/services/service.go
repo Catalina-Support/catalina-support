@@ -4,6 +4,7 @@ package services
 
 import (
 	"errors"
+	"io"
 	"strings"
 	"time"
 
@@ -49,15 +50,17 @@ var (
 	// (docs/modules/tickets.md, decisión 59).
 	ErrMentionNotAllowed = errors.New("tickets.mention.notAllowed")
 	// ErrObserverNotFound: se intenta quitar a alguien que no observa ese hilo.
-	ErrObserverNotFound     = errors.New("tickets.observer.notFound")
-	ErrAttachmentFormat     = errors.New("tickets.attachment.extension")
-	ErrAttachmentTooBig     = errors.New("tickets.attachment.tooBig")
-	ErrAttachmentInvalid    = errors.New("tickets.attachment.invalid")
-	ErrWritingDraftRequired = errors.New("tickets.writing.draft.required")
-	ErrWritingEditorInvalid = errors.New("tickets.writing.editor.invalid")
-	ErrWritingUnavailable   = errors.New("tickets.writing.unavailable")
-	ErrWritingInvalid       = errors.New("tickets.writing.invalid")
-	ErrAttachmentMissing    = errors.New("tickets.attachment.notFound")
+	ErrObserverNotFound          = errors.New("tickets.observer.notFound")
+	ErrAttachmentFormat          = errors.New("tickets.attachment.extension")
+	ErrAttachmentTooBig          = errors.New("tickets.attachment.tooBig")
+	ErrAttachmentInvalid         = errors.New("tickets.attachment.invalid")
+	ErrAttachmentUnsafe          = errors.New("tickets.attachment.unsafe")
+	ErrAttachmentScanUnavailable = errors.New("tickets.attachment.scanUnavailable")
+	ErrWritingDraftRequired      = errors.New("tickets.writing.draft.required")
+	ErrWritingEditorInvalid      = errors.New("tickets.writing.editor.invalid")
+	ErrWritingUnavailable        = errors.New("tickets.writing.unavailable")
+	ErrWritingInvalid            = errors.New("tickets.writing.invalid")
+	ErrAttachmentMissing         = errors.New("tickets.attachment.notFound")
 	// Las categorías y las etiquetas (docs/modules/tickets.md, sección 2.3.2, decisiones 64 a 68).
 	// `required` es un ticket que llega sin categoría —no puede existir—, `notFound` una categoría que
 	// no está en el catálogo y `inactive` una retirada, que los tickets ya creados conservan pero el
@@ -325,11 +328,16 @@ type Service struct {
 	language   GlobalLanguage
 	// insights es el motor de IA, y **puede ser nulo**: sin él los dos resúmenes se quedan sin texto
 	// y todo lo demás funciona igual (docs/modules/ai.md, decisión 2).
-	insights  Insights
-	writing   WritingAssistant
-	filesPath string
-	now       func() time.Time
+	insights          Insights
+	writing           WritingAssistant
+	filesPath         string
+	attachmentScanner AttachmentScanner
+	now               func() time.Time
 }
+
+type AttachmentScanner interface{ Scan(io.Reader) error }
+
+func (s *Service) SetAttachmentScanner(scanner AttachmentScanner) { s.attachmentScanner = scanner }
 
 // NewService construye el servicio.
 func NewService(

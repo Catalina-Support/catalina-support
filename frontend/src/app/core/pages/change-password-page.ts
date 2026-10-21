@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { SessionService } from '../../core/services/session.service';
+import { BrandService } from '../../core/services/brand.service';
 import { Aviso } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
@@ -22,48 +23,52 @@ import { Tarjeta } from '../../shared/components/tarjeta';
     <main class="flex min-h-dvh items-center justify-center p-4">
       <div class="w-full max-w-sm">
         <app-tarjeta [titulo]="t().cambio.titulo">
-          <form class="flex flex-col gap-4" (ngSubmit)="cambiar()">
-            <app-campo
-              identificador="actual"
-              tipo="password"
-              autocomplete="current-password"
-              [etiqueta]="t().cambio.actual"
-              [(valor)]="actual"
-            />
+          @if (entornoCompartido()) {
+            <app-aviso forma="informacion" [texto]="avisoCompartido()" />
+          } @else {
+            <form class="flex flex-col gap-4" (ngSubmit)="cambiar()">
+              <app-campo
+                identificador="actual"
+                tipo="password"
+                autocomplete="current-password"
+                [etiqueta]="t().cambio.actual"
+                [(valor)]="actual"
+              />
 
-            <app-campo
-              identificador="nueva-cambio"
-              tipo="password"
-              autocomplete="new-password"
-              [etiqueta]="t().cambio.nueva"
-              [ayuda]="t().cambio.ayuda"
-              [(valor)]="nueva"
-            />
+              <app-campo
+                identificador="nueva-cambio"
+                tipo="password"
+                autocomplete="new-password"
+                [etiqueta]="t().cambio.nueva"
+                [ayuda]="t().cambio.ayuda"
+                [(valor)]="nueva"
+              />
 
-            <app-campo
-              identificador="repetir-cambio"
-              tipo="password"
-              autocomplete="new-password"
-              [etiqueta]="t().cambio.repetir"
-              [(valor)]="repetir"
-            />
+              <app-campo
+                identificador="repetir-cambio"
+                tipo="password"
+                autocomplete="new-password"
+                [etiqueta]="t().cambio.repetir"
+                [(valor)]="repetir"
+              />
 
-            @if (mensajeError(); as error) {
-              <app-aviso forma="error" [texto]="error" />
-            }
+              @if (mensajeError(); as error) {
+                <app-aviso forma="error" [texto]="error" />
+              }
 
-            @if (hecha()) {
-              <app-aviso forma="exito" [texto]="t().cambio.hecha" />
-            }
+              @if (hecha()) {
+                <app-aviso forma="exito" [texto]="t().cambio.hecha" />
+              }
 
-            <app-boton
-              tipo="submit"
-              [ancho]="true"
-              [texto]="t().cambio.guardar"
-              [textoTrabajando]="t().cambio.guardando"
-              [trabajando]="cambiando()"
-            />
-          </form>
+              <app-boton
+                tipo="submit"
+                [ancho]="true"
+                [texto]="t().cambio.guardar"
+                [textoTrabajando]="t().cambio.guardando"
+                [trabajando]="cambiando()"
+              />
+            </form>
+          }
         </app-tarjeta>
       </div>
     </main>
@@ -72,6 +77,9 @@ import { Tarjeta } from '../../shared/components/tarjeta';
 export class ChangePasswordPage {
   private readonly textos = inject(TranslationService);
   private readonly sesion = inject(SessionService);
+  private readonly marca = inject(BrandService);
+  protected readonly entornoCompartido = this.marca.entornoCompartido;
+  protected readonly avisoCompartido = this.marca.avisoCompartido;
 
   protected readonly actual = signal('');
   protected readonly nueva = signal('');

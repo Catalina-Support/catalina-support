@@ -731,6 +731,10 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "tickets.attachment.tooBig")
 	case errors.Is(err, services.ErrAttachmentInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.attachment.invalid")
+	case errors.Is(err, services.ErrAttachmentUnsafe):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.attachment.unsafe")
+	case errors.Is(err, services.ErrAttachmentScanUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, "tickets.attachment.scanUnavailable")
 	case errors.Is(err, services.ErrCategoryRequired):
 		// Un ticket sin categoría no se acepta: la categoría es obligatoria.
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.category.required")

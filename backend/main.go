@@ -246,6 +246,9 @@ func run() error {
 	mailService := services.NewService(repositories.NewTemplateRepository(db), services.NewSender(), cfg.PublicAppURL)
 
 	settingsService := settingsservices.NewService(settingsrepositories.NewSettingsRepository(db), cfg.FilesPath)
+	settingsService.SetPublicEnvironment(settingsservices.PublicEnvironment{
+		Shared: cfg.SharedEnvironment, Notice: cfg.SharedEnvironmentNotice, Reset: cfg.SharedEnvironmentReset,
+	})
 	settingsService.SetAICredentialKey(cfg.AICredentialKey)
 	settingsService.SetAIManager("http://ai:8081", cfg.AIManagerToken)
 	settingsService.SetCorreoInicial(settingsservices.MailInput{
@@ -265,9 +268,10 @@ func run() error {
 		mailService,
 		tokens,
 		authservices.Config{
-			AdminPassword: cfg.AdminPassword,
-			PublicAppURL:  cfg.PublicAppURL,
-			TokenSecret:   cfg.TokenSecret,
+			AdminPassword:        cfg.AdminPassword,
+			PublicAppURL:         cfg.PublicAppURL,
+			TokenSecret:          cfg.TokenSecret,
+			ProtectedEmailSuffix: cfg.ProtectedEmailSuffix,
 		},
 	)
 	usersService.SetPasswordLinks(authService)
@@ -312,6 +316,9 @@ func run() error {
 	ticketsService.SetMailer(mailService)
 	ticketsService.SetConfiguration(ajustesDeTickets{settings: settingsService})
 	ticketsService.SetGlobalLanguage(instalacionesDeLaConfiguracion{settings: settingsService})
+	if cfg.AntivirusAddress != "" {
+		ticketsService.SetAttachmentScanner(ticketservices.ClamAVScanner{Address: cfg.AntivirusAddress})
+	}
 	dashboardService := dashboardservices.NewService(ticketrepositories.NewReportRepository(db))
 	dashboardController := dashboardcontrollers.NewDashboardController(dashboardService, settingsService.ZonaHoraria, settingsService.Language)
 
@@ -369,6 +376,10 @@ func run() error {
 	authenticated := func(handler http.Handler) http.Handler {
 		return middleware.Chain(handler, middleware.Auth(tokens, whoIsCalling), globalSettingsHeaders)
 	}
+	rateLimiter := middleware.NewLimiter()
+	authenticatedLimited := func(handler http.Handler, limit func(http.Handler) http.Handler) http.Handler {
+		return middleware.Chain(handler, middleware.Auth(tokens, whoIsCalling), limit, globalSettingsHeaders)
+	}
 	aiConfigured := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			required, err := settingsService.AIConfigurationRequired()
@@ -417,7 +428,7 @@ func run() error {
 	// Los caminos de entrada, que la pantalla lee antes de que nadie haya entrado: es público y no
 	// lleva ningún dato de nadie.
 	mux.HandleFunc("GET /api/auth/methods", authController.Methods)
-	mux.HandleFunc("POST /api/auth/login", authController.Login)
+	mux.Handle("POST /api/auth/login", rateLimiter.Middleware("login", int64(cfg.LoginPerMinute), time.Minute, middleware.IPKey, nil)(http.HandlerFunc(authController.Login)))
 	mux.HandleFunc("POST /api/auth/password/forgot", authController.Forgot)
 	mux.HandleFunc("POST /api/auth/password/reset", authController.Reset)
 
@@ -487,7 +498,7 @@ func run() error {
 
 	mux.Handle("GET /api/tickets", authenticated(http.HandlerFunc(ticketsController.List)))
 	mux.Handle("GET /api/dashboard/summary", authenticated(http.HandlerFunc(dashboardController.Summary)))
-	mux.Handle("GET /api/dashboard/export", authenticated(http.HandlerFunc(dashboardController.Export)))
+	mux.Handle("GET /api/dashboard/export", rateLimiter.Middleware("export", int64(cfg.ExportsPerHour), time.Hour, middleware.IPKey, nil)(authenticated(http.HandlerFunc(dashboardController.Export))))
 	mux.Handle("POST /api/tickets", authenticated(http.HandlerFunc(ticketsController.Create)))
 	// La lista de responsables posibles: la da `tickets` para que la pantalla no tenga que llamar a
 	// `/api/users` (docs/arquitectura.md, sección 4).
@@ -501,7 +512,9 @@ func run() error {
 	mux.Handle("POST /api/tickets/{number}/reopen", authenticated(http.HandlerFunc(ticketsController.Reopen)))
 	// La mejora de borradores pertenece a `tickets`, no a `ai`: la pantalla sólo habla con la API
 	// de su módulo y `tickets` aplica permisos y construye el contexto autorizado.
-	mux.Handle("POST /api/tickets/{number}/writing/improve", authenticated(http.HandlerFunc(ticketsController.ImproveWriting)))
+	aiMinuteLimit := rateLimiter.Middleware("ai-minute", int64(cfg.AIPerMinute), time.Minute, middleware.AccountKey, nil)
+	aiDayLimit := rateLimiter.Middleware("ai-day", int64(cfg.AIPerDay), 24*time.Hour, middleware.AccountKey, nil)
+	mux.Handle("POST /api/tickets/{number}/writing/improve", authenticatedLimited(aiDayLimit(http.HandlerFunc(ticketsController.ImproveWriting)), aiMinuteLimit))
 	// El catálogo de categorías y las etiquetas (docs/modules/tickets.md, decisiones 64 a 68). Los
 	// caminos literales `categories` y `tags` **no chocan con `{number}`**: el enrutador de Go 1.22
 	// elige el patrón más específico, y un segmento literal gana a un comodín.
@@ -525,10 +538,12 @@ func run() error {
 	// (`docs/modules/tickets.md`, decisiones 63 y 74).
 	mux.Handle("POST /api/tickets/{number}/observers", authenticated(http.HandlerFunc(ticketsController.AddObserver)))
 	mux.Handle("DELETE /api/tickets/{number}/observers/{id}", authenticated(http.HandlerFunc(ticketsController.RemoveObserver)))
-	mux.Handle("POST /api/tickets/{number}/comments", authenticated(http.HandlerFunc(ticketsController.Comment)))
+	commentLimit := rateLimiter.Middleware("comment", int64(cfg.CommentsPerMinute), time.Minute, middleware.AccountKey, nil)
+	mux.Handle("POST /api/tickets/{number}/comments", authenticatedLimited(http.HandlerFunc(ticketsController.Comment), commentLimit))
 	mux.Handle("PATCH /api/tickets/{number}/comments/{id}", authenticated(http.HandlerFunc(ticketsController.EditComment)))
 	mux.Handle("DELETE /api/tickets/{number}/comments/{id}", authenticated(http.HandlerFunc(ticketsController.DeleteComment)))
-	mux.Handle("POST /api/tickets/{number}/attachments", authenticated(http.HandlerFunc(ticketsController.Upload)))
+	attachmentLimit := rateLimiter.Middleware("attachment-bytes", int64(cfg.AttachmentBytesPerDay), 24*time.Hour, middleware.IPKey, middleware.ContentLengthCost)
+	mux.Handle("POST /api/tickets/{number}/attachments", attachmentLimit(authenticated(http.HandlerFunc(ticketsController.Upload))))
 	mux.Handle("GET /api/tickets/{number}/attachments/{id}", authenticated(http.HandlerFunc(ticketsController.Download)))
 
 	// La configuración de la instalación y su marca. Lo que ve un administrador va detrás de `admin`.

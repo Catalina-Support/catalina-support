@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { TranslationService } from '../../core/i18n/translation.service';
+import { BrandService } from '../../core/services/brand.service';
 import { SessionService } from '../../core/services/session.service';
 import { Aviso } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
@@ -24,7 +25,14 @@ import { Tarjeta } from '../../shared/components/tarjeta';
     <main class="flex min-h-dvh items-center justify-center p-4">
       <div class="w-full max-w-sm">
         <app-tarjeta [titulo]="t().olvido.titulo" [descripcion]="t().olvido.explicacion">
-          @if (enviado()) {
+          @if (entornoCompartido()) {
+            <div class="flex flex-col gap-4">
+              <app-aviso forma="informacion" [texto]="avisoCompartido()" />
+              <a routerLink="/login" class="text-center text-sm text-primario underline">{{
+                t().olvido.volver
+              }}</a>
+            </div>
+          } @else if (enviado()) {
             <div class="flex flex-col gap-4">
               <app-aviso forma="exito" [texto]="t().olvido.enviado" />
               <a routerLink="/login" class="text-center text-sm text-primario underline">
@@ -66,6 +74,9 @@ import { Tarjeta } from '../../shared/components/tarjeta';
 export class ForgotPasswordPage {
   private readonly textos = inject(TranslationService);
   private readonly sesion = inject(SessionService);
+  private readonly marca = inject(BrandService);
+  protected readonly entornoCompartido = this.marca.entornoCompartido;
+  protected readonly avisoCompartido = this.marca.avisoCompartido;
 
   protected readonly email = signal('');
   protected readonly mandando = signal(false);
