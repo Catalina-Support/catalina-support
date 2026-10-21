@@ -1,7 +1,12 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-21
+>
+> **Enmienda coordinada implementada y verificada el 2026-10-21: demo pública alojada.** La demo
+> usa capacidades genéricas opt-in del producto y operación concreta en el repositorio privado;
+> quedó publicada por HTTPS, con IA local, antivirus, cuotas y restauración A/B diaria. Producción
+> no se modificó.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: actualización autosuficiente y
 > migraciones versionadas.** La sección 27 sustituye la migración manual en producción y la ausencia
@@ -1275,17 +1280,21 @@ construcción/publicación y comprobaciones de salud. Declarará que los datos d
 aplican en producción. Los hallazgos y límites ya registrados en la sección 4 siguen vigentes; una
 portada más amigable no los convierte en capacidad implementada ni autoriza ejecutar producción.
 
-`demo.catalina-support.com` se documentará como un tercer destino público sólo a efectos de uso, no
-como un nuevo entorno administrado por este repositorio. Usa las once cuentas locales de ejemplo,
-excluye `admin` de las credenciales publicadas y pierde periódicamente los cambios. La restauración
-se realizará mediante un script privado del servidor: ese script, su calendario, secretos y
-operación quedan fuera del repositorio. Tampoco se promete disponibilidad continua.
+`demo.catalina-support.com` es el tercer destino público para probar el producto. Usa las once
+cuentas locales de ejemplo, excluye `admin` de las credenciales publicadas y restaura sus datos cada
+día a las 03:00 de `America/Guayaquil`. Este repositorio aporta únicamente mecanismos genéricos y
+desactivados por defecto: presentación de entorno compartido, protección de cuentas por sufijo,
+cuotas y puerta de antivirus. La topología, los valores, las ranuras A/B, nginx, systemd y secretos
+viven en el repositorio privado `Catalina-Support/demo`; fijan un commit exacto de `main` y no
+mantienen un fork. No se promete disponibilidad continua.
 
 Después de la aprobación se restauró el desarrollo local con el seeder existente —operación
 destructiva ya documentada— y se comprobaron el nombre Catalina Support, los dos logos de fábrica y
 el color institucional `#1d4ed8`. La evidencia pública consta de una vista doble sin datos sensibles
 y una segunda captura del mismo ticket donde se leen `Summary`, `Last action` e `Improve with AI`.
-No se usó ni alteró producción o la demo pública para obtenerlas.
+La publicación de la demo creó recursos exclusivos bajo `/srv/catalina-support-demo`, en los
+puertos locales 22001/22002 y 22011/22012. Dos restauraciones verificaron la conmutación sin tocar
+los contenedores, volúmenes, puertos ni archivos de producción.
 
 ## 26. Variante NVIDIA del motor local
 
