@@ -1262,7 +1262,7 @@ el aviso de recarga. En ese caso se usa la recarga forzada del navegador o se ab
 Reiniciar `frontend` se reserva para cambios de dependencias o configuración de Tailwind, conforme a
 la regla ya documentada en la sección 7. No se añaden cachés, sondeos ni procesos nuevos.
 
-## 25. Guía del README y demostración alojada
+## 25. Guía del README
 
 El README bilingüe conservará como camino local principal la instalación vacía mediante `/setup` y
 presentará el seeder como opción separada para explorar datos de ejemplo. Los comandos y valores
@@ -1275,17 +1275,11 @@ construcción/publicación y comprobaciones de salud. Declarará que los datos d
 aplican en producción. Los hallazgos y límites ya registrados en la sección 4 siguen vigentes; una
 portada más amigable no los convierte en capacidad implementada ni autoriza ejecutar producción.
 
-`demo.catalina-support.com` se documentará como un tercer destino público sólo a efectos de uso, no
-como un nuevo entorno administrado por este repositorio. Usa las once cuentas locales de ejemplo,
-excluye `admin` de las credenciales publicadas y pierde periódicamente los cambios. La restauración
-se realizará mediante un script privado del servidor: ese script, su calendario, secretos y
-operación quedan fuera del repositorio. Tampoco se promete disponibilidad continua.
-
 Después de la aprobación se restauró el desarrollo local con el seeder existente —operación
 destructiva ya documentada— y se comprobaron el nombre Catalina Support, los dos logos de fábrica y
 el color institucional `#1d4ed8`. La evidencia pública consta de una vista doble sin datos sensibles
 y una segunda captura del mismo ticket donde se leen `Summary`, `Last action` e `Improve with AI`.
-No se usó ni alteró producción o la demo pública para obtenerlas.
+No se usó ni alteró producción para obtenerlas.
 
 ## 26. Variante NVIDIA del motor local
 
