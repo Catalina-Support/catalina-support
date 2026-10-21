@@ -1,7 +1,12 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-21
+>
+> **Enmienda coordinada implementada y verificada el 2026-10-21: demo pública alojada.** La demo
+> usa capacidades genéricas opt-in del producto y operación concreta en el repositorio privado;
+> quedó publicada por HTTPS, con IA local, antivirus, cuotas y restauración A/B diaria. Producción
+> no se modificó.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** Corrige la entrada contra Active
 > Directory real: admite nombre de usuario o correo, conserva el filtro base de la instalación y

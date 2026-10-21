@@ -1,6 +1,6 @@
 # Demostración pública alojada
 
-> **Estado:** aprobado
+> **Estado:** as-built
 > **Última actualización:** 2026-10-21
 >
 > **Corrección del responsable, 2026-10-21:** la infraestructura específica de la demo no se
@@ -255,4 +255,26 @@ El 2026-10-21 el responsable eligió la separación híbrida 1A: capacidades gen
 público e infraestructura específica en el repositorio privado `Catalina-Support/demo`, disponible
 en `/root/dev/catalina-support/demo`.
 
-No quedan decisiones abiertas. La implementación requiere aprobación explícita de este documento.
+No quedan decisiones abiertas.
+
+## 17. Implementación verificada
+
+La demo quedó publicada el 2026-10-21 en `https://demo.catalina-support.com`. El producto público
+incorpora capacidades opt-in mediante entorno: aviso compartido en entrada y armazón, protección del
+sufijo de correo compartido, límites en memoria por IP o cuenta y análisis ClamAV previo al
+almacenamiento. Sin esas variables, una instalación conserva su comportamiento anterior.
+
+El repositorio privado `Catalina-Support/demo` fija el commit público `c91e864`, construye artefactos
+reproducibles y opera las ranuras `a` y `b` en los puertos locales 22001/22002 y 22011/22012. El
+nginx del host sólo publica HTTPS. Mailpit, PostgreSQL, ClamAV y el administrador de IA no tienen
+puertos públicos. Let's Encrypt emitió el certificado y administra su renovación.
+
+Se ejecutaron dos restauraciones completas. La segunda preparó `b`, aplicó la migración y el seeder,
+verificó 11 cuentas, 25 tickets y 5 adjuntos, autenticación, Mailpit y ClamAV; después cambió nginx y
+retiró `a` y su base. El modelo Qwen2.5 1.5B quedó instalado, activo y saludable en CPU.
+
+La comprobación funcional pública confirmó: salud 200, redacción con IA 200, contraseña compartida
+rechazada con 403, undécimo acceso por la misma IP rechazado con 429 y EICAR rechazado con 422. El
+temporizador de systemd ejecuta la restauración a las 03:00 de `America/Guayaquil`; GitHub Actions
+consulta la salud pública cada cinco minutos. Los logs de contenedor rotan y los técnicos archivados
+se eliminan después de siete días. Producción no participó en ninguna orden de la demo.
