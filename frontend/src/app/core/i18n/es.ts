@@ -667,8 +667,6 @@ export const ES = {
     iaRedaccionUsar: 'Usar propuesta',
     iaRedaccionConservar: 'Conservar original',
     iaRedaccionGenerando: 'Mejorando la redacción…',
-    iaRedaccionCalidadInsuficiente:
-      'Esta propuesta cambió muy poco. Aun así puedes usarla o copiarla, o generar otra.',
     iaRedaccionDesactualizada:
       'El borrador cambió después de pedir esta propuesta. Genera otra antes de usarla.',
     // --- editar donde se muestra (decisión 74) ---

@@ -650,8 +650,6 @@ export const EN: Textos = {
     iaRedaccionUsar: 'Use proposal',
     iaRedaccionConservar: 'Keep original',
     iaRedaccionGenerando: 'Improving the writing…',
-    iaRedaccionCalidadInsuficiente:
-      'This proposal changed very little. You can still use or copy it, or generate another one.',
     iaRedaccionDesactualizada:
       'The draft changed after this proposal was requested. Generate another proposal before using it.',
     editarElAsunto: 'Edit the subject',

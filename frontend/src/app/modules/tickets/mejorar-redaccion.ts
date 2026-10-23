@@ -36,10 +36,6 @@ import { TicketsService, type EditorDeRedaccion } from './tickets.service';
             <p class="text-sm text-aviso" role="status">
               {{ t().tickets.iaRedaccionDesactualizada }}
             </p>
-          } @else if (calidadInsuficiente()) {
-            <p class="text-sm text-aviso" role="status">
-              {{ t().tickets.iaRedaccionCalidadInsuficiente }}
-            </p>
           }
 
           <div class="flex flex-wrap gap-2">
@@ -72,7 +68,6 @@ export class MejorarRedaccion implements OnDestroy {
 
   protected readonly generando = signal(false);
   protected readonly propuesta = signal('');
-  protected readonly calidadInsuficiente = signal(false);
   private readonly borradorDeLaPropuesta = signal('');
   private generacion = 0;
 
@@ -100,12 +95,10 @@ export class MejorarRedaccion implements OnDestroy {
       );
       if (turno !== this.generacion) return;
       this.propuesta.set(respuesta.text);
-      this.calidadInsuficiente.set(respuesta.qualityWarning);
       this.borradorDeLaPropuesta.set(borrador);
     } catch (error) {
       if (turno !== this.generacion) return;
       this.propuesta.set('');
-      this.calidadInsuficiente.set(false);
       this.borradorDeLaPropuesta.set('');
       this.fallido.emit(this.textos.error(claveDelError(error)));
     } finally {
@@ -123,7 +116,6 @@ export class MejorarRedaccion implements OnDestroy {
     this.generacion++;
     this.generando.set(false);
     this.propuesta.set('');
-    this.calidadInsuficiente.set(false);
     this.borradorDeLaPropuesta.set('');
   }
 }

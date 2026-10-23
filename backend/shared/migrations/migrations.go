@@ -152,7 +152,7 @@ func discover(directory string, target semver) ([]migration, error) {
 			continue
 		}
 		match := migrationName.FindStringSubmatch(entry.Name())
-		if match == nil && strings.HasPrefix(entry.Name(), "v") && strings.HasSuffix(entry.Name(), ".sql") && !strings.HasSuffix(entry.Name(), "_dev.sql") {
+		if match == nil && strings.HasPrefix(entry.Name(), "v") && strings.HasSuffix(entry.Name(), ".sql") && !strings.HasSuffix(entry.Name(), "_dev_en.sql") && !strings.HasSuffix(entry.Name(), "_dev_es.sql") {
 			return nil, fmt.Errorf("invalid migration filename %s", entry.Name())
 		}
 		if match == nil {

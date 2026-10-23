@@ -1,7 +1,21 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Propuesta coordinada del 2026-10-22:** `modules/tickets.md`, `modules/ai.md` e
+> `interfaz-y-experiencia.md` amplían las cuatro bandejas con márgenes de 16 px y extremos fijos,
+> y endurecen la redacción asistida mediante un prompt estructurado, validación, un reintento y
+> rechazo de propuestas todavía deficientes. El responsable cerró las decisiones 1A–4A; fue aprobado e implementado el 2026-10-22. Pasaron
+> backend focalizado, 252 pruebas Angular,
+> compilación y navegador real en 1920, 1440 y 390 px; la prueba con un modelo real quedó limitada
+> porque el entorno no tiene motor de IA configurado.
+>
+> **Propuesta coordinada del 2026-10-21:** `arquitectura.md`, `ambientes.md`, `prueba-local.md` y
+> `proyecto-abierto.md` separan los ejemplos en inglés y español, fijan la demo pública en inglés y
+> coordinan seis capturas reales con la web. El seeder único en español y sus referencias vigentes
+> quedaron registrados como hallazgo. El responsable cerró el repaso con 1A–5A, aprobó la propuesta
+> el 2026-10-22 y la implementación quedó verificada ese mismo día.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-20:** `ambientes.md`,
 > `arquitectura.md` y `prueba-local.md` sustituyen la migración manual de producción por un ejecutor
@@ -423,11 +437,11 @@
 > `ambientes.md` (19 enmiendas). No se modifica código ni se abre producción.
 >
 > **Actualizado el 2026-10-01 (séptima vez)**: **los datos de ejemplo se siembran con un contenedor de
-> un solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows** —deja
+> un solo uso**, `docker compose -f dev.yml run --rm seed-en|seed-es`, **igual en Linux, macOS y Windows** —deja
 > fuera el problema del guion de bash, que en Windows no se ejecuta, y con él la copia de los
 > adjuntos—. El servicio vive en `dev.yml` **con perfil propio**, así que **`up -d` no lo arranca**, y
 > **los ejemplos son opcionales** (el esquema sigue siendo obligatorio). El contenedor corre **el guion
-> de siempre, `scripts/dev-seed.sh`**, que también sigue valiendo en Linux y macOS fuera del
+> de siempre, `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`**, que también sigue valiendo en Linux y macOS fuera del
 > contenedor. Quedan enmendados `ambientes.md` (**18 enmiendas**: secciones 3.1, 3.3, 5 y 9.3) y
 > `arquitectura.md` (**6 enmiendas**: sección 10.3), y el `README.md` quita el aviso de Windows y el de
 > los adjuntos. Comprobado el 2026-10-01: **dos pasadas seguidas** del comando («Listo: 11 cuentas, 25
@@ -450,7 +464,7 @@
 > **Actualizado el 2026-10-01 (quinta vez)**: **el esquema y los ejemplos se pueden aplicar sin `bash`**.
 > Los pasos de local del `README.md` quedan como un recorrido para quien llega de fuera —clonar,
 > levantar, aplicar el esquema, entrar con `admin`/`admin`—, con el porqué de cada paso, y **los dos
-> comandos de Docker que valen igual en PowerShell, CMD y bash**. `./scripts/dev-seed.sh` queda dicho
+> comandos de Docker que valen igual en PowerShell, CMD y bash**. `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` queda dicho
 > como **lo que es, de Linux y macOS** (y como lo que es: **un extra de contenido, no un requisito para
 > entrar**). `ambientes.md` pasa a **16 enmiendas** (su sección 3.2 estrena los dos comandos y las
 > secciones 3.1, 3.3 y 5 separan las dos vías) y `arquitectura.md` a **4** (su sección 10.3, que
@@ -460,7 +474,7 @@
 > aplicado dos veces seguidas da **0 errores**.
 >
 > **Actualizado el 2026-10-01 (cuarta vez)**: el `README.md` deja claro, en los pasos de local, que
-> **en una base nueva `./scripts/dev-seed.sh` es lo que crea el esquema** —no sólo los ejemplos—, que
+> **en una base nueva `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` es lo que crea el esquema** —no sólo los ejemplos—, que
 > **hasta que no se pasa la aplicación no tiene tablas** y que los síntomas son
 > `relación "installation_settings" does not exist` y `relación "ai_insights" does not exist`; y
 > **reordena los pasos** (entorno, después esquema y datos, y sólo entonces abrir). `ambientes.md`
@@ -531,10 +545,10 @@ escribe código sin un documento aprobado antes.
 
 | Documento | Estado | Cubre |
 | --- | --- | --- |
-| `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `proyecto-abierto.md` | **as-built** | Portada bilingüe, sitio oficial, demo pública y apoyo mediante Ko-fi |
-| `prueba-local.md` | **as-built** | Verificación local de aceleración, respaldo y rollback |
-| `arquitectura.md` | **as-built** | Frontera CPU/NVIDIA y reinicio transaccional |
+| `README.md` (este archivo) | propuesta | Índice y coordinación de ejemplos bilingües |
+| `proyecto-abierto.md` | **propuesta** | Demo inglesa y capturas bilingües del sitio oficial |
+| `prueba-local.md` | **propuesta** | Equivalencia y recorrido de ambos juegos de ejemplos |
+| `arquitectura.md` | **propuesta** | Datos de demostración separados por idioma |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Dashboard exclusivamente estadístico, sin evaluación ni SLA |
 | `usuarios-y-permisos.md` | **as-built** | Permisos acumulativos y privacidad de comentarios del principal |
 | `flujos.md` | **as-built** | Aviso único a todo Soporte al llegar por primera vez a crítica |
@@ -542,11 +556,11 @@ escribe código sin un documento aprobado antes.
 | `modules/mail.md` | **as-built** | Aviso interno de comentario privado sin contenido sensible |
 | `modules/auth.md` | **as-built** | Identidad con papel operativo y capacidad administrativa |
 | `modules/users.md` | **as-built** | Persistencia, API, auditoría y avisos de administración |
-| `interfaz-y-experiencia.md` | **as-built** | Selector Public/Private y representación accesible de notas privadas |
+| `interfaz-y-experiencia.md` | **as-built** | Bandejas a ancho útil, extremos fijos y adaptación móvil |
 | `primer-arranque.md` | **as-built** (8 enmiendas previas) | Aceleración local en el paso 5 |
-| `ambientes.md` | **as-built** | Variante opcional NVIDIA en Linux |
-| `modules/ai.md` | **as-built** | Summary y Last action separados por audiencia |
-| `modules/tickets.md` | **as-built** | Comentarios privados, adjuntos, búsqueda y auditoría del principal |
+| `ambientes.md` | **propuesta** | Servicios y comandos explícitos `seed-en` y `seed-es` |
+| `modules/ai.md` | **as-built** | Redacción profesional verificable y rechazo de propuestas deficientes |
+| `modules/tickets.md` | **as-built** | Bandejas completas y contrato de redacción asistida |
 | `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
 | `entornos-compartidos.md` | **as-built** | Capacidades genéricas para instalaciones públicas compartidas |
 

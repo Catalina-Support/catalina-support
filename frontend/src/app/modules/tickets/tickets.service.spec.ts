@@ -161,11 +161,8 @@ describe('TicketsService', () => {
       draft: 'Hola Ana, ya funciona.',
       previousSuggestion: 'Propuesta anterior',
     });
-    pidiendo.flush({ text: 'Hola, Ana. El servicio ya funciona.', qualityWarning: false });
-    await expect(peticion).resolves.toEqual({
-      text: 'Hola, Ana. El servicio ya funciona.',
-      qualityWarning: false,
-    });
+    pidiendo.flush({ text: 'Hola, Ana. El servicio ya funciona.' });
+    await expect(peticion).resolves.toEqual({ text: 'Hola, Ana. El servicio ya funciona.' });
   });
 
   it('cada acción va a su ruta, y el estado no va por el `PATCH`', async () => {

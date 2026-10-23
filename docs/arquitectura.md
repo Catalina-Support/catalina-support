@@ -1,7 +1,12 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-22: ejemplos bilingües explícitos.** La sección 32 separa los
+> datos de demostración en inglés y español. El hallazgo de partida es que el único seeder actual
+> guarda en español todo el contenido escrito por personas, incluso cuando la instalación y la
+> interfaz están en inglés.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 31 define el ejecutor
 > Go de migraciones, su registro transaccional, checksums, bloqueo y frontera con el arranque. El
@@ -138,9 +143,9 @@
 > requieren las fuentes del repositorio. No se modifica código ni se retoma producción.
 >
 > **Enmendado el 2026-10-01 (quinta vez)**: **los datos de ejemplo se siembran con un contenedor de un
-> solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows**, y con
+> solo uso**, `docker compose -f dev.yml run --rm seed-en|seed-es`, **igual en Linux, macOS y Windows**, y con
 > **perfil propio** para que **`up -d` no lo arranque**: los ejemplos son **opcionales** y se piden a
-> propósito. El contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** (una sola verdad), que
+> propósito. El contenedor corre **el guion de siempre, `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`** (una sola verdad), que
 > también sigue valiendo en Linux y macOS fuera del contenedor. La sección 10.3 cambia su bloque de
 > ejemplos por ese comando (docs/ambientes.md, sección 3.3).
 >
@@ -163,7 +168,7 @@
 > solas**, así que en una base nueva el backend responde `relación "installation_settings" does not
 > exist`. Quedan añadidos los **dos comandos de Docker que valen igual en PowerShell, CMD y bash**
 > —copiar `v1.0.0.sql` al contenedor y dárselo a `psql` con `-f`—, con los ejemplos (`_dev`) a
-> continuación y el aviso de que `./scripts/dev-seed.sh` **es de Linux y macOS** (los pasos completos,
+> continuación y el aviso de que `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` **es de Linux y macOS** (los pasos completos,
 > en el `README.md`).
 >
 > **Enmendado el 2026-10-01 (segunda vez)**: **el directorio de pruebas y Keycloak salen de `dev.yml`**
@@ -327,7 +332,7 @@ Se mantiene el estilo ya usado en el proyecto hermano Calibyou (`modules/<m>/con
 `services`, `repositories`, `dtos`), porque es el que el responsable ya conoce y mantiene.
 
 Hoy el repositorio tiene `main.go`, `.air.toml`, `modules/` con sus **seis módulos** (`ai`, `auth`,
-`mail`, `settings`, `tickets` y `users`), `migrations/` con `v1.0.0.sql` y `v1.0.0_dev.sql`, y
+`mail`, `settings`, `tickets` y `users`), `migrations/` con `v1.0.0.sql` y `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql`, y
 `shared/{auth,authz,config,database,httpx,middleware,version}`. `shared/httpx` se añadió al crear el esqueleto para que la forma de las respuestas HTTP
 tenga un solo dueño desde el principio: hoy escribe `{"error": "clave"}`, con una **clave** que el
 frontend traduce al idioma de quien lee (`docs/interfaz-y-experiencia.md`).
@@ -459,7 +464,7 @@ reparto —el Administrador a los usuarios, los demás a su bandeja—.
 - Mientras el proyecto no tenga datos reales, se actualiza ese mismo archivo en vez de añadir
   migraciones nuevas. **A partir de la 1.0.0 se pasa a un archivo por versión**
   (`v1.1.0.sql`, `v1.2.0.sql`…) **más un archivo de datos de ejemplo por versión con el sufijo
-  `_dev`** (`v1.0.0_dev.sql`), que **nunca se aplica en producción**, aplicados en orden: la política
+  `_dev`** (`v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql`), que **nunca se aplica en producción**, aplicados en orden: la política
   completa está en
   `docs/ambientes.md`, sección 5.
 - Nombres de tabla en plural y en inglés, coherentes con el nombre del módulo (`users`,
@@ -537,7 +542,7 @@ Se llaman `smtp_*` y no `SYSTEM_SMTP_*` como en Calibyou: allí el prefijo disti
 sistema del de cada laboratorio, y aquí sólo hay uno.
 
 **En desarrollo apuntan al buzón de pruebas** de `dev.yml`: el archivo de datos de ejemplo
-(`backend/migrations/v1.0.0_dev.sql`) deja puestos `smtp_host='mail'` y `smtp_port='1025'`, así que
+(`backend/migrations/v1.0.0_dev_en.sql` o `backend/migrations/v1.0.0_dev_es.sql`) deja puestos `smtp_host='mail'` y `smtp_port='1025'`, así que
 todo lo que sale se lee en `http://127.0.0.1:11004` y **nada sale a internet** (sección 10). Sin él, el
 alta de una cuenta local no se podría completar en desarrollo. Si falta la configuración, el envío falla con un error claro y
 **no se intenta por otra vía**: no hay correo «de reserva».
@@ -611,7 +616,7 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 | `keycloak` (**en `keycloak.yml`**, no en `dev.yml`) | `quay.io/keycloak/keycloak:26.0` | `start-dev --import-realm`, con el reino de `config/keycloak/realm-catalina-support.json` | `11006` (HTTP: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f keycloak.yml up -d` |
 | `ai` (**en `ai.yml`**, no en `dev.yml`) | llama.cpp con servidor HTTP | Sirve el modelo **Qwen2.5-1.5B-Instruct Q4_K_M**, que se descarga una vez al volumen la primera vez | **Ninguno**: el motor no se publica en la máquina, sólo se habla por la red `catalina-support-ai`. Lo comparten **desarrollo y producción** (`docs/modules/ai.md`, decisión 1) |
 | `migrate` | `postgres:18-alpine` | Aplica sólo `v1.0.0.sql`, con `ON_ERROR_STOP=1`; `backend` espera su finalización correcta | Ninguno; se ejecuta automáticamente con `up` y también admite `run --rm migrate` |
-| `seed` | `postgres:18-alpine` | Ejecuta `scripts/dev-seed.sh` | Ninguno; ejemplos opcionales, ejecución explícita `run --rm seed` |
+| `seed-en`, `seed-es` | `postgres:18-alpine` | Ejecutan el acceso explícito y el runner compartido | Ninguno; ejemplos opcionales por idioma |
 
 **El motor de IA no está en la tabla de arriba a propósito**: vive en `ai.yml`, **compartido por los dos
 entornos** —no caben dos modelos en esta máquina— y los dos backends entran en su red
@@ -757,10 +762,10 @@ docker compose -f dev.yml down                   # parar (los volúmenes se cons
 docker compose -f dev.yml run --rm migrate
 # Los datos de ejemplo, que son **opcionales** y **un extra para tener contenido, no un requisito
 # para entrar**. **El comando de los tres sistemas** es un contenedor de un solo uso que corre el
-# guion `scripts/dev-seed.sh` (esquema, ejemplos y adjuntos); **no lo arranca `up -d`** (perfil
+# guion `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` (esquema, ejemplos y adjuntos); **no lo arranca `up -d`** (perfil
 # propio). En Linux y macOS el mismo guion se puede correr fuera del contenedor
-docker compose -f dev.yml run --rm seed
-# ./scripts/dev-seed.sh
+docker compose -f dev.yml run --rm seed-en|seed-es
+# ./scripts/dev-seed-en.sh  # o dev-seed-es.sh
 
 docker compose -f dev.yml exec backend go test ./...      # pruebas del backend
 docker compose -f dev.yml exec backend go vet ./...       # análisis estático
@@ -870,7 +875,7 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | TLS de los dos dominios | Certificados de Let's Encrypt emitidos el 2026-09-22 (caducan el 2026-12-21), con renovación automática configurada por `webroot` |
 | Cabeceras de seguridad y CSP | Presentes en la respuesta de desarrollo (`nosniff`, `SAMEORIGIN`, `Referrer-Policy` y CSP de desarrollo) |
 | Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea **21 tablas** —plantillas, cuentas y tokens; las **cinco tablas de configuración de una fila** (`installation_settings`, `ai_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`); dos auxiliares de IA; las diez de tickets; y `ai_insights`— con sus índices y restricciones. Incluye su puesta al día idempotente y la conversión histórica de texto plano a HTML sin tocar un cuerpo que ya contiene adjuntos. |
-| Los datos de ejemplo, con su guion | `./scripts/dev-seed.sh` aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia: **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
+| Los datos de ejemplo, con su guion | `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` aplica el esquema, aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia: **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
 | `shared/auth` | Firma y valida el token de sesión (HS256, 10 horas, `sub`), saca el `Bearer` de la cabecera y compara secretos en tiempo constante. **20 pruebas en verde**, incluidas la caducidad, otro secreto, el algoritmo `none`, los dos secretos vacíos y las cinco del `state` de OIDC |
 | `shared/authz` | Comprueba el papel y responde 403 con `auth.forbidden`. **5 pruebas en verde**, incluido el caso de una ruta montada sin autenticación |
 | Middleware de autenticación | Lee la cuenta **en cada petición**, deja la identidad en el contexto y responde 401 (`auth.session.invalid`/`auth.session.expired`) o 503 si la base no responde. **8 pruebas en verde** |
@@ -1588,3 +1593,40 @@ disponibilidad HTTP no sustituye esa dependencia; la comprobación de esquema pe
 como defensa si se ejecuta el binario fuera de Compose. Logs y `BUILD_INFO` permiten relacionar una
 actualización con commit y versión, sin registrar DSN ni secretos. Los cambios destructivos siguen
 un ciclo expandir–migrar–contraer entre versiones para conservar una ruta operativa de recuperación.
+
+## 32. Datos de demostración en inglés y español
+
+Los ejemplos dejan de depender de un único `v1.0.0_dev.sql`. La distribución incorpora
+`backend/migrations/v1.0.0_dev_en.sql` y `backend/migrations/v1.0.0_dev_es.sql`, además de los
+accesos públicos `scripts/dev-seed-en.sh` y `scripts/dev-seed-es.sh`. Ambos idiomas conservan los
+mismos identificadores, números de ticket, fechas, prioridades, estados persistidos, asignaciones,
+relaciones y cantidades; sólo cambia el contenido visible redactado por personas y los archivos de
+ejemplo.
+
+La variante inglesa usa `User One` a `User Five`, `Support One` a `Support Three` y `Developer One`
+a `Developer Three`. La española usa `Usuario Uno` a `Usuario Cinco`, `Soporte Uno` a `Soporte Tres`
+y `Desarrollador Uno` a `Desarrollador Tres`. Asuntos, comentarios, resúmenes sembrados, categorías,
+etiquetas, motivos, nombres de adjuntos y contenido de esos adjuntos pertenecen al mismo idioma. Los
+identificadores técnicos de roles, estados y eventos no se traducen en la base: la interfaz continúa
+siendo responsable de sus rótulos localizados.
+
+En una base nueva o sin instalación sellada, el seeder elegido establece el idioma correspondiente
+y completa la instalación. En una instalación ya sellada conserva la configuración vigente. Cada
+ejecución reconstruye los ejemplos en el idioma elegido, como hace hoy el seeder único; cambiar el
+idioma desde Configuración no reescribe datos históricos.
+
+Los archivos `*_dev_en.sql` y `*_dev_es.sql` siguen excluidos del ejecutor de migraciones de
+producción. No cambian el esquema, las APIs, los permisos ni la semántica funcional de tickets. Los
+documentos que todavía nombran el archivo y comando únicos se actualizarán junto con la
+implementación; ese desfase se registra como parte del hallazgo y no se corrige antes de aprobar
+esta propuesta.
+
+El responsable cerró el repaso con 1A–5A. Los dos accesos públicos llaman a un ejecutor interno
+compartido que recibe explícitamente idioma, SQL y origen de adjuntos; no existe un comando público
+ambiguo. La equivalencia estructural entre idiomas es obligatoria y no quedan decisiones abiertas.
+
+La verificación real ejecutó ambos servicios sobre bases desechables. Cada variante produjo once
+cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos y cinco adjuntos. Una
+base nueva adoptó `en` con `seed-en` y `es` con `seed-es`; una instalación sellada conservó sus
+ajustes al cambiar de juego. La configuración resuelta de Compose contiene sólo `seed-en` y
+`seed-es`, y las pruebas del ejecutor confirman que ignora ambos archivos de desarrollo.

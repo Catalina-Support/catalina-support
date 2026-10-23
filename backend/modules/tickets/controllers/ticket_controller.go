@@ -101,7 +101,7 @@ func (c *TicketController) ImproveWriting(w http.ResponseWriter, r *http.Request
 		c.fail(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, dtos.ImproveWritingResponse{Text: propuesta.Text, QualityWarning: propuesta.QualityWarning})
+	httpx.WriteJSON(w, http.StatusOK, dtos.ImproveWritingResponse{Text: propuesta.Text})
 }
 
 // Create da de alta un ticket principal.

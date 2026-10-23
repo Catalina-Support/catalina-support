@@ -109,10 +109,11 @@ services:
   # **Es opcional** —quien quiera probar el proyecto vacío, sólo con el esquema, no lo ejecuta— y
   # **no se levanta con `up -d`**: tiene perfil propio y se pide a propósito:
   #
-  #   docker compose -f dev.yml run --rm seed
+  #   docker compose -f dev.yml run --rm seed-en  # English
+  #   docker compose -f dev.yml run --rm seed-es  # Español
   #
   # Es **un contenedor que se ejecuta y se va**, con la misma imagen que la base —`psql` y `bash` ya
-  # vienen dentro—, y corre **el guion de siempre, `scripts/dev-seed.sh`**: una sola verdad sobre
+  # vienen dentro—, y corre **el ejecutor compartido mediante el guion explícito del idioma**: una sola verdad sobre
   # cómo se siembra, y el mismo comando en Linux, macOS y Windows (docs/ambientes.md, sección 3.3).
   # El guion aplica el esquema (idempotente), los ejemplos y copia los adjuntos de `config/seed/` a
   # `_files/`, en la carpeta de su ticket.
@@ -142,12 +143,34 @@ services:
       - backend_go_build:/root/.cache/go-build
     command: ["go", "run", "./cmd/migrate"]
 
-  seed:
+  seed-en:
     image: postgres:18-alpine
-    container_name: catalina_support_dev_seed
-    profiles: ["seed"]
+    container_name: catalina_support_dev_seed_en
+    profiles: ["seed-en"]
     working_dir: /app
-    entrypoint: ["bash", "scripts/dev-seed.sh"]
+    entrypoint: ["bash", "scripts/dev-seed-en.sh"]
+    environment:
+      # La marca con la que el guion sabe que corre dentro del contenedor: habla con la base por la
+      # red del entorno con el `psql` de la imagen, sin necesitar docker dentro.
+      SEED_EN_CONTENEDOR: "1"
+    env_file:
+      - ./config/env/dev.env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./backend/migrations:/app/backend/migrations:ro
+      - ./config:/app/config:ro
+      - ./_files:/app/_files
+
+
+  seed-es:
+    image: postgres:18-alpine
+    container_name: catalina_support_dev_seed_es
+    profiles: ["seed-es"]
+    working_dir: /app
+    entrypoint: ["bash", "scripts/dev-seed-es.sh"]
     environment:
       # La marca con la que el guion sabe que corre dentro del contenedor: habla con la base por la
       # red del entorno con el `psql` de la imagen, sin necesitar docker dentro.

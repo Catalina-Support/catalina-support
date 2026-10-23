@@ -8,7 +8,7 @@
 requester  →  technical support (level 1)  →  development (level 2)
 ```
 
-Catalina Support keeps the conversation simple. Requesters report an issue, Support handles what it
+Catalina Support keeps the conversation simple. Users report an issue, Support handles what it
 can, and only filtered cases—with their context—reach Development through a linked internal ticket.
 The two conversations stay separate, while authorized staff can review them side by side.
 
@@ -27,7 +27,7 @@ The same ticket keeps AI assistance visible and reviewable: **Summary**, **Last 
 
 ## Why Catalina Support
 
-- A focused two-level workflow: Requester → Support → Development.
+- A focused two-level workflow: User → Support → Development.
 - Main and internal tickets with independent conversations and a side-by-side view.
 - AI-generated **Summary** and **Last action**, plus professional draft improvement.
 - A local AI engine, your own compatible server, or an external provider.
@@ -54,17 +54,17 @@ not published.
 
 | Name | Email | Role |
 | --- | --- | --- |
-| Usuario Uno | `user1@demo.com` | Requester |
-| Usuario Dos | `user2@demo.com` | Requester |
-| Usuario Tres | `user3@demo.com` | Requester |
-| Usuario Cuatro | `user4@demo.com` | Requester |
-| Usuario Cinco | `user5@demo.com` | Requester |
-| Soporte Uno | `support1@demo.com` | Support |
-| Soporte Dos | `support2@demo.com` | Support |
-| Soporte Tres | `support3@demo.com` | Support |
-| Desarrollador 1 | `dev1@demo.com` | Development |
-| Desarrollador 2 | `dev2@demo.com` | Development |
-| Desarrollador 3 | `dev3@demo.com` | Development |
+| User One | `user1@demo.com` | User |
+| User Two | `user2@demo.com` | User |
+| User Three | `user3@demo.com` | User |
+| User Four | `user4@demo.com` | User |
+| User Five | `user5@demo.com` | User |
+| Support One | `support1@demo.com` | Support |
+| Support Two | `support2@demo.com` | Support |
+| Support Three | `support3@demo.com` | Support |
+| Developer One | `dev1@demo.com` | Development |
+| Developer Two | `dev2@demo.com` | Development |
+| Developer Three | `dev3@demo.com` | Development |
 
 </details>
 
@@ -141,15 +141,16 @@ the installation uses AD or Keycloak.
 
 ### 3. Optional sample data
 
-To load the same accounts and realistic tickets used by the demo:
+To load the same English accounts and realistic tickets used by the demo:
 
 ```bash
-docker compose -f dev.yml run --rm seed
+docker compose -f dev.yml run --rm seed-en
 ```
 
 This creates 11 accounts, 25 tickets and 5 attachments. It also **deletes existing development
 tickets, categories, tags, `@demo.com` accounts and development attachments except branding**.
-Run it only when you intentionally want to restore the examples.
+Use `seed-es` instead for Spanish examples. Run either command only when you intentionally want to restore the
+examples.
 
 The seeder preserves a completed installation's branding, language, public URL, email, sign-in
 method, directories, AI, prefix and assignment settings. On an unfinished installation it prepares
@@ -164,7 +165,7 @@ docker compose -f dev.yml up -d
 ```
 
 The database and attachments remain. `docker compose -f dev.yml down` removes containers and the
-network but keeps volumes; adding `-v` also removes the database. Do not run `seed` merely to restart:
+network but keeps volumes; adding `-v` also removes the database. Do not run `seed-en` or `seed-es` merely to restart:
 it resets the sample content.
 
 ### Troubleshooting
