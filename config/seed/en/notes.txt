@@ -1,0 +1,7 @@
+Incident log for the day
+========================
+
+08:05  The application opens normally.
+09:12  Uploading an attachment larger than 10 MB never finishes.
+09:40  The issue is reproduced on two other workstations.
+10:02  Support is notified with this file.

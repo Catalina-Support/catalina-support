@@ -11,7 +11,7 @@
 -- instalación recién desplegada, sin la fila de configuración no se puede leer ni el idioma ni el
 -- nombre, y sin plantilla no sale ningún correo (docs/modules/settings.md, decisión 10).
 --
--- **Los datos de ejemplo de desarrollo NO van aquí**: van en `v1.0.0_dev.sql`, que se aplica sólo en
+-- **Los datos de ejemplo de desarrollo NO van aquí**: van en `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql`, que se aplica sólo en
 -- desarrollo y nunca en producción.
 --
 -- Va por secciones, una por módulo, en el orden en que se implementan.

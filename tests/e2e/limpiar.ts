@@ -17,7 +17,7 @@ import { FABRICA } from './ayudas';
  * no haya ninguna.
  *
  * Los **tickets** de prueba no se tocan: un ticket no se borra (decisión del producto), y el entorno
- * se deja como nuevo con `./scripts/dev-seed.sh`, que borra los tickets y las cuentas de prueba y
+ * se deja como nuevo con `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh`, que borra los tickets y las cuentas de prueba y
  * vuelve a poner las once de ejemplo (`docs/ambientes.md`, sección 9).
  */
 export default async function limpiar(): Promise<void> {

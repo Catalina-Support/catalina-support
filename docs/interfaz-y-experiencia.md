@@ -1,7 +1,12 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Propuesta coordinada del 2026-10-22.** La sección 51 reduce a 16 px el margen horizontal de las
+> cuatro bandejas, elimina su máximo de ancho y fija Ticket y Action en los extremos con aire
+> interior. El responsable cerró el repaso con 1A–4A. No se modifica código antes de aprobar esta
+> propuesta junto con `modules/tickets.md` y `modules/ai.md`.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 50 añade la tarjeta **Icono del sitio** y define
 > la actualización inmediata del favicon en todas las pestañas. El responsable cerró 1A–14A y
@@ -2951,3 +2956,35 @@ El icono es decorativo porque el nombre de la pestaña ya identifica la aplicaci
 el foco, muestra el resultado en el toast común y no bloquea otras partes de Configuración. Se prueba
 en los ocho temas, ambos idiomas, teclado, PC y móvil, incluidos los tres niveles de fallback y la
 sincronización entre pestañas. No se cambia el icono de accesos directos instalados.
+
+## 51. Ancho útil de las bandejas de tickets
+
+Las cuatro bandejas de tickets ocupan el ancho disponible dentro del armazón y dejan 16 px a cada
+lado en escritorio. Esta excepción sustituye para esas pantallas los 40 px generales y su límite de
+88 rem; no ensancha formularios ni páginas de lectura. El menú lateral conserva sus anchos, control
+de plegado y estado actuales.
+
+La tabla reparte el espacio liberado entre sus columnas descriptivas. Ticket queda fija a la
+izquierda y Action a la derecha cuando existe desplazamiento. La primera columna suma aire junto al
+borde izquierdo y la última junto al derecho para que enlaces y botones no parezcan pegados al
+marco. Separadores, fondos, foco y contraste usan los tokens de cada tema. En móvil permanecen las
+tarjetas.
+
+El navegador se comprueba con menú abierto y plegado, 1440 y 1920 px, un ancho intermedio con
+scroll, zoom de usuario y móvil. La revisión visual exige que el botón final sea visible o quede
+fijo durante el desplazamiento, que no cubra texto y que Summary y Last action mantengan su
+legibilidad.
+
+### 51.1 Registro de decisiones
+
+El responsable aclaró el 2026-10-22 que el espacio desperdiciado está a izquierda y derecha de la
+tabla, no en el menú. Eligió las cuatro bandejas (1A), 16 px (2A), Action fija (3A) y añadió padding
+interior en ambos extremos. No quedan decisiones abiertas.
+
+### 51.2 Implementación y verificación
+
+La implementación deja 16 px efectivos mediante compensación localizada en la bandeja, sin cambiar
+el armazón ni otras páginas. Action recibió 6 rem después de que la primera revisión visual detectó
+que el ancho mínimo anterior recortaba encabezado y botón. La segunda pasada de Chromium confirmó
+la tabla completa y sin desbordamiento en 1920 y 1440 px, y las tarjetas a 390 px. Pasaron las 252
+pruebas Angular, la regresión focal, las fronteras y la compilación hacia un directorio limpio.

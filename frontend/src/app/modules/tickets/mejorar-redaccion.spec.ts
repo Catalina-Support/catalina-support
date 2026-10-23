@@ -41,7 +41,7 @@ describe('MejorarRedaccion', () => {
     boton('Mejorar con IA').click();
     const peticion = http.expectOne('/api/tickets/CS-2026-0001/writing/improve');
     expect(peticion.request.body).toEqual({ editor: 'comment', draft: 'hola necesito datos' });
-    peticion.flush({ text: 'Hola, ¿podría compartir los datos necesarios?', qualityWarning: false });
+    peticion.flush({ text: 'Hola, ¿podría compartir los datos necesarios?' });
 
     await fixture.whenStable();
     fixture.detectChanges();
@@ -62,7 +62,6 @@ describe('MejorarRedaccion', () => {
     boton('Mejorar con IA').click();
     http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
       text: 'Primera propuesta',
-      qualityWarning: false,
     });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -79,7 +78,7 @@ describe('MejorarRedaccion', () => {
       draft: 'borrador actualizado',
       previousSuggestion: 'Primera propuesta',
     });
-    regeneracion.flush({ text: 'Propuesta diferente', qualityWarning: false });
+    regeneracion.flush({ text: 'Propuesta diferente' });
     await fixture.whenStable();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Propuesta diferente');
@@ -93,7 +92,6 @@ describe('MejorarRedaccion', () => {
     boton('Mejorar con IA').click();
     http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
       text: 'Una propuesta',
-      qualityWarning: false,
     });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -112,17 +110,4 @@ describe('MejorarRedaccion', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('[role="region"]')).toBeNull();
   });
 
-  it('avisa dentro del panel si la segunda propuesta cambia muy poco y permite usarla', async () => {
-    boton('Mejorar con IA').click();
-    http.expectOne('/api/tickets/CS-2026-0001/writing/improve').flush({
-      text: 'Hola necesito datos.',
-      qualityWarning: true,
-    });
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.textContent).toContain('Esta propuesta cambió muy poco');
-    expect(boton('Usar propuesta').disabled).toBe(false);
-  });
 });

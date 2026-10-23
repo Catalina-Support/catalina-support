@@ -371,8 +371,8 @@ lotes de recuperación, por lo que no forman parte del patrón de fila única.
 **La migración** (`backend/migrations/v1.0.0.sql`) crea las cinco tablas y **siembra su única fila**
 con los valores de fábrica de la sección 2, para que la aplicación arranque sin pasar por la pantalla
 de configuración. **El nombre de la instalación es una columna más de esa misma tabla**, y las
-cuentas y los tickets con los que se trabaja en desarrollo van en `backend/migrations/v1.0.0_dev.sql`,
-el archivo de datos de ejemplo que se aplica sólo en desarrollo con `scripts/dev-seed.sh`
+cuentas y los tickets con los que se trabaja en desarrollo van en `backend/migrations/v1.0.0_dev_en.sql` o `backend/migrations/v1.0.0_dev_es.sql`,
+el archivo de datos de ejemplo que se aplica sólo en desarrollo con `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`
 (`docs/ambientes.md`, secciones 3.3 y 5).
 
 ## 4. Cómo la lee quien la necesita

@@ -184,6 +184,12 @@ describe('BandejaPage', () => {
     expect(celdas[0].textContent?.trim()).toBe('CS-2026-0001');
     expect(celdas[0].classList).toContain('sticky');
     expect(celdas[0].classList).toContain('left-0');
+    expect(celdas[0].classList).toContain('pl-4');
+    expect(celdas.at(-1)?.classList).toContain('sticky');
+    expect(celdas.at(-1)?.classList).toContain('right-0');
+    expect(celdas.at(-1)?.classList).toContain('pr-4');
+    expect(host.querySelector('thead th:last-child')?.classList).toContain('w-[6rem]');
+    expect(host.querySelector('main')?.classList).toContain('lg:-mx-6');
     expect(host.querySelector('thead th')?.classList).toContain('sticky');
     expect(host.querySelector('section')?.classList).toContain('md:overflow-auto');
     expect(host.querySelector('section')?.classList).toContain('md:min-h-60');

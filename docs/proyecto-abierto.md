@@ -1,7 +1,10 @@
 # Proyecto abierto, contribuciones y marca
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Décima enmienda aprobada, implementada y verificada el 2026-10-22:** la sección 18 coordina la demo inglesa y la nueva
+> evidencia bilingüe del sitio oficial.
 >
 > **Novena enmienda implementada el 2026-10-20: traslado del repositorio.** El código fuente se
 > trasladó a la organización `Catalina-Support`, bajo
@@ -648,3 +651,29 @@ el panel lateral de resultados de IA; para no falsear la interfaz se publicaron 
 complementarias: la vista principal/interna y el detalle del mismo ticket con `Summary`, `Last
 action` e `Improve with AI`. No se modificó código de producto, permisos, seeders, despliegue, DNS,
 demo, sitio externo, script de restauración, producción ni etiqueta de versión.
+
+## 18. Demo inglesa y capturas bilingües del sitio
+
+La demo pública se restaura con los ejemplos ingleses y se presenta en inglés. Mantiene las cuentas,
+contraseña común, advertencias y política de borrado ya publicadas; sólo cambia el idioma del
+contenido sembrado y los nombres visibles de las cuentas. La documentación pública usa `User`, no
+`Requester`, para nombrar ese papel y sus cuentas.
+
+El sitio oficial vuelve a obtener sus seis capturas desde entornos reales separados: tres con
+interfaz y ejemplos en inglés y tres con interfaz y ejemplos en español. No se traducen imágenes ni
+se fabrican datos visualmente. Las tomas conservan el mismo recorrido funcional y no muestran datos
+personales, secretos ni contenido ajeno a los seeders.
+
+La renovación del material del sitio no rediseña su composición ni cambia el producto. Las dos
+capturas propias de los README del repositorio quedan fuera de esta enmienda salvo que una referencia
+textual necesite corregirse para reflejar los nuevos comandos o nombres.
+
+Las seis tomas conservan composición, tamaño visual y función narrativa; sólo se sustituyen el
+contenido localizado y, cuando corresponda, sus dimensiones intrínsecas. El responsable cerró el
+repaso con 1A–5A y no quedan decisiones abiertas.
+
+La verificación real ejecutó ambos servicios sobre bases desechables. Cada variante produjo once
+cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos y cinco adjuntos. Una
+base nueva adoptó `en` con `seed-en` y `es` con `seed-es`; una instalación sellada conservó sus
+ajustes al cambiar de juego. La configuración resuelta de Compose contiene sólo `seed-en` y
+`seed-es`, y las pruebas del ejecutor confirman que ignora ambos archivos de desarrollo.

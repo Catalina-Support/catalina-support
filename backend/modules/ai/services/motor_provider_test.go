@@ -143,12 +143,36 @@ func TestUltimaAccionUsaEjemploDeAperturaYElReintentoSeRefuerza(t *testing.T) {
 	}
 }
 
+func TestRedaccionProfesionalValidaEnEspanolEIngles(t *testing.T) {
+	casos := []struct {
+		nombre, borrador, propuesta string
+	}{
+		{
+			nombre:    "español",
+			borrador:  "reinicia la impresora y revisa si vuelve a fallar",
+			propuesta: "He reiniciado la impresora y, por el momento, su funcionamiento parece haberse restablecido correctamente. Por favor, comprueba si ya puedes imprimir y avísanos si el problema vuelve a presentarse.",
+		},
+		{
+			nombre:    "inglés",
+			borrador:  "restart the printer and check if it fails again",
+			propuesta: "I restarted the printer, and it now appears to be working correctly. Please try printing again and let us know if the issue returns so we can continue investigating.",
+		},
+	}
+	for _, caso := range casos {
+		t.Run(caso.nombre, func(t *testing.T) {
+			if !redaccionProfesionalValida(caso.borrador, "Mañana informaremos el resultado después de revisar el servidor.", caso.propuesta) {
+				t.Fatalf("se rechazó una propuesta profesional: %q", caso.propuesta)
+			}
+		})
+	}
+}
+
 func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	var recibido string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, _ := io.ReadAll(r.Body)
 		recibido = string(data)
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"Hola, Ana. Ya puedes ingresar.\"}"}}]}`)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"Hemos comprobado que el acceso se encuentra disponible nuevamente para tu cuenta. Por favor, intenta ingresar y comunícanos si vuelves a encontrar alguna dificultad.\"}"}}]}`)
 	}))
 	defer server.Close()
 
@@ -161,10 +185,10 @@ func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 	resultado, err := servicio.MejorarRedaccion(
 		"hola ana ya puedes ingresar", "", "Ana Pérez", "main", "es",
 	)
-	if err != nil || resultado.Texto != "Hola, Ana. Ya puedes ingresar." {
+	if err != nil || !strings.HasPrefix(resultado.Texto, "Hemos comprobado") {
 		t.Fatalf("resultado inesperado: texto=%q err=%v", resultado.Texto, err)
 	}
-	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "tono profesional", "ticket principal de soporte"} {
+	for _, esperado := range []string{"hola ana ya puedes ingresar", "Ana Pérez", "2 o 3 oraciones", "por favor", "Respuesta de ejemplo", "ticket principal de soporte"} {
 		if !strings.Contains(recibido, esperado) {
 			t.Fatalf("la petición no contiene %q: %s", esperado, recibido)
 		}
@@ -177,11 +201,15 @@ func TestMejorarRedaccionUsaContextoMinimoYDevuelveTextoPlano(t *testing.T) {
 }
 
 func TestMejorarRedaccionRegeneraDesdeElBorradorYEvitandoSoloLaUltimaPropuesta(t *testing.T) {
+	candidata := "Revisaremos el servidor de manera exhaustiva para comprobar su funcionamiento e identificar el origen del comportamiento informado. Mañana le comunicaremos el resultado obtenido y los siguientes pasos que correspondan."
+	if !redaccionProfesionalValida("revisamos el servidor y mañana comunicamos el resultado", "Mañana informaremos el resultado después de revisar el servidor.", candidata) {
+		t.Fatal("el ejemplo de regeneración debe superar la validación local")
+	}
 	var recibido string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, _ := io.ReadAll(r.Body)
 		recibido = string(data)
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"Revisaremos el servidor y compartiremos el resultado mañana.\"}"}}]}`)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"text\":\"Revisaremos el servidor de manera exhaustiva para comprobar su funcionamiento e identificar el origen del comportamiento informado. Mañana le comunicaremos el resultado obtenido y los siguientes pasos que correspondan.\"}"}}]}`)
 	}))
 	defer server.Close()
 
@@ -211,7 +239,7 @@ func TestMejorarRedaccionRegeneraDesdeElBorradorYEvitandoSoloLaUltimaPropuesta(t
 	}
 }
 
-func TestMejorarRedaccionReintentaYAdvierteSiLaSegundaSigueSiendoPobre(t *testing.T) {
+func TestMejorarRedaccionReintentaYRechazaSiLaSegundaSigueSiendoPobre(t *testing.T) {
 	var llamadas atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		llamadas.Add(1)
@@ -226,11 +254,11 @@ func TestMejorarRedaccionReintentaYAdvierteSiLaSegundaSigueSiendoPobre(t *testin
 	defer servicio.Parar()
 
 	resultado, err := servicio.MejorarRedaccion("hola necesito datos", "", "Ana", "main", "es")
-	if err != nil {
-		t.Fatal(err)
+	if !errors.Is(err, ErrRespuestaInvalida) {
+		t.Fatalf("se esperaba rechazo de calidad, resultado=%+v err=%v", resultado, err)
 	}
-	if llamadas.Load() != 2 || !resultado.CalidadInsuficiente {
-		t.Fatalf("se esperaban dos intentos y advertencia: llamadas=%d resultado=%+v", llamadas.Load(), resultado)
+	if llamadas.Load() != 2 {
+		t.Fatalf("se esperaban dos intentos: llamadas=%d", llamadas.Load())
 	}
 }
 

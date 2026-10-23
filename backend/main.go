@@ -119,7 +119,7 @@ func (r resumidorDeIA) ImproveDraft(draft, previousSuggestion, recipient, ticket
 	if errors.Is(err, aiservices.ErrRespuestaInvalida) {
 		return ticketservices.WritingSuggestion{}, ticketservices.ErrWritingInvalid
 	}
-	return ticketservices.WritingSuggestion{Text: result.Texto, QualityWarning: result.CalidadInsuficiente}, err
+	return ticketservices.WritingSuggestion{Text: result.Texto}, err
 }
 
 // Pedir encola un resumen. **No espera al motor**: quien crea un ticket no puede quedarse mirando un

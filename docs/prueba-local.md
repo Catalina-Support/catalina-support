@@ -1,7 +1,10 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Enmienda aprobada, implementada y verificada el 2026-10-22:** la sección 28 define la equivalencia y la comprobación real
+> de los dos juegos de ejemplos.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 27 verifica la
 > actualización autosuficiente y las migraciones versionadas. El responsable cerró y aprobó las
@@ -110,7 +113,7 @@ Esta propuesta cubre **desarrollo y evaluación local**. No habilita desplegar p
 | Aplicar sólo el esquema exige copiar SQL y llamar a `psql` manualmente | README y `dev.yml` | Servicio de un solo uso para el esquema |
 | Playwright apunta al dominio del proyecto | `dev.yml`, `playwright.config.ts` y preparación | Compose propio y direcciones de su red |
 | Angular rechaza el nombre `frontend` | `frontend/angular.json` y comprobación del 2026-10-02 | Admitir explícitamente ese host de desarrollo |
-| Los ejemplos sustituyen los ajustes del usuario | Últimos bloques de `v1.0.0_dev.sql` | Separar datos de ejemplo y configuración |
+| Los ejemplos sustituyen los ajustes del usuario | Últimos bloques de `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Separar datos de ejemplo y configuración |
 | Keycloak anuncia el dominio original | `keycloak.yml` y reino importado | Dirección pública local y conexión interna independiente |
 | El cliente OIDC no lee ni comprueba `issuer` en descubrimiento | `backend/modules/auth/services/keycloak.go` | Comprobar el emisor público antes de utilizar los endpoints |
 
@@ -146,7 +149,7 @@ No se cambia el flujo del asistente ni se añade un acceso que lo salte.
 
 ## 4. Ejemplos opcionales que conservan la configuración
 
-El comando sigue siendo `docker compose -f dev.yml run --rm seed`.
+El comando sigue siendo `docker compose -f dev.yml run --rm seed-en|seed-es`.
 
 En una instalación **sellada**, no modifica `installation_settings`, `directory_settings`,
 `keycloak_settings` ni `ticket_settings`: conserva nombre, idioma, marca, región, dirección,
@@ -274,7 +277,7 @@ Las enmiendas específicas quedan registradas en los documentos afectados y desc
 
 | Documento actualizado | Qué decide o refleja | Archivos afectados |
 | --- | --- | --- |
-| `docs/ambientes.md` | Esquema con un comando, seeder conservando configuración y suite desechable | `dev.yml`, `tests.yml`, `scripts/dev-seed.sh`, migraciones y `tests/e2e/**` |
+| `docs/ambientes.md` | Esquema con un comando, seeder conservando configuración y suite desechable | `dev.yml`, `tests.yml`, `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`, migraciones y `tests/e2e/**` |
 | `docs/arquitectura.md` | Red y volúmenes aislados, hosts admitidos y separación OIDC | Compose, `frontend/angular.json`, cableado del backend |
 | `docs/modules/auth.md` | Descubrimiento, emisor público y conexión interna de Keycloak | `backend/modules/auth/**`, `backend/shared/config/**`, `keycloak.yml`, `config/keycloak/**` |
 | `docs/modules/settings.md` | Nuevo campo interno, lectura, escritura y prueba de conexión | `backend/modules/settings/**`, migración de `keycloak_settings`, pantalla de Configuración |
@@ -1034,3 +1037,31 @@ nombres estrictos, exclusión `_dev` y rechazo de `update.sh` fuera de `main`. L
 queda implementada con un advisory lock sobre una conexión exclusiva; el recorrido con varias
 versiones se ejercerá cuando el responsable abra la siguiente. La suite backend conserva únicamente
 el fallo ambiental conocido del informe sin tickets sembrados.
+
+## 28. Verificación de los ejemplos bilingües
+
+La prueba ejecuta `seed-en` y `seed-es` en bases desechables e independientes. Confirma en ambas las
+once cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos, cinco adjuntos y
+el mismo grafo de identificadores, estados, prioridades, fechas, relaciones y permisos. Verifica
+además nombres, asuntos, comentarios, categorías, etiquetas, motivos, nombres de archivo y contenido
+de adjuntos en el idioma elegido.
+
+Una base nueva adopta el idioma del seeder y queda sellada. Una base ya sellada conserva todos sus
+ajustes al reconstruir los ejemplos, incluso si se ejecuta el seeder del otro idioma. Cambiar el
+idioma de la plataforma sin ejecutar un seeder no modifica datos existentes.
+
+El recorrido en navegador abre las dos variantes con su interfaz correspondiente y comprueba que no
+aparezca contenido humano del idioma opuesto en las seis pantallas destinadas a la web. Las pruebas
+automáticas comparan cantidades y estructura entre idiomas, descargan los cinco adjuntos y validan
+sus bytes. También se resuelven los dos Compose, pasan las suites afectadas y se confirma que el
+ejecutor de producción ignora ambos archivos `*_dev_*.sql`.
+
+La regresión comprueba además que los dos scripts públicos recorren el mismo ejecutor interno y que
+el servicio genérico `seed` ya no forma parte de la configuración resuelta. El responsable cerró el
+repaso con 1A–5A y no quedan decisiones abiertas.
+
+La verificación real ejecutó ambos servicios sobre bases desechables. Cada variante produjo once
+cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos y cinco adjuntos. Una
+base nueva adoptó `en` con `seed-en` y `es` con `seed-es`; una instalación sellada conservó sus
+ajustes al cambiar de juego. La configuración resuelta de Compose contiene sólo `seed-en` y
+`seed-es`, y las pruebas del ejecutor confirman que ignora ambos archivos de desarrollo.
