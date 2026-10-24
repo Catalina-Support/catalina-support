@@ -1,7 +1,13 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-10-24
+>
+> **Limpieza integral de Playwright aprobada, implementada y verificada el 2026-10-24.** La sección
+> 30 elimina contratos y fallos históricos: cada caso comprueba exclusivamente el producto actual,
+> crea sus propios datos y usa un motor de IA falso determinista para resúmenes y redacción. El
+> responsable decidió 1A–4A y aprobó el documento. La pasada final terminó con 198 casos ejecutados
+> correctamente y 30 omisiones exclusivas de los perfiles AD, Keycloak y diagnóstico.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-22:** la sección 28 define la equivalencia y la comprobación real
 > de los dos juegos de ejemplos.
@@ -1065,3 +1071,90 @@ cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos y ci
 base nueva adoptó `en` con `seed-en` y `es` con `seed-es`; una instalación sellada conservó sus
 ajustes al cambiar de juego. La configuración resuelta de Compose contiene sólo `seed-en` y
 `seed-es`, y las pruebas del ejecutor confirman que ignora ambos archivos de desarrollo.
+
+## 29. Regresiones del recorrido efímero sin seeders
+
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-23.** El responsable eligió
+> 3A y 4A y cerró el repaso con 1A–5A. Las regresiones focalizadas pasaron; la ejecución integral
+> descubrió contratos históricos adicionales que se corrigen en la propuesta de la sección 30.
+
+El preparador oficial de Playwright usa el contrato vigente del paso 4: llena **Enviar prueba a**,
+selecciona SMTP sin cifrado para Mailpit, acepta expresamente ese transporte y pulsa **Enviar correo
+de prueba**. No conserva nombres ni supuestos de la antigua prueba de conexión.
+
+La suite añade regresiones para:
+
+1. abrir el paso 5 sin administrador local, mantener los demás modos y terminar con servidor propio;
+2. alternar Principales e Internos con respuestas fuera de orden sin mezclar sus filas;
+3. exponer un solo botón **Nueva cuenta** en PC y móvil;
+4. usar dos enlaces de contraseña consecutivos en la misma pestaña, corrigiendo el producto sólo si
+   la reproducción falla.
+
+La pasada final parte de volúmenes nuevos, no ejecuta seeders, recorre el preparador oficial y
+destruye contenedores y volúmenes. No toca desarrollo persistente, demo ni producción.
+
+Las regresiones focalizadas se ejecutan en PC y móvil. Después pasan las suites completas de
+frontend y E2E sobre volúmenes vacíos; una corrección no se considera cerrada si sólo pasa el caso
+que la descubrió.
+
+## 30. Limpieza integral de contratos E2E
+
+> **Aprobado, implementado y verificado el 2026-10-24.** El responsable eligió 1A–4A. No quedan
+> decisiones abiertas ni fallos conocidos en la suite vigente.
+
+### 30.1 Regla de vigencia
+
+Una prueba E2E describe únicamente el comportamiento que el producto tiene hoy. Se reescriben los
+casos que todavía esperan rutas, permisos, nombres, columnas, estados o flujos anteriores. No se
+conservan aserciones, omisiones ni fallos conocidos como memoria histórica: esa memoria pertenece a
+Git y al registro de decisiones, no a la suite ejecutable.
+
+No se elimina una prueba sólo porque su contrato haya cambiado. Si la funcionalidad sigue vigente,
+el caso se adapta al contrato actual y conserva cobertura de usuario. Sólo se retira un caso cuando
+la funcionalidad comprobada ya no existe o la misma garantía está cubierta de forma idéntica por
+otro recorrido.
+
+### 30.2 Aislamiento de datos
+
+La suite parte de una instalación vacía y no ejecuta `seed-en` ni `seed-es`. Cada caso crea mediante
+API o interfaz todas las cuentas, tickets, categorías, etiquetas y relaciones que necesita. No usa
+correos, identificadores, cantidades ni textos de la demo. Los datos generados llevan identificadores
+únicos para que el orden de ejecución no cambie el resultado.
+
+Los ayudantes reflejan el modelo actual: el papel operativo y la capacidad administrativa viajan por
+separado; entrar lleva al Dashboard cuando corresponda; y cada recorrido navega explícitamente a la
+pantalla que quiere probar. Ningún ayudante traduce silenciosamente un contrato antiguo.
+
+### 30.3 Motor de IA falso determinista
+
+El servidor estático de nginx se sustituye por un servicio falso pequeño y determinista. Reconoce
+el tipo de solicitud sin depender del orden de las pruebas y devuelve:
+
+1. salud compatible para las pruebas de conexión;
+2. JSON válido y estable para **Motivo** y **Última acción**;
+3. texto profesional válido para **Mejorar con IA**;
+4. respuestas de error controlables cuando un caso necesita comprobar indisponibilidad o rechazo.
+
+El falso no llama a Internet, no descarga modelos y no comparte estado mutable entre pruebas. Los
+recorridos ejercen frontend, backend y adaptador real hasta esa frontera; no interceptan la API del
+producto desde Playwright para fabricar un éxito.
+
+### 30.4 Criterio de cierre
+
+La limpieza termina cuando las **228 pruebas actuales** pasan en PC y móvil desde volúmenes nuevos.
+Las únicas omisiones admitidas son las que requieren un perfil explícito de Active Directory,
+Keycloak o diagnóstico; cada una debe declarar esa dependencia en el propio caso. No quedan
+omisiones por deuda, pruebas marcadas con fallos conocidos ni comentarios que justifiquen una
+expectativa obsoleta.
+
+La verificación incluye `--list`, las pruebas Angular, fronteras, compilación de producción y la suite
+E2E completa sobre una instalación vacía. Al terminar se destruyen contenedores y volúmenes. Demo,
+desarrollo persistente, producción, dominio y publicación quedan fuera de alcance.
+
+La verificación final ejecutó los 228 casos declarados en PC y móvil: 198 pasaron y los 30 omitidos
+pertenecen únicamente a los perfiles explícitos de Active Directory, Keycloak y diagnóstico. Las
+255 pruebas Angular y las fronteras del frontend pasaron. La suite no ejecutó seeders y el servicio
+`ai-test` atendió de forma determinista la prueba de conexión, los resúmenes y la redacción asistida.
+La suite Go completa pasó también. Sus pruebas de reactivación por comentarios crean dentro de una
+transacción sus propias cuentas y tickets, configuran explícitamente el doble de identidades y
+revierten esos datos al terminar; no dependen de contratos que hubiera dejado otro recorrido.

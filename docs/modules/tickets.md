@@ -1,13 +1,13 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-10-23
 >
-> **Propuesta coordinada del 2026-10-22.** La sección 32 corrige el aprovechamiento horizontal de
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 32 corrige el aprovechamiento horizontal de
 > las cuatro bandejas de tickets. El responsable eligió 1A–4A en el repaso: conservar el menú,
 > reducir el margen exterior a 16 px, mantener Ticket y Acción fijos en los extremos y dar aire
-> interior a la primera y última columna. No quedan decisiones abiertas; no se modifica código
-> antes de aprobar esta propuesta junto con `interfaz-y-experiencia.md` y `modules/ai.md`.
+> interior a la primera y última columna. El responsable aprobó el alcance y la implementación
+> coincide con `interfaz-y-experiencia.md` y `modules/ai.md`.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-20.** La sección 27.3 corrige la discrepancia entre la matriz
 > aprobada y el flujo de comentarios: cuando el solicitante responde en un principal `en espera`,
@@ -1942,3 +1942,21 @@ focal posterior del ancho final pasó sus 10 pruebas. Chromium confirmó, con me
 tabla dentro de 1920 px y 1200 px dentro de 1440 px, sin scroll horizontal; Acción midió 96 px y se
 vio completa. A 390 px se conservaron las 20 tarjetas visibles. La revisión visual comprobó además
 padding, bordes, truncado y foco en los extremos.
+
+## 33. Coherencia al cambiar el tipo de la lista general
+
+> **Propuesta del 2026-10-23.** El recorrido efímero comprobó que el conmutador puede marcar
+> Internos mientras la tabla conserva Principales. El responsable eligió 2A y cerró el repaso con
+> 3A y 5A. No quedan decisiones abiertas; falta la aprobación explícita.
+
+En `/tickets`, **Principales** e **Internos** forman una sola selección: URL, botón marcado, consulta
+y filas visibles deben referirse siempre al mismo tipo. Al cambiar la opción se invalida cualquier
+petición anterior, se vacía la tabla y se muestra la carga hasta recibir el nuevo tipo. Una respuesta
+tardía del tipo anterior no puede repoblarla.
+
+La navegación conserva por separado filtros y resultados recordados, pero sólo los restaura después
+de comprobar que pertenecen al tipo vigente. No cambian API, permisos, filtros, orden, carga
+incremental ni rutas de detalle.
+
+La regresión demora deliberadamente una respuesta, alterna ambos tipos y comprueba URL, estado
+accesible del conmutador y números visibles después de cada cambio.

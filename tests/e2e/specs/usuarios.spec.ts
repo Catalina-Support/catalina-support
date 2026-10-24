@@ -38,7 +38,7 @@ test.describe('La lista de usuarios', () => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se puede entrar');
 
     await entrar(page, FABRICA.email, FABRICA.password);
-    // Un Administrador entra directamente en la lista (sección 4.4).
+    await page.goto('/users');
     await expect(page).toHaveURL(/\/users$/);
   });
 
@@ -52,7 +52,7 @@ test.describe('La lista de usuarios', () => {
     await expect(page.getByRole('heading', { name: 'Usuarios' })).toBeVisible();
 
     // Los filtros son chips a la vista, no un formulario escondido detrás de un botón.
-    await expect(page.getByRole('group', { name: 'Papel' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Rol' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Origen' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Estado' })).toBeVisible();
 
@@ -92,10 +92,14 @@ test.describe('La lista de usuarios', () => {
     await expect(filaDe(page, ana.email)).toBeVisible();
   });
 
-  test('separa el papel operativo de la capacidad administrativa', async ({ page }) => {
-    await page.getByLabel('Buscar por nombre o correo').fill('dev1@demo.com');
+  test('separa el papel operativo de la capacidad administrativa', async ({ page, request }) => {
+    const desarrolloAdmin = await crearCuentaLista(request, {
+      role: 'desarrollo',
+      isAdmin: true,
+    });
+    await page.getByLabel('Buscar por nombre o correo').fill(desarrolloAdmin.email);
 
-    const fila = filaDe(page, 'dev1@demo.com');
+    const fila = filaDe(page, desarrolloAdmin.email);
     const papel = fila.locator('[data-user-role]');
     const insignia = papel.locator('[data-admin-badge]');
 
@@ -122,7 +126,7 @@ test.describe('La lista de usuarios', () => {
     await alta.getByLabel('Apellidos').fill('Ruiz');
     await alta.getByLabel('Correo electrónico').fill(correo);
     // El papel se elige en el alta: es lo que reparte un Administrador.
-    await alta.getByLabel('Papel').selectOption('soporte');
+    await alta.getByLabel('Rol').selectOption('soporte');
     await alta.getByRole('button', { name: 'Crear la cuenta' }).click();
 
     // El diálogo se cierra y se dice lo que ha pasado.
@@ -143,8 +147,8 @@ test.describe('La lista de usuarios', () => {
     });
 
     await entrarComo(page, correo);
-    // Entra como Soporte, así que va a su bandeja, que es donde trabaja.
-    await expect(page).toHaveURL(/\/tickets$/);
+    // El Dashboard es el inicio actual de las cuentas operativas.
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test('desactivar pregunta, deja a la persona fuera y reactivar la devuelve', async ({
@@ -184,7 +188,7 @@ test.describe('La lista de usuarios', () => {
     expect(reactivar.status(), await reactivar.text()).toBe(200);
 
     await entrar(page, ana.email, ana.password);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
   });
 });
 
@@ -196,52 +200,20 @@ test.describe('Los usuarios, por papel', () => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se puede entrar');
   });
 
-  test('Soporte edita el nombre en la lista, y no tiene ficha de nadie', async ({
+  test('Soporte sin capacidad administrativa no accede a la gestión de usuarios', async ({
     page,
     request,
   }) => {
     const soporte = await crearCuentaLista(request, { role: 'soporte' });
-    const ana = await crearCuentaLista(request);
 
     await entrarComo(page, soporte.email);
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await abrirMenuSiEsCajon(page);
+    await expect(page.getByRole('link', { name: 'Usuarios' })).toHaveCount(0);
 
-    // Soporte entra en su bandeja, y la lista de usuarios está en el menú.
-    await expect(page).toHaveURL(/\/tickets$/);
     await page.goto('/users');
-
-    // Se busca por su correo: la lista se pagina, y la cuenta recién creada puede no estar en la
-    // primera página cuando en desarrollo se acumulan las de todas las pasadas.
-    await page.getByLabel('Buscar por nombre o correo').fill(ana.email);
-
-    const fila = filaDe(page, ana.email);
-    await expect(fila).toBeVisible();
-
-    // No hay ficha que abrir: Soporte no ve la ficha de nadie (users.md, decisión 2).
-    await expect(fila.getByRole('link', { name: 'Abrir la ficha' })).toHaveCount(0);
-
-    // Y edita el nombre donde está, que es el único sitio donde ese permiso se puede ejercer.
-    await fila.getByRole('button', { name: 'Editar' }).click();
-    await fila.getByLabel('Nombre').fill('Ana María');
-    await fila.getByLabel('Apellidos').fill('Pérez Gómez');
-    await fila.getByRole('button', { name: 'Guardar' }).click();
-
-    await expect(page.getByText('Cambios guardados.')).toBeVisible();
-
-    // **La fila se relee**, y con margen: en una pasada completa (con el motor de IA y la base
-    // trabajando) el repintado de la lista tardó más de lo normal y esta comprobación salió roja una vez,
-    // pasando en solitario y en la pasada anterior. Se le da tiempo en vez de darlo por fallo.
-    await expect(filaDe(page, ana.email)).toContainText('Ana María Pérez Gómez', { timeout: 20_000 });
-
-    // Se recarga: el nombre está guardado de verdad, no sólo pintado. Se busca por correo, porque al
-    // cambiarle los apellidos la cuenta **cambia de sitio en la lista** —el orden es por apellidos y
-    // nombre— y puede caer en otra página.
-    await page.reload();
-    await page.getByLabel('Buscar por nombre o correo').fill(ana.email);
-    await expect(filaDe(page, ana.email)).toContainText('Ana María Pérez Gómez');
-
-    // Y si escribe la dirección de la ficha a mano, se le dice que no.
-    await page.goto(`/users/${ana.id}`);
     await expect(page).toHaveURL(/\/forbidden$/);
+    await expect(page.getByRole('heading', { name: 'No puedes ver esta pantalla' })).toBeVisible();
   });
 
   test('el perfil propio cambia el nombre y no deja tocar el correo', async ({
@@ -252,7 +224,7 @@ test.describe('Los usuarios, por papel', () => {
 
     await entrarComo(page, ana.email);
     // Un usuario entra en sus tickets.
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     // El perfil se abre desde tu nombre, en la zona de controles del menú.
     await abrirMenuSiEsCajon(page);
@@ -279,10 +251,10 @@ test.describe('Los usuarios, por papel', () => {
     page,
     request,
   }) => {
-    const jefa = await crearCuentaLista(request, { role: 'administrador' });
+    const jefa = await crearCuentaLista(request, { role: 'soporte', isAdmin: true });
 
     await entrarComo(page, jefa.email);
-    await expect(page).toHaveURL(/\/users$/);
+    await expect(page).toHaveURL(/\/dashboard$/);
 
     // Su propia ficha: se abre, y **no** ofrece desactivarse (users.md, sección 7).
     await page.goto(`/users/${jefa.id}`);

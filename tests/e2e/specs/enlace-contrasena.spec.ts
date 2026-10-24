@@ -66,7 +66,7 @@ test.describe('El enlace del correo', () => {
 
     // Y con esa contraseña se entra de verdad.
     await entrar(page, cuenta.email, 'una-contraseña-larga');
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     // Un usuario entra en sus tickets, y esta persona acaba de entrar: no tiene ninguno todavía.
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
     await expect(page.getByText('Todavía no hay ningún ticket.')).toBeVisible();
@@ -159,7 +159,45 @@ test.describe('El enlace del correo', () => {
 
     // Y esa contraseña entra de verdad.
     await entrar(page, cuenta.email, '12345678');
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     expect(await tokenGuardado(page)).toBeTruthy();
+  });
+
+  test('dos enlaces consecutivos en la misma pestaña no comparten estado', async ({ page, request }) => {
+    test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se puede dar de alta nada');
+    await vaciarBuzon(request);
+
+    const entrada = await request.post('/api/auth/login', {
+      data: { email: FABRICA.email, password: FABRICA.password },
+    });
+    expect(entrada.ok()).toBeTruthy();
+    const { token } = (await entrada.json()) as { token: string };
+    const primera = cuentaDePrueba();
+    const cuentas = [primera, { ...cuentaDePrueba(), email: `segunda-${primera.email}` }];
+    const enlaces: string[] = [];
+
+    for (const cuenta of cuentas) {
+      const alta = await request.post('/api/users', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { ...cuenta, role: 'usuario', origin: 'local' },
+      });
+      expect(alta.status(), await alta.text()).toBe(201);
+      enlaces.push(await esperarEnlaceDelCorreo(request, cuenta.email, ASUNTO_DEL_ALTA));
+    }
+
+    await page.goto(enlaces[0]);
+    await page.getByLabel('Contraseña nueva').fill('primera-contraseña');
+    await page.getByLabel('Repite la contraseña').fill('primera-contraseña');
+    await page.getByRole('button', { name: 'Guardar la contraseña' }).click();
+    await expect(page.getByText('Tu contraseña ya está puesta. Entra con ella.')).toBeVisible();
+
+    await page.goto(enlaces[1]);
+    await expect(page).toHaveURL(/\/set-password$/);
+    await expect(page.getByLabel('Contraseña nueva')).toHaveValue('');
+    await expect(page.getByText('Tu contraseña ya está puesta. Entra con ella.')).toHaveCount(0);
+    await page.getByLabel('Contraseña nueva').fill('segunda-contraseña');
+    await page.getByLabel('Repite la contraseña').fill('segunda-contraseña');
+    await page.getByRole('button', { name: 'Guardar la contraseña' }).click();
+    await expect(page.getByText('Tu contraseña ya está puesta. Entra con ella.')).toBeVisible();
   });
 });

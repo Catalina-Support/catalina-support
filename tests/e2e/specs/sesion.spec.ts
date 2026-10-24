@@ -16,7 +16,7 @@ test.describe('Entrar y salir', () => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no hay cuenta con la que entrar');
 
     await entrar(page, FABRICA.email, FABRICA.password);
-    await expect(page).toHaveURL(/\/users$/);
+    await expect(page).toHaveURL(/\/dashboard$/);
 
     await abrirMenuSiEsCajon(page);
     await page.getByRole('button', { name: 'Salir' }).click();
@@ -28,8 +28,8 @@ test.describe('Entrar y salir', () => {
     // Cancelar no sale: se sigue dentro, y la ventana se cierra.
     await ventana.getByRole('button', { name: 'Cancelar' }).click();
     await expect(ventana).toHaveCount(0);
-    await expect(page).toHaveURL(/\/users$/);
-    await expect(page.getByRole('heading', { name: 'Usuarios' })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible();
 
     // Y confirmar sí: se vuelve a la entrada.
     await abrirMenuSiEsCajon(page);
@@ -79,17 +79,17 @@ test.describe('Entrar y salir', () => {
     await entrar(page, FABRICA.email, FABRICA.password);
 
     // Se entra de verdad: la raíz deja de ser la pantalla de entrada y aparece **lo que le toca al
-    // papel**. Un Administrador entra en la lista de usuarios, que es donde trabaja
+    // papel**. Un Administrador entra en el Dashboard, su inicio actual
     // (docs/interfaz-y-experiencia.md, sección 4.4).
-    await expect(page).toHaveURL(/\/users$/);
-    await expect(page.getByRole('heading', { name: 'Usuarios' })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible();
 
     await quienSoy;
     expect(await tokenGuardado(page)).toBeTruthy();
 
     // Con sesión, la pantalla de entrada ya no tiene nada que hacer: lleva a donde toca entrar.
     await page.goto('/login');
-    await expect(page).toHaveURL(/\/users$/);
+    await expect(page).toHaveURL(/\/dashboard$/);
 
     // Y desde dentro se llega a cambiar la contraseña, que es de `auth` y no del módulo de usuarios.
     await page.goto('/change-password');

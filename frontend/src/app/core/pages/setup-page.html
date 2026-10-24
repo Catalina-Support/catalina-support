@@ -751,12 +751,15 @@
                 <h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3>
                 <app-boton
                   forma="secundario"
-                  [texto]="t().configuracion.iaCargarCatalogo"
+                  [texto]="errorCatalogoIA() ? t().servidor.reintentar : t().configuracion.iaCargarCatalogo"
                   [textoTrabajando]="t().configuracion.iaRefrescandoCatalogo"
                   [trabajando]="refrescandoCatalogo()"
                   (pulsado)="cargarCatalogoIA()"
                 />
               </div>
+              @if (errorCatalogoIA(); as error) {
+                <app-aviso forma="error" [texto]="error" />
+              }
               @if (catalogoIA(); as catalogo) {
                 <p class="text-sm text-texto">
                   {{ t().configuracion.iaAceleracionEfectiva }}:

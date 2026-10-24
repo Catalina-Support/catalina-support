@@ -1,12 +1,12 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-10-23
 >
-> **Propuesta coordinada del 2026-10-22.** La sección 51 reduce a 16 px el margen horizontal de las
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 51 reduce a 16 px el margen horizontal de las
 > cuatro bandejas, elimina su máximo de ancho y fija Ticket y Action en los extremos con aire
-> interior. El responsable cerró el repaso con 1A–4A. No se modifica código antes de aprobar esta
-> propuesta junto con `modules/tickets.md` y `modules/ai.md`.
+> interior. El responsable cerró y aprobó el repaso con 1A–4A; la implementación coincide con
+> `modules/tickets.md` y `modules/ai.md`.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 50 añade la tarjeta **Icono del sitio** y define
 > la actualización inmediata del favicon en todas las pestañas. El responsable cerró 1A–14A y
@@ -2988,3 +2988,18 @@ el armazón ni otras páginas. Action recibió 6 rem después de que la primera 
 que el ancho mínimo anterior recortaba encabezado y botón. La segunda pasada de Chromium confirmó
 la tabla completa y sin desbordamiento en 1920 y 1440 px, y las tarjetas a 390 px. Pasaron las 252
 pruebas Angular, la regresión focal, las fronteras y la compilación hacia un directorio limpio.
+
+## 52. Estados coherentes en configuración, bandejas y altas
+
+> **Propuesta coordinada del 2026-10-23.** El responsable eligió 1A, 2A y 4A y cerró el repaso con
+> 1A–5A. No quedan decisiones abiertas; falta la aprobación explícita.
+
+Un fallo del catálogo local de IA se presenta dentro de su tarjeta y mantiene operables las
+alternativas del paso 5. No abre el aviso global de servidor caído mientras el backend responda.
+La tarjeta permite volver a intentar. Configuración ofrece el mismo tratamiento.
+
+Al cambiar Principales o Internos, la tabla anterior desaparece y ocupa su lugar la carga. El botón,
+la URL y las filas vuelven a mostrarse juntos cuando termina la consulta vigente.
+
+En `/users`, cada ancho expone un único botón **Nueva cuenta** al foco y al árbol de accesibilidad.
+Las variantes responsivas no producen controles duplicados para lectores de pantalla ni pruebas.

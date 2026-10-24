@@ -1,7 +1,7 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-23
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: icono del sitio configurable.** La sección 25 incorpora un
 > favicon propio e independiente de los dos logos, con administración en `/setup` y Configuración,
@@ -1235,3 +1235,16 @@ Las pruebas cubrirán validación, reemplazo y limpieza de archivos, fallback en
 caché, SVG aislado, permisos, candado del sello y actualización del favicon al cambiar tanto el
 icono como el logo claro. No se añaden manifest, iconos instalables ni `apple-touch-icon`: el alcance
 es exclusivamente la pestaña del navegador.
+
+## 26. Catálogo local indisponible en Configuración
+
+> **Propuesta del 2026-10-23.** El repaso amplió expresamente a `/settings` la corrección descubierta
+> en `/setup`. El responsable eligió 1A, 2A y 5A. No quedan decisiones abiertas; falta la aprobación.
+
+Si el administrador de modelos locales no responde, Configuración muestra el fallo dentro de la
+tarjeta local, ofrece **Volver a intentar** y mantiene utilizables servidor propio y proveedor
+externo. Ese 503 no activa por sí solo la pantalla global de servidor caído. Los fallos al probar o
+guardar el modo elegido conservan sus mensajes toast actuales.
+
+La regresión focal cubre Configuración en PC y móvil con el backend general sano y el administrador
+local ausente. No cambian endpoints, secretos, permisos, obligatoriedad de IA ni estado efectivo.
