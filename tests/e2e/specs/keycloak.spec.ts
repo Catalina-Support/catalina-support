@@ -171,7 +171,7 @@ test.describe('El camino de Keycloak', () => {
     await entrarPorKeycloak(page, SARA);
 
     // Vuelve a la aplicación, ya dentro: un `usuario` va a sus tickets.
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
     // **El fragmento se borra en cuanto se usa**: el token no se queda en la barra de direcciones.
@@ -199,7 +199,7 @@ test.describe('El camino de Keycloak', () => {
 
     await entrarPorKeycloak(page, PABLO);
 
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
     const token = await tokenDeFabrica(request);
@@ -250,7 +250,7 @@ test.describe('El camino de Keycloak', () => {
 
     // Entra por Keycloak, con la contraseña de allí, que no es la suya local.
     await entrarPorKeycloak(page, NURIA);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     const despues = await cuentasConEseCorreo(request, NURIA.email, token);
     expect(despues[0]!.origin).toBe('keycloak');
@@ -293,7 +293,7 @@ test.describe('El camino de Keycloak', () => {
 
     // La cuenta tiene que existir: entra por Keycloak (o vuelve a entrar).
     await entrarPorKeycloak(page, PABLO);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     await salir(page);
 
     const token = await tokenDeFabrica(request);
@@ -328,7 +328,7 @@ test.describe('El camino de Keycloak', () => {
     // de entrada no se enseña.
     await salir(page);
     await entrarPorKeycloak(page, PABLO);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     const despues = await cuentasConEseCorreo(request, PABLO.email, token);
     expect(despues[0]!.isActive).toBe(true);

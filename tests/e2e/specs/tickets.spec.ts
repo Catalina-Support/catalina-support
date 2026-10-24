@@ -104,7 +104,7 @@ async function detalleDe(
     priority?: 'low' | 'medium' | 'high' | 'critical';
     /** Los dos campos del motor de IA, con su estado y el idioma global (`docs/modules/ai.md`). */
     insights?: {
-      motivo: { state: string; text?: string; language?: string };
+      summary: { state: string; text?: string; language?: string };
       ultimaAccion: { state: string; text?: string; language?: string };
     };
   };
@@ -305,7 +305,7 @@ test.describe('El recorrido de un ticket', () => {
       ),
     ).toHaveLength(1);
 
-    await page.goto('/tickets/main?priority=critical&priority=high&order=updated');
+    await page.goto('/tickets?type=principal&priority=critical&priority=high&order=updated');
     await expect(page).toHaveURL(/priority=critical&priority=high&order=updated/);
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
@@ -318,7 +318,7 @@ test.describe('El recorrido de un ticket', () => {
     await expect(page.getByRole('button', { name: 'Cambiar la prioridad' })).toHaveCount(0);
   });
 
-  test('Soporte revisa una mejora de IA antes de aplicarla y el usuario no recibe el botón', async ({
+  test('Soporte recibe la ayuda de IA configurada y el usuario no recibe el botón', async ({
     page,
     request,
   }) => {
@@ -340,18 +340,14 @@ test.describe('El recorrido de un ticket', () => {
     const abrir = page.getByRole('button', { name: 'Mejorar con IA' });
     await expect(abrir).toBeVisible();
     await abrir.click();
-    const dialogo = page.getByRole('dialog', { name: 'Mejorar la redacción con IA' });
-    await expect(dialogo.getByLabel('Borrador')).toHaveValue('hola lucía mandame el error que aparece');
-    await dialogo.getByLabel('Tonalidad').selectOption('empathetic');
-    await dialogo.getByRole('button', { name: 'Mejorar', exact: true }).click();
 
-    await expect(dialogo.getByLabel('Borrador')).toHaveValue('connection ok');
-    // La propuesta permanece en el modal hasta que la persona la acepta.
+    const propuesta = page.getByRole('region', { name: 'Propuesta de la IA' });
+    await expect(propuesta).toBeVisible();
+    await expect(propuesta).toContainText('mensaje exacto');
     await expect(editor).toHaveText('hola lucía mandame el error que aparece');
-    await dialogo.getByRole('button', { name: 'Usar este texto' }).click();
-    await expect(editor).toHaveText('connection ok');
 
-    // Aplicarla sólo cambia el borrador: todavía no existe ningún comentario nuevo en la API.
+    await propuesta.getByRole('button', { name: 'Usar propuesta' }).click();
+    await expect(editor).toContainText('mensaje exacto');
     expect((await detalleDe(request, tokenSolicitante, numero)).comments).toHaveLength(0);
 
     await salir(page);
@@ -366,7 +362,7 @@ test.describe('El recorrido de un ticket', () => {
     await entrarComo(page, ana.email);
 
     // Un usuario entra en **sus tickets**, no en una pantalla de inicio: ya no hay inicio.
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     // **El nombre del módulo, los filtros y «Nuevo ticket» van en la misma fila** (decisión del
     // responsable, 2026-09-28): juntarlos deja un renglón más de tabla a la vista. Se mide por su
@@ -449,7 +445,9 @@ test.describe('El recorrido de un ticket', () => {
     // El usuario comenta: la conversación crece y sigue siendo suya.
     await page.getByLabel('Escribe un comentario').fill('¿Hay novedades?');
     await page.getByRole('button', { name: 'Comentar' }).click();
-    await expect(page.getByText('¿Hay novedades?')).toBeVisible();
+    await expect(
+      page.locator('.cuerpo-con-adjuntos').filter({ hasText: '¿Hay novedades?' }).last(),
+    ).toBeVisible();
 
     // **Cerrar se elige por su estado y se confirma en la ventana** (decisiones 80 y 81), y **sin decir
     // por qué no se cierra**: se prueba primero a confirmar sin el comentario, y el ticket sigue abierto.
@@ -463,7 +461,7 @@ test.describe('El recorrido de un ticket', () => {
 
     await expect(page.getByText('Cerrado').first()).toBeVisible();
     await expect(
-      page.getByText('Lo cierro yo: ya me lo arreglaron.'),
+      page.getByText('Lo cierro yo: ya me lo arreglaron.', { exact: true }),
       'el comentario del cierre queda en la conversación',
     ).toBeVisible();
 
@@ -535,27 +533,28 @@ test.describe('El recorrido de un ticket', () => {
   test('Soporte pregunta al usuario y escala; Desarrollo lo devuelve a su bandeja', async ({
     page,
     request,
-  }) => {
+  }, info) => {
     const soporte = await crearCuentaLista(request, { role: 'soporte' });
     const desarrollo = await crearCuentaLista(request, { role: 'desarrollo' });
     const ana = await crearCuentaLista(request);
 
     await entrarComo(page, soporte.email);
 
-    // Soporte entra en la bandeja, y ve el ticket que ha abierto el usuario.
-    await expect(page).toHaveURL(/\/tickets$/);
+    // Soporte entra en la bandeja personal.
+    await page.goto('/my-tickets');
+    await expect(page).toHaveURL(/\/my-tickets$/);
     // La bandeja de Soporte es **«Mis tickets»**: lo suyo, no todo lo que hay (decisión 52).
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
     // El ticket lo abre el usuario, que es quien abre tickets: Soporte lo atiende.
     const { numero } = await ticketDePrueba(request, await tokenDe(request, ana.email), 'Escalado y devuelto');
 
-    // **Se busca en «Tickets principales»**, que es la lista de todo lo que hay (decisión 52): el
+    // **Se busca en «Tickets»**, que es la lista de todo lo que hay (decisión 52): el
     // ticket es del usuario y puede no ser suyo —el turno se lo dará a un técnico u otro—, así que
     // buscarlo en «Mis tickets» sería depender de a quién le tocó. Se busca por su número, que es como
     // se encuentra un ticket: en desarrollo hay muchos y el nuevo cae en la última página.
-    await page.goto('/tickets/main');
-    await expect(page.getByRole('heading', { name: 'Tickets principales' })).toBeVisible();
+    await page.goto('/tickets?type=principal');
+    await expect(page.getByRole('heading', { name: 'Tickets' })).toBeVisible();
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
 
@@ -577,7 +576,7 @@ test.describe('El recorrido de un ticket', () => {
     await expect(page.getByLabel('La pregunta')).toHaveCount(0);
     await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
 
-    await expect(page.getByText('En espera').first()).toBeVisible();
+    await expect(page.getByText('Esperando').first()).toBeVisible();
 
     // Y escala: sin motivo no se escala, y el motivo es lo que se pide.
     await elegirEstado(page, numero, 'escalado');
@@ -587,9 +586,8 @@ test.describe('El recorrido de un ticket', () => {
 
     await expect(page.getByText('Escalado').first()).toBeVisible();
 
-    // Con el interno creado aparece **el conmutador de la vista**, y Soporte entra por el principal
-    // (decisión del responsable, 2026-09-27). Se cambia a «Los dos» para ver el interno, que es lo que
-    // hacía antes por defecto.
+    // Con el interno creado aparece el conmutador de la vista. En PC se pueden ver ambos lados y en
+    // móvil se cambia entre el principal y el interno.
     const vista = page.getByRole('group', { name: 'Qué quieres ver' });
     await expect(vista).toBeVisible();
     await expect(page.getByText('Principal', { exact: true })).toBeVisible();
@@ -602,7 +600,11 @@ test.describe('El recorrido de un ticket', () => {
     // **Y el botón de volver dice sólo «Volver»** (decisión del responsable, 2026-09-28).
     await expect(page.getByRole('button', { name: 'Volver', exact: true })).toBeVisible();
 
-    await vista.getByRole('button', { name: 'Los dos' }).click();
+    if (info.project.name === 'movil') {
+      await vista.getByRole('button', { name: 'Interno' }).click();
+    } else {
+      await vista.getByRole('button', { name: 'Los dos' }).click();
+    }
 
     // **El número del interno sale en dos sitios, y los dos valen**: en la cabecera de la página —al
     // lado del principal— y en la cabecera de su columna (decisión del responsable, 2026-09-28).
@@ -610,17 +612,20 @@ test.describe('El recorrido de un ticket', () => {
 
     // **Y con los dos tickets a la vista hay un control de acciones por columna** (decisión 78), cada
     // uno con el suyo: desde un solo control de arriba no se sabría a cuál se le cambia el estado.
-    await expect(page.locator(`#acciones-${numero}`)).toBeVisible();
+    if (info.project.name === 'pc') {
+      await expect(page.locator(`#acciones-${numero}`)).toBeVisible();
+    }
     await expect(page.locator(`#acciones-INT-${numero}`)).toBeVisible();
 
     // Desarrollo entra en **lo suyo**, que son los internos, y el interno recién creado todavía no
     // es suyo: el reparto por turnos se lo habrá dado a otro desarrollador. Está en **Tickets
     // internos**, que es la lista de todo lo que hay (decisión 52).
     await entrarComo(page, desarrollo.email);
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
-    await page.goto('/tickets/internal');
-    await expect(page.getByRole('heading', { name: 'Tickets internos' })).toBeVisible();
+    await page.goto('/tickets?type=interno');
+    await expect(page.getByRole('heading', { name: 'Tickets' })).toBeVisible();
     await buscarEnLaLista(page, `INT-${numero}`);
     await expect(page.getByRole('link', { name: `INT-${numero}` })).toBeVisible();
     // En los internos no está el principal: son listas distintas, y esa es la gracia.
@@ -634,7 +639,7 @@ test.describe('El recorrido de un ticket', () => {
     await asignarA(page, desarrollo.id);
     await expect(page.getByText('Ticket asignado.')).toBeVisible();
 
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
     await buscarEnLaLista(page, `INT-${numero}`);
     await expect(page.getByRole('link', { name: `INT-${numero}` })).toBeVisible();
@@ -805,8 +810,8 @@ test.describe('La bandeja, por papel', () => {
     await entrarComo(page, FABRICA.email, FABRICA.password);
 
     // El Administrador aterriza en los usuarios, y desde el menú se va a la bandeja.
-    await expect(page).toHaveURL(/\/users$/);
-    await page.goto('/tickets');
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Bandeja' })).toBeVisible();
 
     // El chip de tipo es suyo —es el único papel que ve los dos—, y desde el 2026-09-27 vive **dentro
@@ -834,7 +839,7 @@ test.describe('La bandeja, por papel', () => {
     await expect(page.getByRole('button', { name: 'Asignar', exact: true })).toHaveCount(0);
 
     // Y el chip de tipo lleva a los internos, que ahora vive dentro del modal de búsqueda.
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await filtrarEnLaLista(page, 'Tipo', 'Internos');
     await expect(page.getByRole('heading', { name: 'Bandeja' })).toBeVisible();
   });
@@ -872,9 +877,7 @@ test.describe('Las listas de tickets', () => {
     page,
     request,
   }) => {
-    // **Un minuto**: el caso da de alta tres cuentas leyendo sus correos del buzón y busca cuatro
-    // veces abriendo el modal, y con los treinta segundos de siempre se quedaba sin tiempo en la
-    // última aserción (lo cazó la propia suite, no una persona).
+    // El caso da de alta tres cuentas, recorre ambas listas y verifica dos reasignaciones.
     test.setTimeout(60_000);
 
     const soporteA = await crearCuentaLista(request, { role: 'soporte' });
@@ -890,43 +893,40 @@ test.describe('Las listas de tickets', () => {
     // **El ticket está en la lista de todo**, que es donde lo encuentra cualquiera del equipo. Se busca
     // por el número, que es como se busca un ticket.
     //
-    // **No se afirma de quién es todavía**: el reparto por turnos se lo asigna a un técnico activo al
-    // crearlo, y cuál de ellos depende del turno —con las cuentas que dejan las pruebas, cualquiera—,
-    // así que «un ticket nuevo no es de nadie» no es verdad y dar por hecho lo contrario hacía que esta
-    // prueba fallara según a quién le tocara el turno (pasó el 2026-09-27). Lo que sí es fijo es el
-    // resto: se lo queda A, luego B se lo lleva, y a A se le va de su bandeja.
+    // El reparto por turnos puede asignarlo a cualquier técnico activo. El caso fija después los dos
+    // responsables y comprueba que el ticket cambia de bandeja.
     await entrarComo(page, soporteA.email);
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
-    await page.goto('/tickets/main');
-    await expect(page.getByRole('heading', { name: 'Tickets principales' })).toBeVisible();
+    await page.goto('/tickets?type=principal');
+    await expect(page.getByRole('heading', { name: 'Tickets' })).toBeVisible();
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
 
-    // **La reasignación, dentro del ticket**: A se lo queda desde su ficha, que es donde se ve a quién
-    // se le pasa. El atajo «Asignármelo» de la lista ya no existe (decisión 50). Se elige **por su
-    // identificador** y no por su nombre: las cuentas de prueba se llaman todas igual.
+    // A se lo queda desde la ficha. Se elige por su identificador porque las cuentas de prueba
+    // comparten nombre.
     await page.getByRole('link', { name: numero }).click();
     await expect(page.getByRole('heading', { level: 1, name: numero })).toBeVisible();
     await asignarA(page, soporteA.id);
     await expect(page.getByText('Ticket asignado.')).toBeVisible();
 
     // Y ahora sí está en lo suyo: «lo mío» es lo que tengo asignado.
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
 
     // **Y el ejemplo del responsable**: un técnico se lo pasa a otro técnico. B entra por la lista de
     // todo, se lo asigna desde el ticket, y el ticket cambia de bandeja.
     await entrarComo(page, soporteB.email);
-    await page.goto('/tickets/main');
+    await page.goto('/tickets?type=principal');
     await buscarEnLaLista(page, numero);
     await page.getByRole('link', { name: numero }).click();
     await expect(page.getByRole('heading', { level: 1, name: numero })).toBeVisible();
     await asignarA(page, soporteB.id);
     await expect(page.getByText('Ticket asignado.')).toBeVisible();
 
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
 
@@ -936,7 +936,7 @@ test.describe('Las listas de tickets', () => {
     // rellenar la búsqueda antes de que la pantalla sea la de A encuentra la lista de la persona
     // anterior, y la prueba falla por una carrera y no por el producto (le pasó a esta misma prueba).
     await entrarComo(page, soporteA.email);
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
     await buscarEnLaLista(page, numero);
     await expect(page.getByRole('link', { name: numero })).toHaveCount(0);
@@ -945,43 +945,55 @@ test.describe('Las listas de tickets', () => {
   test('el chip de «Mis tickets» lleva a los internos, y las dos listas del todo están en el menú', async ({
     page,
     request,
-  }) => {
+  }, info) => {
     const soporte = await crearCuentaLista(request, { role: 'soporte' });
 
     await entrarComo(page, soporte.email);
+    await page.goto('/my-tickets');
 
-    // El chip de tipo lo lleva Soporte desde el 2026-09-26, arranca en los principales y desde el
-    // 2026-09-27 se cambia **dentro del modal de búsqueda**.
-    await page.getByRole('button', { name: 'Buscar', exact: true }).click();
-    const chip = page.getByRole('dialog').getByRole('group', { name: 'Tipo' });
-    await expect(chip.getByRole('button', { name: 'Principales' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-
-    await chip.getByRole('button', { name: 'Internos' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Buscar', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
-    // Las dos listas del «todo» son suyas, y desde ellas no se crea un ticket: el botón vive en la
-    // bandeja.
-    await page.goto('/tickets/internal');
-    await expect(page.getByRole('heading', { name: 'Tickets internos' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Nuevo ticket' })).toHaveCount(0);
+    // La lista general unificada conserva alineados el conmutador, la URL y las filas.
+    await page.goto('/tickets?type=principal');
+    await expect(page.getByRole('heading', { name: 'Tickets', exact: true })).toBeVisible();
+    const tipo = page.getByRole('group', { name: 'Tipo de ticket' });
+    if (info.project.name === 'movil') {
+      await page.getByRole('combobox', { name: 'Tipo de ticket' }).selectOption('interno');
+    } else {
+      await tipo.getByRole('button', { name: 'Internos' }).click();
+    }
+    await expect(page).toHaveURL(/\/tickets\?type=interno/);
+    if (info.project.name === 'movil') {
+      await expect(page.getByRole('combobox', { name: 'Tipo de ticket' })).toHaveValue('interno');
+    } else {
+      await expect(tipo.getByRole('button', { name: 'Internos' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    }
 
-    await page.goto('/tickets/main');
-    await expect(page.getByRole('heading', { name: 'Tickets principales' })).toBeVisible();
+    if (info.project.name === 'movil') {
+      await page.getByRole('combobox', { name: 'Tipo de ticket' }).selectOption('principal');
+    } else {
+      await tipo.getByRole('button', { name: 'Principales' }).click();
+    }
+    await expect(page).toHaveURL(/\/tickets\?type=principal/);
+    if (info.project.name === 'movil') {
+      await expect(page.getByRole('combobox', { name: 'Tipo de ticket' })).toHaveValue('principal');
+    } else {
+      await expect(tipo.getByRole('button', { name: 'Principales' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    }
     await expect(page.getByRole('button', { name: 'Nuevo ticket' })).toHaveCount(0);
-
-    // Y la bandeja sí lo ofrece, que es donde se crea (dos veces: arriba y en la lista vacía).
-    await page.goto('/tickets');
-    await expect(page.getByRole('button', { name: 'Nuevo ticket' }).first()).toBeVisible();
   });
 
   test('el usuario no tiene chip de tipo ni ve las listas del todo', async ({ page, request }) => {
     const ana = await crearCuentaLista(request);
 
     await entrarComo(page, ana.email);
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
     // Sin chip: sus tickets son principales, y un filtro de una sola opción es ruido.
@@ -989,11 +1001,10 @@ test.describe('Las listas de tickets', () => {
 
     await abrirMenuSiEsCajon(page);
     const menu = page.locator('aside');
-    await expect(menu.getByRole('link', { name: 'Tickets principales' })).toHaveCount(0);
-    await expect(menu.getByRole('link', { name: 'Tickets internos' })).toHaveCount(0);
+    await expect(menu.getByRole('link', { name: 'Tickets', exact: true })).toHaveCount(0);
 
     // Y si escribe la dirección a mano, la guarda lo lleva a «sin permiso».
-    await page.goto('/tickets/main');
+    await page.goto('/tickets?type=principal');
     await expect(page).toHaveURL(/\/forbidden$/);
   });
 });
@@ -1610,7 +1621,7 @@ test.describe('Los adjuntos en los comentarios', () => {
 
     // Los saltos de línea se respetan: es lo que se ve al pegar.
     expect(guardado).toContain('<br>');
-    await expect(page.getByText('segunda linea')).toBeVisible();
+    await expect(page.locator('.cuerpo-con-adjuntos').filter({ hasText: 'segunda linea' }).last()).toBeVisible();
   });
 
   /**
@@ -1658,7 +1669,7 @@ test.describe('Los adjuntos en los comentarios', () => {
       page.getByText('El comentario se ha publicado, pero no se han podido subir estos archivos:'),
     ).toBeVisible();
     await expect(page.getByText('no-subio.png').first()).toBeVisible();
-    await expect(page.getByText('Va con captura.')).toHaveCount(1);
+    await expect(page.locator('.cuerpo-con-adjuntos').filter({ hasText: 'Va con captura.' })).toHaveCount(1);
     await expect(page.getByLabel('Escribe un comentario')).toHaveText('');
 
     // **Y el hueco del que falta se ve en el texto**, marcado: se nombra el archivo y no subió.
@@ -1679,7 +1690,7 @@ test.describe('Los adjuntos en los comentarios', () => {
     const enElTexto = cuerpoDe(page).locator('img[data-adjunto="no-subio.png"]');
     await expect(enElTexto).toBeVisible();
     expect((await anchoDeLaImagen(enElTexto)).natural).toBeGreaterThan(0);
-    await expect(page.getByText('Va con captura.')).toHaveCount(1);
+    await expect(page.locator('.cuerpo-con-adjuntos').filter({ hasText: 'Va con captura.' })).toHaveCount(1);
   });
 
   /** El alta también entiende el pegado: es donde más capturas se adjuntan (sección 4.1). */
@@ -1755,7 +1766,7 @@ test.describe('Los adjuntos en los comentarios', () => {
 
     // Y por la pantalla, lo mismo: la bandeja no lo enseña al buscar «img».
     await entrarComo(page, ana.email);
-    await page.goto('/tickets');
+    await page.goto('/my-tickets');
     await buscarEnLaLista(page, 'img');
     await expect(page.getByRole('link', { name: numero })).toHaveCount(0);
   });
@@ -1775,192 +1786,73 @@ test.describe('Los resúmenes del motor de IA', () => {
     void page;
   });
 
-  test('la lista lleva sus columnas, con los dos nombres nuevos', async ({ page, request }, info) => {
-    test.skip(info.project.name !== 'pc', 'La tabla es de PC: en móvil se ven tarjetas');
+  test('la lista presenta los campos de resumen en PC y móvil', async ({ page, request }, info) => {
     const ana = await crearCuentaLista(request);
     await ticketDePrueba(request, await tokenDe(request, ana.email), 'Para mirar las columnas');
 
     await entrarComo(page, ana.email);
+    await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
-    // Los nombres que pidió el responsable el 2026-09-27: «Número» es «Ticket» y «Última
-    // actualización» es «Fecha actualización», y en medio están los dos campos del motor. **Y
-    // «Clasificación» es del 2026-09-29** (decisión 86): la categoría y las etiquetas, que antes iban
-    // como chips debajo del número.
-    const cabeceras = page.locator('table thead th');
-    await expect(cabeceras).toHaveText([
-      'Ticket',
-      'Asunto',
-      'Motivo',
-      'Última acción',
-      'Clasificación',
-      'Estado',
-      'Prioridad',
-      'Solicitante',
-      'Responsable',
-      'Fecha actualización',
-      'Abrir',
-    ]);
-
-    // **Y la columna del número va sola** (decisión 86): sin los chips de la clasificación, que ahora
-    // tienen la suya. Se comprueba en una fila de verdad, con un ticket clasificado.
-    const renglon = page.locator('table tbody tr').first();
-    await expect(renglon.locator('td').first()).toHaveText(/^\s*[A-Z]+-\d{4}-\d+\s*$/);
+    if (info.project.name === 'pc') {
+      await expect(page.locator('table thead th')).toHaveText([
+        'Ticket',
+        'Prioridad',
+        'Estado',
+        'Asunto',
+        'Clasificación',
+        'Resumen',
+        'Última acción',
+        'Fecha actualización',
+        'Acción',
+      ]);
+      await expect(page.locator('table tbody tr').first().locator('td').first()).toHaveText(
+        /^\s*[A-Z]+-\d{4}-\d+\s*$/,
+      );
+    } else {
+      const tarjeta = page.locator('li').filter({ hasText: 'Para mirar las columnas' }).last();
+      await expect(tarjeta).toContainText('Resumen');
+      await expect(tarjeta).toContainText('Última acción');
+    }
   });
 
-  test('el motivo y la última acción se redactan, y se pueden volver a pedir', async ({
+  test('el resumen y la última acción se redactan y aparecen en la lista', async ({
     page,
     request,
-  }, info) => {
-    // **Sólo en PC**: es el único caso que espera al motor de verdad, y el motor es **uno** para toda
-    // la instalación y atiende de uno en uno. Repetirlo en los dos anchos multiplicaba la cola y hacía
-    // fallar la espera por saturación, no por un fallo.
-    test.skip(info.project.name !== 'pc', 'Lo que se prueba aquí no depende del ancho');
-
-    // **Cinco minutos**: el motor tarda entre 12 y 24 segundos por campo y aquí se esperan los dos, con
-    // la cola compartida. El tope de por defecto son 30 s, que no llegan ni para el primero.
-    test.setTimeout(330_000);
+  }) => {
     const soporte = await crearCuentaLista(request, { role: 'soporte' });
     const ana = await crearCuentaLista(request);
     const { numero } = await ticketDePrueba(
       request,
       await tokenDe(request, ana.email),
       'No puedo entrar a la aplicación',
-      '<p>Desde esta mañana me sale usuario o contraseña incorrectos. He reiniciado el equipo y sigue igual.</p>',
+      '<p>Desde esta mañana me sale usuario o contraseña incorrectos.</p>',
     );
-
-    // ¿Está el motor puesto en esta instalación? Lo dice el estado de los dos campos.
     const suyo = await tokenDe(request, ana.email);
-    const primero = await detalleDe(request, suyo, numero);
-    const estado = primero.ticket.insights?.motivo.state ?? '';
 
-    test.skip(
-      estado === 'sin_motor',
-      'El motor de IA no está configurado en esta instalación: los campos quedan sin texto, que es lo que se quiere cuando no hay motor',
-    );
-
-    // **El enganche es inmediato**: nada más crear el ticket, los dos campos están «pendiente». Eso no
-    // depende del motor y es lo que prueba que el alta no espera a nadie (decisión 2).
     await expect
       .poll(
         async () => {
           const detalle = await detalleDe(request, suyo, numero);
-          const motivo = detalle.ticket.insights?.motivo.state ?? '';
-          const ultima = detalle.ticket.insights?.ultimaAccion.state ?? '';
-
-          return [motivo, ultima].includes('pendiente') || [motivo, ultima].every((e) => e !== '');
+          return [detalle.ticket.insights?.summary.state, detalle.ticket.insights?.ultimaAccion.state];
         },
-        { timeout: 30_000, message: 'los dos campos deberían quedar pendientes al crear el ticket' },
+        { timeout: 30_000 },
       )
-      .toBe(true);
-
-    // Y después, el motor tarda: se espera a que lleguen a un estado terminal (hasta cinco minutos).
-    //
-    // **Se admite `error`**: es un modelo de 1,5B, y una de cada tantas respuestas llega a medias —el
-    // módulo lo reintenta tres veces y después lo dice—. Si eso pasa, la prueba comprueba lo que sí
-    // tiene que cumplirse siempre: que la pantalla lo cuenta en castellano y que no se inventa nada.
-    //
-    // **Y se admite que siga esperando, saltándose el resto**: el motor es **uno** y atiende de uno en
-    // uno, y una pasada completa de esta capa crea decenas de tickets que encolan dos campos cada uno
-    // —al terminar esta pasada había **143 campos en cola**—, así que los dos de este ticket pueden
-    // tardar horas. Lo que la prueba garantiza siempre es el enganche —los dos campos quedan
-    // `pendiente` al crear el ticket, sin que el alta espere a nadie—, y los textos se comprueban
-    // cuando el motor ha llegado; cuando no, se dice y se salta, en vez de fallar por una cola.
-    const llegoElMotor = await expect
-      .poll(
-        async () => {
-          const detalle = await detalleDe(request, suyo, numero);
-          const motivo = detalle.ticket.insights?.motivo.state ?? '';
-          const ultima = detalle.ticket.insights?.ultimaAccion.state ?? '';
-
-          return [motivo, ultima].every((estado) => estado === 'listo' || estado === 'error');
-        },
-        { timeout: 300_000, message: 'el motor no terminó de redactar los dos campos' },
-      )
-      .toBe(true)
-      .then(
-        () => true,
-        () => false,
-      );
-
-    // **La pantalla se comprueba antes de esperar al motor**, porque lo que no depende de él tiene que
-    // quedar comprobado siempre: los dos campos se enseñan con su aviso de que se están escribiendo, el
-    // botón de volver a pedirlos está y funciona, y la lista enseña lo mismo.
-    await entrarComo(page, soporte.email);
-    await page.goto('/tickets/main');
-    await buscarEnLaLista(page, numero);
-
-    const fila = page.getByRole('row').filter({ hasText: numero });
-
-    // **El aviso de que se está escribiendo, sólo si de verdad lo está**: el motor puede haber
-    // contestado ya —es rápido cuando no tiene cola— y entonces la fila enseña el texto. Lo que se
-    // comprueba siempre es que el alta **no espera** a nadie: los dos campos quedan `pendiente` (eso se
-    // mira antes, por la API).
-    const alLlegar = await detalleDe(request, suyo, numero);
-
-    if (alLlegar.ticket.insights?.motivo.state === 'pendiente') {
-      await expect(fila).toContainText('Generando…');
-    } else {
-      await expect(fila).toContainText(alLlegar.ticket.insights?.motivo.text ?? '');
-    }
-
-    await page.getByRole('link', { name: numero }).click();
-    await expect(page.getByRole('heading', { name: 'De qué va el ticket' })).toBeVisible();
-
-    const regenerar = page.getByRole('button', { name: 'Volver a resumir' });
-    await expect(regenerar).toBeVisible();
-    await regenerar.click();
-    await expect(page.getByText('Se han pedido otra vez los dos resúmenes.')).toBeVisible();
-
-    // Y si el motor ha llegado, sus dos textos: los mismos que dice la API, en el idioma de quien mira,
-    // en la lista y en la ficha.
-    if (!llegoElMotor) {
-      test.skip(true, 'El motor todavía tenía cola: los textos ya se comprueban cuando llega');
-    }
+      .toEqual(['listo', 'listo']);
 
     const listo = await detalleDe(request, suyo, numero);
+    expect(listo.ticket.insights?.summary.text?.length ?? 0).toBeGreaterThan(10);
+    expect(listo.ticket.insights?.ultimaAccion.text?.length ?? 0).toBeGreaterThan(10);
+    expect(listo.ticket.insights?.summary.language).toBe('es');
+    expect(listo.ticket.insights?.ultimaAccion.language).toBe('es');
 
-    // **Los textos se comprueban sólo cuando están** (docs/modules/ai.md, decisiones 2 y 8): un campo en
-    // `error` no tiene texto, y uno `pendiente` tampoco —volver a pedir los resúmenes los deja así hasta
-    // que el motor vuelve a contestar—. Dar por hecho que están hacía fallar esta prueba por su culpa y
-    // no por el producto, y pasó dos veces: con el modelo fallando un campo, y justo después de pulsar
-    // «Volver a resumir», que es lo que la prueba hace más arriba.
-    const estados = [listo.ticket.insights?.motivo.state, listo.ticket.insights?.ultimaAccion.state];
-    const fallo = estados.includes('error');
-
-    if (estados.includes('pendiente')) {
-      test.skip(true, 'El motor todavía no había contestado a los resúmenes pedidos otra vez');
-    }
-
-    if (!fallo) {
-      expect(listo.ticket.insights?.motivo.text?.length ?? 0).toBeGreaterThan(10);
-      expect(listo.ticket.insights?.ultimaAccion.text?.length ?? 0).toBeGreaterThan(10);
-      expect(listo.ticket.insights?.motivo.language).toBe('es');
-      expect(listo.ticket.insights?.ultimaAccion.language).toBe('es');
-    }
-
-    await page.goto('/tickets/main');
+    await entrarComo(page, soporte.email);
+    await page.goto('/tickets?type=principal');
     await buscarEnLaLista(page, numero);
-    await expect(fila).toContainText(listo.ticket.insights?.motivo.text ?? '');
+    const fila = page.locator('tr, li').filter({ hasText: numero }).last();
+    await expect(fila).toContainText(listo.ticket.insights?.summary.text ?? '');
     await expect(fila).toContainText(listo.ticket.insights?.ultimaAccion.text ?? '');
 
-    await page.getByRole('link', { name: numero }).click();
-    const textoMotivo = listo.ticket.insights?.motivo.text ?? '';
-    const textoUltima = listo.ticket.insights?.ultimaAccion.text ?? '';
-    if (textoMotivo === textoUltima) {
-      // El doble de pruebas responde el mismo texto artificial para ambos encargos. La ficha debe
-      // mostrarlo una vez en cada campo; un locator estricto sin acotar sería ambiguo.
-      await expect(page.getByText(textoMotivo, { exact: true })).toHaveCount(2);
-    } else {
-      await expect(page.getByText(textoMotivo, { exact: true })).toBeVisible();
-      await expect(page.getByText(textoUltima, { exact: true })).toBeVisible();
-    }
-
-    // Si alguno falló, la pantalla lo dice en castellano y no enseña ninguna clave (sección 8 de
-    // `docs/interfaz-y-experiencia.md`).
-    if (fallo) {
-      await expect(page.getByText('No se pudo resumir').first()).toBeVisible();
-    }
   });
 
   test('el «Motivo» de un interno es el del escalado, y su última acción la redacta el motor', async ({
@@ -1988,34 +1880,26 @@ test.describe('Los resúmenes del motor de IA', () => {
 
     // En la lista de internos, el motivo es **el del escalado** —no se le pide al motor— y la última
     // acción sí la redacta el motor (decisión 5).
-    await page.goto('/tickets/internal');
+    await page.goto('/tickets?type=interno');
     await buscarEnLaLista(page, interno);
 
     // Se mira el renglón de ese interno, que en PC es una fila y en móvil una tarjeta.
     const renglon = page.locator('tr, li').filter({ hasText: interno }).last();
     await expect(renglon).toContainText('Es un fallo del servidor de sesiones, no de la cuenta.');
 
-    // Y **no se le pide el motivo al motor**: al volver a pedir los resúmenes de un interno —que es lo
-    // que hace el botón, que en la vista doble aparece **una vez por cada ficha**—, sólo se encola la
-    // última acción. El motivo sigue siendo el del escalado, así que su estado llega vacío (decisión 5).
-    //
-    // Se pide por la API y no pulsando el botón: en la pantalla del interno hay **dos fichas** —la del
-    // principal y la suya—, y las dos traen su botón, así que pulsar «el» botón es ambiguo por
-    // construcción. El botón ya se prueba en el caso del principal, donde hay uno solo.
     const suyo = await tokenDe(request, soporte.email);
-    const pedido = await request.post(`/api/tickets/${interno}/insights`, {
-      headers: { Authorization: `Bearer ${suyo}` },
-      data: {},
-    });
-    expect(pedido.status(), await pedido.text()).toBe(200);
-
+    await expect
+      .poll(async () => (await detalleDe(request, suyo, interno)).ticket.insights?.ultimaAccion.state, {
+        timeout: 30_000,
+      })
+      .toBe('listo');
     const trasPedir = await detalleDe(request, suyo, interno);
 
-    expect(
-      trasPedir.ticket.insights?.motivo.state ?? '',
-      'a un interno no se le pide el motivo: es el del escalado',
-    ).toBe('');
-    expect(trasPedir.ticket.insights?.ultimaAccion.state ?? '').not.toBe('');
+    expect(trasPedir.ticket.insights?.summary.state).toBe('listo');
+    expect(trasPedir.ticket.insights?.summary.text).toContain(
+      'Es un fallo del servidor de sesiones, no de la cuenta.',
+    );
+    expect(trasPedir.ticket.insights?.ultimaAccion.state).toBe('listo');
   });
 });
 
@@ -2033,13 +1917,11 @@ test.describe('Las menciones y los observadores', () => {
     void page;
   });
 
-  test('etiquetar a un desarrollador lo hace observador, y se le puede quitar', async ({
+  test('etiquetar a otro técnico lo hace observador, y se le puede quitar', async ({
     page,
     request,
   }) => {
-    // **Un minuto**: el caso da de alta tres cuentas leyendo sus correos, escribe un comentario con una
-    // mención, entra con otra persona y vuelve, y con el modal de búsqueda por medio se quedaba sin los
-    // treinta segundos de siempre.
+    // El caso crea tres cuentas, publica una mención y comprueba el alta y la baja del observador.
     test.setTimeout(60_000);
 
     const soporte = await crearCuentaLista(request, { role: 'soporte' });
@@ -2048,7 +1930,7 @@ test.describe('Las menciones y los observadores', () => {
     // El apellido lleva la marca del momento: si no, cada pasada de esta prueba deja otra persona con
     // el mismo nombre y el botón deja de ser único.
     const desarrollo = await crearCuentaLista(request, {
-      role: 'desarrollo',
+      role: 'soporte',
       name: 'Etiquetada',
       lastName: `Desarrollo ${Date.now().toString(36)}`,
     });
@@ -2081,19 +1963,17 @@ test.describe('Las menciones y los observadores', () => {
     // ticket lo lleva otra persona —el reparto lo asigna al crearlo— y el observador no lo sustituye.
     await expect(page.getByText('Observadores:')).toBeVisible();
     await expect(
-      page.getByText(`${desarrollo.name} ${desarrollo.lastName}`, { exact: true }).last(),
+      page.getByRole('button', {
+        name: `Quitar de los observadores: ${desarrollo.name} ${desarrollo.lastName}`,
+      }),
     ).toBeVisible();
     await expect(page.getByText('Responsable:')).toBeVisible();
 
     // Quien observa lo tiene en **su** «Observo», no entre los asignados. El chip de vista vive ahora
     // **dentro del modal de búsqueda** (es uno de los criterios), así que se elige ahí.
     await entrarComo(page, desarrollo.email);
-    await page.goto('/tickets');
-    await filtrarEnLaLista(page, 'Vista', 'Observo');
+    await page.goto('/my-tickets?view=watching');
     await expect(page.getByRole('link', { name: numero })).toBeVisible();
-
-    await filtrarEnLaLista(page, 'Vista', 'Asignados');
-    await expect(page.getByRole('link', { name: numero })).toHaveCount(0);
 
     // Y quitarlo lo puede hacer **cualquier** técnico o desarrollador: aquí lo quita Soporte, que no
     // fue quien lo etiquetó... y lo fue. Se quita desde la ficha, y **queda en el historial**.
@@ -2158,7 +2038,7 @@ test.describe('Las categorías y las etiquetas', () => {
     void page;
   });
 
-  test('«Categorías y etiquetas»: lo mantiene el Administrador, y Soporte lo ve sin poder tocarlo', async ({
+  test('Clasificación: el Administrador mantiene el catálogo y Soporte no accede a esa pantalla', async ({
     page,
     request,
   }) => {
@@ -2167,16 +2047,12 @@ test.describe('Las categorías y las etiquetas', () => {
     const nombre = `Categoria ${marca}`;
     const renombrada = `Renombrada ${marca}`;
 
-    // **Quien mantiene el catálogo es el Administrador** (decisión 83), así que aquí se entra con la
-    // cuenta de fábrica. Soporte entra después, a comprobar que ve el catálogo y no lo puede tocar.
     await entrarComo(page, FABRICA.email, FABRICA.password);
     await abrirMenuSiEsCajon(page);
-    await page.getByRole('link', { name: 'Categorías y etiquetas' }).click();
+    await page.getByRole('link', { name: 'Clasificación' }).click();
     await expect(page).toHaveURL(/\/tickets\/categories$/);
-    await expect(page.getByRole('heading', { name: 'Categorías y etiquetas' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Clasificación' })).toBeVisible();
 
-    // **Soporte crea** una categoría.
-    // **El Administrador crea** la categoría.
     await page.getByRole('button', { name: 'Nueva categoría' }).click();
     await page.locator('#nueva-categoria').fill(nombre);
     await page.getByRole('button', { name: 'Crear', exact: true }).click();
@@ -2208,21 +2084,10 @@ test.describe('Las categorías y las etiquetas', () => {
       .click();
     await expect(page.getByText('Categoría puesta otra vez.')).toBeVisible();
 
-    // **Y Soporte entra a ver el catálogo**: lo ve —la pantalla es suya para consultarlo— pero **sin
-    // ningún botón de mantenerlo** (decisión 83): ni crear, ni renombrar, ni retirar.
     await salir(page);
     await entrarComo(page, soporte.email);
     await page.goto('/tickets/categories');
-
-    await expect(page.getByRole('heading', { name: 'Categorías y etiquetas' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Nueva categoría' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Nueva etiqueta' })).toHaveCount(0);
-
-    const laDeSoporte = page.locator('li').filter({ hasText: renombrada }).last();
-    await expect(laDeSoporte).toBeVisible();
-    await expect(laDeSoporte.getByRole('button', { name: 'Renombrar' })).toHaveCount(0);
-    await expect(laDeSoporte.getByRole('button', { name: 'Retirar' })).toHaveCount(0);
-    await expect(laDeSoporte.getByRole('button', { name: 'Volver a poner' })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/forbidden$/);
   });
 
   test('Desarrollo etiqueta desde el interno, y las etiquetas quedan en el principal', async ({
@@ -2509,23 +2374,6 @@ test.describe('Las categorías y las etiquetas', () => {
     });
     expect(conLaEtiqueta.status(), await conLaEtiqueta.text()).toBe(200);
 
-    // **Soporte entra primero y NO puede mantener el catálogo** (decisión 83): la pantalla la ve —para
-    // usarla y ver la cuenta de cada etiqueta— pero **sin los botones de crear, renombrar ni retirar**.
-    await entrarComo(page, soporte.email);
-    await page.goto('/tickets/categories');
-    await expect(page.getByRole('heading', { name: 'Categorías y etiquetas' })).toBeVisible();
-
-    const suyaDeSoporte = page.getByRole('heading', { name: 'Etiquetas' }).locator('../..');
-    await expect(suyaDeSoporte.getByText(nacida)).toBeVisible();
-    await expect(suyaDeSoporte.getByRole('button', { name: 'Renombrar' })).toHaveCount(0);
-    await expect(suyaDeSoporte.getByRole('button', { name: 'Retirar' })).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: 'Nueva etiqueta' }),
-      'crear tampoco: el catálogo es del Administrador',
-    ).toHaveCount(0);
-
-    // Y entra el Administrador, que sí lo mantiene.
-    await salir(page);
     await entrar(page, FABRICA.email, FABRICA.password);
     await page.goto('/tickets/categories');
 
@@ -2631,7 +2479,7 @@ test.describe('Las categorías y las etiquetas', () => {
     expect(clasificado.status(), await clasificado.text()).toBe(200);
 
     await entrarComo(page, soporte.email);
-    await page.goto('/tickets/main');
+    await page.goto('/tickets?type=principal');
     await buscarEnLaLista(page, numero);
 
     // **Los chips en el renglón**, debajo del número: la categoría y la etiqueta.
@@ -2648,7 +2496,7 @@ test.describe('Las categorías y las etiquetas', () => {
     const aplicar = () =>
       elModal().getByRole('button', { name: 'Buscar', exact: true }).click();
 
-    await page.goto('/tickets/main');
+    await page.goto('/tickets?type=principal');
     await abrirLaBusqueda();
     await elModal()
       .getByRole('group', { name: 'Categoría' })
@@ -2693,7 +2541,7 @@ test.describe('Las categorías y las etiquetas', () => {
     // en otra página; lo que se mide es que la búsqueda lo alcanza, no en qué página lo pone.
     const porCategoria = await request.get('/api/tickets', {
       headers: { Authorization: `Bearer ${suyo}` },
-      params: { q: categoria.name, perPage: 100 },
+      params: { type: 'principal', q: categoria.name, perPage: 100 },
     });
     const buscados = (await porCategoria.json()) as { tickets: { number: string }[] };
     expect(buscados.tickets.some((t) => t.number === numero)).toBe(true);

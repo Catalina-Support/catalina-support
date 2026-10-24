@@ -710,7 +710,11 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
       relativeTo: this.route,
       replaceUrl: true,
       queryParams: {
-        type: this.conChipDeTipo() && f.type !== this.tipoInicial(f.view) ? f.type || 'all' : null,
+        type: this.esListaGeneral()
+          ? f.type
+          : this.conChipDeTipo() && f.type !== this.tipoInicial(f.view)
+            ? f.type || 'all'
+            : null,
         state: f.state || null,
         q: f.q || null,
         category: f.category || null,

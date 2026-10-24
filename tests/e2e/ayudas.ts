@@ -132,6 +132,7 @@ export async function crearCuentaLista(
   peticion: APIRequestContext,
   opciones: {
     role?: string;
+    isAdmin?: boolean;
     token?: string;
     /**
      * El nombre y los apellidos se pueden fijar desde la prueba.
@@ -154,6 +155,7 @@ export async function crearCuentaLista(
     data: {
       ...cuenta,
       role: opciones.role ?? 'usuario',
+      isAdmin: opciones.isAdmin ?? false,
       origin: 'local',
     },
   });
@@ -368,7 +370,11 @@ export async function respondeAlProbar(
 
   // El motor de IA no tiene su configuración anidada: su dirección vive en la raíz y su prueba la
   // recibe como `url`. Los otros dos caminos mandan su objeto tal cual (docs/modules/ai.md).
-  const cuerpo = camino === 'ai' ? { url: configuracion['aiUrl'] } : configuracion[camino];
+  const ai = configuracion['ai'] as Record<string, unknown> | undefined;
+  const cuerpo =
+    camino === 'ai'
+      ? { url: ai?.['baseUrl'] ?? configuracion['aiUrl'] }
+      : configuracion[camino];
 
   const prueba = await peticion.post(`/api/settings/${camino}/test`, {
     headers: { Authorization: `Bearer ${token}` },

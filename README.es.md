@@ -63,9 +63,9 @@ publica deliberadamente.
 | Soporte Uno | `support1@demo.com` | Soporte |
 | Soporte Dos | `support2@demo.com` | Soporte |
 | Soporte Tres | `support3@demo.com` | Soporte |
-| Desarrollador 1 | `dev1@demo.com` | Desarrollo |
-| Desarrollador 2 | `dev2@demo.com` | Desarrollo |
-| Desarrollador 3 | `dev3@demo.com` | Desarrollo |
+| Desarrollador Uno | `dev1@demo.com` | Desarrollo |
+| Desarrollador Dos | `dev2@demo.com` | Desarrollo |
+| Desarrollador Tres | `dev3@demo.com` | Desarrollo |
 
 </details>
 
@@ -142,15 +142,15 @@ recuperación incluso cuando la instalación usa AD o Keycloak.
 
 ### 3. Datos de ejemplo opcionales
 
-Para cargar las mismas cuentas y tickets realistas que usa la demo:
+Para cargar cuentas y tickets realistas en español:
 
 ```bash
-docker compose -f dev.yml run --rm seed
+docker compose -f dev.yml run --rm seed-es
 ```
 
 Esto crea 11 cuentas, 25 tickets y 5 adjuntos. También **elimina los tickets, categorías,
-etiquetas, cuentas `@demo.com` y adjuntos de desarrollo existentes, excepto la marca**. Ejecútalo
-únicamente cuando quieras restaurar los ejemplos de forma consciente.
+etiquetas, cuentas `@demo.com` y adjuntos de desarrollo existentes, excepto la marca**.
+Usa `seed-en` si prefieres los ejemplos en inglés. Ejecuta cualquiera de los dos sólo cuando quieras restaurarlos de forma consciente.
 
 El seeder conserva la marca, idioma, dirección pública, correo, método de entrada, directorios, IA,
 prefijo y reparto de una instalación terminada. Sobre una instalación incompleta prepara y sella una
@@ -165,8 +165,7 @@ docker compose -f dev.yml up -d
 ```
 
 La base y los adjuntos se conservan. `docker compose -f dev.yml down` elimina contenedores y red,
-pero conserva los volúmenes; añadir `-v` elimina también la base. No ejecutes `seed` simplemente
-para volver a arrancar: reinicia el contenido de ejemplo.
+pero conserva los volúmenes; añadir `-v` elimina también la base. No ejecutes `seed-en` ni `seed-es` simplemente para volver a arrancar: reinicia el contenido de ejemplo.
 
 ### Si algo falla
 

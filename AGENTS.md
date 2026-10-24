@@ -135,9 +135,9 @@ el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintiséis plantillas, `users`,
 `password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
-IA y **las diez tablas de los tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
-su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
-Windows). Hay **cuatro módulos en marcha**:
+IA y **las diez tablas de los tickets**—, y en desarrollo se suma uno de los juegos opcionales
+**`v1.0.0_dev_en.sql`** o **`v1.0.0_dev_es.sql`**, mediante `./scripts/dev-seed-en.sh`,
+`./scripts/dev-seed-es.sh`, `seed-en` o `seed-es`. Hay **cuatro módulos en marcha**:
 
 **Las migraciones se aplican automáticamente antes de la aplicación** (2026-10-20): un comando Go
 de una sola ejecución descubre únicamente `vMAJOR.MINOR.PATCH.sql`, ordena SemVer, toma un advisory
@@ -549,13 +549,15 @@ docker compose -f ai.yml up -d                          # motor requerido si se 
 
 # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
 # **Son opcionales** y **no se levantan con `up -d`** (perfil propio): se piden a propósito. Es un
-# contenedor de un solo uso que corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad—
-# y vale igual en Linux, macOS y Windows. Borra los tickets que hubiera y deja el entorno en un estado
-# conocido (docs/ambientes.md, sección 3.3). **Los ejemplos son para tener contenido, no para poder
-# entrar**: con el esquema ya se entra con `admin`/`admin`.
-docker compose -f dev.yml run --rm seed
-# En Linux y macOS, el mismo guion también se puede correr fuera del contenedor
-./scripts/dev-seed.sh
+# contenedor de un solo uso por idioma; ambos recorren el mismo ejecutor interno y valen igual en
+# Linux, macOS y Windows. Borran los tickets existentes y dejan el entorno en un estado conocido.
+# **Los ejemplos son para tener contenido, no para poder entrar**: con el esquema ya se entra con
+# `admin`/`admin`.
+docker compose -f dev.yml run --rm seed-en
+docker compose -f dev.yml run --rm seed-es
+# En Linux y macOS también pueden ejecutarse fuera del contenedor
+./scripts/dev-seed-en.sh
+./scripts/dev-seed-es.sh
 
 # El despliegue a producción: construye y publica los artefactos en /srv/catalina-support y
 # levanta los contenedores de prod.yml (docs/ambientes.md, sección 4.2). **No abre el dominio**: eso
@@ -625,8 +627,8 @@ parecería una web rota.
   se puede investigar. Fuera de eso, nada de datos personales: para referirse a una cuenta se usa su
   identificador, no su nombre.
 - **Base de datos**: el esquema vive en `backend/migrations/`, **un archivo por versión**
-  (`v1.0.0.sql`, `v1.1.0.sql`…) **más un archivo de datos de ejemplo por versión con el sufijo
-  `_dev`** (`v1.0.0_dev.sql`), transaccionales e idempotentes, aplicados con
+  (`v1.0.0.sql`, `v1.1.0.sql`…) **más archivos de datos de ejemplo por versión e idioma con sufijo
+  `_dev_en` o `_dev_es`** (`v1.0.0_dev_en.sql`, `v1.0.0_dev_es.sql`), transaccionales e idempotentes, aplicados con
   `psql -v ON_ERROR_STOP=1` en orden hasta la versión publicada. **El `_dev` no se aplica nunca en
   producción**, y lo que la aplicación necesita para funcionar —las filas de configuración y las
   plantillas de correo— va en el archivo de la versión, no en el de ejemplos. Nunca `AutoMigrate` ni

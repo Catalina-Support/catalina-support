@@ -10,7 +10,8 @@ func TestDiscoverOnlyStrictProductionMigrationsInSemverOrder(t *testing.T) {
 	dir := t.TempDir()
 	for name, body := range map[string]string{
 		"v1.0.10.sql": "SELECT 10", "v1.0.2.sql": "SELECT 2",
-		"v1.0.0_dev.sql": "DELETE FROM users", "notes.sql": "SELECT 1",
+		"v1.0.0_dev_en.sql": "DELETE FROM users", "v1.0.0_dev_es.sql": "DELETE FROM users",
+		"notes.sql": "SELECT 1",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
 			t.Fatal(err)

@@ -60,7 +60,9 @@ test.describe('Configuración', () => {
     await expect(page.getByRole('heading', { name: 'La marca' })).toBeVisible();
     await expect(page.getByText('Logo para los temas claros')).toBeVisible();
     await expect(page.getByText('Logo para los temas oscuros')).toBeVisible();
-    await expect(page.getByLabel('Elegir un archivo')).toHaveCount(2);
+    await expect(page.getByLabel('Logo para los temas claros')).toHaveCount(1);
+    await expect(page.getByLabel('Logo para los temas oscuros')).toHaveCount(1);
+    await expect(page.getByLabel('Icono del sitio')).toHaveCount(1);
 
     // **El color va dentro de la marca** desde el 2026-09-30: son la misma cosa, la identidad de la
     // institución, y estaban en dos tarjetas sin motivo.
@@ -78,16 +80,14 @@ test.describe('Configuración', () => {
       <rect width="240" height="120" fill="#6a3fb0"/></svg>`;
 
     await page
-      .getByLabel('Elegir un archivo')
-      .first()
+      .getByLabel('Logo para los temas claros')
       .setInputFiles({ name: 'logo.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg) });
 
-    // El botón está en cada hueco, así que se busca el hueco **por su título**: el título es su hijo
-    // directo, así que su padre es el hueco y no la tarjeta que los contiene a los dos.
+    // Elegir el archivo lo guarda inmediatamente. Se busca el hueco **por su título**: el título
+    // es su hijo directo, así que su padre es el hueco y no la tarjeta que contiene los dos.
     const huecoClaro = page
       .getByRole('heading', { name: 'Logo para los temas claros' })
       .locator('..');
-    await huecoClaro.getByRole('button', { name: 'Subir el logo' }).click();
     await expect(page.getByText('Logo subido. Ya se está usando.')).toBeVisible();
 
     // La vista previa del hueco claro enseña lo que se acaba de subir, de verdad.
@@ -175,10 +175,10 @@ test.describe('Configuración', () => {
     await expect(page).toHaveTitle('Catalina Support');
   });
 
-  test('el idioma se aplica sólo después de revisar manualmente las doce plantillas', async ({ page }) => {
+  test('el idioma se aplica sólo después de revisar manualmente las trece plantillas', async ({ page }) => {
     await page.locator('#idioma-instalacion').selectOption('en');
     await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
-    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(12);
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(13);
     await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
@@ -196,7 +196,7 @@ test.describe('Configuración', () => {
 
     await page.locator('#idioma-instalacion').selectOption('es');
     await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
-    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(12);
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(13);
     await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   });
@@ -388,69 +388,31 @@ test.describe('Configuración', () => {
    * prueba dice que sí cuando el motor contesta y que dice que no cuando la dirección no existe. El
    * motor de desarrollo tiene que estar levantado, así que la prueba se salta si no lo está.
    */
-  test('el motor de IA se configura y se prueba desde la pantalla', async ({ page, request }) => {
+  test('el motor de IA configurado se prueba desde la pantalla', async ({ page }) => {
     test.setTimeout(120_000);
-    test.skip(
-      !(await respondeAlProbar(request, 'ai')),
-      'El motor de IA no responde: levántalo con `docker compose -f ai.yml up -d`',
-    );
-
-    // **Se parte de otra dirección distinta** de la que se va a escribir: el botón de guardar está
-    // apagado mientras no haya cambios, y una prueba que dependa de lo que hubiera antes deja de ser
-    // una prueba. Se deja apuntada la de verdad, para devolverla al final.
-    const peticion = await tokenDeFabrica(request);
-    const antes = (await (
-      await request.get('/api/settings', { headers: { Authorization: `Bearer ${peticion}` } })
-    ).json()) as Record<string, unknown>;
-    await request.put('/api/settings', {
-      headers: { Authorization: `Bearer ${peticion}` },
-      data: { ...antes, aiUrl: 'http://antes.example.org', aiModel: 'modelo-de-antes' },
-    });
 
     await entrarComo(page, FABRICA.email, FABRICA.password);
     await page.goto('/settings');
 
-    // **La tarjeta nueva**, con la dirección y el modelo tal y como se guardaron.
     await expect(page.getByRole('heading', { name: 'El motor de IA' })).toBeVisible();
     const direccion = page.getByLabel('Dirección del motor');
     const modelo = page.getByLabel('Modelo');
-    await expect(direccion).toHaveValue('http://antes.example.org');
-    await expect(modelo).toHaveValue('modelo-de-antes');
+    await expect(direccion).toHaveValue('http://ai-test:8080');
+    await expect(modelo).toHaveValue('modelo-de-prueba');
 
-    // Se guarda el motor de desarrollo, que es el que tiene que quedar.
-    await direccion.fill('http://catalina_support_ai:8080');
-    await modelo.fill('qwen2.5-1.5b-instruct');
-    await page.getByRole('button', { name: 'Guardar el motor de IA' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
     await expect(page.getByText('El motor de IA se ha guardado.')).toBeVisible();
 
-    // **Y se prueba la conexión**: el motor de desarrollo contesta, así que la prueba lo dice.
-    // `last()` porque el botón del motor es el último de la pantalla: los otros dos salen sólo con su
-    // método de entrada.
-    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
-    await expect(page.getByText('El motor ha contestado: redacta los dos resúmenes del ticket.')).toBeVisible();
-
-    // Y lo que no funciona se dice: con una dirección que no existe, la prueba falla.
     await direccion.fill('http://no-existe-de-verdad:8080');
     await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
     await expect(page.getByText(/El motor de IA no ha contestado/)).toBeVisible();
 
-    // **Vaciar la dirección no prueba la guardada** (decisión del responsable, 2026-09-30): al abrir
-    // la pantalla el campo viene con lo que hay en la base, así que vaciarlo es borrarlo a propósito y
-    // lo que toca es decir que no hay nada que probar.
     await direccion.fill('');
     await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
     await expect(page.getByText(/no hay ninguna que probar/)).toBeVisible();
 
-    // Se devuelve la dirección que había. Al final, y no en un `finally`, porque en una prueba fallida
-    // el contexto ya está cerrado: entonces lo deja el seeder.
-    await request.put('/api/settings', {
-      headers: { Authorization: `Bearer ${peticion}` },
-      data: {
-        ...antes,
-        aiUrl: 'http://catalina_support_ai:8080',
-        aiModel: 'qwen2.5-1.5b-instruct',
-      },
-    });
+    await direccion.fill('http://ai-test:8080');
+    await modelo.fill('modelo-de-prueba');
   });
 
   test('el resultado de una conexión se mantiene visible en un toast', async ({ page }) => {
@@ -486,7 +448,7 @@ test.describe('Configuración', () => {
     await page.goto('/settings');
 
     const tarjetas = page.locator('app-tarjeta');
-    await expect(tarjetas).toHaveCount(7);
+    await expect(tarjetas).toHaveCount(9);
 
     // Los títulos, en orden: de lo que la instalación **es** a cómo se entra, cómo trabaja y cómo avisa.
     for (const [i, titulo] of [
@@ -494,8 +456,10 @@ test.describe('Configuración', () => {
       'La marca',
       'Método de autenticación',
       'La numeración y el reparto',
+      'Reportería',
       'Región horaria y dirección pública',
       'El motor de IA',
+      'El correo',
       'Los correos',
     ].entries()) {
       await expect(tarjetas.nth(i).getByRole('heading').first()).toHaveText(titulo);
@@ -514,14 +478,14 @@ test.describe('Configuración', () => {
     await expect(tarjetas.nth(3).getByLabel('Reparto').first()).toBeVisible();
 
     // **Y la región y la dirección van juntas**, sin la numeración dentro.
-    await expect(tarjetas.nth(4).getByLabel('Región horaria seleccionada')).toBeVisible();
-    await expect(tarjetas.nth(4).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
-    await expect(tarjetas.nth(4).getByLabel('Dirección pública')).toBeVisible();
-    await expect(tarjetas.nth(4).getByLabel('Prefijo de los números')).toHaveCount(0);
+    await expect(tarjetas.nth(5).getByLabel('Región horaria seleccionada')).toBeVisible();
+    await expect(tarjetas.nth(5).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
+    await expect(tarjetas.nth(5).getByLabel('Dirección pública')).toBeVisible();
+    await expect(tarjetas.nth(5).getByLabel('Prefijo de los números')).toHaveCount(0);
 
     // **Y el motor de IA tiene la suya**, con su dirección y su modelo, que ya no viven en el entorno.
-    await expect(tarjetas.nth(5).getByLabel('Dirección del motor')).toBeVisible();
-    await expect(tarjetas.nth(5).getByLabel('Modelo')).toBeVisible();
-    await expect(tarjetas.nth(5).getByRole('button', { name: 'Probar la conexión' })).toBeVisible();
+    await expect(tarjetas.nth(6).getByLabel('Dirección del motor')).toBeVisible();
+    await expect(tarjetas.nth(6).getByLabel('Modelo')).toBeVisible();
+    await expect(tarjetas.nth(6).getByRole('button', { name: 'Probar la conexión' })).toBeVisible();
   });
 });

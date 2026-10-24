@@ -132,4 +132,15 @@ describe('apiInterceptor', () => {
     await segunda;
     expect(disponibilidad.sinServidor()).toBe(false);
   });
+
+  it('no confunde el catálogo local ausente con una caída del backend', async () => {
+    for (const url of ['/api/setup/ai/models', '/api/settings/ai/models']) {
+      const llamada = firstValueFrom(http.get(url));
+      control
+        .expectOne(url)
+        .flush({ error: 'settings.ai.managerUnavailable' }, { status: 503, statusText: 'Unavailable' });
+      await expect(llamada).rejects.toBeTruthy();
+      expect(disponibilidad.sinServidor()).toBe(false);
+    }
+  });
 });

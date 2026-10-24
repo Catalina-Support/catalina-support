@@ -28,8 +28,8 @@ test.describe('El armazón', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se puede entrar');
     await entrar(page, FABRICA.email, FABRICA.password);
-    // Un Administrador entra en la lista de usuarios: el inicio es de quien no tiene pantallas.
-    await expect(page).toHaveURL(/\/users$/);
+    // El Dashboard es el inicio actual del Administrador.
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test('el menú tiene las tres zonas, con el logo arriba y los controles abajo', async ({
@@ -69,7 +69,11 @@ test.describe('El armazón', () => {
   });
 
   test('el menú se pliega, se queda en iconos y lo recuerda', async ({ page }, info) => {
-    test.skip(!esPc(info), 'El menú se pliega en PC, que es donde hay sitio');
+    if (!esPc(info)) {
+      await expect(page.getByRole('button', { name: 'Abrir el menú' })).toBeVisible();
+      await expect(page.locator('aside')).not.toBeInViewport();
+      return;
+    }
 
     const menu = page.locator('aside');
 
@@ -90,12 +94,12 @@ test.describe('El armazón', () => {
 
     // **Se espera a que el plegado esté puesto**, no sólo a haber pulsado: el ancho lo decide Angular
     // al repintar, y medir antes de que repinte es medir el menú de antes.
-    await expect(menu).toHaveClass(/w-16/);
+    await expect(menu).toHaveClass(/w-14/);
     const anchoPlegado = await menu.evaluate((nodo) => nodo.getBoundingClientRect().width);
 
     await page.reload();
     const trasRecargar = page.locator('aside');
-    await expect(trasRecargar).toHaveClass(/w-16/);
+    await expect(trasRecargar).toHaveClass(/w-14/);
     const anchoTrasRecargar = await trasRecargar.evaluate((nodo) => nodo.getBoundingClientRect().width);
     expect(anchoTrasRecargar).toBe(anchoPlegado);
     expect(anchoPlegado).toBeLessThan(100);
@@ -114,7 +118,7 @@ test.describe('El armazón', () => {
   });
 
   test('el menú lleva a Configuración y marca dónde estás', async ({ page }, info) => {
-    test.skip(!esPc(info), 'En móvil el enlace está en el cajón: eso se prueba en su caso');
+    await abrirCajonSiHaceFalta(page, info);
 
     await page.getByRole('link', { name: 'Configuración' }).click();
 
@@ -126,18 +130,15 @@ test.describe('El armazón', () => {
   test('marca una sola entrada en cada listado y conserva el módulo de las pantallas auxiliares', async ({
     page,
   }) => {
-    await entrar(page, 'dev1@demo.com', '123123123');
-
     const menu = page.locator('aside');
     const activa = menu.locator('nav a[aria-current="page"]');
 
     for (const [ruta, etiqueta] of [
-      ['/tickets', 'My tickets'],
-      ['/tickets/main', 'Main tickets'],
-      ['/tickets/internal', 'Internal tickets'],
-      ['/tickets/categories', 'Classification'],
-      ['/users', 'Users'],
-      ['/settings', 'Settings'],
+      ['/dashboard', 'Panel'],
+      ['/my-tickets', 'Bandeja'],
+      ['/tickets/categories', 'Clasificación'],
+      ['/users', 'Usuarios'],
+      ['/settings', 'Configuración'],
     ] as const) {
       await page.goto(ruta);
       await expect(activa).toHaveCount(1);
@@ -145,21 +146,17 @@ test.describe('El armazón', () => {
       await expect(activa).toHaveClass(/bg-superficie-suave/);
     }
 
-    await page.goto('/tickets/new');
-    await expect(activa).toHaveCount(1);
-    await expect(activa).toHaveText('My tickets');
-
     await page.goto('/users/00000000-0000-0000-0000-000000000000');
     await expect(activa).toHaveCount(1);
-    await expect(activa).toHaveText('Users');
+    await expect(activa).toHaveText('Usuarios');
 
     await page.goto('/mail');
     await expect(activa).toHaveCount(1);
-    await expect(activa).toHaveText('Settings');
+    await expect(activa).toHaveText('Configuración');
   });
 
   test('la pantalla de entrada no lleva el menú', async ({ page }, info) => {
-    test.skip(!esPc(info), 'En móvil el botón de salir está en el cajón');
+    await abrirCajonSiHaceFalta(page, info);
 
     // Salir se confirma en su ventana (decisión del responsable, 2026-09-29).
     await page.getByRole('button', { name: 'Salir' }).click();
@@ -171,10 +168,14 @@ test.describe('El armazón', () => {
   });
 
   test('en móvil el menú es un cajón: se abre, se ve y se cierra', async ({ page }, info) => {
-    test.skip(esPc(info), 'En PC el menú está siempre a la vista');
+    if (esPc(info)) {
+      await expect(page.locator('aside')).toBeInViewport();
+      await expect(page.getByRole('banner')).toHaveCount(0);
+      return;
+    }
 
     // La tira de arriba sólo existe en pantallas pequeñas.
-    const tira = page.locator('header');
+    const tira = page.getByRole('banner');
     await expect(tira).toBeVisible();
 
     const menu = page.locator('aside');
@@ -227,7 +228,7 @@ test.describe('El menú, por papel', () => {
     await entrar(page, cuenta.email, 'una-contraseña-larga');
     // Un usuario entra en **sus tickets**: el inicio provisional desapareció con las pantallas de
     // producto, que era lo que le faltaba.
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     await abrirCajonSiHaceFalta(page, info);
 
     // El menú no le enseña lo que no puede hacer…

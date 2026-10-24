@@ -1,7 +1,10 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-22
+>
+> **Enmienda propuesta el 2026-10-21:** la sección 28 ofrece seeders explícitos por idioma y fija
+> el inglés para el reinicio de la demo pública.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: actualización autosuficiente y
 > migraciones versionadas.** La sección 27 sustituye la migración manual en producción y la ausencia
@@ -115,11 +118,11 @@
 > `frontend` es rechazado por Angular. La suite predeterminada sigue usando el dominio de desarrollo.
 >
 > **Enmendado el 2026-10-01 (séptima vez)**: **los datos de ejemplo se siembran con un contenedor de
-> un solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows** —es lo
+> un solo uso**, `docker compose -f dev.yml run --rm seed-en|seed-es`, **igual en Linux, macOS y Windows** —es lo
 > que deja fuera el guion de bash, que no se puede ejecutar en Windows, y con él la copia de los
 > adjuntos—. El servicio vive en `dev.yml` **con perfil propio**, así que **`up -d` no lo arranca**:
 > se pide a propósito, y **los ejemplos son opcionales** (el esquema sigue siendo obligatorio). El
-> contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad, y el guion sigue
+> contenedor corre **el guion de siempre, `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`** —una sola verdad, y el guion sigue
 > valiendo en Linux y macOS fuera del contenedor—: el guion distingue con la marca `SEED_EN_CONTENEDOR`
 > si habla con la base por la red del entorno con el `psql` de la imagen o entrando al contenedor con
 > `docker compose exec`. Quedan al día las secciones 3.1, 3.3, 5 y 9.3. Comprobado el 2026-10-01 con
@@ -141,7 +144,7 @@
 > con comandos de Docker que funcionan **igual en PowerShell, CMD y bash**: se copia el archivo al
 > contenedor con `docker compose -f dev.yml cp` y se le da a `psql` con `-f` y `-v ON_ERROR_STOP=1`
 > (sección 3.2, que era el único sitio que solo enseñaba la redirección `<`, de intérprete). El guion
-> `./scripts/dev-seed.sh` **queda dicho como lo que es: de Linux y macOS**, y quien no tenga `bash`
+> `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` **queda dicho como lo que es: de Linux y macOS**, y quien no tenga `bash`
 > aplica sus dos archivos con esos dos comandos (secciones 3.1, 3.3 y 5). Los pasos del arranque en
 > local, con el porqué de cada uno, viven en el `README.md`. Comprobado el 2026-10-01: en una base
 > nueva (`catalina_support_prueba`) los dos comandos de la sección 3.2 dejan **18 tablas** y la
@@ -151,7 +154,7 @@
 >
 > **Enmendado el 2026-10-01 (cuarta vez)**: queda dicho **qué aplica el esquema en desarrollo y
 > cuándo**. La sección 3.3 dice ya lo que el guion siempre hizo y la documentación no contaba: **en
-> una base nueva `./scripts/dev-seed.sh` es lo que crea el esquema** —su paso 1, `Aplicando el
+> una base nueva `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` es lo que crea el esquema** —su paso 1, `Aplicando el
 > esquema…`, aplica `v1.0.0.sql`—, **no sólo los datos de ejemplo**, y se pasa **después de levantar
 > el entorno y antes de abrir la aplicación**: la aplicación **no crea tablas al arrancar** y las
 > migraciones no se aplican solas, así que abrirla antes deja `relación "installation_settings" does
@@ -225,7 +228,7 @@
 > versión sigue abierta en la **1.0.0** y no se crea un archivo nuevo por esto.
 >
 > **Enmendado el 2026-09-28 (segunda vez)** — **decisión del responsable** al ver el entorno lleno de
-> datos de prueba: **después de cada pasada de la capa de interfaz se ejecuta `./scripts/dev-seed.sh`**,
+> datos de prueba: **después de cada pasada de la capa de interfaz se ejecuta `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh`**,
 > para que desarrollo quede con las once cuentas y los 25 tickets de ejemplo y **nadie se encuentre
 > tickets de prueba en las listas**. Los tickets que crea la suite **no se pueden borrar desde ella** —un
 > ticket no se borra, y el contenedor de las pruebas no habla con la base—, así que el reinicio lo hace
@@ -239,7 +242,7 @@
 > desplegable de «Asignar a» y en el buscador de a quién etiquetar. Ahora se apagan —**no se borran**,
 > que es la regla de las cuentas— pidiendo **por la API**, que es lo que usa la aplicación: el
 > contenedor de las pruebas no habla con la base. Los **tickets** que deja la pasada no se tocan —un
-> ticket no se borra—: el entorno se deja como nuevo con `./scripts/dev-seed.sh`.
+> ticket no se borra—: el entorno se deja como nuevo con `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh`.
 >
 > **Enmendado el 2026-09-27 (segunda vez)**: la capa de interfaz **devuelve la instalación a cuentas
 > locales antes de empezar** (`tests/e2e/preparar.ts`, la preparación previa de `playwright.config.ts`),
@@ -388,22 +391,22 @@ local están en el `README.md`, «Probar en local: instalación vacía».
 un solo uso que arranca, siembra y se va.
 
 ```bash
-docker compose -f dev.yml run --rm seed
+docker compose -f dev.yml run --rm seed-en|seed-es
 ```
 
 **No se levanta con `up -d`**, porque el servicio `seed` de `dev.yml` tiene **perfil propio**: se pide
 a propósito, y **quien quiera el proyecto vacío —sólo con el esquema— no ejecuta este comando**.
 **Los ejemplos son una elección; el esquema es obligatorio.**
 
-El contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad sobre cómo se
-siembra—: aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a
+El contenedor corre **el guion de siempre, `scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh`** —una sola verdad sobre cómo se
+siembra—: aplica el esquema, aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y **copia los archivos de los adjuntos** a
 `_files/`, que es el paso que un seeder SQL no puede hacer. Sus montajes son de **sólo lectura** salvo
 `_files/`, que es lo único que el guion escribe en la máquina.
 
 **En Linux y macOS el mismo guion sigue existiendo fuera del contenedor**, y hace lo mismo:
 
 ```bash
-./scripts/dev-seed.sh
+./scripts/dev-seed-en.sh  # o ./scripts/dev-seed-es.sh
 ```
 
 El guion habla con la base **entrando al contenedor con `docker compose exec`** cuando corre en la
@@ -419,7 +422,7 @@ contenedor, que es el paso 3 del guion.
 
 Su **paso 1** (`Aplicando el esquema…`) aplica `backend/migrations/v1.0.0.sql` —transaccional e
 idempotente, así que sobre una base que ya lo tiene se puede volver a pasar sin daño—, el **paso 2**
-aplica `v1.0.0_dev.sql` y el **paso 3** **copia los archivos de los adjuntos** desde `config/seed/` a
+aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y el **paso 3** **copia los archivos de los adjuntos** desde `config/seed/` a
 `_files/`, en la carpeta de su ticket: un seeder SQL no puede crear archivos, y un adjunto sin su
 archivo no se puede abrir.
 
@@ -628,7 +631,7 @@ pasa a enseñar la aplicación de verdad, con el correo todavía pendiente.
 `v1.0.0.sql`, `v1.1.0.sql`, `v1.2.0.sql`… El archivo y la etiqueta de git que marca esa versión
 llevan el mismo número, así que mirando el tag se sabe qué migración le toca.
 
-**Y un archivo de datos de ejemplo por versión, con `_dev` detrás del nombre** (`v1.0.0_dev.sql`):
+**Y un archivo de datos de ejemplo por versión, con `_dev` detrás del nombre** (`v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql`):
 dónde van las cuentas y los tickets con los que se trabaja en desarrollo. **Ese archivo no se aplica
 nunca en producción**, y por eso lleva el sufijo bien visible.
 
@@ -648,7 +651,7 @@ despliegue y llena `migrations/` de retales.
 | Archivo | Qué lleva | Dónde se aplica |
 | --- | --- | --- |
 | `v1.0.0.sql` | Las tablas, los índices y sus restricciones **y lo que la aplicación necesita para funcionar**: las dos filas de configuración —la de la instalación y la de los tickets— y las veinte plantillas de correo. Sin la fila de configuración no se puede leer ni el idioma ni el nombre; sin plantilla no sale ningún correo | **Desarrollo y producción** |
-| `v1.0.0_dev.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed` (`scripts/dev-seed.sh` en Linux y macOS) |
+| `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` en Linux y macOS) |
 
 **El guion borra también los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva **por número
 de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una fila vieja se
@@ -802,7 +805,7 @@ van dentro de la copia de la base**, así que esa copia es un secreto más (secc
 **Y el correo saliente tampoco es una variable de entorno**: vive en `installation_settings.smtp_*` y
 se configura en la vista de primer arranque o en Configuración; las variables `SMTP_*` se retiraron
 (`docs/arquitectura.md`, sección 9). En desarrollo lo deja puesto
-`backend/migrations/v1.0.0_dev.sql`, apuntando al buzón de pruebas del `dev.yml` (`mail`, web en
+`backend/migrations/v1.0.0_dev_en.sql` o `backend/migrations/v1.0.0_dev_es.sql`, apuntando al buzón de pruebas del `dev.yml` (`mail`, web en
 `127.0.0.1:11004`).
 
 Reglas que valen para los dos entornos:
@@ -951,7 +954,7 @@ eliminó contenedores, red y volúmenes. `docker compose -f tests.yml ps -a` que
 | 3 | **Copias de seguridad** | `pg_dump` diario, con retención (14 días) y un script en `scripts/`, programado en el `cron` del servidor. **Corrección del responsable (2026-09-25)**: el script **no copia `_files`** —los adjuntos y los documentos se copian a mano cuando Soporte lo pida—, y **los adjuntos no se borran nunca**. Está en la sección 6 |
 | 4 | **Integración continua** | **Ninguna** en la 1.0.0: las pruebas se ejecutan a mano en los contenedores, como parte del trabajo |
 | 5 | **Las migraciones** | Un archivo por versión, tres dígitos, orden SemVer, historial y checksum en `schema_migrations`; el ejecutor aplica pendientes antes de arrancar la aplicación |
-| 6 | **Los datos de ejemplo, aparte** | **Decisión del responsable, 2026-09-25**: la 1.0.0 se cierra con **dos archivos** —`v1.0.0.sql`, con las tablas y lo que la aplicación necesita para funcionar en los dos entornos, y `v1.0.0_dev.sql`, con once cuentas y 25 tickets que **sólo se aplican en desarrollo**—. Lo que la aplicación necesita para arrancar (las dos filas de configuración y las veinte plantillas de correo) **no es un dato de ejemplo** y se queda en el primero, porque en producción no hay quien lo siembre por otra vía |
+| 6 | **Los datos de ejemplo, aparte** | **Decisión del responsable, 2026-09-25**: la 1.0.0 se cierra con **dos archivos** —`v1.0.0.sql`, con las tablas y lo que la aplicación necesita para funcionar en los dos entornos, y `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql`, con once cuentas y 25 tickets que **sólo se aplican en desarrollo**—. Lo que la aplicación necesita para arrancar (las dos filas de configuración y las veinte plantillas de correo) **no es un dato de ejemplo** y se queda en el primero, porque en producción no hay quien lo siembre por otra vía |
 | 7 | **La limpieza de los logs** | **Manual**: `go-logs` no rota y no se le añade un script |
 
 ## 11. Qué NO entra en la 1.0.0
@@ -1357,3 +1360,29 @@ caracteres y también quedó sin trabajo en el segundo arranque. Una migración 
 creó su respaldo, falló, revirtió la tabla de prueba y conservó el checksum anterior. Pasaron las
 pruebas unitarias del ejecutor y la suite backend salvo el fallo ambiental ya conocido de reportería
 sin tickets sembrados. Los dos binarios de producción compilaron y el runtime confirmó `pg_dump 18`.
+
+## 28. Ejemplos explícitos por idioma
+
+`dev.yml` expone dos servicios de una sola ejecución: `seed-en` y `seed-es`. Sus comandos públicos
+son `docker compose -f dev.yml run --rm seed-en` y `docker compose -f dev.yml run --rm seed-es`;
+ninguno arranca con `up`. En Linux y macOS se ofrecen también `./scripts/dev-seed-en.sh` y
+`./scripts/dev-seed-es.sh`. Docker sigue siendo el camino portable para PowerShell, CMD y bash.
+
+El reinicio periódico de `demo.catalina-support.com` usa `seed-en`, conserva su horario y sus
+credenciales vigentes y deja tanto la interfaz como los ejemplos en inglés. Los seeders permanecen
+prohibidos en producción y fuera de los despliegues de desarrollo o demostración expresamente
+preparados para ellos.
+
+README, runbook y referencias cruzadas publican los servicios y guiones explícitos por idioma.
+Los archivos `v1.0.0_dev_en.sql` y `v1.0.0_dev_es.sql` son las dos vías de datos. El cambio no afecta despliegues
+de producción, TLS, DNS ni la frecuencia del reinicio público.
+
+El servicio anterior `seed` se retira: no queda como alias. El reinicio público sustituye su
+invocación por `seed-en` sin cambiar horario ni credenciales. El responsable cerró el repaso con
+1A–5A y no quedan decisiones abiertas.
+
+La verificación real ejecutó ambos servicios sobre bases desechables. Cada variante produjo once
+cuentas, 25 tickets, 123 filas de historial, 27 comentarios, siete internos y cinco adjuntos. Una
+base nueva adoptó `en` con `seed-en` y `es` con `seed-es`; una instalación sellada conservó sus
+ajustes al cambiar de juego. La configuración resuelta de Compose contiene sólo `seed-en` y
+`seed-es`, y las pruebas del ejecutor confirman que ignora ambos archivos de desarrollo.

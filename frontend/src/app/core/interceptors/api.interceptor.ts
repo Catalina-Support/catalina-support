@@ -38,6 +38,11 @@ const RUTAS_QUE_NO_ECHAN_A_NADIE = [
   '/api/auth/password/reset',
 ];
 
+/** Un fallo de este catálogo describe al administrador local, no la salud del backend. */
+function esCatalogoLocalDeIA(url: string): boolean {
+  return /\/api\/(setup|settings)\/ai\/models(?:\?.*)?$/.test(url);
+}
+
 export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
   const sesion = inject(SessionService);
   const router = inject(Router);
@@ -67,7 +72,11 @@ export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse) {
         // Sin respuesta del servidor (cortado) o un 502/503 de nginx: no hay con quién hablar.
-        if (error.status === 0 || error.status === 502 || error.status === 503) {
+        if (
+          error.status === 0 ||
+          error.status === 502 ||
+          (error.status === 503 && !esCatalogoLocalDeIA(peticion.url))
+        ) {
           disponibilidad.noDisponible();
         }
 
