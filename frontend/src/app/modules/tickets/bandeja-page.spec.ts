@@ -424,4 +424,45 @@ describe('BandejaPage', () => {
       vi.useRealTimers();
     }
   });
+
+  it('descarta la respuesta anterior al cambiar Principales por Internos', async () => {
+    usuario.set({
+      id: 2,
+      name: 'Sofía',
+      lastName: 'Soporte',
+      email: 'sofia@demo.com',
+      role: 'soporte',
+      origin: 'local',
+      factory: false,
+    });
+    const fixture = TestBed.createComponent(BandejaPage);
+    fixture.componentRef.setInput('listado', 'general');
+    fixture.detectChanges();
+
+    const principal = http.expectOne(
+      (peticion) => peticion.url === '/api/tickets' && peticion.params.get('type') === 'principal',
+    );
+    http.expectOne('/api/tickets/categories').flush(SIN_CATEGORIAS);
+
+    const componente = fixture.componentInstance as unknown as {
+      aplicarTipoGeneral(tipo: string): Promise<void>;
+    };
+    const cambio = componente.aplicarTipoGeneral('interno');
+    const interna = http.expectOne(
+      (peticion) => peticion.url === '/api/tickets' && peticion.params.get('type') === 'interno',
+    );
+    interna.flush({
+      tickets: [{ ...CON_CLASIFICACION, internal: true, number: 'INT-CS-2026-0001' }],
+      total: 1,
+      page: 1,
+      perPage: 20,
+    } satisfies PaginaDeTickets);
+    await cambio;
+
+    principal.flush(PAGINA);
+    await esperar();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent as string).toContain('INT-CS-2026-0001');
+    expect(fixture.nativeElement.querySelector('a[href="/tickets/CS-2026-0001"]')).toBeNull();
+  });
 });

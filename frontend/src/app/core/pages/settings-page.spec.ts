@@ -356,4 +356,27 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     fixture.detectChanges();
     expect(boton.disabled).toBe(false);
   });
+
+  it('muestra el fallo del catálogo dentro de la tarjeta y permite reintentar', async () => {
+    const fixture = await montar();
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('button')).find((candidato) =>
+      (candidato as HTMLButtonElement).textContent?.includes('Refrescar catálogo'),
+    ) as HTMLButtonElement;
+
+    boton.click();
+    http
+      .expectOne('/api/settings/ai/models')
+      .flush({ error: 'error interno' }, { status: 503, statusText: 'Unavailable' });
+    await esperar();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string).toContain('Algo ha fallado por nuestra parte.');
+    expect(boton.textContent).toContain('Reintentar');
+
+    boton.click();
+    http.expectOne('/api/settings/ai/models').flush(CATALOGO);
+    await esperar();
+    fixture.detectChanges();
+    expect(boton.textContent).toContain('Refrescar catálogo');
+  });
 });

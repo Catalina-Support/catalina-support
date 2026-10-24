@@ -1,7 +1,7 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-23
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** Corrige la entrada contra Active
 > Directory real: admite nombre de usuario o correo, conserva el filtro base de la instalación y
@@ -836,3 +836,19 @@ La normalización se aplica antes de buscar por `external_id`, vincular o crear.
 un GUID binario real, un identificador textual, usuario corto, correo, caracteres que necesitan
 escape LDAP, cuenta deshabilitada y contraseña rechazada. Ningún log incluirá contraseñas ni el
 filtro con datos sin enmascarar.
+
+## 18. Enlaces consecutivos de establecimiento de contraseña
+
+> **Propuesta de verificación del 2026-10-23.** Durante el recorrido, reutilizar una pestaña para
+> enlaces consecutivos pareció conservar el resultado anterior. El responsable eligió 4A: primero
+> se reproduce aisladamente y sólo se corrige si falla. Cerró el comportamiento con 4A y la matriz
+> con 5A. No quedan decisiones abiertas; falta la aprobación explícita.
+
+La misma pestaña puede navegar de un enlace válido de `/set-password#token=…` a otro distinto. Cada
+cambio debe iniciar una carga nueva, limpiar el éxito o error anterior, validar el token nuevo y
+borrar el fragmento después de adoptarlo. El estado de un enlace nunca se reutiliza para otro.
+
+La reproducción usa dos cuentas y dos enlaces válidos consecutivos en la misma página. Si el
+comportamiento ya es correcto, se conserva únicamente la regresión y se registra como no
+reproducido. Si falla, se corrige sólo el ciclo de vida de esa pantalla; no cambian tokens,
+caducidad, API, contraseñas ni correos.

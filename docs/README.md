@@ -1,7 +1,22 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-10-24
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-24:** `prueba-local.md` limpia
+> la suite Playwright para que describa exclusivamente el producto actual, cree todos sus datos sin
+> seeders y use un motor de IA falso determinista para resúmenes y redacción. El responsable eligió
+> 1A–4A. La pasada final ejecutó 228 casos: 198 pasaron y 30 se omitieron sólo por los perfiles
+> explícitos de AD, Keycloak y diagnóstico.
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-23:** `primer-arranque.md`, `modules/tickets.md`,
+> `modules/users.md`, `modules/auth.md`, `modules/settings.md`, `interfaz-y-experiencia.md` y
+> `prueba-local.md` registran
+> los hallazgos del recorrido efímero: un 503 local que bloquea el paso de IA, la lista general
+> desincronizada, el control duplicado de alta, el preparador SMTP desactualizado y la verificación
+> de enlaces consecutivos de contraseña. El responsable eligió 1A–4A y cerró el repaso con 1A–5A,
+> ampliando la protección a Configuración. La implementación quedó cubierta por 255 pruebas
+> Angular, compilación de producción y recorridos focales en PC y móvil.
 >
 > **Propuesta coordinada del 2026-10-22:** `modules/tickets.md`, `modules/ai.md` e
 > `interfaz-y-experiencia.md` amplían las cuatro bandejas con márgenes de 16 px y extremos fijos,
@@ -545,22 +560,22 @@ escribe código sin un documento aprobado antes.
 
 | Documento | Estado | Cubre |
 | --- | --- | --- |
-| `README.md` (este archivo) | propuesta | Índice y coordinación de ejemplos bilingües |
+| `README.md` (este archivo) | **as-built** | Coordinación de la limpieza integral de Playwright |
 | `proyecto-abierto.md` | **propuesta** | Demo inglesa y capturas bilingües del sitio oficial |
-| `prueba-local.md` | **propuesta** | Equivalencia y recorrido de ambos juegos de ejemplos |
+| `prueba-local.md` | **as-built** | Suite vigente, aislada y sin contratos históricos |
 | `arquitectura.md` | **propuesta** | Datos de demostración separados por idioma |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas previas) | Dashboard exclusivamente estadístico, sin evaluación ni SLA |
 | `usuarios-y-permisos.md` | **as-built** | Permisos acumulativos y privacidad de comentarios del principal |
 | `flujos.md` | **as-built** | Aviso único a todo Soporte al llegar por primera vez a crítica |
-| `modules/settings.md` | **as-built** | Selección y estado efectivo de aceleración local |
+| `modules/settings.md` | **as-built** | Catálogo local indisponible sin bloquear Configuración |
 | `modules/mail.md` | **as-built** | Aviso interno de comentario privado sin contenido sensible |
-| `modules/auth.md` | **as-built** | Identidad con papel operativo y capacidad administrativa |
-| `modules/users.md` | **as-built** | Persistencia, API, auditoría y avisos de administración |
-| `interfaz-y-experiencia.md` | **as-built** | Bandejas a ancho útil, extremos fijos y adaptación móvil |
-| `primer-arranque.md` | **as-built** (8 enmiendas previas) | Aceleración local en el paso 5 |
+| `modules/auth.md` | **as-built** | Verificación de enlaces consecutivos de contraseña |
+| `modules/users.md` | **as-built** | Un solo control accesible para crear cuentas |
+| `interfaz-y-experiencia.md` | **as-built** | Estados coherentes en configuración, bandejas y altas |
+| `primer-arranque.md` | **as-built** (8 enmiendas previas) | Catálogo local ausente sin falso servidor caído |
 | `ambientes.md` | **propuesta** | Servicios y comandos explícitos `seed-en` y `seed-es` |
 | `modules/ai.md` | **as-built** | Redacción profesional verificable y rechazo de propuestas deficientes |
-| `modules/tickets.md` | **as-built** | Bandejas completas y contrato de redacción asistida |
+| `modules/tickets.md` | **as-built** | Coherencia al alternar Principales e Internos |
 | `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
 | `entornos-compartidos.md` | **as-built** | Capacidades genéricas para instalaciones públicas compartidas |
 

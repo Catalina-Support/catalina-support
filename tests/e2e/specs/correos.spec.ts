@@ -24,7 +24,7 @@ test.describe('El editor de los correos', () => {
   }, info) => {
     // **Una cuenta de administrador y no la de fábrica**: la prueba se manda al correo de quien la
     // pide, y la cuenta de fábrica es la única sin correo (responde `mail.test.noEmail`).
-    const jefa = await crearCuentaLista(request, { role: 'administrador' });
+    const jefa = await crearCuentaLista(request, { role: 'soporte', isAdmin: true });
     await vaciarBuzon(request);
 
     await entrarComo(page, jefa.email);
@@ -55,9 +55,8 @@ test.describe('El editor de los correos', () => {
     await page.getByRole('link', { name: 'Editar los correos' }).click();
     await expect(page).toHaveURL(/\/mail$/);
 
-    // Los **doce** correos, y los dos idiomas del elegido. Eran diez hasta el 2026-09-27, que entró el
-    // aviso de que te han etiquetado (`docs/modules/mail.md`, sección 5.1).
-    await expect(page.getByRole('navigation', { name: 'Qué correo' }).getByRole('button')).toHaveCount(12);
+    // Los **trece** correos, incluida la plantilla de comentarios privados, y los dos idiomas del elegido.
+    await expect(page.getByRole('navigation', { name: 'Qué correo' }).getByRole('button')).toHaveCount(13);
 
     const texto = marca();
     const asunto = `Aviso de prueba ${texto}: {{numero}}`;
@@ -111,7 +110,7 @@ test.describe('El editor de los correos', () => {
     page,
     request,
   }) => {
-    const jefa = await crearCuentaLista(request, { role: 'administrador' });
+    const jefa = await crearCuentaLista(request, { role: 'soporte', isAdmin: true });
     await entrarComo(page, jefa.email);
     await page.goto('/mail');
 
