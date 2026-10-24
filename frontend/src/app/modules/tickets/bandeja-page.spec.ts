@@ -184,6 +184,12 @@ describe('BandejaPage', () => {
     expect(celdas[0].textContent?.trim()).toBe('CS-2026-0001');
     expect(celdas[0].classList).toContain('sticky');
     expect(celdas[0].classList).toContain('left-0');
+    expect(celdas[0].classList).toContain('pl-4');
+    expect(celdas.at(-1)?.classList).toContain('sticky');
+    expect(celdas.at(-1)?.classList).toContain('right-0');
+    expect(celdas.at(-1)?.classList).toContain('pr-4');
+    expect(host.querySelector('thead th:last-child')?.classList).toContain('w-[6rem]');
+    expect(host.querySelector('main')?.classList).toContain('lg:-mx-6');
     expect(host.querySelector('thead th')?.classList).toContain('sticky');
     expect(host.querySelector('section')?.classList).toContain('md:overflow-auto');
     expect(host.querySelector('section')?.classList).toContain('md:min-h-60');
@@ -417,5 +423,46 @@ describe('BandejaPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('descarta la respuesta anterior al cambiar Principales por Internos', async () => {
+    usuario.set({
+      id: 2,
+      name: 'Sofía',
+      lastName: 'Soporte',
+      email: 'sofia@demo.com',
+      role: 'soporte',
+      origin: 'local',
+      factory: false,
+    });
+    const fixture = TestBed.createComponent(BandejaPage);
+    fixture.componentRef.setInput('listado', 'general');
+    fixture.detectChanges();
+
+    const principal = http.expectOne(
+      (peticion) => peticion.url === '/api/tickets' && peticion.params.get('type') === 'principal',
+    );
+    http.expectOne('/api/tickets/categories').flush(SIN_CATEGORIAS);
+
+    const componente = fixture.componentInstance as unknown as {
+      aplicarTipoGeneral(tipo: string): Promise<void>;
+    };
+    const cambio = componente.aplicarTipoGeneral('interno');
+    const interna = http.expectOne(
+      (peticion) => peticion.url === '/api/tickets' && peticion.params.get('type') === 'interno',
+    );
+    interna.flush({
+      tickets: [{ ...CON_CLASIFICACION, internal: true, number: 'INT-CS-2026-0001' }],
+      total: 1,
+      page: 1,
+      perPage: 20,
+    } satisfies PaginaDeTickets);
+    await cambio;
+
+    principal.flush(PAGINA);
+    await esperar();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent as string).toContain('INT-CS-2026-0001');
+    expect(fixture.nativeElement.querySelector('a[href="/tickets/CS-2026-0001"]')).toBeNull();
   });
 });

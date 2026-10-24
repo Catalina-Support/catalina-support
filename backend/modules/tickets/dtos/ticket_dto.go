@@ -74,8 +74,7 @@ type ImproveWritingRequest struct {
 }
 
 type ImproveWritingResponse struct {
-	Text           string `json:"text"`
-	QualityWarning bool   `json:"qualityWarning"`
+	Text string `json:"text"`
 }
 
 // AssigneesResponse son las personas que pueden ser responsables, por tipo de ticket.

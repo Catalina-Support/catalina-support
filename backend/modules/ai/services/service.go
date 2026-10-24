@@ -582,8 +582,7 @@ func (s *Service) Traducir(texto, idioma string) (string, error) {
 // MejorarRedaccion revisa un borrador ya autorizado por el módulo que conoce el ticket. No guarda
 // entrada ni salida: devuelve texto plano para que la persona lo revise antes de decidir si lo usa.
 type ResultadoRedaccion struct {
-	Texto               string
-	CalidadInsuficiente bool
+	Texto string
 }
 
 func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, tipo, idioma string) (ResultadoRedaccion, error) {
@@ -598,8 +597,8 @@ func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, ti
 	if tipo == "internal" {
 		clase = "internal ticket between Support and Development"
 	}
-	sistema := "Improve the supplied support message in a professional tone. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations."
-	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario + "\nTicket type: " + clase
+	sistema := "Rewrite the supplied support message as a clear, natural and professional response in the same language as the draft. Write 2 or 3 complete sentences, normally 25 to 60 words. State what the technician did or found, politely ask the user to verify the result using 'please' when appropriate, and explain what to do if the issue continues. Substantially reorganize and expand informal wording while preserving every fact, name, number and technical detail. Never invent completed work, results or commitments. Do not force a greeting or sign-off. Use the recipient name only when natural. Return only plain text without Markdown, HTML, mentions or explanations."
+	prompt := "Example draft: restarted the router and it seems okay, check if it fails again.\nExample response: We restarted the router and its connection now appears to be operating normally. Please verify that you can connect successfully, and let us know if the issue returns so we can continue investigating.\n\nDraft:\n" + borrador + "\n\nRecipient name: " + destinatario + "\nTicket type: " + clase
 	if propuestaAnterior != "" {
 		prompt += "\n\nPrevious proposal to avoid:\n" + propuestaAnterior + "\n\nWrite a clearly different paraphrase of the draft. Keep the draft as the source of truth; do not paraphrase the previous proposal."
 	}
@@ -608,8 +607,8 @@ func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, ti
 		if tipo == "internal" {
 			clase = "ticket interno entre Soporte y Desarrollo"
 		}
-		sistema = "Mejora el mensaje de soporte proporcionado con tono profesional. Corrige la ortografía y la claridad, conservando cada hecho, nombre, número y detalle técnico. No inventes información. Usa el nombre del destinatario sólo si resulta natural. Devuelve texto plano sin Markdown, HTML, menciones ni explicaciones."
-		prompt = "Borrador:\n" + borrador + "\n\nNombre del destinatario: " + destinatario + "\nTipo de ticket: " + clase
+		sistema = "Reescribe el mensaje de soporte como una respuesta clara, natural y profesional en el mismo idioma del borrador. Escribe 2 o 3 oraciones completas, normalmente entre 25 y 60 palabras. Explica qué hizo o encontró el técnico, pide cortésmente al usuario que compruebe el resultado usando «por favor» cuando corresponda e indica qué hacer si el problema continúa. Reorganiza y amplía de forma sustancial una redacción informal, conservando cada hecho, nombre, número y detalle técnico. Nunca inventes trabajos realizados, resultados ni compromisos. No fuerces saludo ni despedida. Usa el nombre del destinatario sólo si resulta natural. Devuelve únicamente texto plano sin Markdown, HTML, menciones ni explicaciones."
+		prompt = "Borrador de ejemplo: reiniciamos el router y parece funcionar, revisa si vuelve a fallar.\nRespuesta de ejemplo: Reiniciamos el router y, por el momento, la conexión parece funcionar correctamente. Por favor, comprueba que puedes conectarte y avísanos si el problema vuelve a presentarse para que podamos continuar investigando.\n\nBorrador:\n" + borrador + "\n\nNombre del destinatario: " + destinatario + "\nTipo de ticket: " + clase
 		if propuestaAnterior != "" {
 			prompt += "\n\nPropuesta anterior que debes evitar:\n" + propuestaAnterior + "\n\nRedacta una paráfrasis claramente distinta del borrador. Conserva el borrador como fuente de verdad; no parafrasees la propuesta anterior."
 		}
@@ -617,9 +616,9 @@ func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, ti
 	for intento := 0; intento < 2; intento++ {
 		textoDelIntento := prompt
 		if intento == 1 {
-			textoDelIntento += "\n\nYour previous answer was too similar or not professionally written. Rewrite it with a clearly different sentence structure, correct capitalization and the same facts."
+			textoDelIntento += "\n\nYour previous answer failed the quality requirements. Produce 2 or 3 complete professional sentences with a substantially different structure and enough detail. When the draft asks the user to check or report back, include a polite request with 'please' and a clear next step if the issue continues. Preserve exactly the same facts and do not invent any."
 			if idioma == "es" {
-				textoDelIntento += "\n\nLa respuesta anterior fue demasiado parecida o no estaba redactada profesionalmente. Reescríbela con una estructura claramente distinta, mayúsculas correctas y los mismos hechos."
+				textoDelIntento += "\n\nLa respuesta anterior no cumplió los requisitos de calidad. Produce 2 o 3 oraciones profesionales completas, con una estructura claramente distinta y suficiente desarrollo. Cuando el borrador pide comprobar o informar el resultado, incluye una petición cortés con «por favor» y un siguiente paso claro si el problema continúa. Conserva exactamente los mismos hechos y no inventes ninguno."
 			}
 		}
 		ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
@@ -632,24 +631,62 @@ func (s *Service) MejorarRedaccion(borrador, propuestaAnterior, destinatario, ti
 		if mejorado == "" {
 			return ResultadoRedaccion{}, ErrRespuestaInvalida
 		}
-		calidadBaja := !redaccionSuficientementeDistinta(borrador, propuestaAnterior, mejorado)
-		if !calidadBaja || intento == 1 {
-			return ResultadoRedaccion{Texto: mejorado, CalidadInsuficiente: calidadBaja}, nil
+		if redaccionProfesionalValida(borrador, propuestaAnterior, mejorado) {
+			return ResultadoRedaccion{Texto: mejorado}, nil
+		}
+		if intento == 1 {
+			return ResultadoRedaccion{}, ErrRespuestaInvalida
 		}
 	}
 	return ResultadoRedaccion{}, ErrRespuestaInvalida
 }
 
-func redaccionSuficientementeDistinta(borrador, anterior, propuesta string) bool {
-	runas := []rune(strings.TrimSpace(propuesta))
+func redaccionProfesionalValida(borrador, anterior, propuesta string) bool {
+	propuesta = strings.TrimSpace(propuesta)
+	runas := []rune(propuesta)
 	if len(runas) == 0 || !unicode.IsUpper(runas[0]) {
 		return false
 	}
 	candidata := palabrasRelevantes(propuesta)
-	if len(candidata) == 0 || similitudDePalabras(palabrasRelevantes(borrador), candidata) >= 0.85 {
+	if len(candidata) < 20 || len(candidata) > 70 || similitudDePalabras(palabrasRelevantes(borrador), candidata) >= 0.80 {
 		return false
 	}
-	return anterior == "" || similitudDePalabras(palabrasRelevantes(anterior), candidata) < 0.85
+	if anterior != "" && similitudDePalabras(palabrasRelevantes(anterior), candidata) >= 0.80 {
+		return false
+	}
+	oraciones := 0
+	for _, r := range propuesta {
+		if r == '.' || r == '?' || r == '!' {
+			oraciones++
+		}
+	}
+	if oraciones < 2 || oraciones > 3 {
+		return false
+	}
+	if borradorPideComprobacion(borrador) && !propuestaEsCortes(propuesta) {
+		return false
+	}
+	return true
+}
+
+func borradorPideComprobacion(texto string) bool {
+	texto = strings.ToLower(texto)
+	for _, pista := range []string{"revisa si", "revise si", "comprueba", "compruebe", "confirma", "confirme", "avísanos", "avísenos", "por favor", "check if", "please check", "verify", "confirm", "let us know", "if it happens", "if the issue"} {
+		if strings.Contains(texto, pista) {
+			return true
+		}
+	}
+	return false
+}
+
+func propuestaEsCortes(texto string) bool {
+	texto = strings.ToLower(texto)
+	for _, pista := range []string{"por favor", "podría", "podrías", "agradeceríamos", "please", "could you", "would you", "kindly"} {
+		if strings.Contains(texto, pista) {
+			return true
+		}
+	}
+	return false
 }
 
 func palabrasRelevantes(texto string) []string {

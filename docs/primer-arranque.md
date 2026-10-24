@@ -1,7 +1,7 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-23
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 19 incorpora el icono
 > opcional del sitio al paso 1. Las decisiones 1A–14A están cerradas; pasaron 253 pruebas frontend,
@@ -574,3 +574,25 @@ El icono no es obligatorio y no participa en **Siguiente**, en la validación de
 final. Si se omite, la pestaña usa el logo claro personalizado y, si éste tampoco existe, el logo
 claro de fábrica. Los errores permanecen en el paso mediante el toast común y no descartan los demás
 datos ya escritos.
+
+## 20. Catálogo local indisponible sin falso servidor caído
+
+> **Propuesta del 2026-10-23.** El recorrido efímero confirmó que la ausencia del administrador de
+> modelos locales responde 503 al entrar al paso 5 y el interceptor global lo confunde con una caída
+> completa del backend. El responsable eligió 1A y cerró el repaso con 2A y 5A. No quedan
+> decisiones abiertas; falta la aprobación explícita.
+
+Entrar al paso 5 no presupone que el administrador del motor local esté disponible. Si la consulta
+del catálogo falla, el asistente conserva las tres opciones de IA y muestra el resultado dentro de
+la tarjeta local. El Administrador puede reintentar o elegir servidor propio o proveedor externo
+sin recargar ni perder lo escrito.
+
+La tarjeta ofrece **Volver a intentar** sin cambiar de modo ni borrar los campos. La misma regla se
+aplica en Configuración, mediante el contrato descrito en `modules/settings.md`.
+
+La pantalla global **No hay conexión con el servidor** queda reservada para una pérdida general del
+backend. Un 503 de `/api/setup/ai/models` no la activa por sí solo. Probar y guardar la opción
+finalmente elegida continúa siendo obligatorio.
+
+La regresión abre el paso 5 con backend sano y administrador local ausente, confirma el aviso local,
+cambia a servidor propio y termina la instalación usando el endpoint real de prueba.

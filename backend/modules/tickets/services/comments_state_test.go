@@ -1,7 +1,9 @@
 package services
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -14,12 +16,12 @@ import (
 // solicitó el ticket (docs/modules/tickets.md, sección 27.3).
 func TestRespuestaDelSolicitanteReactivaPrincipal(t *testing.T) {
 	servicio, tx, _ := servicioDeObservadores(t)
-	numero, principalID, solicitanteID := unPrincipalCerrableDeUsuario(t, tx)
+	numero, principalID, solicitante := crearPrincipalDeUsuario(t, tx)
+	servicio.SetAccounts(cuentasStub{solicitante.ID: solicitante})
 	prepararPrincipalEnEspera(t, tx, principalID)
 	historialAntes := contarTransicionesExactas(t, tx, principalID, repositories.StateEnEspera, repositories.StateEnProgreso)
 
-	cuenta := cuentaDeLaBasePorID(t, tx, solicitanteID)
-	actor := auth.Identity{ID: cuenta.ID, Role: cuenta.Role}
+	actor := auth.Identity{ID: solicitante.ID, Role: solicitante.Role}
 	if _, err := servicio.Comment(numero, "Ya envié la información solicitada", actor); err != nil {
 		t.Fatalf("el comentario del solicitante falló: %v", err)
 	}
@@ -38,8 +40,8 @@ func TestRespuestaDelSolicitanteReactivaPrincipal(t *testing.T) {
 		Scan(&actorID).Error; err != nil {
 		t.Fatalf("no se pudo leer el actor del historial: %v", err)
 	}
-	if actorID != solicitanteID {
-		t.Fatalf("el actor del movimiento es %d; se esperaba al solicitante %d", actorID, solicitanteID)
+	if actorID != solicitante.ID {
+		t.Fatalf("el actor del movimiento es %d; se esperaba al solicitante %d", actorID, solicitante.ID)
 	}
 }
 
@@ -47,11 +49,11 @@ func TestRespuestaDelSolicitanteReactivaPrincipal(t *testing.T) {
 // recibir un adjunto después: sigue siendo una respuesta nueva y aplica la misma transición.
 func TestRespuestaVaciaDelSolicitanteReactivaPrincipal(t *testing.T) {
 	servicio, tx, _ := servicioDeObservadores(t)
-	numero, principalID, solicitanteID := unPrincipalCerrableDeUsuario(t, tx)
+	numero, principalID, solicitante := crearPrincipalDeUsuario(t, tx)
+	servicio.SetAccounts(cuentasStub{solicitante.ID: solicitante})
 	prepararPrincipalEnEspera(t, tx, principalID)
-	cuenta := cuentaDeLaBasePorID(t, tx, solicitanteID)
 
-	if _, err := servicio.Comment(numero, "", auth.Identity{ID: cuenta.ID, Role: cuenta.Role}); err != nil {
+	if _, err := servicio.Comment(numero, "", auth.Identity{ID: solicitante.ID, Role: solicitante.Role}); err != nil {
 		t.Fatalf("el comentario vacío del solicitante falló: %v", err)
 	}
 	if estado := estadoDelPrincipal(t, tx, principalID); estado != repositories.StateEnProgreso {
@@ -63,9 +65,10 @@ func TestRespuestaVaciaDelSolicitanteReactivaPrincipal(t *testing.T) {
 // autorizada a comentar en el principal sustituye al solicitante para esta automatización.
 func TestComentarioAjenoNoReactivaPrincipal(t *testing.T) {
 	servicio, tx, _ := servicioDeObservadores(t)
-	numero, principalID, _ := unPrincipalCerrableDeUsuario(t, tx)
+	numero, principalID, solicitante := crearPrincipalDeUsuario(t, tx)
 	prepararPrincipalEnEspera(t, tx, principalID)
-	soporte := cuentaDeLaBase(t, tx, auth.RoleSoporte, true)
+	soporte := crearCuentaParaComentario(t, tx, auth.RoleSoporte)
+	servicio.SetAccounts(cuentasStub{solicitante.ID: solicitante, soporte.ID: soporte})
 
 	if _, err := servicio.Comment(numero, "Seguimos pendientes de tu respuesta", auth.Identity{ID: soporte.ID, Role: soporte.Role}); err != nil {
 		t.Fatalf("el comentario de Soporte falló: %v", err)
@@ -104,9 +107,9 @@ func TestRespuestaEnInternoNoReactivaPrincipal(t *testing.T) {
 // del comentario. Editar después una respuesta anterior no cuenta como una respuesta nueva.
 func TestEditarComentarioNoReactivaPrincipal(t *testing.T) {
 	servicio, tx, _ := servicioDeObservadores(t)
-	numero, principalID, solicitanteID := unPrincipalCerrableDeUsuario(t, tx)
-	cuenta := cuentaDeLaBasePorID(t, tx, solicitanteID)
-	actor := auth.Identity{ID: cuenta.ID, Role: cuenta.Role}
+	numero, principalID, solicitante := crearPrincipalDeUsuario(t, tx)
+	servicio.SetAccounts(cuentasStub{solicitante.ID: solicitante})
+	actor := auth.Identity{ID: solicitante.ID, Role: solicitante.Role}
 
 	if err := tx.Exec(`UPDATE tickets SET state = ? WHERE id = ?`, repositories.StateEnProgreso, principalID).Error; err != nil {
 		t.Fatalf("no se pudo preparar el principal: %v", err)
@@ -123,6 +126,51 @@ func TestEditarComentarioNoReactivaPrincipal(t *testing.T) {
 	if estado := estadoDelPrincipal(t, tx, principalID); estado != repositories.StateEnEspera {
 		t.Fatalf("editar el comentario cambió el estado a %q", estado)
 	}
+}
+
+// crearPrincipalDeUsuario construye todo el contrato que necesitan estas pruebas dentro de su
+// transacción. No lee tickets ni cuentas de seeders y el rollback del helper de servicio lo elimina.
+func crearPrincipalDeUsuario(t *testing.T, tx *gorm.DB) (string, int64, auth.Account) {
+	t.Helper()
+
+	solicitante := crearCuentaParaComentario(t, tx, auth.RoleUsuario)
+	var categoriaID int64
+	if err := tx.Raw(`SELECT id FROM ticket_categories WHERE normalized = 'general'`).Scan(&categoriaID).Error; err != nil {
+		t.Fatalf("no se pudo leer la categoría de fábrica: %v", err)
+	}
+	if categoriaID == 0 {
+		t.Fatal("no existe la categoría de fábrica de la migración")
+	}
+
+	var secuencia int
+	if err := tx.Raw(`SELECT COALESCE(MAX(number_seq), 0) + 1 FROM tickets WHERE number_year = 2099`).Scan(&secuencia).Error; err != nil {
+		t.Fatalf("no se pudo reservar el número del ticket de prueba: %v", err)
+	}
+	numero := fmt.Sprintf("TEST-2099-%04d", secuencia)
+	var principalID int64
+	if err := tx.Raw(`INSERT INTO tickets
+		(number, number_year, number_seq, subject, description, state, priority, category_id, requester_id, created_by_id)
+		VALUES (?, 2099, ?, 'Respuesta del solicitante', 'Contrato aislado de prueba', 'nuevo', 'medium', ?, ?, ?)
+		RETURNING id`, numero, secuencia, categoriaID, solicitante.ID, solicitante.ID).Scan(&principalID).Error; err != nil {
+		t.Fatalf("no se pudo crear el ticket de prueba: %v", err)
+	}
+
+	return numero, principalID, solicitante
+}
+
+func crearCuentaParaComentario(t *testing.T, tx *gorm.DB, rol string) auth.Account {
+	t.Helper()
+	unico := time.Now().UnixNano()
+	cuenta := auth.Account{
+		Name: "Prueba", LastName: "Comentarios", Role: rol, Origin: auth.OriginLocal, IsActive: true,
+		Email: fmt.Sprintf("comentarios-%s-%d@example.test", rol, unico),
+	}
+	if err := tx.Raw(`INSERT INTO users (name, last_name, email, role, origin, is_active)
+		VALUES (?, ?, ?, ?, ?, true) RETURNING id`, cuenta.Name, cuenta.LastName, cuenta.Email, cuenta.Role, cuenta.Origin).
+		Scan(&cuenta.ID).Error; err != nil {
+		t.Fatalf("no se pudo crear la cuenta %s de prueba: %v", rol, err)
+	}
+	return cuenta
 }
 
 func prepararPrincipalEnEspera(t *testing.T, tx *gorm.DB, principalID int64) {

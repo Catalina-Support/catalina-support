@@ -1,7 +1,13 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-19
+> **Última actualización:** 2026-10-22
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-22.** La sección 25 registra que el contrato vigente aceptaba
+> todavía una segunda propuesta insuficiente. El responsable eligió 1A–4A: prompt estructurado,
+> 2–3 oraciones de 25–60 palabras, cortesía contextual sin saludo forzado, un reintento y rechazo
+> de la segunda salida si continúa deficiente. La propuesta fue aprobada explícitamente; se implementa sólo este alcance
+> coordinada con `modules/tickets.md` e `interfaz-y-experiencia.md`.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-19.** La sección 24 separa las versiones pública e interna de
 > Summary y Last action para que las notas privadas aporten contexto al equipo sin filtrarse al
@@ -1245,3 +1251,82 @@ Los contextos se construyen en backend después de aplicar visibilidad. La versi
 la clave normal del ticket y la interna usa una clave técnica opaca que nunca sale por la API. Las
 pruebas de módulos, la compilación y el recorrido real confirman que el Usuario recibe sólo la
 versión pública y que no ve la nota usada por la versión interna.
+
+## 25. Redacción profesional útil y verificable
+
+### 25.1 Hallazgo
+
+El prompt vigente sólo pide tono profesional, corrección y claridad. La validación mide mayúscula
+inicial y similitud léxica, pero no exige cortesía, desarrollo suficiente ni un siguiente paso. Si
+el segundo intento sigue siendo débil, el backend lo entrega con advertencia. La captura real mostró
+una propuesta casi idéntica al borrador, por lo que el comportamiento contradice la transformación
+apreciable prometida en la sección 19.3.
+
+### 25.2 Encargo al modelo
+
+El sistema pide redactar una respuesta de soporte profesional, clara y natural en el mismo idioma
+del borrador. La salida tiene 2–3 oraciones y, como objetivo, 25–60 palabras. Debe comunicar lo que
+el técnico hizo o encontró, solicitar cortésmente que la persona compruebe el resultado —incluido
+«por favor» o su equivalente natural cuando corresponda— y explicar el siguiente paso si el
+problema continúa.
+
+El modelo amplía y reorganiza la redacción, pero conserva todos los hechos, nombres, números y
+detalles técnicos. No puede afirmar que una acción se completó, que un problema se resolvió ni que
+se realizará una tarea si el borrador no lo sustenta. Tampoco añade saludo ni despedida por sistema;
+usa el destinatario sólo cuando encaja naturalmente en el cuerpo. Devuelve exclusivamente texto
+plano, sin explicación de su trabajo.
+
+El segundo intento recibe una instrucción reforzada que señala cada incumplimiento detectable:
+similitud excesiva, extensión insuficiente, falta de estructura profesional o ausencia de una
+petición cortés cuando el mensaje solicita verificación. El borrador original continúa siendo la
+única fuente de verdad y la propuesta anterior sólo sirve como redacción que debe evitarse.
+
+### 25.3 Validación y fallo
+
+La validación conserva idioma, contenido significativo, mayúscula inicial y diferencia léxica, y
+añade estructura de 2–3 oraciones y una transformación suficientemente desarrollada. El rango de
+25–60 palabras guía el prompt y la calidad; puede admitirse una desviación pequeña cuando evita
+inventar contenido o producir relleno. La cortesía se evalúa cuando la respuesta pide al usuario
+que pruebe, confirme o aporte información.
+
+Una primera salida insuficiente se reintenta una vez. Si la segunda continúa incumpliendo, el
+endpoint devuelve el error estable de propuesta inválida y no muestra una propuesta utilizable ni
+una advertencia permisiva. El borrador permanece intacto y la interfaz vuelve al estado desde el que
+se puede solicitar otra mejora.
+
+### 25.4 Pruebas y alcance
+
+Las pruebas usan el mismo caso en inglés y español: un técnico escribe informalmente que reinició
+la impresora y que parece funcionar. La propuesta debe explicar la acción con redacción profesional,
+pedir por favor que se verifique y señalar que se informe si el fallo reaparece, sin afirmar una
+resolución definitiva. Se cubren además texto demasiado similar, texto corto, cortesía contextual,
+segundo fallo, hechos protegidos, regeneración y modalidades local, servidor y proveedor.
+
+No cambian permisos, persistencia, proveedores, configuración, privacidad, resúmenes de tickets ni
+la revisión local de la propuesta.
+
+### 25.5 Registro de decisiones
+
+El responsable decidió el 2026-10-22 aplicar validación y rechazo tras un reintento (4A), además de
+mejorar expresamente el prompt. Eligió 2–3 oraciones de 25–60 palabras (3A), cortesía y siguiente
+paso sin inventar hechos, y no forzar saludo o despedida (4A del repaso final). La misma situación
+se verificará en inglés y español. No quedan decisiones abiertas.
+
+### 25.6 Implementación y verificación
+
+El prompt bilingüe exige estructura, extensión, cortesía contextual, siguiente paso y prohibición
+expresa de inventar hechos. Incluye un ejemplo breve en cada idioma que muestra a los modelos
+locales cómo transformar de forma sustancial un borrador informal sin copiar marcadores ni inventar
+acciones. El validador comprueba 2–3 oraciones, 20–70 palabras como tolerancia
+técnica alrededor del objetivo de 25–60, mayúscula inicial, diferencia léxica y cortesía cuando el
+borrador pide comprobar o informar. Se corrigió una falsa coincidencia para que «revisamos el
+servidor» no se interprete como una petición al Usuario. Si el segundo intento falla, el servicio
+devuelve `ai.invalid`; el DTO y la interfaz ya no exponen `qualityWarning` ni permiten aplicar una
+propuesta deficiente.
+
+Pasaron las suites focalizadas de `ai/services`, controladores y servicios de tickets. Las pruebas
+directas validaron el mismo escenario profesional en español e inglés, además del rechazo después
+de dos respuestas pobres. Las 252 pruebas del frontend y la compilación también pasaron. Una llamada
+real con `qwen2.5-1.5b-instruct` transformó el borrador informal inglés sobre el reinicio de una
+impresora en dos oraciones profesionales, con «Please», petición de verificación y siguiente paso;
+la propuesta superó el validador y se mostró en la interfaz para revisión.

@@ -1,7 +1,7 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-23
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 16 reserva todo el
 > módulo y la búsqueda administrativa de AD a la capacidad Administrador. Soporte sin Admin deja de
@@ -442,3 +442,18 @@ devuelven sólo los datos mínimos y no permiten administrar cuentas ni consulta
 Frontend, rutas y controladores aplican la misma regla. Las pruebas de navegación verifican el
 acceso de Administrador puro y de Soporte/Desarrollo + Admin, y la ausencia de entradas
 administrativas para un rol no autorizado; el middleware Admin protege la API.
+
+## 17. Un solo control accesible para crear cuentas
+
+> **Propuesta del 2026-10-23.** La lista renderiza simultáneamente dos controles con el nombre
+> accesible «Nueva cuenta» para sus variantes responsivas. El responsable eligió incluir la
+> corrección mediante 4A y cerró su verificación con 5A. No quedan decisiones abiertas; falta la
+> aprobación explícita.
+
+La adaptación entre tabla y tarjetas puede mantener presentaciones distintas, pero en cada ancho
+debe existir un único botón expuesto con el nombre **Nueva cuenta**. La variante oculta no recibe
+foco ni permanece en el árbol de accesibilidad. Se conservan posición visual, acción, permisos,
+diálogo y comportamiento responsive.
+
+La prueba usa consultas por papel y nombre accesible, sin `.first()`, y confirma un solo botón en PC
+y móvil.

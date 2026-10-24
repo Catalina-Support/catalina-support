@@ -179,8 +179,7 @@ type WritingAssistant interface {
 }
 
 type WritingSuggestion struct {
-	Text           string
-	QualityWarning bool
+	Text string
 }
 
 type Capabilities struct {

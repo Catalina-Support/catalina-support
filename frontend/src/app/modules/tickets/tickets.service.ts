@@ -319,9 +319,9 @@ export class TicketsService {
     editor: EditorDeRedaccion,
     draft: string,
     previousSuggestion?: string,
-  ): Promise<{ text: string; qualityWarning: boolean }> {
+  ): Promise<{ text: string }> {
     return firstValueFrom(
-      this.http.post<{ text: string; qualityWarning: boolean }>(
+      this.http.post<{ text: string }>(
         `/api/tickets/${numero}/writing/improve`,
         {
           editor,

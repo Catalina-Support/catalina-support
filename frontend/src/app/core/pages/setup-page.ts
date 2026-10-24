@@ -165,6 +165,7 @@ export class SetupPage implements OnDestroy {
   protected readonly iaPrivacidad = signal(false);
   protected readonly iaAceleracion = signal<'auto' | 'cpu' | 'nvidia'>('auto');
   protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly errorCatalogoIA = signal('');
   protected readonly refrescandoCatalogo = signal(false);
   protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
   protected readonly logoClaro = signal<File | null>(null);
@@ -400,11 +401,11 @@ export class SetupPage implements OnDestroy {
   protected async cargarCatalogoIA(): Promise<void> {
     if (this.refrescandoCatalogo()) return;
     this.refrescandoCatalogo.set(true);
-    this.mensaje.set(null);
+    this.errorCatalogoIA.set('');
     try {
       await this.refrescarCatalogo();
     } catch (error) {
-      this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+      this.errorCatalogoIA.set(this.textoDelError(error));
     } finally {
       this.refrescandoCatalogo.set(false);
     }

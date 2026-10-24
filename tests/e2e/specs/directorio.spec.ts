@@ -126,7 +126,7 @@ test.describe('El camino de AD', () => {
     await entrar(page, LUIS.email, LUIS.password);
 
     // Dentro: la raíz reparte, y un `usuario` va a su bandeja (docs/interfaz-y-experiencia, 4.4).
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();
 
     // Y la cuenta existe, con el papel de quien entra por primera vez y **sin contraseña local**:
@@ -144,7 +144,7 @@ test.describe('El camino de AD', () => {
    */
   test('una cuenta que ya es del directorio vuelve a entrar', async ({ page, request }) => {
     await entrar(page, ANA.email, ANA.password);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     // El nombre que se enseña en el menú es el del directorio.
     await expect(page.getByText('Ana Pérez').first()).toBeVisible();
@@ -203,7 +203,7 @@ test.describe('El camino de AD', () => {
 
     // Entra con la contraseña del directorio, que no es la suya local.
     await entrar(page, MARTA.email, MARTA.password);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/my-tickets$/);
 
     const despues = await cuentasConEseCorreo(request, MARTA.email, token);
     expect(despues[0]!.origin).toBe('ad');

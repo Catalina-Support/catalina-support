@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# Deja el entorno de desarrollo con los datos de ejemplo de Catalina-Support.
+# Ejecutor interno compartido de los datos de ejemplo. Use dev-seed-en.sh o dev-seed-es.sh.
 #
-#   ./scripts/dev-seed.sh                          # Linux y macOS
-#   docker compose -f dev.yml run --rm seed        # Linux, macOS y Windows (es el comando de siempre)
+# Uso interno. Los accesos públicos son dev-seed-en.sh y dev-seed-es.sh, o los servicios Compose equivalentes.
 #
 # El segundo **es el mismo guion, dentro de un contenedor**: `dev.yml` monta lo que necesita y corre
 # este archivo, así que no hay dos formas de sembrar que puedan separarse (docs/ambientes.md, 3.3).
@@ -11,9 +10,9 @@
 # Qué hace:
 #
 #   1. Exige que el ejecutor versionado haya completado el esquema.
-#   2. Aplica `backend/migrations/v1.0.0_dev.sql`: **once cuentas y 25 tickets** con su historia,
+#   2. Aplica `backend/migrations/v1.0.0_dev_${IDIOMA}.sql`: **once cuentas y 25 tickets** con su historia,
 #      sus escalados, sus comentarios y sus adjuntos.
-#   3. Copia los archivos de los adjuntos (`config/seed/`) a `_files/`, en la carpeta de su ticket.
+#   3. Copia los archivos de los adjuntos (`config/seed/en/` o `config/seed/es/`) a `_files/`, en la carpeta de su ticket.
 #
 # **Es de desarrollo y borra**: los tickets que hubiera —también los que hayas creado probando—, las
 # cuentas `@demo.com` y los adjuntos que no sean la marca. Deja el entorno exactamente como dice el
@@ -26,6 +25,12 @@
 # con la contraseña que fija `tests/e2e/ayudas.ts`.
 #
 set -euo pipefail
+
+IDIOMA="${1:-}"
+if [ "$IDIOMA" != "en" ] && [ "$IDIOMA" != "es" ]; then
+    echo "Uso interno: $0 en|es" >&2
+    exit 2
+fi
 
 PROYECTO="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE="$PROYECTO/dev.yml"
@@ -47,12 +52,13 @@ fi
 # Cómo se habla con la base. **Es el único punto que cambia entre los dos caminos**, y la siembra es
 # la misma en los dos: esquema, ejemplos y adjuntos.
 #
-#   - **Dentro del contenedor del seeder** (`docker compose -f dev.yml run --rm seed`), que es la
+#   - **Dentro del contenedor del seeder** (`docker compose -f dev.yml run --rm seed-en|seed-es`), que es la
 #     forma que vale igual en Linux, macOS y Windows: el `psql` de la propia imagen habla con la base
 #     por la red del entorno. No hay docker dentro y no hace falta; la espera a la base la hace el
 #     `depends_on` con su comprobación de salud. El contenedor avisa de que es este camino con la
 #     marca `SEED_EN_CONTENEDOR=1` (dev.yml).
-#   - **Fuera de los contenedores** (Linux y macOS, `./scripts/dev-seed.sh`): no se da por hecho que
+#   - **Fuera de los contenedores** (Linux y macOS, `./scripts/dev-seed-en.sh` o
+#     `./scripts/dev-seed-es.sh`): no se da por hecho que
 #     la máquina tenga `psql` —el proyecto no lo pide, y la máquina de este proyecto lo tiene y no se
 #     usa—, así que se entra al contenedor de la base con `docker compose exec`.
 if [ "${SEED_EN_CONTENEDOR:-}" = "1" ]; then
@@ -83,7 +89,7 @@ echo "La configuración se conserva si la instalación está sellada; si no, se 
 echo "1/3  Esquema versionado verificado."
 
 echo "2/3  Aplicando los datos de ejemplo…"
-psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0_dev.sql"
+psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0_dev_${IDIOMA}.sql"
 
 echo "3/3  Copiando los adjuntos…"
 
@@ -97,7 +103,7 @@ find "$PROYECTO/_files" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' ! -name 'bran
 # es la que espera la fila.
 copiados=0
 while IFS='|' read -r original guardado; do
-    origen="$PROYECTO/config/seed/$original"
+    origen="$PROYECTO/config/seed/$IDIOMA/$original"
     destino="$PROYECTO/_files/$guardado"
     if [ ! -f "$origen" ]; then
         echo "Falta $origen para el adjunto «$original» del seeder." >&2

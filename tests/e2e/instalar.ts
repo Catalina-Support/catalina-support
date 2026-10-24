@@ -72,6 +72,9 @@ export async function instalar(): Promise<void> {
         .click();
       await page.locator('#correo-host').fill('mail');
       await page.locator('#correo-puerto').fill('1025');
+      await page.locator('#correo-destino-prueba').fill('instalacion@example.test');
+      await page.locator('#correo-seguridad').selectOption('plain');
+      await page.locator('input[type="checkbox"]').check();
       await page.locator('#correo-remitente-nombre').fill('Catalina Support');
       await page
         .locator('#correo-remitente-correo')
@@ -80,12 +83,12 @@ export async function instalar(): Promise<void> {
         r.url().endsWith('/api/setup/mail/test'),
       );
       await page
-        .getByRole('button', { name: 'Probar la conexión', exact: true })
+        .getByRole('button', { name: 'Enviar correo de prueba', exact: true })
         .click();
       expect((await prueba).status()).toBe(200);
       const toast = page.locator('app-toast');
       await expect(toast).toContainText(
-        'El servidor de correo ha contestado y la autenticación ha funcionado.',
+        'El servidor aceptó el correo para instalacion@example.test.',
       );
       expect(await toast.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('fixed');
       const caja = await toast.boundingBox();
@@ -160,7 +163,8 @@ export async function instalar(): Promise<void> {
           bindDn: 'cn=admin,dc=ejemplo,dc=com',
           bindPassword: 'admin-directorio',
           searchBase: 'ou=personas,dc=ejemplo,dc=com',
-          userFilter: '(mail=%s)',
+          userFilter: '(objectClass=person)',
+          attrUsername: 'uid',
           attrEmail: 'mail',
           attrName: 'givenName',
           attrLastName: 'sn',

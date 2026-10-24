@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { SessionService } from '../../core/services/session.service';
@@ -72,7 +73,7 @@ import { Tarjeta } from '../../shared/components/tarjeta';
     </main>
   `,
 })
-export class SetPasswordPage {
+export class SetPasswordPage implements OnDestroy {
   private readonly textos = inject(TranslationService);
   private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
@@ -84,11 +85,30 @@ export class SetPasswordPage {
   protected readonly guardando = signal(false);
   protected readonly hecha = signal(false);
   protected readonly mensajeError = signal('');
+  private readonly cambiosDeNavegacion: Subscription;
 
   protected readonly hayToken = computed(() => this.token() !== '');
 
   constructor() {
-    this.token.set(leerTokenDelFragmento());
+    this.adoptarToken();
+    this.cambiosDeNavegacion = this.router.events
+      .pipe(filter((evento): evento is NavigationEnd => evento instanceof NavigationEnd))
+      .subscribe(() => this.adoptarToken());
+  }
+
+  ngOnDestroy(): void {
+    this.cambiosDeNavegacion.unsubscribe();
+  }
+
+  private adoptarToken(): void {
+    const token = leerTokenDelFragmento();
+    if (!token) return;
+    this.token.set(token);
+    this.password.set('');
+    this.repetir.set('');
+    this.guardando.set(false);
+    this.hecha.set(false);
+    this.mensajeError.set('');
   }
 
   protected t() {

@@ -88,8 +88,6 @@
             [texto]="t().usuarios.limpiar"
             (pulsado)="limpiarFiltros()"
           />
-        } @else {
-          <app-boton [texto]="t().usuarios.nueva" (pulsado)="abrirAlta()" />
         }
       </div>
     } @else if (esAncha()) {

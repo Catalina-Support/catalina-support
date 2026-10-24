@@ -34,9 +34,14 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: '1'
       MP_SMTP_AUTH_ALLOW_INSECURE: '1'
   ai-test:
-    image: nginx:1.27-alpine
+    build:
+      context: .
+      dockerfile: config/dockerfiles/backend.Dockerfile
     volumes:
-      - ./config/nginx/ai.tests.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./tests/ai-fake:/ai-fake:ro
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
+    command: [go, run, /ai-fake/main.go]
   frontend:
     networks:
       default:

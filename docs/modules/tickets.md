@@ -1,7 +1,13 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-23
+>
+> **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 32 corrige el aprovechamiento horizontal de
+> las cuatro bandejas de tickets. El responsable eligió 1A–4A en el repaso: conservar el menú,
+> reducir el margen exterior a 16 px, mantener Ticket y Acción fijos en los extremos y dar aire
+> interior a la primera y última columna. El responsable aprobó el alcance y la implementación
+> coincide con `interfaz-y-experiencia.md` y `modules/ai.md`.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-20.** La sección 27.3 corrige la discrepancia entre la matriz
 > aprobada y el flujo de comentarios: cuando el solicitante responde en un principal `en espera`,
@@ -1422,7 +1428,7 @@ La primera llegada histórica a `critical`, incluida la creación, solicita el a
 vuelva a subir. El envío ocurre después de guardar: un fallo SMTP se comunica al actor sin revertir
 prioridad ni historial.
 
-`v1.0.0_dev.sql` reparte los 25 tickets de forma realista: mayoría media, algunos bajos y altos y
+`v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` reparte los 25 tickets de forma realista: mayoría media, algunos bajos y altos y
 pocos críticos. Las pruebas cubren valores inválidos, valor predeterminado, permisos, ticket
 cerrado, historial, valor compartido, filtros combinados, orden estable y aviso único no bloqueante.
 
@@ -1877,3 +1883,80 @@ cuentas combinadas con esos roles; el Usuario nunca las recibe.
 Los contratos de lista comparten pantalla y estado, pero los permisos y consultas de
 principal e interno siguen siendo explícitos en el backend. Las pruebas verifican navegación,
 permisos combinados y la visibilidad privada forzada para Desarrollo.
+
+## 32. Bandejas con ancho útil y extremos legibles
+
+### 32.1 Hallazgo
+
+Las cuatro bandejas limitan hoy su contenido a 88 rem y el armazón añade 40 px a cada lado en
+escritorio. En una pantalla amplia ambos espacios se acumulan: la tabla queda más estrecha de lo
+necesario y su columna final puede permanecer fuera de la captura aunque exista ancho físico. Esto
+no coincide con la presentación completa que necesita el producto.
+
+### 32.2 Contrato de escritorio
+
+**Mis tickets** y las vistas general, principal e interna usan todo el ancho que les entrega el
+armazón. El menú lateral conserva su estado y su comportamiento actuales; plegarlo no es requisito
+para obtener el nuevo ancho. En estas bandejas, el armazón deja 16 px a izquierda y derecha en
+escritorio y se retira el máximo de 88 rem. No se alteran los límites de lectura de formularios ni
+de otras páginas.
+
+La tabla distribuye el espacio adicional entre Subject, Classification, Summary y Last action sin
+reducir la tipografía ni la altura de fila. Desde 1440 px, con el menú desplegado y datos normales,
+se procura presentar las once columnas sin desplazamiento horizontal. El scroll nativo permanece
+como respaldo cuando el contenido, la traducción, el zoom o un ancho menor no permiten cumplirlo.
+
+Ticket continúa fija al borde inicial y Action pasa a estar fija al borde final durante el
+desplazamiento horizontal. Ambas usan superficies opacas, separadores del tema y orden de apilado
+que impide ver texto por detrás. La primera celda incorpora espacio interior adicional respecto del
+borde izquierdo de la tabla y la última respecto del borde derecho; ese aire no se obtiene creando
+márgenes externos nuevos ni estrechando las columnas centrales.
+
+Por debajo de 768 px se mantienen las tarjetas actuales. No cambian columnas, datos, truncado,
+orden, filtros, permisos, rutas, carga incremental ni acciones.
+
+### 32.3 Verificación
+
+Las pruebas cubren las cuatro bandejas, ancho completo, margen de 16 px, extremos fijos y padding
+exterior de Ticket y Action. El recorrido en navegador comprueba escritorio con menú abierto y
+plegado, desplazamiento a un ancho intermedio, zoom, foco visible, ocho temas y tarjetas móviles.
+También confirma que Summary y Last action conservan dos líneas legibles y que Action no tapa la
+columna anterior.
+
+### 32.4 Registro de decisiones
+
+El responsable corrigió el 2026-10-22 la premisa inicial: el problema no era plegar el menú sino la
+suma del máximo de contenido y los márgenes laterales. Eligió aplicar el cambio a las cuatro
+bandejas (1A), 16 px laterales (2A), fijar Action a la derecha (3A) y conservar el menú. Añadió
+padding interior junto a los bordes izquierdo y derecho. No quedan decisiones abiertas.
+
+### 32.5 Implementación y verificación
+
+La bandeja compensa 24 px del padding de escritorio del armazón y deja 16 px efectivos por lado;
+retira el máximo de 88 rem. La tabla usa mínimos de 72 rem con personas y 64 rem sin ellas. Ticket
+incorpora 16 px al borde inicial; Action mide 6 rem, incorpora 16 px al borde final y queda fija a
+la derecha con separador opaco.
+
+Pasaron las 252 pruebas del frontend, las fronteras y la compilación de producción. La regresión
+focal posterior del ancho final pasó sus 10 pruebas. Chromium confirmó, con menú abierto, 1680 px de
+tabla dentro de 1920 px y 1200 px dentro de 1440 px, sin scroll horizontal; Acción midió 96 px y se
+vio completa. A 390 px se conservaron las 20 tarjetas visibles. La revisión visual comprobó además
+padding, bordes, truncado y foco en los extremos.
+
+## 33. Coherencia al cambiar el tipo de la lista general
+
+> **Propuesta del 2026-10-23.** El recorrido efímero comprobó que el conmutador puede marcar
+> Internos mientras la tabla conserva Principales. El responsable eligió 2A y cerró el repaso con
+> 3A y 5A. No quedan decisiones abiertas; falta la aprobación explícita.
+
+En `/tickets`, **Principales** e **Internos** forman una sola selección: URL, botón marcado, consulta
+y filas visibles deben referirse siempre al mismo tipo. Al cambiar la opción se invalida cualquier
+petición anterior, se vacía la tabla y se muestra la carga hasta recibir el nuevo tipo. Una respuesta
+tardía del tipo anterior no puede repoblarla.
+
+La navegación conserva por separado filtros y resultados recordados, pero sólo los restaura después
+de comprobar que pertenecen al tipo vigente. No cambian API, permisos, filtros, orden, carga
+incremental ni rutas de detalle.
+
+La regresión demora deliberadamente una respuesta, alterna ambos tipos y comprueba URL, estado
+accesible del conmutador y números visibles después de cada cambio.
