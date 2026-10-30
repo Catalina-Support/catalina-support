@@ -617,9 +617,18 @@ test.describe('El recorrido de un ticket', () => {
     }
     await expect(page.locator(`#acciones-INT-${numero}`)).toBeVisible();
 
-    // Desarrollo entra en **lo suyo**, que son los internos, y el interno recién creado todavía no
-    // es suyo: el reparto por turnos se lo habrá dado a otro desarrollador. Está en **Tickets
-    // internos**, que es la lista de todo lo que hay (decisión 52).
+    // **Soporte también reasigna el interno** (decisión 50), y el ticket puede no tener responsable:
+    // los internos nacen sin reparto por defecto. La ficha se lo ocultaba a Soporte y sólo se lo
+    // enseñaba a Desarrollo; este es el caso que lo vigila.
+    if (info.project.name === 'pc') {
+      await vista.getByRole('button', { name: 'Interno' }).click();
+    }
+    await asignarA(page, desarrollo.id);
+    await expect(page.getByText('Ticket asignado.')).toBeVisible();
+
+    // Desarrollo entra en **lo suyo**, que son los internos: Soporte acaba de asignárselo desde la
+    // ficha, así que ya está en su bandeja. También sigue en **Tickets internos**, que es la lista de
+    // todo lo que hay (decisión 52).
     await entrarComo(page, desarrollo.email);
     await page.goto('/my-tickets');
     await expect(page.getByRole('heading', { name: 'Mis tickets' })).toBeVisible();

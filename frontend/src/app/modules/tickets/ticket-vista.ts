@@ -379,8 +379,8 @@ export class TicketVista implements OnDestroy {
   protected readonly esUsuario = computed(() => this.papel() === 'usuario');
   protected readonly esSoporte = computed(() => this.papel() === 'soporte');
   protected readonly esDesarrollo = computed(() => this.papel() === 'desarrollo');
-  /** El Administrador mira los tickets: no comenta, no mueve estados y no asigna (sección 4.4). */
-  protected readonly soloLectura = this.sesion.esAdministrador;
+  /** El Administrador **puro** mira los tickets: no comenta, no mueve estados y no asigna (sección 4.4). */
+  protected readonly soloLectura = computed(() => this.papel() === 'administrador');
   protected readonly esSuyo = computed(
     () => this.ticket().requester?.id === this.sesion.usuario()?.id,
   );
@@ -723,7 +723,10 @@ export class TicketVista implements OnDestroy {
       return false;
     }
 
-    return this.ticket().internal ? this.esDesarrollo() : this.esSoporte();
+    // **En el principal reasigna Soporte; en el interno, Soporte y Desarrollo** (decisión 50). La
+    // capacidad Admin no cambia el papel operativo: una cuenta de Soporte con esa capacidad sigue
+    // reasignando como Soporte (sección 14 de `usuarios-y-permisos.md`).
+    return this.ticket().internal ? this.esSoporte() || this.esDesarrollo() : this.esSoporte();
   }
 
   protected puedeTocarComentario(comentario: Comentario): boolean {
