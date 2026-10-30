@@ -139,7 +139,11 @@ describe('TicketVista', () => {
   }
 
   /** Monta la vista con ese papel, que es lo único que cambia lo que se puede hacer dentro. */
-  function montar(rol: string, detalle: DetalleDeTicket = DETALLE): ComponentFixture<TicketVista> {
+  function montar(
+    rol: string,
+    detalle: DetalleDeTicket = DETALLE,
+    responsables: Responsables = RESPONSABLES,
+  ): ComponentFixture<TicketVista> {
     usuario.set({
       id: 1,
       name: 'María',
@@ -152,7 +156,7 @@ describe('TicketVista', () => {
 
     const fixture = TestBed.createComponent(TicketVista);
     fixture.componentRef.setInput('detalle', detalle);
-    fixture.componentRef.setInput('responsables', RESPONSABLES);
+    fixture.componentRef.setInput('responsables', responsables);
     fixture.componentRef.setInput('categorias', CATEGORIAS);
     fixture.detectChanges();
 
@@ -395,6 +399,57 @@ describe('TicketVista', () => {
     fixture.detectChanges();
 
     expect(host.textContent).toContain('Ticket asignado.');
+  });
+
+  it('Soporte reasigna un interno sin responsable: el botón está y la petición va al interno', async () => {
+    // **El interno nace sin responsable** con el reparto por defecto (`ninguna`), y Soporte también
+    // reasigna internos (decisión 50). La ficha se lo ocultaba: sólo se lo enseñaba a Desarrollo.
+    const fixture = montar('soporte', INTERNO_DETALLE, {
+      main: [SOPORTE],
+      internal: [DESARROLLO],
+    });
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.textContent).toContain('Sin responsable');
+    pulsarAria(host, 'Asignar a');
+    fixture.detectChanges();
+
+    const selector = host.querySelector<HTMLSelectElement>('#asignar-INT-CS-2026-0001');
+    expect(selector).toBeTruthy();
+
+    selector!.value = '2';
+    selector!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    pulsarTexto(host, 'Asignar');
+
+    const peticion = http.expectOne('/api/tickets/INT-CS-2026-0001/assign');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ assigneeId: 2 });
+    peticion.flush({ ticket: INTERNO_DETALLE.ticket });
+
+    await esperar();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Ticket asignado.');
+  });
+
+  it('Soporte con capacidad Admin trabaja como Soporte: conserva reasignar', () => {
+    // **En tickets manda el papel operativo** (sección 14 de `usuarios-y-permisos.md`): la capacidad
+    // administrativa no convierte la ficha en sólo lectura.
+    esAdministrador.set(true);
+    const fixture = montar('soporte');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('button[aria-label="Asignar a"]')).toBeTruthy();
+  });
+
+  it('el Administrador puro sigue sin reasignar aunque tenga la capacidad administrativa', () => {
+    esAdministrador.set(true);
+    const fixture = montar('administrador');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('button[aria-label="Asignar a"]')).toBeNull();
   });
 
   it('a quien no puede reasignar no se le enseña el botón del responsable', () => {

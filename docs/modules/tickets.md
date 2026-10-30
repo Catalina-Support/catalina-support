@@ -1,7 +1,14 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-23
+> **Última actualización:** 2026-10-30
+>
+> **Corrección aprobada, implementada y verificada el 2026-10-30.** La sección 34 corrige la
+> ficha del ticket: la asignación manual no depende del reparto y, en los tickets, manda el papel
+> operativo también cuando la cuenta tiene capacidad administrativa. La corrección alcanza a la
+> interfaz, que ocultaba el botón de reasignar en los internos a Soporte y trataba como sólo
+> lectura a Soporte y Desarrollo con capacidad Admin. No cambian API, modelo de datos ni permisos
+> del backend.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 32 corrige el aprovechamiento horizontal de
 > las cuatro bandejas de tickets. El responsable eligió 1A–4A en el repaso: conservar el menú,
@@ -1960,3 +1967,64 @@ incremental ni rutas de detalle.
 
 La regresión demora deliberadamente una respuesta, alterna ambos tipos y comprueba URL, estado
 accesible del conmutador y números visibles después de cada cambio.
+
+## 34. Asignación manual y papel operativo en la ficha
+
+> **Aprobada, implementada y verificada el 2026-10-30.** El recorrido real encontró que Soporte no
+> puede reasignar un ticket interno desde su ficha y que una cuenta de Soporte o Desarrollo con
+> capacidad Admin queda de sólo lectura en los tickets. La sección 3.3 y la sección 14 de
+> `usuarios-y-permisos.md` ya fijan lo contrario; el fallo estaba en la interfaz. No cambian API,
+> modelo de datos ni permisos del backend.
+
+### 34.1 Hallazgo
+
+La ficha decide quién puede reasignar con dos reglas que no coinciden con el backend:
+
+1. En un **ticket interno**, `puedeAsignar()` sólo se lo enseña a Desarrollo, mientras que el
+   servicio `Assign` y la decisión 50 permiten reasignar a **Soporte y Desarrollo**. Como los
+   internos nacen sin reparto por defecto, Soporte ve «Sin responsable» y no tiene forma de poner
+   uno.
+2. `soloLectura` se calcula con la **capacidad administrativa**, no con el papel exclusivo. Una
+   cuenta `soporte` o `desarrollo` con `isAdmin` verdadero pierde el botón de reasignar —y también
+   la edición y el cierre—, aunque la sección 14 establece que **en tickets manda el papel
+   operativo**. Sólo el Administrador puro mira sin botones.
+
+La misma regla se repite en el control de estados (`acciones-del-ticket.ts`), donde el cierre se
+oculta con la misma señal.
+
+Y, además, la pantalla del ticket volvía a la **vista por defecto en cada recarga**, no sólo al
+abrir el ticket. Después de reasignar un interno, Soporte saltaba al principal y el aviso de
+«Ticket asignado» desaparecía. La vista se elige al abrir el ticket y se conserva en las recargas.
+
+### 34.2 Contrato
+
+- **La asignación manual no depende del reparto.** Da igual que el ticket haya nacido por turnos,
+  sin reparto o ya asignado: quien puede reasignar lo hace desde la ficha, con el botón junto al
+  responsable y su ventana de selección.
+- **En el principal reasigna Soporte**; **en el interno reasignan Soporte y Desarrollo**, a
+  cualquier persona activa del papel que corresponda. Es la decisión 50 y la matriz del backend.
+- **En tickets manda el papel operativo.** Soporte + Administrador trabaja como Soporte y
+  Desarrollo + Administrador como Desarrollo. La capacidad administrativa no convierte la ficha en
+  sólo lectura; el **Administrador puro** sigue mirando sin botones (sección 14 de
+  `usuarios-y-permisos.md`).
+- **Un ticket cerrado sigue necesitando reabrirse antes de reasignarse.** Es el comportamiento
+  actual de la ficha y este cambio no lo altera: primero se reabre, después se asigna. El backend
+  no cambia.
+- **La vista elegida se conserva al recargar.** Asignar, comentar o mover un ticket ya no devuelve
+  a la vista por defecto: quien estaba en el interno sigue en el interno y ve su aviso.
+- No cambian los endpoints, los permisos del servidor, el reparto por turnos, los avisos por correo
+  ni la lista de candidatos.
+
+### 34.3 Verificación
+
+- Prueba de la vista: Soporte abre un interno sin responsable, ve el botón, elige a un
+  desarrollador y la petición sale a `POST /api/tickets/INT-…/assign`.
+- Prueba de la vista: Soporte con capacidad Admin conserva el botón y las acciones de su papel;
+  el Administrador puro sigue sin ellas.
+- Prueba del servicio: la matriz de `puedeAsignar` cubre principal e interno, los cuatro papeles y
+  la capacidad Admin acumulativa.
+- Recorrido de interfaz: Soporte reasigna un interno ya escalado en PC y móvil, y el ticket cambia
+  de bandeja sin perder la vista ni el aviso.
+- Pasaron las 260 pruebas del frontend, las fronteras, la compilación, las pruebas del servicio de
+  tickets y el recorrido de interfaz en PC y móvil. La suite del repositorio de tickets conserva el
+  fallo ambiental conocido de reportería cuando no hay tickets sembrados; no toca este cambio.

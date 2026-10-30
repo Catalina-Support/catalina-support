@@ -248,7 +248,13 @@ export class TicketPage implements OnInit, OnDestroy {
       // **La vista por defecto es la del papel** (decisión del responsable, 2026-09-27): Soporte entra
       // por el principal y Desarrollo por el interno, que es el ticket con el que cada uno trabaja. Los
       // dos pueden cambiar a «Los dos» o al otro con el conmutador.
-      this.cambiarForma(this.vistaDeEntrada());
+      //
+      // **Sólo al abrir el ticket**: en una recarga posterior —después de asignar, comentar o mover— se
+      // conserva la vista que eligió quien mira. Volver a la de por defecto sacaba a Soporte del
+      // interno justo después de reasignarlo y se perdía el aviso de que se había asignado.
+      if (conCargando) {
+        this.cambiarForma(this.vistaDeEntrada());
+      }
 
       await this.cargarResponsables();
       await this.cargarCategorias();
