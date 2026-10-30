@@ -2,12 +2,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { type WritableSignal, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { SessionService, type Usuario } from '../../core/services/session.service';
 import { TicketPage } from './ticket-page';
+import { TicketVista } from './ticket-vista';
 import { type DetalleDeTicket } from './tickets.service';
 
 /**
@@ -208,5 +210,45 @@ describe('TicketPage', () => {
     fixture.detectChanges();
 
     expect(navegar).toHaveBeenCalledWith(['/my-tickets']);
+  });
+
+  it('conserva la vista del interno al recargar después de un cambio', async () => {
+    const fixture = await montar();
+    const host = fixture.nativeElement as HTMLElement;
+
+    // Soporte elige el interno a mano: no es su vista por defecto, pero es donde está trabajando.
+    const interno = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (candidato) => candidato.textContent?.trim() === 'Interno',
+    );
+    expect(interno).toBeTruthy();
+    interno!.click();
+    fixture.detectChanges();
+
+    const vista = fixture.debugElement.query(By.directive(TicketVista))
+      .componentInstance as TicketVista;
+    expect(vista.detalle().ticket.internal).toBe(true);
+
+    // Y un cambio del ticket recarga los datos: **la vista no puede volver al principal**.
+    vista.cambio.emit();
+
+    http.expectOne('/api/tickets/CS-2026-0001').flush(PRINCIPAL);
+    await esperar();
+    fixture.detectChanges();
+
+    http.expectOne('/api/tickets/INT-CS-2026-0001').flush(INTERNO);
+    await esperar();
+    fixture.detectChanges();
+
+    http.expectOne('/api/tickets/assignees').flush({ main: [], internal: [] });
+    await esperar();
+    fixture.detectChanges();
+
+    http.expectOne('/api/tickets/categories').flush({ categories: [] });
+    await esperar();
+    fixture.detectChanges();
+
+    const recargada = fixture.debugElement.query(By.directive(TicketVista))
+      .componentInstance as TicketVista;
+    expect(recargada.detalle().ticket.internal).toBe(true);
   });
 });

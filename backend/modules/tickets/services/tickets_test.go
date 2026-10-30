@@ -201,6 +201,43 @@ func TestQuienVeQue(t *testing.T) {
 	}
 }
 
+// TestQuienPuedeAsignar: la matriz de la decisión 50, también con la capacidad Admin acumulativa.
+//
+// En tickets manda el papel operativo (docs/usuarios-y-permisos.md, sección 14): Soporte + Admin
+// reasigna como Soporte. El Administrador puro no reasigna.
+func TestQuienPuedeAsignar(t *testing.T) {
+	servicio := &Service{}
+
+	soporteConAdmin := auth.Identity{ID: soporte.ID, Role: auth.RoleSoporte, IsAdmin: true}
+	desarrolloConAdmin := auth.Identity{ID: desarrollo.ID, Role: auth.RoleDesarrollo, IsAdmin: true}
+
+	casos := []struct {
+		quien    auth.Identity
+		interno  bool
+		esperado bool
+	}{
+		{soporte, false, true},
+		{desarrollo, false, false},
+		{usuario, false, false},
+		{administrador, false, false},
+		{soporteConAdmin, false, true},
+		// **En el interno reasignan los dos equipos** (decisión 50).
+		{soporte, true, true},
+		{desarrollo, true, true},
+		{usuario, true, false},
+		{administrador, true, false},
+		{soporteConAdmin, true, true},
+		{desarrolloConAdmin, true, true},
+	}
+
+	for _, caso := range casos {
+		if obtenido := servicio.puedeAsignar(caso.quien, caso.interno); obtenido != caso.esperado {
+			t.Fatalf("asignar con papel %s (interno=%v, admin=%v): se esperaba %v y salió %v",
+				caso.quien.Role, caso.interno, caso.quien.IsAdmin, caso.esperado, obtenido)
+		}
+	}
+}
+
 // TestQuienComenta: Desarrollo no escribe en el principal; es Soporte quien traslada al usuario.
 func TestQuienComenta(t *testing.T) {
 	principal := Ticket{Number: "CS-2026-0001", Requester: &auth.Account{ID: usuario.ID}}
