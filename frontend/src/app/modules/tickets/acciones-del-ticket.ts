@@ -235,8 +235,8 @@ export class AccionesDelTicket {
   protected readonly esUsuario = computed(() => this.sesion.usuario()?.role === 'usuario');
   protected readonly esSoporte = computed(() => this.sesion.usuario()?.role === 'soporte');
   protected readonly esDesarrollo = computed(() => this.sesion.usuario()?.role === 'desarrollo');
-  /** El Administrador mira los tickets: no mueve estados (sección 4.4). */
-  protected readonly soloLectura = this.sesion.esAdministrador;
+  /** El Administrador **puro** mira los tickets: no mueve estados (sección 4.4). */
+  protected readonly soloLectura = computed(() => this.sesion.usuario()?.role === 'administrador');
   protected readonly esSuyo = computed(
     () => this.ticket().requester?.id === this.sesion.usuario()?.id,
   );

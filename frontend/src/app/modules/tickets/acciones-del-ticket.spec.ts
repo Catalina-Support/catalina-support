@@ -254,6 +254,13 @@ describe('AccionesDelTicket', () => {
     expect(host.querySelector('dialog')).toBeNull();
   });
 
+  it('Soporte con capacidad Admin sigue moviendo estados: en tickets manda el papel operativo', () => {
+    esAdministrador.set(true);
+    const host = montar(NUEVO, 'soporte').nativeElement as HTMLElement;
+
+    expect(estados(host)).toEqual(['en progreso', 'escalado', 'cerrado']);
+  });
+
   it('elegir «En espera» abre su ventana, no pide texto y vuelve a su sitio', () => {
     const fixture = montar(EN_PROGRESO, 'soporte');
     const host = fixture.nativeElement as HTMLElement;
