@@ -112,21 +112,29 @@ func (c *TicketController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, aviso, err := c.service.Create(services.CreateInput{
-		Subject:        entrada.Subject,
-		Description:    entrada.Description,
-		CategoryID:     entrada.CategoryID,
-		Tags:           entrada.Tags,
-		RequesterID:    entrada.RequesterID,
-		RequesterEmail: entrada.RequesterEmail,
-		Priority:       entrada.Priority,
+	resultado, err := c.service.Create(services.CreateInput{
+		Subject:           entrada.Subject,
+		Description:       entrada.Description,
+		CategoryID:        entrada.CategoryID,
+		Tags:              entrada.Tags,
+		RequesterID:       entrada.RequesterID,
+		RequesterEmail:    entrada.RequesterEmail,
+		RequesterName:     entrada.RequesterName,
+		RequesterLastName: entrada.RequesterLastName,
+		Priority:          entrada.Priority,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket), Warning: aviso})
+	httpx.WriteJSON(w, http.StatusCreated, dtos.TicketEnvelope{
+		Ticket:            dtos.NewTicketResponse(resultado.Ticket),
+		Warning:           resultado.Warning,
+		RequesterCreated:  resultado.RequesterCreated,
+		RequesterNotified: resultado.RequesterNotified,
+		RequesterOrigin:   resultado.RequesterOrigin,
+	})
 }
 
 // Priority cambia la prioridad compartida por el principal y su ticket interno.
@@ -725,6 +733,18 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.assignee.unknown")
 	case errors.Is(err, services.ErrRequesterUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.unknown")
+	case errors.Is(err, services.ErrRequesterEmailInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.emailInvalid")
+	case errors.Is(err, services.ErrRequesterNameRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.nameRequired")
+	case errors.Is(err, services.ErrRequesterInactive):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.inactive")
+	case errors.Is(err, services.ErrRequesterNotInDirectory):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.notInDirectory")
+	case errors.Is(err, services.ErrRequesterAccountExists):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.requester.accountRequired")
+	case errors.Is(err, services.ErrRequesterDirectoryDown):
+		httpx.WriteError(w, http.StatusServiceUnavailable, "tickets.requester.directoryUnavailable")
 	case errors.Is(err, services.ErrAttachmentFormat):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.attachment.extension")
 	case errors.Is(err, services.ErrAttachmentTooBig):

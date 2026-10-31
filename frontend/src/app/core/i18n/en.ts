@@ -710,6 +710,14 @@ export const EN: Textos = {
     archivoRechazado: 'These files were not added:',
     paraQuien: 'Who is the ticket for?',
     paraQuienAyuda: 'Support can create a ticket on behalf of someone else.',
+    solicitanteNombre: 'First name',
+    solicitanteApellidos: 'Last name',
+    solicitanteNombreAyuda:
+      'Only if the person has no account. With Active Directory they come from the directory.',
+    cuentaCreadaLocal:
+      'Account created for the ticket. The person has no access until it is granted from Users.',
+    cuentaCreadaAvisada: 'Account created from the directory. The notice has been emailed.',
+    cuentaCreadaSinAviso: 'Account created, but the email notice could not be prepared.',
     elegirSolicitante: 'The person',
     crear: 'Create the ticket',
     creando: 'Creating…',
@@ -1180,6 +1188,16 @@ export const EN: Textos = {
     'tickets.assignee.unknown': 'That person cannot be the assignee of this ticket.',
     'tickets.requester.unknown': 'That person does not exist or is deactivated.',
     'tickets.requester.notAllowed': 'Only Support can create a ticket on behalf of someone else.',
+    'tickets.requester.emailInvalid': 'The requester email is not valid.',
+    'tickets.requester.nameRequired':
+      'The first name and last name are required to create the requester account.',
+    'tickets.requester.inactive': 'The requester account is deactivated.',
+    'tickets.requester.notInDirectory':
+      'That person is not in the organization directory, so the account cannot be created.',
+    'tickets.requester.accountRequired':
+      'With Keycloak the account must already exist in the realm or the person must sign in once.',
+    'tickets.requester.directoryUnavailable':
+      'The directory could not be checked. Try again when it is available.',
     'tickets.attachment.extension': 'That kind of file is not allowed.',
     'tickets.attachment.tooBig': 'That file is too heavy: the maximum is 25 MB.',
     'tickets.attachment.invalid': 'The file could not be read.',

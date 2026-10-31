@@ -1,7 +1,11 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-20
+> **Última actualización:** 2026-10-30
+>
+> **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 19 añade el correo `auth.accountCreated`, la plantilla
+> número 14, para avisar a la persona a la que se acaba de crear cuenta desde un ticket. Entra en
+> `v1.0.1.sql`; la aplicación y el esquema pasan a 1.0.1. El editor pasa a veintiocho filas.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: envío real de prueba SMTP.** La sección 17
 > sustituye la comprobación que sólo conectaba y autenticaba por un mensaje real a un destinatario
@@ -92,7 +96,7 @@
 
 ## 1. Alcance de este documento
 
-Cuenta **cómo se construye el módulo `mail`**: la tabla de plantillas, los marcadores, los trece
+Cuenta **cómo se construye el módulo `mail`**: la tabla de plantillas, los marcadores, los catorce
 correos por defecto con sus textos, el envío, los endpoints y el editor de la pantalla de
 Configuración.
 
@@ -121,7 +125,7 @@ tickets: **recibe una plantilla, un idioma, unos destinatarios y unos datos, y e
 | Columna | Tipo | Notas |
 | --- | --- | --- |
 | `id` | `bigserial` | |
-| `key` | `text` | Cuál de los trece correos: `ticket.created`, `auth.recovery`… |
+| `key` | `text` | Cuál de los catorce correos: `ticket.created`, `auth.recovery`… |
 | `language` | `text` | `es` o `en` |
 | `subject` | `text` | El asunto actual, con sus marcadores |
 | `body` | `text` | El **HTML** actual del cuerpo, con sus marcadores |
@@ -130,9 +134,9 @@ tickets: **recibe una plantilla, un idioma, unos destinatarios y unos datos, y e
 | `updated_at` | `timestamptz` | Cuándo se editó por última vez |
 | `updated_by_id` | `bigint` | Quién lo editó. Nulo mientras siga el texto de fábrica, y también cuando edita la cuenta de fábrica `admin`, que no está en la tabla de cuentas |
 
-**Único por (`key`, `language`)**: veintiséis filas, ni una más —trece correos en dos idiomas—.
+**Único por (`key`, `language`)**: veintiocho filas, ni una más —catorce correos en dos idiomas—.
 
-- **Los veintiséis textos se siembran en la migración**, con `INSERT ... ON CONFLICT DO NOTHING`. Eso
+- **Los veintiocho textos se siembran en la migración**, con `INSERT ... ON CONFLICT DO NOTHING`. Eso
   importa: al ser idempotente, **volver a aplicar la migración no pisa lo que un administrador haya
   editado**. Si algún día hay que cambiar un texto de fábrica, será con una migración nueva que lo
   diga, no reescribiendo la siembra.
@@ -167,7 +171,7 @@ Se escriben con llaves dobles y en minúsculas: `{{numero}}`, `{{enlace}}`, `{{n
   `PUBLIC_APP_URL` queda **como respaldo**, nunca con un host escrito en el texto: el mismo
   texto tiene que servir en desarrollo y en producción.
 
-## 5. Los trece correos por defecto
+## 5. Los catorce correos por defecto
 
 Estos son los textos que se siembran. **Se revisan aquí, que es donde se pueden corregir sin tocar
 código.**
@@ -245,13 +249,14 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
 > **Cuerpo (ES)**: `<p>Te han etiquetado en el ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p>Lo sigues desde tu bandeja, en «Observo».</p><p><a href="{{enlace}}">Abrir el ticket</a></p>`
 > **Cuerpo (EN)**: `<p>You were mentioned in ticket <strong>{{numero}}</strong>.</p><p>{{asunto}}</p><p>You are following it from your inbox, under “Watching”.</p><p><a href="{{enlace}}">Open the ticket</a></p>`
 
-### 5.2 Los tres correos de cuenta
+### 5.2 Los cuatro correos de cuenta
 
 | Clave | Quién lo recibe |
 | --- | --- |
 | `auth.invitation` | La persona a la que se acaba de dar de alta |
 | `auth.recovery` | La persona que ha pedido —o a la que le han lanzado— un restablecimiento |
 | `auth.passwordChanged` | La persona cuya contraseña ha cambiado |
+| `auth.accountCreated` | La persona a la que se acaba de crear cuenta desde un ticket y que ya puede entrar con su cuenta de la organización |
 
 **`auth.invitation`** — marcadores: `{{nombre}}`, `{{enlace}}`, `{{caducidad}}`
 
@@ -273,6 +278,13 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
 > **Asunto (EN)**: Your password has changed
 > **Cuerpo (ES)**: `<p>Hola {{nombre}}:</p><p>Tu contraseña ha cambiado el {{cuando}}, desde la dirección {{ip}}.</p><p>Si no has sido tú, avisa a Soporte cuanto antes.</p>`
 > **Cuerpo (EN)**: `<p>Hi {{nombre}},</p><p>Your password changed on {{cuando}}, from the address {{ip}}.</p><p>If it was not you, tell Support as soon as you can.</p>`
+
+**`auth.accountCreated`** — marcadores: `{{nombre}}`, `{{enlace}}`
+
+> **Asunto (ES)**: Tu cuenta en la mesa de ayuda
+> **Asunto (EN)**: Your help desk account
+> **Cuerpo (ES)**: `<p>Hola {{nombre}}:</p><p>Se ha creado tu cuenta en la mesa de ayuda. Ya puedes entrar con tu cuenta de la organización.</p><p><a href="{{enlace}}">Entrar en la mesa de ayuda</a></p>`
+> **Cuerpo (EN)**: `<p>Hi {{nombre}},</p><p>Your help desk account has been created. You can now sign in with your organization account.</p><p><a href="{{enlace}}">Open the help desk</a></p>`
 
 ## 6. El envío
 
@@ -303,7 +315,7 @@ vuelve a Soporte». Los que van **al solicitante** no se les duplica.
 
 | Método y ruta | Qué hace | Quién |
 | --- | --- | --- |
-| `GET /api/mail/templates` | Las veintiséis plantillas: clave, idioma, asunto y cuerpo | Administrador |
+| `GET /api/mail/templates` | Las veintiocho plantillas: clave, idioma, asunto y cuerpo | Administrador |
 | `POST /api/mail/templates/{key}/{language}/preview` | El asunto y el cuerpo **ya renderizados**, con datos de ejemplo. Acepta el **borrador** que se está escribiendo | Administrador |
 | `PUT /api/mail/templates/{key}/{language}` | Guarda una plantilla. Valida los marcadores | Administrador |
 | `POST /api/mail/templates/{key}/{language}/reset` | Restaura el texto de fábrica | Administrador |
@@ -327,7 +339,7 @@ contexto que su propia clave:
 | Clave | Cuándo | Código |
 | --- | --- | --- |
 | `mail.template.notFound` | La plantilla (clave + idioma) no está en la tabla | **404** |
-| `mail.template.unknownKey` | Esa clave no es ninguno de los trece correos | **404** |
+| `mail.template.unknownKey` | Esa clave no es ninguno de los catorce correos | **404** |
 | `mail.language.unknown` | El idioma no es `es` ni `en` | **404** |
 | `mail.subject.required` | El asunto viene vacío | **422** |
 | `mail.body.required` | El cuerpo viene vacío | **422** |
@@ -346,7 +358,7 @@ el editor no tenga que volver a pedirla ni duplicar reglas:
 
 | Endpoint | Devuelve |
 | --- | --- |
-| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veintiséis |
+| `GET /api/mail/templates` | `{"templates": [ … ]}` con las veintiocho |
 | `PUT /api/mail/templates/{key}/{language}` | `{"template": { … }}` y, si falta algún marcador imprescindible, `"missing": ["enlace"]` junto a ella |
 | `POST /api/mail/templates/{key}/{language}/reset` | `{"template": { … }}` con el texto de fábrica ya puesto |
 | `POST /api/mail/templates/{key}/{language}/test` | `{"sentTo": "quien@demo.com"}` |
@@ -397,7 +409,8 @@ Y **qué lleva cada plantilla**, que es lo que el editor necesita para pintarse 
 Con `docs/modules/mail.md` aprobado, **`mail` es el primer módulo que se implementa**, porque `auth`
 lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 
-1. La tabla `mail_templates` y los veintiséis textos sembrados, en `migrations/v1.0.0.sql`.
+1. La tabla `mail_templates` y los veintiocho textos sembrados: veintiséis en `migrations/v1.0.0.sql`
+   y las dos filas de `auth.accountCreated` en `migrations/v1.0.1.sql`.
 2. El rellenado de marcadores y el escapado, con sus pruebas: es la parte que más se rompe.
 3. El envío por SMTP con las dos versiones, y el registro en el log.
 4. Los cuatro endpoints.
@@ -405,11 +418,11 @@ lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 
 ## 11. Implementación: plantillas traducidas al cambiar el idioma global
 
-Se conservan las veintiséis filas —trece por idioma— como memoria editable de ambos idiomas, pero
+Se conservan las veintiocho filas —catorce por idioma— como memoria editable de ambos idiomas, pero
 los envíos eligen siempre la versión del idioma global. `Send` y `SendAsync` dejan de recibir el
 idioma del destinatario y lo resuelven desde la instalación en cada envío.
 
-Al solicitar un cambio global, `mail` toma como fuente las trece plantillas personalizadas del idioma
+Al solicitar un cambio global, `mail` toma como fuente las catorce plantillas personalizadas del idioma
 activo. Antes de enviarlas a `ai`, sustituye etiquetas HTML y marcadores `{{…}}` por elementos
 protegidos. La IA traduce sólo el texto; `mail` recompone el HTML y rechaza un borrador si pierde,
 añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guarda todavía.
@@ -417,7 +430,7 @@ añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guard
 Si el destino conserva el texto de fábrica, el Administrador revisa fuente y borrador. Si el destino
 ya fue personalizado, revisa tres versiones: fuente activa, borrador de IA y destino existente, y
 puede elegir una o combinarlas en el editor. Nunca se reemplaza una personalización sin mostrarla.
-Al confirmar, una transacción guarda las trece plantillas destino y el nuevo idioma global. Si una fila o
+Al confirmar, una transacción guarda las catorce plantillas destino y el nuevo idioma global. Si una fila o
 validación falla, no cambia ninguna plantilla ni el idioma. El historial de traducciones no crea una
 tabla adicional: permanecen las dos versiones actuales y `updated_at`/`updated_by_id` dicen quién
 confirmó la última.
@@ -426,10 +439,10 @@ La traducción usa la IA activa y por ello no puede iniciar si la instalación e
 requerida. No se mandan destinatarios, direcciones ni datos reales de tickets: sólo asuntos, cuerpos
 y marcadores de las plantillas. Restaurar y editar manualmente continúan disponibles.
 
-Con un proveedor externo, antes de traducir se muestran las veintiséis solicitudes —asunto y cuerpo
+Con un proveedor externo, antes de traducir se muestran las veintiocho solicitudes —asunto y cuerpo
 de cada plantilla— y una estimación de tokens y costo. Si el Administrador no la acepta, no se hace
-ninguna llamada: los trece destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
-se habilita cuando las trece plantillas destino pasan su validación, procedan de la IA, del destino
+ninguna llamada: los catorce destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
+se habilita cuando las catorce plantillas destino pasan su validación, procedan de la IA, del destino
 existente o de la edición manual.
 
 El responsable eligió traducción por IA con borrador revisable y aplicación atómica el 2026-10-06.
@@ -439,7 +452,7 @@ rechazarla conserva el camino manual. No quedan decisiones abiertas; corrección
 
 ### 11.1 Implementación verificada
 
-`POST /api/mail/language/drafts` devuelve las trece comparaciones sin persistir; protege etiquetas y
+`POST /api/mail/language/drafts` devuelve las catorce comparaciones sin persistir; protege etiquetas y
 marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El modo manual devuelve el
 destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
 transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.
@@ -457,7 +470,7 @@ incumplimiento produce el mismo error sin otra solicitud facturable. Las demás 
 aplican parcialmente: el Administrador puede corregir manualmente cualquier borrador y la
 transacción existente exige que las once estén válidas antes de cambiar el idioma global.
 
-No cambian las veintiséis filas de plantilla, marcadores, confirmación comercial, estimación de costo,
+No cambian las veintiocho filas de plantilla, marcadores, confirmación comercial, estimación de costo,
 endpoints ni edición manual. Las pruebas cubren asunto y cuerpo, conservación del destino anterior,
 edición posterior y ausencia de segunda llamada al proveedor. El responsable eligió 6A, 7A, 10B,
 11A y 12A; no quedan decisiones abiertas.
@@ -467,7 +480,7 @@ El servicio de traducción reutiliza el validador central de `ai`; por ello sól
 ## 13. Implementación: plantilla ausente
 
 La lectura por clave e idioma consulta como máximo una plantilla y distingue cero filas mediante
-`RowsAffected`. Conserva el mismo error de dominio y no cambia el editor, los trece pares, el idioma
+`RowsAffected`. Conserva el mismo error de dominio y no cambia el editor, los catorce pares, el idioma
 global, la vista previa ni el envío.
 
 ## 14. Aviso de prioridad crítica
@@ -483,7 +496,7 @@ prioridad guardada.
 
 La clave implementada es `ticket.priorityCritical`; forma parte del mismo catálogo editable,
 restaurable y previsualizable que las otras once. Tras añadir el aviso privado, la migración deja
-veintiséis filas; las pruebas
+veintiocho filas; las pruebas
 de backend y de extremo a extremo comprobaron un solo mensaje aunque el ticket baje y vuelva a
 crítica.
 
@@ -563,6 +576,34 @@ Durante `/setup`, cada combinación de IP de origen y destinatario admite cinco 
 minutos y el sexto responde `429`; el sello continúa cerrando completamente el endpoint. En
 Configuración la ruta exige capacidad administrativa. Los logs anotan resultado, servidor, IP y
 destinatario parcialmente oculto; nunca contraseña, cuerpo ni contenido de la sesión SMTP.
+
+## 19. Correo de cuenta creada desde un ticket
+
+> **Aprobada, implementada y verificada el 2026-10-30.** Cuando Soporte abre un ticket para una persona que está en AD y no
+> tiene cuenta aquí, la cuenta se crea desde el directorio y hay que decírselo. Nace la plantilla
+> número catorce, `auth.accountCreated`, que no lleva contraseña ni token: la persona entra con su
+> cuenta de la organización.
+
+- **Clave:** `auth.accountCreated`, en español e inglés.
+- **Marcadores:** `{{nombre}}` y `{{enlace}}`; ninguno es un token. `{{enlace}}` es la dirección
+  pública de la instalación, para abrir la entrada.
+- **Cuándo se envía:** sólo cuando el alta del ticket **crea** una cuenta nueva desde AD. No se
+  envía si la cuenta ya existía ni si sólo se ha vinculado una cuenta local; en esos casos no hay
+  un alta que contar.
+- **Cuándo no se envía:** en la creación local de una cuenta de solicitante sin acceso. Esa cuenta
+  no puede entrar y el correo de alta normal —con enlace de contraseña— no aplica.
+- **Si el correo falla:** el ticket y la cuenta siguen creados; el fallo queda en el log con la
+  clave, el idioma y el destinatario, sin contenido. La pantalla avisa de que la cuenta se creó,
+  pero no de que el correo haya llegado.
+- **Migración:** las dos filas entran en `v1.0.1.sql`, con `ON CONFLICT DO NOTHING`. No se reescribe
+  `v1.0.0.sql`; la aplicación y el esquema pasan a **1.0.1**.
+- **Editor:** la lista pasa de trece a catorce correos y de veintiséis a veintiocho filas. El
+  catálogo de marcadores y la validación de los borradores de idioma se actualizan con la misma
+  clave.
+- **Pruebas:** la plantilla existe en los dos idiomas, el renderizado sustituye `{{nombre}}` y
+  `{{enlace}}`, el catálogo de claves la incluye y el envío de prueba no la usa. La creación desde
+  AD envía una sola vez; una cuenta existente o vinculada no envía nada. La base aislada quedó con
+  28 filas y las dos de `auth.accountCreated`, y la validación de la plantilla pasó.
 
 Enviar la prueba es opcional y no bloquea el avance ni el sellado. Decisiones cerradas: 1A campo de
 destino; 2B un solo botón que envía; 3B opcional; 4A texto fijo; 5A asistente y Configuración; 6A

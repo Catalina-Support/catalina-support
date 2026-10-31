@@ -24,6 +24,16 @@ func TestValidateAdmiteLosMarcadoresDeSuCorreo(t *testing.T) {
 	}
 }
 
+// La plantilla 14 usa nombre y enlace, y no admite los marcadores de una contraseña.
+func TestValidateCuentaCreadaDesdeUnTicket(t *testing.T) {
+	if err := Validate("auth.accountCreated", "Tu cuenta", "<p>{{nombre}}</p><p><a href=\"{{enlace}}\">Entrar</a></p>"); err != nil {
+		t.Fatalf("la plantilla de cuenta creada no valida: %v", err)
+	}
+	if err := Validate("auth.accountCreated", "Tu cuenta", "<p>{{caducidad}}</p>"); err == nil {
+		t.Fatal("auth.accountCreated no tiene caducidad y debería rechazarla")
+	}
+}
+
 // Un marcador de otro correo no vale: {{ip}} es de «tu contraseña ha cambiado», no de un ticket.
 func TestValidateNoAdmiteMarcadoresDeOtroCorreo(t *testing.T) {
 	if err := Validate("ticket.closed", "{{ip}}", "<p>{{numero}}</p>"); err == nil {

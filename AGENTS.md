@@ -93,7 +93,7 @@ completo.
 | `docs/modules/settings.md` | **as-built**: selección y estado efectivo de aceleración local |
 | `docs/primer-arranque.md` | **as-built**: aceleración local en el paso 5 |
 | `docs/modules/ai.md` | **as-built**: aceleración Auto/CPU/NVIDIA del motor local |
-| `docs/modules/mail.md` | **as-built**: decimotercera plantilla para comentarios privados |
+| `docs/modules/mail.md` | **as-built**: decimocuarta plantilla para cuentas creadas desde un ticket |
 | `docs/modules/auth.md` | **as-built**: identidad con papel operativo y capacidad administrativa |
 | `docs/modules/users.md` | **as-built**: persistencia, auditoría y avisos de administración |
 | `docs/arquitectura.md` | **as-built**: frontera CPU/NVIDIA y reinicio transaccional |
@@ -132,7 +132,8 @@ con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `http
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
-La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintiséis plantillas, `users`,
+La migración **`v1.0.0.sql`** está aplicada y **`v1.0.1.sql`** añade la plantilla 14: `mail_templates`
+y sus **veintiocho** plantillas, `users`,
 `password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
 IA y **las diez tablas de los tickets**—, y en desarrollo se suma uno de los juegos opcionales
@@ -148,7 +149,7 @@ publicada es inmutable. `scripts/update.sh` exige `main` limpio y avance rápido
 compila antes de interrumpir el servicio y no restaura automáticamente una base. Los `*_dev.sql`
 siguen fuera y son opcionales.
 
-- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los trece correos en sus dos idiomas, con vista previa y prueba—.
+- **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los catorce correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
@@ -194,7 +195,7 @@ propio, el favicon usa el logo claro personalizado o el claro de fábrica. El **
 logo, el icono y el color se guardan en la instalación (módulo `settings`), con su endpoint público porque la
 entrada se pinta antes de entrar.
 
-**La instalación dice qué versión es**: una constante del backend (`shared/version`, hoy `1.0.0`) que viaja en **la marca pública** y se lee **en la fila de salir del menú lateral, a la derecha, y en el pie de la pantalla de entrada** —decisión del responsable, 2026-09-25, que eligió el pie de la entrada además del menú—.
+**La instalación dice qué versión es**: una constante del backend (`shared/version`, hoy `1.0.1`) que viaja en **la marca pública** y se lee **en la fila de salir del menú lateral, a la derecha, y en el pie de la pantalla de entrada** —decisión del responsable, 2026-09-25, que eligió el pie de la entrada además del menú—.
 
 **La pantalla de Configuración está entera**: **el nombre de la instalación**, **cómo se entra** —el
 método de entrada, el directorio de la organización y Keycloak, con sus dos botones de «Probar la
@@ -353,7 +354,7 @@ cambiar el prefijo **no cambia los números ya emitidos**, y el enlace al **edit
 que es una pantalla del módulo `mail` a propósito: llamar a `/api/mail/**` desde `settings` rompería
 la regla dura de modularidad.
 
-**El editor de los correos está hecho**: los trece correos con sus dos idiomas al lado, el cuerpo con
+**El editor de los correos está hecho**: los catorce correos con sus dos idiomas al lado, el cuerpo con
 sus botones de formato sobre lo seleccionado, los marcadores que se insertan al pulsarlos y una **vista
 previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
 
@@ -394,11 +395,11 @@ de soporte manual (decisión del responsable, 2026-09-25).
 La cuenta de fábrica entra con la contraseña de `config/env/prod.env` —que no se versiona ni aparece
 en la documentación—. La base se copia a diario y además antes de cada actualización con esquema.
 
-**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
+**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.1 no está cerrada**; y **la etiqueta `v1.0.1`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f tests.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra una instalación
-desechable aislada, en PC y en móvil, con **222 casos** (184 ejecutables y 38 que se omiten según el
+desechable aislada, en PC y en móvil, con **224 casos** (186 ejecutables y 38 que se omiten según el
 servicio, el dispositivo o el perfil). **Los dos caminos de directorio se incluyen con el perfil `directory` de `tests.yml`**,
 que levanta servicios propios, separados de los opcionales del entorno local. Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no
@@ -591,7 +592,7 @@ sudo nginx -t && sudo systemctl reload nginx
 El vhost de producción (`https://support.example.com`) ya está instalado y con
 certificado, y **el despliegue a producción ya está hecho** (2026-09-25): los contenedores de
 `prod.yml` están levantados y verificados **por dentro** —salud, esquema aplicado y la cuenta de
-fábrica entrando—. **El dominio sigue respondiendo 503** a propósito, porque **la 1.0.0 no está
+fábrica entrando—. **El dominio sigue respondiendo 503** a propósito, porque **la 1.0.1 no está
 cerrada**: abrirlo es sustituir el bloque del aviso por el `proxy_pass` al frontend —que está
 comentado justo debajo, en `config/nginx/catalina-support-prod.conf`—, copiar el vhost y recargar
 nginx. Mientras el dominio está cerrado responde 503 con un aviso, y no un 502 de nginx, que
