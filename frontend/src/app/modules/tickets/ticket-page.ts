@@ -208,7 +208,10 @@ export class TicketPage implements OnInit, OnDestroy {
   }
 
   protected estadoDeArriba(): { estado: string; texto: string } | null {
-    const detalle = this.principal() ?? this.interno();
+    // **El chip es el del ticket cuyo número se enseña**, no siempre el del principal. Con Desarrollo
+    // en el interno, la cabecera lleva el `INT-…` y su estado tiene que ser el del interno; si no, el
+    // número y el chip se contradicen (decisión 90 de `docs/modules/tickets.md`).
+    const detalle = this.detalleDeArriba();
     if (!detalle) {
       return null;
     }
@@ -220,6 +223,16 @@ export class TicketPage implements OnInit, OnDestroy {
       estado: detalle.ticket.state,
       texto: etiquetaDeEstado(this.t(), detalle.ticket.state, this.esUsuario()),
     };
+  }
+
+  /** El detalle que corresponde al número de la cabecera: el interno o el principal. */
+  private detalleDeArriba(): DetalleDeTicket | null {
+    const interno = this.interno();
+    if (interno && this.numeroDeArriba() === interno.ticket.number) {
+      return interno;
+    }
+
+    return this.principal() ?? interno;
   }
 
   /**

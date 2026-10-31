@@ -113,13 +113,16 @@ describe('TicketPage', () => {
   }
 
   /** Monta la pantalla con un principal que tiene interno, que es cuando existe la vista doble. */
-  async function montar(): Promise<ComponentFixture<TicketPage>> {
+  async function montar(
+    rol = 'soporte',
+    internoDetalle: DetalleDeTicket = INTERNO,
+  ): Promise<ComponentFixture<TicketPage>> {
     usuario.set({
       id: 1,
       name: 'María',
       lastName: 'Pérez',
       email: 'maria@demo.com',
-      role: 'soporte',
+      role: rol,
       origin: 'local',
       factory: false,
     });
@@ -133,7 +136,7 @@ describe('TicketPage', () => {
     await esperar();
     fixture.detectChanges();
 
-    http.expectOne('/api/tickets/INT-CS-2026-0001').flush(INTERNO);
+    http.expectOne('/api/tickets/INT-CS-2026-0001').flush(internoDetalle);
     await esperar();
     fixture.detectChanges();
 
@@ -165,6 +168,20 @@ describe('TicketPage', () => {
     // Uno solo, y **fuera** de las vistas de ticket: vive en la cabecera de la página.
     expect(host.querySelectorAll('app-acciones-del-ticket').length).toBe(1);
     expect(host.querySelector('app-ticket-vista app-acciones-del-ticket')).toBeNull();
+  });
+
+  it('el chip de la cabecera es el del ticket cuyo número se enseña, no el del principal', async () => {
+    const resuelto: DetalleDeTicket = {
+      ...INTERNO,
+      ticket: { ...INTERNO.ticket, state: 'resuelto' },
+    };
+    const fixture = await montar('desarrollo', resuelto);
+    const host = fixture.nativeElement as HTMLElement;
+
+    // Desarrollo entra por el interno: la cabecera enseña el `INT-…` y su chip tiene que decir
+    // «Resuelto», no el «En progreso» del principal.
+    expect(host.querySelector('h1')?.textContent?.trim()).toBe('INT-CS-2026-0001');
+    expect(host.querySelector('app-estado')?.textContent).toContain('Resuelto');
   });
 
   it('con los dos tickets hay uno por columna, en la cabecera de cada una', async () => {
