@@ -99,12 +99,17 @@ var markersFor = map[string][]Marker{
 		{Name: "cuando"},
 		{Name: "ip"},
 	},
+	// La plantilla número catorce: avisa del alta desde un ticket (docs/modules/mail.md, sección 19).
+	"auth.accountCreated": {
+		{Name: "nombre"},
+		{Name: "enlace", Essential: true},
+	},
 }
 
 // Languages son los idiomas en los que existe cada plantilla.
 var Languages = []string{"es", "en"}
 
-// Keys son las trece claves, en el orden en que se enseñan en el editor.
+// Keys son las catorce claves, en el orden en que se enseñan en el editor.
 var Keys = []string{
 	"ticket.created",
 	"ticket.escalated",
@@ -119,6 +124,7 @@ var Keys = []string{
 	"auth.invitation",
 	"auth.recovery",
 	"auth.passwordChanged",
+	"auth.accountCreated",
 }
 
 // Markers devuelve los marcadores de un correo, y si la clave existe.

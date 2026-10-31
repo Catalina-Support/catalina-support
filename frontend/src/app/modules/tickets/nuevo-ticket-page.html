@@ -115,6 +115,26 @@
           [valor]="solicitante()"
           (valorChange)="solicitante.set($event)"
         />
+
+        <!--
+          **Los nombres sólo hacen falta si la cuenta no existe** (docs/modules/tickets.md, sección
+          35): con AD se toman del directorio, y si la cuenta ya existe se ignoran. Por eso no se
+          exigen en la pantalla; el backend los pide al crear la cuenta local.
+        -->
+        <app-campo
+          identificador="ticket-solicitante-nombre"
+          [etiqueta]="t().tickets.solicitanteNombre"
+          [ayuda]="t().tickets.solicitanteNombreAyuda"
+          [valor]="solicitanteNombre()"
+          (valorChange)="solicitanteNombre.set($event)"
+        />
+
+        <app-campo
+          identificador="ticket-solicitante-apellidos"
+          [etiqueta]="t().tickets.solicitanteApellidos"
+          [valor]="solicitanteApellidos()"
+          (valorChange)="solicitanteApellidos.set($event)"
+        />
       }
 
       <div>

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/juanky-estevez/go-logs"
@@ -25,37 +26,51 @@ type CreateInput struct {
 	// personas en este producto.
 	RequesterID    *int64
 	RequesterEmail string
+	// RequesterName y RequesterLastName sólo se usan cuando la cuenta no existe y hay que crearla
+	// localmente (docs/modules/tickets.md, sección 35).
+	RequesterName     string
+	RequesterLastName string
+}
+
+// CreateResult es lo que devuelve el alta: el ticket, el aviso de prioridad y lo que pasó con la
+// cuenta del solicitante.
+type CreateResult struct {
+	Ticket            Ticket
+	Warning           string
+	RequesterCreated  bool
+	RequesterNotified bool
+	RequesterOrigin   string
 }
 
 // Create da de alta un ticket principal: le pone número, lo reparte y avisa.
 //
 // El número y el ticket nacen **en la misma transacción**: un ticket sin número no puede existir, y
 // dos tickets creados a la vez no pueden llevarse el mismo (docs/modules/tickets.md, sección 2.2).
-func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, string, error) {
+func (s *Service) Create(entrada CreateInput, actor auth.Identity) (CreateResult, error) {
 	// El Administrador mira los tickets, no los crea (docs/usuarios-y-permisos.md, sección 3).
 	if actor.Role == auth.RoleAdministrador {
-		return Ticket{}, "", ErrForbidden
+		return CreateResult{}, ErrForbidden
 	}
 
 	asunto := strings.TrimSpace(entrada.Subject)
 	if asunto == "" {
-		return Ticket{}, "", ErrSubjectRequired
+		return CreateResult{}, ErrSubjectRequired
 	}
 	prioridad, err := normalizarPrioridad(entrada.Priority)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	// La descripción es **texto con formato** (docs/modules/tickets.md, sección 2.3): si trae HTML que
 	// no está en la lista blanca, no se guarda nada. El asunto, en cambio, sigue siendo texto plano.
 	descripcion := strings.TrimSpace(entrada.Description)
 	if descripcion == "" {
-		return Ticket{}, "", ErrBodyRequired
+		return CreateResult{}, ErrBodyRequired
 	}
 
 	descripcion, err = SanearCuerpo(descripcion)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	// **La mención vale en cualquier cuerpo del ticket** (docs/modules/tickets.md, decisión 58): la
@@ -64,7 +79,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, stri
 	// meten la mención donde sea—. Se comprueban una a una y, si alguna no vale, no se guarda nada.
 	menciones := MencionesDelCuerpo(descripcion)
 	if err := s.validarMenciones(menciones, nil, actor); err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	// **La categoría se comprueba antes de abrir la transacción y antes de repartir**: un ticket sin
@@ -72,29 +87,35 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, stri
 	// normalizan aquí, para que un texto que no vale no llegue a la base.
 	categoria, err := s.categoriaParaTicket(entrada.CategoryID)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	etiquetas, err := NormalizarEtiquetas(entrada.Tags)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
-	solicitante, err := s.solicitante(entrada.RequesterID, entrada.RequesterEmail, actor)
+	solicitante, creadaAhora, err := s.solicitante(
+		entrada.RequesterID,
+		entrada.RequesterEmail,
+		entrada.RequesterName,
+		entrada.RequesterLastName,
+		actor,
+	)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	config, err := s.config.TicketSettings()
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	// El turno se decide **antes** de abrir la transacción: preguntar a `users` con una transacción
 	// abierta es dejar una conexión esperando a otra.
 	responsable, err := s.repartir(config.MainAssignment, auth.RoleSoporte, false)
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	var (
@@ -166,7 +187,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, stri
 		)
 	})
 	if err != nil {
-		return Ticket{}, "", err
+		return CreateResult{}, err
 	}
 
 	// El aviso sale **después** de que el ticket exista: el correo es un aviso, no la acción
@@ -180,65 +201,121 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (Ticket, stri
 	}
 	s.avisarEtiquetado(numero, asunto, menciones)
 
+	// Si la cuenta se creó desde AD, la persona ya puede entrar con su cuenta de la organización: se
+	// le dice con la plantilla 14. La cuenta local del solicitante no recibe este correo porque no
+	// tiene acceso (docs/modules/tickets.md, sección 35).
+	notificada := false
+	if creadaAhora && solicitante.Origin == auth.OriginAD && solicitante.Email != "" && s.mailer != nil && s.language != nil {
+		if idioma, err := s.language.Language(); err != nil {
+			logs.LogWarning("no se pudo leer el idioma para avisar de la cuenta creada del ticket " + numero)
+		} else {
+			s.mailer.SendAsync(
+				"auth.accountCreated",
+				idioma,
+				[]string{solicitante.Email},
+				map[string]string{
+					"nombre": solicitante.Name,
+					"enlace": s.mailer.Link(""),
+				},
+			)
+			notificada = true
+		}
+	}
+
 	// Y el motor de IA empieza a redactar **sin que nadie espere**: quien abre un ticket no puede
 	// quedarse mirando un contenedor (docs/modules/ai.md, decisión 2). Los dos campos nacen aquí.
 	s.pedirAlMotor(numero, TipoSummary, TipoUltimaAccion)
 
-	return Ticket{
-		ID:          ticket.ID,
-		Number:      ticket.Number,
-		Subject:     ticket.Subject,
-		Description: ticket.Description,
-		State:       ticket.State,
-		Priority:    ticket.Priority,
-		Category:    aCategoria(categoria),
-		Tags:        etiquetas,
-		Requester:   &solicitante,
-		CreatedBy:   cuentaDe(actor),
-		Assignee:    responsable,
-		CreatedAt:   ticket.CreatedAt,
-		UpdatedAt:   ticket.UpdatedAt,
-	}, aviso, nil
+	return CreateResult{
+		Ticket: Ticket{
+			ID:          ticket.ID,
+			Number:      ticket.Number,
+			Subject:     ticket.Subject,
+			Description: ticket.Description,
+			State:       ticket.State,
+			Priority:    ticket.Priority,
+			Category:    aCategoria(categoria),
+			Tags:        etiquetas,
+			Requester:   &solicitante,
+			CreatedBy:   cuentaDe(actor),
+			Assignee:    responsable,
+			CreatedAt:   ticket.CreatedAt,
+			UpdatedAt:   ticket.UpdatedAt,
+		},
+		Warning:           aviso,
+		RequesterCreated:  creadaAhora,
+		RequesterNotified: notificada,
+		RequesterOrigin: func() string {
+			if creadaAhora {
+				return solicitante.Origin
+			}
+			return ""
+		}(),
+	}, nil
 }
 
 // solicitante decide de quién es el ticket: de quien lo crea, o de quien diga Soporte.
 //
 // **Crear en nombre de otro es de Soporte** (docs/usuarios-y-permisos.md, sección 3), y el
 // Administrador no crea tickets, así que sólo le queda al usuario y a Desarrollo crear los suyos.
-func (s *Service) solicitante(pedido *int64, correo string, actor auth.Identity) (auth.Account, error) {
+func (s *Service) solicitante(pedido *int64, correo, nombre, apellidos string, actor auth.Identity) (auth.Account, bool, error) {
 	// Sin nada, o con uno mismo: el ticket es de quien lo crea.
 	sinPedido := (pedido == nil || *pedido == actor.ID) && strings.TrimSpace(correo) == ""
 
 	if sinPedido {
 		cuenta, err := s.accounts.ByID(actor.ID)
 		if err != nil {
-			return auth.Account{}, ErrRequesterUnknown
+			return auth.Account{}, false, ErrRequesterUnknown
 		}
 
-		return cuenta, nil
+		return cuenta, false, nil
 	}
 
 	// Crear en nombre de otro es de Soporte (docs/usuarios-y-permisos.md, sección 3).
 	if actor.Role != auth.RoleSoporte {
-		return auth.Account{}, ErrRequesterNotYours
+		return auth.Account{}, false, ErrRequesterNotYours
 	}
-
-	var (
-		cuenta auth.Account
-		err    error
-	)
 
 	if pedido != nil {
-		cuenta, err = s.accounts.ByID(*pedido)
-	} else {
-		cuenta, err = s.accounts.ByEmail(strings.TrimSpace(correo))
+		cuenta, err := s.accounts.ByID(*pedido)
+		if err != nil || !cuenta.IsActive {
+			return auth.Account{}, false, ErrRequesterUnknown
+		}
+
+		return cuenta, false, nil
 	}
 
-	if err != nil || !cuenta.IsActive {
-		return auth.Account{}, ErrRequesterUnknown
+	cuenta, creada, err := s.accounts.EnsureRequester(strings.TrimSpace(correo), nombre, apellidos, actor)
+	if err != nil {
+		return auth.Account{}, false, traducirErrorDelSolicitante(err)
+	}
+	if !cuenta.IsActive {
+		return auth.Account{}, false, ErrRequesterInactive
 	}
 
-	return cuenta, nil
+	return cuenta, creada, nil
+}
+
+// traducirErrorDelSolicitante convierte lo que devuelve `users` en la clave que viaja al frontend.
+func traducirErrorDelSolicitante(err error) error {
+	switch {
+	case errors.Is(err, auth.ErrRequesterEmailInvalid):
+		return ErrRequesterEmailInvalid
+	case errors.Is(err, auth.ErrRequesterNameRequired):
+		return ErrRequesterNameRequired
+	case errors.Is(err, auth.ErrRequesterInactive):
+		return ErrRequesterInactive
+	case errors.Is(err, auth.ErrRequesterNotInDirectory):
+		return ErrRequesterNotInDirectory
+	case errors.Is(err, auth.ErrRequesterAccountExists):
+		return ErrRequesterAccountExists
+	case errors.Is(err, auth.ErrRequesterDirectoryDown):
+		return ErrRequesterDirectoryDown
+	case errors.Is(err, auth.ErrAccountNotFound):
+		return ErrRequesterUnknown
+	default:
+		return err
+	}
 }
 
 // Assignees son las personas que pueden ser responsables de cada tipo de ticket.

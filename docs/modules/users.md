@@ -1,7 +1,12 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-23
+> **Última actualización:** 2026-10-30
+>
+> **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 18 crea una cuenta de solicitante desde el alta de un
+> ticket cuando Soporte escribe un correo que no tiene cuenta. La cuenta local nace sin contraseña
+> y sin correo de alta; con AD se crea desde el directorio y, si la persona no está allí, el ticket
+> se rechaza. No cambian los permisos administrativos ni las reglas de entrada.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 16 reserva todo el
 > módulo y la búsqueda administrativa de AD a la capacidad Administrador. Soporte sin Admin deja de
@@ -457,3 +462,64 @@ diálogo y comportamiento responsive.
 
 La prueba usa consultas por papel y nombre accesible, sin `.first()`, y confirma un solo botón en PC
 y móvil.
+
+## 18. Cuenta de solicitante desde el alta de un ticket
+
+> **Aprobada, implementada y verificada el 2026-10-30.** Cuando Soporte abre un ticket para alguien que no tiene cuenta, el
+> alta del ticket necesita una cuenta `usuario` que lo identifique. Esta sección fija cómo la crea
+> `users` sin dar acceso y sin abrir un camino administrativo nuevo.
+
+### 18.1 Contrato
+
+- **Quién la pide**: sólo el módulo `tickets`, cuando Soporte crea un ticket con
+  `requesterEmail` y no hay cuenta. El contrato se declara en `tickets` y lo implementa `users`,
+  como el resto de las cuentas que aparecen en un ticket; `main.go` los conecta. Devuelve la cuenta
+  y si se **creó ahora** o se reutilizó.
+- **La cuenta es normal**: papel `usuario`, origen `local`, activa, sin contraseña y **sin correo de
+  alta**. No tiene capacidad administrativa y no puede entrar hasta que alguien le dé acceso desde
+  Usuarios o hasta que entre por AD o Keycloak con el mismo correo.
+- **No se reutiliza `Create`**: el alta normal manda el enlace para establecer contraseña, y aquí
+  precisamente no se quiere dar acceso. Se reutilizan las validaciones de nombre, apellidos y
+  correo, pero el camino es propio y no envía correo.
+- **Si la cuenta ya existe activa**, se devuelve y no se toca. Si existe desactivada, se rechaza; no
+  se reactiva desde el alta de un ticket.
+- **Con AD como método vigente**: se busca a la persona en el directorio por su correo exacto y se
+  crea o vincula con `CreateFromDirectory` (papel `usuario`, sin admin, datos del directorio). Si no
+  está en el directorio, se rechaza y no se crea nada. No se cae a una cuenta local: con AD, una
+  cuenta local de solicitante no podría entrar y la persona ya debería estar en el directorio. Si la
+  cuenta se **crea** (no si sólo se vincula una existente), el flujo del ticket envía el correo
+  `auth.accountCreated`.
+- **Con Keycloak**: no hay búsqueda de personas en el reino, así que no se crea ni se vincula nada.
+  Se rechaza con una clave que dice que la cuenta tiene que existir en Keycloak o entrar una vez.
+- **Con el método local**: se crea la cuenta sin acceso. Si más adelante la instalación pasa a AD o
+  Keycloak, esa cuenta se vincula por correo en la primera entrada, como cualquier cuenta local.
+- **Duplicados**: la base sigue siendo la que garantiza el correo único. Si dos peticiones intentan
+  crear la misma cuenta, una gana y la otra relee la cuenta creada; no se devuelve un error de
+  duplicado al ticket.
+- **Auditoría**: se registra en el log el identificador de la cuenta creada y que vino del alta de un
+  ticket. No se registran nombres, correo ni el contenido del ticket.
+- **Permisos**: no cambia quién administra Usuarios. La cuenta creada aparece en la lista y desde
+  allí se le puede reenviar el enlace, desactivar o cambiar de papel según las reglas actuales.
+- **Versión y migración**: el correo nuevo exige la plantilla 14, que entra en `v1.0.1.sql`; la
+  versión de la aplicación y del esquema pasa a **1.0.1**. No se reescribe `v1.0.0.sql`, que ya está
+  aplicada.
+
+### 18.2 Por qué no se crea un ticket sin cuenta
+
+El ticket guarda `requester_id` como clave ajena obligatoria y toda la lectura, los avisos y los
+permisos del solicitante dependen de esa cuenta. Añadir un solicitante sin cuenta obligaría a
+cambiar el modelo, las listas, los correos y la matriz de permisos. La cuenta mínima sin acceso
+resuelve el caso sin tocar nada de eso.
+
+### 18.3 Verificación
+
+- Servicio: crear la cuenta local desde el alta de un ticket deja `origin=local`, `role=usuario`,
+  `is_active=true` y `password_hash` nulo; no se envía correo de alta.
+- Servicio: una cuenta existente activa se reutiliza; una inactiva se rechaza; una creación local
+  sin nombre o apellidos se rechaza.
+- Servicio: con AD, una persona del directorio se crea o vincula con sus datos y sin contraseña
+  local; una persona que no está en AD rechaza el ticket.
+- Servicio: con Keycloak no se crea nada y se devuelve la clave de cuenta requerida.
+- La base garantiza el correo único; si la creación choca con otra petición, el servicio relee la
+  cuenta creada y el ticket la reutiliza.
+- Interfaz: el ticket muestra la cuenta creada como solicitante y Soporte como creador.

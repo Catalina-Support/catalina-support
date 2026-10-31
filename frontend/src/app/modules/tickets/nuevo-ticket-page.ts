@@ -56,6 +56,8 @@ export class NuevoTicketPage implements OnInit {
   protected readonly asunto = signal('');
   protected readonly descripcion = signal('');
   protected readonly solicitante = signal('');
+  protected readonly solicitanteNombre = signal('');
+  protected readonly solicitanteApellidos = signal('');
   protected readonly prioridad = signal<Prioridad>('medium');
 
   /** El catálogo y la categoría elegida. La categoría es obligatoria. */
@@ -190,9 +192,20 @@ export class NuevoTicketPage implements OnInit {
         priority: this.prioridad(),
         categoryId: categoria,
         requesterEmail: this.puedeElegirSolicitante() ? this.solicitante().trim() : undefined,
+        requesterName: this.puedeElegirSolicitante() ? this.solicitanteNombre().trim() : undefined,
+        requesterLastName: this.puedeElegirSolicitante()
+          ? this.solicitanteApellidos().trim()
+          : undefined,
       });
 
       const numero = respuesta.ticket.number;
+      if (respuesta.requesterCreated) {
+        this.tickets.avisarCuentaCreada({
+          created: true,
+          notified: Boolean(respuesta.requesterNotified),
+          origin: respuesta.requesterOrigin ?? '',
+        });
+      }
       const fallidos = await this.subirAdjuntos(numero, archivos);
 
       // Si algún adjunto no subió, se queda en la pantalla diciéndolo: el ticket ya existe, y quien lo

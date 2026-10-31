@@ -10,6 +10,7 @@ import (
 
 	"catalina-support/backend/modules/users/repositories"
 	"catalina-support/backend/shared/auth"
+	"catalina-support/backend/shared/config"
 )
 
 // Las claves de error del módulo, tal y como viajan al frontend (docs/modules/users.md, sección 9).
@@ -72,6 +73,12 @@ type DirectorySearch interface {
 	DirectoryEnabled() bool
 }
 
+// Access es lo que este módulo necesita de `settings`: el método de entrada vigente. Se declara aquí,
+// en quien lo usa, y `settings` lo cumple sin conocer este paquete.
+type Access interface {
+	Access() (config.Access, error)
+}
+
 func (s *Service) DirectoryEnabled() bool {
 	buscador, ok := s.directory.(DirectorySearch)
 	return ok && buscador.DirectoryEnabled()
@@ -82,6 +89,7 @@ type Service struct {
 	repo      *repositories.UserRepository
 	links     PasswordLinks
 	directory Directory
+	access    Access
 }
 
 // NewService construye el servicio.
@@ -100,6 +108,10 @@ func (s *Service) SetPasswordLinks(links PasswordLinks) { s.links = links }
 // una cuenta de AD sigue estando allí antes de reactivarla. Sin él, ese camino no existe y la
 // reactivación de una cuenta de AD se rechaza diciendo que no se puede comprobar.
 func (s *Service) SetDirectory(directory Directory) { s.directory = directory }
+
+// SetAccess conecta la configuración de entrada: el alta de un solicitante desde un ticket necesita
+// saber si la instalación entra con cuentas locales, con AD o con Keycloak.
+func (s *Service) SetAccess(access Access) { s.access = access }
 
 func (s *Service) SearchDirectory(query string) ([]auth.DirectoryAccount, error) {
 	query = strings.TrimSpace(query)
