@@ -124,3 +124,14 @@ func FactoryIdentity() Identity {
 // Vive aquí, y no en `users`, porque quien lo pregunta es `auth`: así el módulo de cuentas puede
 // devolver este error sin que `auth` tenga que conocer los errores de nadie.
 var ErrAccountNotFound = errors.New("cuenta no encontrada")
+
+// Los errores del solicitante que se crea desde el alta de un ticket. Viven aquí porque los
+// comparten `users`, que crea la cuenta, y `tickets`, que decide qué contarle a Soporte.
+var (
+	ErrRequesterEmailInvalid   = errors.New("el correo del solicitante no es válido")
+	ErrRequesterNameRequired   = errors.New("faltan el nombre o los apellidos del solicitante")
+	ErrRequesterInactive       = errors.New("la cuenta del solicitante está desactivada")
+	ErrRequesterNotInDirectory = errors.New("el solicitante no está en el directorio")
+	ErrRequesterAccountExists  = errors.New("el solicitante necesita una cuenta que ya exista")
+	ErrRequesterDirectoryDown  = errors.New("no se puede comprobar el directorio del solicitante")
+)

@@ -175,10 +175,10 @@ test.describe('Configuración', () => {
     await expect(page).toHaveTitle('Catalina Support');
   });
 
-  test('el idioma se aplica sólo después de revisar manualmente las trece plantillas', async ({ page }) => {
+  test('el idioma se aplica sólo después de revisar manualmente las catorce plantillas', async ({ page }) => {
     await page.locator('#idioma-instalacion').selectOption('en');
     await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
-    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(13);
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(14);
     await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
@@ -196,7 +196,7 @@ test.describe('Configuración', () => {
 
     await page.locator('#idioma-instalacion').selectOption('es');
     await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
-    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(13);
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(14);
     await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   });

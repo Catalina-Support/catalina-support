@@ -149,7 +149,32 @@ export class TicketPage implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.mostrarAvisoDeCuentaCreada();
     void this.cargar();
+  }
+
+  /**
+   * Recoge el aviso que dejó el alta cuando creó la cuenta del solicitante. Se muestra una sola vez,
+   * al llegar al ticket, y no viaja en la URL.
+   */
+  private mostrarAvisoDeCuentaCreada(): void {
+    const aviso = this.tickets.tomarAvisoDeCuentaCreada();
+    if (!aviso) {
+      return;
+    }
+
+    const textos = this.t().tickets;
+    const texto =
+      aviso.origin === 'ad'
+        ? aviso.notified
+          ? textos.cuentaCreadaAvisada
+          : textos.cuentaCreadaSinAviso
+        : textos.cuentaCreadaLocal;
+
+    this.mensaje.set({
+      forma: aviso.notified || aviso.origin !== 'ad' ? 'exito' : 'atencion',
+      texto,
+    });
   }
 
   protected t() {

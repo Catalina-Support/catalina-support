@@ -24,6 +24,10 @@ type CreateTicketRequest struct {
 	// correo es lo que tiene a mano cuando alguien llama.
 	RequesterID    *int64 `json:"requesterId"`
 	RequesterEmail string `json:"requesterEmail"`
+	// Nombre y apellidos se usan sólo cuando la cuenta del solicitante no existe y hay que crearla
+	// localmente (docs/modules/tickets.md, sección 35).
+	RequesterName     string `json:"requesterName"`
+	RequesterLastName string `json:"requesterLastName"`
 }
 
 // UpdateTicketRequest cambia el asunto, la descripción, la categoría o las etiquetas. Los cuatro van
@@ -226,6 +230,11 @@ type ObserverTicketResponse struct {
 type TicketEnvelope struct {
 	Ticket  TicketResponse `json:"ticket"`
 	Warning string         `json:"warning,omitempty"`
+	// RequesterCreated y RequesterNotified sólo los llena el alta: dicen si se creó la cuenta del
+	// solicitante y si se le avisó por correo (docs/modules/tickets.md, sección 35).
+	RequesterCreated  bool   `json:"requesterCreated,omitempty"`
+	RequesterNotified bool   `json:"requesterNotified,omitempty"`
+	RequesterOrigin   string `json:"requesterOrigin,omitempty"`
 }
 
 // TicketDetailResponse es un ticket con todo lo que cuelga de él.

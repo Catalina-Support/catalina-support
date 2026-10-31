@@ -732,6 +732,16 @@ export const ES = {
     archivoRechazado: 'Estos archivos no se han añadido:',
     paraQuien: '¿Para quién es el ticket?',
     paraQuienAyuda: 'Soporte puede crear un ticket en nombre de otra persona.',
+    solicitanteNombre: 'Nombre',
+    solicitanteApellidos: 'Apellidos',
+    solicitanteNombreAyuda:
+      'Sólo si la persona no tiene cuenta. Con Active Directory se toman del directorio.',
+    cuentaCreadaLocal:
+      'Cuenta creada para el ticket. La persona no recibe acceso hasta que se le dé desde Usuarios.',
+    cuentaCreadaAvisada:
+      'Cuenta creada desde el directorio. Se le ha enviado el aviso por correo.',
+    cuentaCreadaSinAviso:
+      'Cuenta creada, pero no se ha podido preparar el aviso por correo.',
     elegirSolicitante: 'La persona',
     crear: 'Crear el ticket',
     creando: 'Creando…',
@@ -1224,6 +1234,16 @@ export const ES = {
     'tickets.assignee.unknown': 'Esa persona no puede ser la responsable de este ticket.',
     'tickets.requester.unknown': 'Esa persona no existe o está desactivada.',
     'tickets.requester.notAllowed': 'Sólo Soporte puede crear un ticket en nombre de otra persona.',
+    'tickets.requester.emailInvalid': 'El correo del solicitante no es válido.',
+    'tickets.requester.nameRequired':
+      'Para crear la cuenta del solicitante hacen falta el nombre y los apellidos.',
+    'tickets.requester.inactive': 'La cuenta del solicitante está desactivada.',
+    'tickets.requester.notInDirectory':
+      'Esa persona no está en el directorio de la organización, así que no se puede crear la cuenta.',
+    'tickets.requester.accountRequired':
+      'Con Keycloak la cuenta tiene que existir ya en el reino o la persona tiene que entrar una vez.',
+    'tickets.requester.directoryUnavailable':
+      'No se ha podido comprobar el directorio. Inténtalo de nuevo cuando esté disponible.',
     'tickets.attachment.extension': 'Ese tipo de archivo no se admite.',
     'tickets.attachment.tooBig': 'Ese archivo pesa demasiado: el máximo son 25 MB.',
     'tickets.attachment.invalid': 'No se ha podido leer el archivo.',

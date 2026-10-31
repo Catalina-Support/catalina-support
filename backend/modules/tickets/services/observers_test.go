@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"catalina-support/backend/shared/auth"
@@ -21,7 +22,7 @@ func (c cuentasStub) ByID(id int64) (auth.Account, error) {
 
 func (c cuentasStub) ByEmail(email string) (auth.Account, error) {
 	for _, cuenta := range c {
-		if cuenta.Email == email {
+		if strings.EqualFold(cuenta.Email, email) {
 			return cuenta, nil
 		}
 	}
@@ -49,6 +50,15 @@ func (c cuentasStub) ActiveByRole(role string) ([]auth.Account, error) {
 	}
 
 	return cuentas, nil
+}
+
+func (c cuentasStub) EnsureRequester(email, _name, _lastName string, _ auth.Identity) (auth.Account, bool, error) {
+	cuenta, err := c.ByEmail(email)
+	if err != nil {
+		return auth.Account{}, false, auth.ErrRequesterNotInDirectory
+	}
+
+	return cuenta, false, nil
 }
 
 // TestMencionesDelCuerpo: se extraen los identificadores de las personas etiquetadas —una vez cada

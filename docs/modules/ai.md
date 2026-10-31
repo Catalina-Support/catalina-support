@@ -1,7 +1,7 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-10-30
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-22.** La sección 25 registra que el contrato vigente aceptaba
 > todavía una segunda propuesta insuficiente. El responsable eligió 1A–4A: prompt estructurado,
@@ -544,7 +544,7 @@ backend sí arranca en estado «IA requiere configuración» para que la cuenta 
 La recuperación de resúmenes pendientes o `sin_motor` empieza automáticamente en las tres
 modalidades, incluido un proveedor externo: no crea un lote nuevo por cambiar el idioma y respeta los
 topes normales de la cola. La confirmación económica se reserva exclusivamente para traducir las
-trece plantillas de correo. Antes de esas veintiséis solicitudes se muestran tokens y costo estimados;
+catorce plantillas de correo. Antes de esas veintiocho solicitudes se muestran tokens y costo estimados;
 si se rechaza, no se llama al proveedor y las plantillas se editan manualmente.
 
 ### 9.10 Licencia e integridad del catálogo local

@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 /** Una cuenta, reducida a lo que se enseña dentro de un ticket. */
@@ -249,6 +249,16 @@ export interface AltaDeTicket {
   readonly tags?: readonly string[];
   /** Sólo Soporte: el ticket es de otra persona, y se identifica por su correo. */
   readonly requesterEmail?: string;
+  /** Nombre y apellidos para cuando la cuenta del solicitante no existe y hay que crearla. */
+  readonly requesterName?: string;
+  readonly requesterLastName?: string;
+}
+
+/** Lo que contestó el alta sobre la cuenta del solicitante (docs/modules/tickets.md, sección 35). */
+export interface AvisoDeCuentaCreada {
+  readonly created: boolean;
+  readonly notified: boolean;
+  readonly origin: string;
 }
 
 /** Los tipos de ticket, para el filtro. */
@@ -362,10 +372,40 @@ export class TicketsService {
   }
 
   /** Crea un ticket. `requesterId` es de Soporte: lo crea en nombre de otra persona. */
-  crear(alta: AltaDeTicket): Promise<{ ticket: Ticket; warning?: string }> {
+  crear(
+    alta: AltaDeTicket,
+  ): Promise<{
+    ticket: Ticket;
+    warning?: string;
+    requesterCreated?: boolean;
+    requesterNotified?: boolean;
+    requesterOrigin?: string;
+  }> {
     return firstValueFrom(
-      this.http.post<{ ticket: Ticket; warning?: string }>('/api/tickets', alta),
+      this.http.post<{
+        ticket: Ticket;
+        warning?: string;
+        requesterCreated?: boolean;
+        requesterNotified?: boolean;
+        requesterOrigin?: string;
+      }>('/api/tickets', alta),
     );
+  }
+
+  /**
+   * El aviso de que el alta creó la cuenta del solicitante. Vive aquí para que la pantalla del alta
+   * lo deje y la del ticket lo recoja al navegar, sin pasarlo por la URL.
+   */
+  private readonly avisoCuenta = signal<AvisoDeCuentaCreada | null>(null);
+
+  avisarCuentaCreada(aviso: AvisoDeCuentaCreada): void {
+    this.avisoCuenta.set(aviso);
+  }
+
+  tomarAvisoDeCuentaCreada(): AvisoDeCuentaCreada | null {
+    const aviso = this.avisoCuenta();
+    this.avisoCuenta.set(null);
+    return aviso;
   }
 
   cambiarPrioridad(

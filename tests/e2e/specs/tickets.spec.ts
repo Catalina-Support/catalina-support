@@ -318,6 +318,43 @@ test.describe('El recorrido de un ticket', () => {
     await expect(page.getByRole('button', { name: 'Cambiar la prioridad' })).toHaveCount(0);
   });
 
+  test('Soporte abre un ticket para una persona sin cuenta y la crea sin darle acceso', async ({
+    page,
+    request,
+  }) => {
+    const soporte = await crearCuentaLista(request, {
+      role: 'soporte',
+      name: 'Sofía',
+      lastName: 'Soporte',
+    });
+    const correo = `nueva-${Date.now().toString(36)}@example.invalid`;
+
+    await entrarComo(page, soporte.email);
+    await page.goto('/tickets/new');
+
+    const marca = Date.now().toString(36);
+    await page.getByLabel('Asunto', { exact: true }).fill(`Llamada de ${marca}`);
+    await page.getByLabel('Descripción').fill('La persona no tiene cuenta en la plataforma.');
+    await page.getByLabel('Categoría').selectOption({ label: 'General' });
+    await page.getByLabel('¿Para quién es el ticket?').fill(correo);
+    await page.getByLabel('Nombre', { exact: true }).fill('Nueva');
+    await page.getByLabel('Apellidos', { exact: true }).fill('Persona');
+
+    await page.getByRole('button', { name: 'Crear el ticket' }).click();
+
+    // La cuenta se crea en el mismo paso y se avisa a Soporte; no recibe acceso.
+    await expect(page).toHaveURL(/\/tickets\/[A-Z0-9-]+$/);
+    await expect(page.getByText('Cuenta creada para el ticket.')).toBeVisible();
+
+    const numero = await numeroEnPantalla(page);
+    const detalle = await detalleDe(
+      request,
+      await tokenDe(request, soporte.email, soporte.password),
+      numero,
+    );
+    expect(detalle.ticket.requester?.email).toBe(correo);
+  });
+
   test('Soporte recibe la ayuda de IA configurada y el usuario no recibe el botón', async ({
     page,
     request,
