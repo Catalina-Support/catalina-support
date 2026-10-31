@@ -44,6 +44,13 @@ var (
 	ErrAssigneeUnknown   = errors.New("tickets.assignee.unknown")
 	ErrRequesterUnknown  = errors.New("tickets.requester.unknown")
 	ErrRequesterNotYours = errors.New("tickets.requester.notAllowed")
+	// Los errores del alta para un solicitante sin cuenta (docs/modules/tickets.md, sección 35).
+	ErrRequesterEmailInvalid   = errors.New("tickets.requester.emailInvalid")
+	ErrRequesterNameRequired   = errors.New("tickets.requester.nameRequired")
+	ErrRequesterInactive       = errors.New("tickets.requester.inactive")
+	ErrRequesterNotInDirectory = errors.New("tickets.requester.notInDirectory")
+	ErrRequesterAccountExists  = errors.New("tickets.requester.accountRequired")
+	ErrRequesterDirectoryDown  = errors.New("tickets.requester.directoryUnavailable")
 	// ErrMentionNotAllowed: el cuerpo etiqueta a alguien que no vale —no es Soporte ni Desarrollo
 	// quien escribe, o el identificador no es una cuenta activa de esos dos papeles—. **Se rechaza el
 	// cuerpo entero**, como el saneador: un texto guardado a medias es peor que uno que se rechaza
@@ -149,6 +156,9 @@ type Accounts interface {
 	// ActiveByRole son las cuentas activas con ese papel: los técnicos del turno y los responsables
 	// que se pueden elegir.
 	ActiveByRole(role string) ([]auth.Account, error)
+	// EnsureRequester es el alta de un solicitante sin cuenta, con su nombre y apellidos. Devuelve si
+	// la cuenta se acaba de crear (docs/modules/tickets.md, sección 35).
+	EnsureRequester(email, name, lastName string, actor auth.Identity) (auth.Account, bool, error)
 }
 
 // Mailer es lo que este módulo necesita del correo: mandar un aviso —en segundo plano— y armar la

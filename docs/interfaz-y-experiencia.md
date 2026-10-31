@@ -1,7 +1,7 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-23
+> **Última actualización:** 2026-10-30
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 51 reduce a 16 px el margen horizontal de las
 > cuatro bandejas, elimina su máximo de ancho y fija Ticket y Action en los extremos con aire
@@ -904,7 +904,7 @@ modularidad (sección 4.4).
 | --- | --- | --- |
 | El editor de los correos | `/mail` | Administrador |
 
-- **A la izquierda, los trece correos**; a la derecha, el que se está editando: su **asunto**, su
+- **A la izquierda, los catorce correos**; a la derecha, el que se está editando: su **asunto**, su
   **cuerpo** y sus **marcadores**, con los imprescindibles marcados.
 - **Los dos idiomas van al lado** —el mismo correo en español y en inglés, para ver que dicen lo
   mismo— **y en móvil se apilan**: en un teléfono no caben dos columnas.
@@ -1691,7 +1691,7 @@ tarjeta.
 
 ### 16.4 Revisión del cambio de idioma
 
-La revisión presenta las trece plantillas como lista de pendientes. Al abrir una se ven origen y
+La revisión presenta las catorce plantillas como lista de pendientes. Al abrir una se ven origen y
 borrador lado a lado en PC y apilados en móvil, con asunto, cuerpo y marcadores. Si ya existe un
 destino personalizado, aparece como tercera versión y el Administrador elige conservarlo, usar el
 borrador o combinarlos en el editor. No se reemplaza en silencio. **Aplicar idioma** sólo se habilita

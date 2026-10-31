@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-30
 >
+> **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 35 permite que Soporte cree un ticket a nombre de una
+> persona sin cuenta, creando la cuenta en el mismo alta. La cuenta local nace sin acceso; con AD
+> se exige que la persona esté en el directorio. No cambian los permisos de los demás papeles ni el
+> modelo de tickets.
+>
 > **Corrección aprobada, implementada y verificada el 2026-10-30.** La sección 34 corrige la
 > ficha del ticket: la asignación manual no depende del reparto y, en los tickets, manda el papel
 > operativo también cuando la cuenta tiene capacidad administrativa. La corrección alcanza a la
@@ -2028,3 +2033,95 @@ abrir el ticket. Después de reasignar un interno, Soporte saltaba al principal 
 - Pasaron las 260 pruebas del frontend, las fronteras, la compilación, las pruebas del servicio de
   tickets y el recorrido de interfaz en PC y móvil. La suite del repositorio de tickets conserva el
   fallo ambiental conocido de reportería cuando no hay tickets sembrados; no toca este cambio.
+
+## 35. Alta para un solicitante sin cuenta
+
+> **Aprobada, implementada y verificada el 2026-10-30.** El producto ya dice que Soporte puede abrir un ticket «para quien no
+> tiene acceso a la plataforma» ([propósito-y-alcance.md](../propósito-y-alcance.md)), pero el alta
+> exigía una cuenta activa y rechazaba el correo desconocido. Esta sección hace real esa promesa sin
+> cambiar el modelo de tickets ni los permisos de los demás papeles.
+
+### 35.1 Hallazgo
+
+`POST /api/tickets` acepta `requesterEmail`, pero `solicitante()` busca una cuenta activa por correo
+y, si no la encuentra, responde `tickets.requester.unknown`. Soporte no puede crear el ticket en el
+mismo paso: tiene que ir antes a Usuarios, crear la cuenta y volver. Con AD el camino existe, pero
+también fuera del alta del ticket.
+
+La cuenta que hace falta es una cuenta normal, con papel `usuario`; no es un solicitante sin cuenta
+ni un ticket sin `requester_id`. El modelo de tickets no cambia.
+
+### 35.2 Contrato
+
+- **Sólo Soporte** puede mandar `requesterEmail`; la regla actual no cambia. El alta añade
+  `requesterName` y `requesterLastName`, que sólo se usan cuando la cuenta no existe.
+- **La cuenta existe y está activa**: se usa tal cual. Los nombres escritos se ignoran.
+- **La cuenta no existe y el método es local**: se crea una cuenta `usuario`, origen `local`, activa,
+  **sin contraseña y sin correo de alta**. No recibe acceso a la plataforma; sirve para identificar
+  al solicitante y recibir los avisos del ticket. Se le puede dar acceso después desde Usuarios.
+  `requesterName` y `requesterLastName` son obligatorios.
+- **La cuenta no existe y el método es AD**: se busca a la persona en el directorio por su correo.
+  Si está, se crea o vincula con los datos del directorio, origen `ad`, sin contraseña local y con
+  papel `usuario`; los nombres del formulario no sustituyen a los del directorio. Si no está, se
+  rechaza con `tickets.requester.notInDirectory` y **no se crea ni el ticket ni la cuenta**.
+- **La cuenta no existe y el método es Keycloak**: no hay búsqueda de personas en el reino, así que
+  se rechaza con `tickets.requester.accountRequired` y se indica que la persona debe existir en
+  Keycloak o entrar una vez. No se crea una cuenta local que no podría entrar por ese método.
+- **La cuenta existe pero está desactivada**: se rechaza con `tickets.requester.inactive`; no se
+  reactiva desde el alta del ticket.
+- **La cuenta y el ticket van juntos**: si la cuenta no se puede crear o vincular, no se numera ni se
+  guarda el ticket. Si el ticket falla después, la cuenta creada en ese intento se conserva y se
+  puede reutilizar; no se deja un ticket a medias.
+- **No se envía correo de alta** al solicitante creado localmente. Los avisos del ticket siguen
+  siendo los de siempre: el solicitante recibe los correos de su ticket y puede responder cuando
+  tenga acceso.
+- **Si la cuenta se crea desde AD**, además del ticket se envía a la persona el correo nuevo
+  `auth.accountCreated` —«Se ha creado tu cuenta en la mesa de ayuda; entra con tu cuenta de la
+  organización»—. No lleva enlace de contraseña ni token. Si el correo falla, el ticket y la cuenta
+  siguen creados y el fallo queda en el log.
+- La respuesta del alta lleva `requesterCreated` y `requesterNotified` para que la pantalla pueda
+  decir lo que pasó: cuenta creada para el ticket (sin acceso) o cuenta creada desde AD con su
+  correo enviado.
+- No cambian el reparto por turnos, la asignación, los avisos, las transiciones ni la ficha del
+  ticket interno. El interno sigue mostrando el solicitante del principal y el desarrollador como
+  responsable.
+
+### 35.3 Interfaz
+
+El formulario de alta de Soporte conserva «¿Para quién es el ticket?» y añade **Nombre** y
+**Apellidos** debajo del correo, con una ayuda que dice lo que va a pasar:
+
+- si la cuenta existe, se usa la que hay;
+- si no existe y la instalación entra con cuentas locales, se crea sólo para el ticket y **no recibe
+  acceso**;
+- si la instalación entra con AD, la persona tiene que estar en el directorio;
+- si entra con Keycloak, la cuenta tiene que existir ya en el reino.
+
+Los campos de nombre no se exigen en la pantalla para no impedir el caso de una cuenta que ya
+existe; el backend los exige sólo cuando tiene que crear la cuenta local. El error vuelve con su
+clave y se lee en el aviso del formulario.
+
+Cuando la cuenta se crea, el ticket lo dice al abrirse: «Cuenta creada para el ticket» si fue
+local, o «Cuenta creada desde el directorio; se le ha enviado el aviso» si fue AD y el correo salió.
+Si el correo falla, el aviso lo dice sin deshacer el alta. El aviso viaja en el servicio del módulo
+y se consume una sola vez; no se pasa por la URL.
+
+### 35.4 Verificación
+
+- Servicio: cuenta local creada sin contraseña, sin correo de alta y con papel `usuario`; el ticket
+  queda con esa cuenta como solicitante y con Soporte como creador.
+- Servicio: cuenta existente activa se reutiliza; cuenta inactiva se rechaza; AD encontrado crea o
+  vincula con los datos del directorio; AD no encontrado y Keycloak no encontrado rechazan sin
+  crear ticket.
+- Servicio: si falta nombre o apellidos en la creación local, se rechaza antes de numerar el ticket.
+- Interfaz: Soporte crea un ticket para un correo nuevo y la ficha muestra a esa persona como
+  solicitante y a Soporte en «Lo abrió».
+- Interfaz: con AD, el recorrido usa una persona del directorio; con Keycloak, el intento de un
+  correo desconocido muestra la clave de error y no crea nada.
+- Correo: la cuenta creada desde AD recibe `auth.accountCreated` una sola vez, sin enlace de
+  contraseña; una cuenta existente o vinculada no lo recibe.
+- Interfaz: tras crear una cuenta local o de AD, el alta navega al ticket y el aviso aparece allí,
+  una sola vez.
+- Pasaron las 260 pruebas del frontend, las fronteras, la compilación, las pruebas de los servicios
+  de tickets, usuarios y mail, y el recorrido de interfaz en PC y móvil. La migración `v1.0.1`
+  dejó las 28 filas de plantillas en la base aislada.

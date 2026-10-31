@@ -5,8 +5,8 @@
 // Lo que hace falta saber —qué versión está puesta— lo dice el número.
 //
 // **Se cambia al cerrar una versión**, en el mismo trabajo en que se etiqueta el repositorio: la
-// versión de la aplicación y la del esquema de la base son la misma cosa, y `1.0.0` es la que nombra
-// `backend/migrations/v1.0.0.sql` (docs/ambientes.md, sección 5).
+// versión de la aplicación y la del esquema de la base son la misma cosa, y `1.0.1` es la que nombra
+// `backend/migrations/v1.0.1.sql` (docs/ambientes.md, sección 5).
 //
 // Vive en `shared` porque lo lee el módulo que publica la marca y lo puede leer cualquiera: no depende
 // de nadie y nadie depende de él (docs/arquitectura.md, sección 4).
@@ -14,7 +14,7 @@ package version
 
 // Version es la versión de esta instalación, sin la `v`: la `v` la pone la interfaz al enseñarla
 // (docs/modules/settings.md, sección 5.9).
-const Version = "1.0.0"
+const Version = "1.0.1"
 
 // Development distingue el árbol todavía abierto de una versión publicada con etiqueta. Al cerrar
 // una versión pasa a false en el mismo cambio que crea la etiqueta y actualiza SourceURL.

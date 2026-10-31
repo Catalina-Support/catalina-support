@@ -300,6 +300,9 @@ func run() error {
 	// contesta `auth` **con la configuración guardada**: la misma búsqueda y la misma cuenta de servicio
 	// con las que se entra (docs/modules/users.md, sección 5, punto 4).
 	usersService.SetDirectory(authService)
+	// El alta de un solicitante desde un ticket necesita saber por dónde entra la instalación:
+	// cuentas locales, AD o Keycloak (docs/modules/users.md, sección 18).
+	usersService.SetAccess(settingsService)
 
 	// El idioma de la instalación es el que se le pone a una cuenta cuando nadie le elige uno.
 

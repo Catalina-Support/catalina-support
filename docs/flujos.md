@@ -1,7 +1,11 @@
 # Flujos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-14
+> **Última actualización:** 2026-10-30
+>
+> **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 3.2 permite que Soporte abra el ticket a nombre de una
+> persona sin cuenta, creándola en el mismo paso. La cuenta local no recibe acceso; con AD se exige
+> que la persona esté en el directorio. El recorrido y los correos no cambian.
 >
 > **Enmienda implementada para 1.0.0, 2026-10-14.** La sección 14 incorpora el aviso único a todo
 > Soporte activo cuando un ticket llega por primera vez a prioridad crítica. No se modifica código
@@ -90,12 +94,20 @@ después.
 Igual, con dos diferencias: Soporte **elige al solicitante** (la persona a la que está ayudando) y
 el ticket queda con **creador** y **solicitante** distintos.
 
+**Si la persona no tiene cuenta**, Soporte escribe también su nombre y apellidos. Con el método
+local se crea una cuenta `usuario` **sin contraseña y sin correo de alta**: sirve para identificarla
+y avisarla, pero **no le da acceso**. Con AD la persona tiene que estar en el directorio y la cuenta
+se crea o vincula desde allí; con Keycloak tiene que existir ya en el reino. El ticket y la cuenta
+se crean en el mismo paso (`docs/modules/tickets.md`, sección 35; `docs/modules/users.md`, sección
+18).
+
 **Se ve**: el ticket aparece en **Tickets principales** —la lista de todo lo que hay—, en el «Mis
-tickets» del técnico al que le tocó el turno y **también en «Mis tickets» del solicitante**, porque es
-su ticket: lo verá y podrá responder cuando entre.
+tickets» del técnico al que le tocó el turno y **también en «Mis tickets» del solicitante** cuando
+tenga acceso, porque es su ticket: lo verá y podrá responder.
 
 **Correo**: a Soporte, igual que en 3.1. **Al solicitante no se le avisa de que se ha creado**: no lo
-creó él, y un correo diciendo «has creado un ticket» sería ruido.
+creó él, y un correo diciendo «has creado un ticket» sería ruido. Sí recibe los avisos posteriores
+del ticket, que es lo que dice el producto.
 
 ## 4. Triaje y atención en Soporte
 
