@@ -141,7 +141,10 @@ func newManager(models, token string) *manager {
 	}
 	m.resolveAcceleration()
 	m.command = func(s modelSpec) *exec.Cmd {
-		args := []string{"--model", filepath.Join(m.dir(s), s.Files[0].Name), "--alias", s.Alias, "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "4096", "--threads", "2", "--parallel", "1", "--n-predict", "512", "--no-webui"}
+		// **Sin `--threads` fijo**: llama.cpp usa su valor automático (`-1`), que en esta máquina
+		// resolvió 16 hilos. El límite de 2 era una suposición de la primera máquina y dejaba la
+		// mitad del host sin usar (docs/modules/ai.md, sección 26).
+		args := []string{"--model", filepath.Join(m.dir(s), s.Files[0].Name), "--alias", s.Alias, "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "4096", "--parallel", "1", "--n-predict", "512", "--no-webui"}
 		if m.effectiveAcceleration == "nvidia" {
 			args = append(args, "--n-gpu-layers", "999")
 		}

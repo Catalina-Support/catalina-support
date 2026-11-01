@@ -1,7 +1,13 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-10-31
+>
+> **Medición y cambio del 2026-10-31.** La sección 26 recoge el banco de pruebas de modelos y de
+> hilos. El modelo actual sigue siendo el mejor equilibrio. **Se retiró el `--threads 2` fijo**: el
+> administrador deja que `llama-server` elija y en esta máquina usa **16 hilos**, con una latencia
+> de 1,9 s frente a 4,0 s. La decisión está implementada y cubierta por una prueba del administrador;
+> falta la verificación con la instalación real en desarrollo.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-22.** La sección 25 registra que el contrato vigente aceptaba
 > todavía una segunda propuesta insuficiente. El responsable eligió 1A–4A: prompt estructurado,
@@ -1330,3 +1336,71 @@ de dos respuestas pobres. Las 252 pruebas del frontend y la compilación tambié
 real con `qwen2.5-1.5b-instruct` transformó el borrador informal inglés sobre el reinicio de una
 impresora en dos oraciones profesionales, con «Please», petición de verificación y siguiente paso;
 la propuesta superó el validador y se mostró en la interfaz para revisión.
+
+## 26. Banco de pruebas de modelos e hilos
+
+> **Decisión del 2026-10-31.** El banco vive en `tests/ai-benchmark/` y no toca el motor activo ni
+> producción. La conclusión es que el modelo actual sigue siendo el mejor equilibrio y que la
+> mejora de velocidad está en los hilos, no en cambiar de modelo.
+
+### 26.1 Método
+
+Ocho casos (resumen y última acción, español e inglés, principal e interno) con el texto exacto que
+arma `tickets`. Cada petición usa:
+
+- el mismo mensaje de sistema de `oficioDe`;
+- el mismo mensaje de usuario de `pedirGlobalUnaVez`, incluida la exigencia de `{"text":"…"}`;
+- `temperature: 0.2`, `max_tokens: 320` y `response_format: {"type":"json_object"}`;
+- `llama-server` con `--ctx-size 4096 --parallel 1 --n-predict 512 --no-webui` y los hilos que se
+  indiquen.
+
+Cada respuesta se contrasta con el texto entregado: JSON, idioma, tope de 40 palabras, hechos
+esperados, nombres propios y números que no aparecen en la entrada, y revisión humana de la frase.
+El detalle por respuesta está en `tests/ai-benchmark/report.md`.
+
+### 26.2 Resultados
+
+| Modelo y hilos | Correctos | Latencia media | Memoria del motor |
+| --- | ---: | ---: | ---: |
+| Qwen2.5-1.5B · 2 hilos (actual) | 7/8 | 4,0 s | 1,191 GiB |
+| Qwen2.5-1.5B · 4 hilos | 6/8 | 2,4 s | 1,191 GiB |
+| Qwen2.5-1.5B · 8 hilos | 7/8 | 2,0 s | 1,191 GiB |
+| Qwen2.5-1.5B · 16 hilos | 7/8 | 1,9 s | 1,191 GiB |
+| Qwen2.5-1.5B · 32 hilos | 7/8 | 2,5 s | 1,191 GiB |
+| Gemma 3 1B · 2 hilos | 5/8 | 4,4 s | 880 MiB |
+| Qwen3-0.6B · razonamiento por defecto | 4/8 | 11,3 s | 717 MiB |
+| Qwen3-0.6B · razonamiento desactivado | 0/8 | 1,4 s | 717 MiB |
+| Qwen3-1.7B · razonamiento por defecto | 3/8 | 26,3 s | 1,576 GiB |
+| Qwen3-1.7B · razonamiento desactivado | 5/8 | 4,1 s | 1,576 GiB |
+| Qwen2.5-0.5B · 2 hilos | 3/8 | 1,6 s | 493 MiB |
+
+### 26.3 Lectura
+
+- **El modelo actual no se cambia por uno más rápido**: ninguno gana a la vez en velocidad y
+  contenido. Qwen3 con razonamiento es mucho más lento y trunca; sin razonamiento mejora la
+  latencia pero falla idioma, contenido o la última acción. Gemma 3 1B no es más rápida y comete
+  errores de contenido. Qwen2.5-0.5B es rapidísimo pero repite el motivo en vez de la última acción.
+- **La mejora real está en los hilos**: la máquina tiene 32 núcleos y `ai-manager` arrancaba
+  `llama-server` con `--threads 2`. **Se retiró ese límite**: `llama-server` usa su valor
+  automático (`-1`) y en esta máquina elige **16 hilos**, con 1,9 s de media frente a 4,0 s. 8 hilos
+  daban 2,0 s y 32 hilos 2,5 s; el automático acierta con los núcleos físicos.
+- **La última acción es el caso frágil**: incluso el modelo actual repite a veces el motivo en vez
+  del hecho final. No es un problema de modelo únicamente; hay que repetir el banco y revisar el
+  encargo antes de cambiar nada.
+
+### 26.4 Implementación
+
+`ai-manager/main.go` ya no pasa `--threads`: deja que `llama-server` elija. La prueba
+`TestCommandLetsLlamaChooseTheHostThreads` comprueba que los argumentos no contienen `--threads` y
+que siguen ahí `--ctx-size 4096`, `--parallel 1` y `--n-predict 512`. También se comprobó que el
+servidor, sin el argumento, registra `n_threads = 16` en esta máquina.
+
+### 26.5 Recomendación
+
+1. Mantener **Qwen2.5-1.5B** como modelo activo.
+2. Verificar en desarrollo que el arranque automático mantiene la salud y la latencia; si el host
+   cambia de núcleos, no hay que tocar código.
+3. Repetir el banco al menos tres veces por caso y añadir tickets reales anonimizados antes de
+   llevar cualquier otro cambio a producción.
+4. No añadir Qwen3 al catálogo todavía: necesita desactivar razonamiento, más techo de memoria y
+   ajustes de encargo.
