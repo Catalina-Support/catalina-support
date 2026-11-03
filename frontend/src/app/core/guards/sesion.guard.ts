@@ -32,10 +32,11 @@ export const sesionActiva: CanActivateFn = async (_route, state) => {
   }
 
   const usuario = sesion.usuario();
+  const ruta = rutaSinConsulta(state.url);
   if (
     (await setup.estadoDeInstalacion()).aiRequired &&
-    state.url !== '/settings' &&
-    state.url !== '/forbidden'
+    ruta !== '/settings' &&
+    ruta !== '/forbidden'
   ) {
     return usuario?.isAdmin
       ? router.createUrlTree(['/settings'], { queryParams: { ai: 'required' } })
@@ -44,6 +45,16 @@ export const sesionActiva: CanActivateFn = async (_route, state) => {
 
   return true;
 };
+
+/**
+ * La ruta de una URL, sin query ni fragmento.
+ *
+ * **Se compara la ruta, no la URL completa**: la redirección por IA añade `?ai=required` y, si se
+ * compara contra `/settings`, la siguiente vuelta no coincide y se entra en un bucle infinito.
+ */
+export function rutaSinConsulta(url: string): string {
+  return url.split('?')[0].split('#')[0] || '/';
+}
 
 /**
  * Sólo para quien ha entrado **y** tiene uno de esos papeles.

@@ -65,7 +65,7 @@ export const EN: Textos = {
       'The language of the whole installation: interface, dates, emails, and AI-generated text.',
     traduccionTitulo: 'Review language change',
     traduccionAyuda:
-      'Review and correct all twelve templates before applying the language to the whole installation.',
+      'Review and correct all fourteen templates before applying the language to the whole installation.',
     traduccionCosto:
       'The external provider may charge for 22 requests: a conservative estimate of 12,000 input tokens and 8,000 output tokens. You can accept or edit the templates manually.',
     traducirConfirmando: 'Accept cost and translate',
@@ -76,7 +76,7 @@ export const EN: Textos = {
     aplicarIdioma: 'Apply language',
     correos: 'The emails',
     correosAyuda:
-      'The ten emails the application sends, in both languages, are edited on their own screen: it belongs to the mail module, and from here you only get to it.',
+      'The fourteen emails the application sends, in both languages, are edited on their own screen: it belongs to the mail module, and from here you only get to it.',
     editarCorreos: 'Edit the emails',
     region: 'Time zone',
     regionAyuda:
@@ -551,7 +551,7 @@ export const EN: Textos = {
   correos: {
     titulo: 'The emails',
     descripcion:
-      'The ten emails the application sends, in both languages. The text is the voice of the institution, and whoever is in charge changes it.',
+      'The fourteen emails the application sends, in both languages. The text is the voice of the institution, and whoever is in charge changes it.',
     queCorreo: 'Which email',
     editado: 'This email has your text, not the factory one.',
     deFabrica: 'This email carries the factory text.',
@@ -588,6 +588,7 @@ export const EN: Textos = {
   },
 
   plantillas: {
+    'auth.accountCreated': 'Account created from a ticket',
     'ticket.created': 'New ticket, to the technician',
     'ticket.escalated': 'Escalated ticket, to Development',
     'ticket.waitingUser': 'We need something from the user',
@@ -1048,10 +1049,10 @@ export const EN: Textos = {
     'ai.invalid': 'The summary engine answered something we cannot read.',
     'mail.translation.costConfirmationRequired':
       'Confirm the possible provider cost or edit the templates manually.',
-    'mail.translation.incomplete': 'Review all twelve templates before applying the language.',
+    'mail.translation.incomplete': 'Review all fourteen templates before applying the language.',
     'mail.translation.protectedChanged':
       'The translation changed HTML or a marker. Correct that template manually.',
-    'settings.language.reviewRequired': 'Review all twelve templates before applying the language.',
+    'settings.language.reviewRequired': 'Review all fourteen templates before applying the language.',
     'tickets.mention.notAllowed': 'You cannot mention anyone in this ticket.',
 
     'auth.invalidCredentials': 'The email address or the password is not correct.',
@@ -1226,7 +1227,7 @@ export const EN: Textos = {
     'tickets.tag.tooLong': 'A tag cannot be longer than 32 characters.',
 
     'mail.template.notFound': 'That template does not exist.',
-    'mail.template.unknownKey': 'That is not one of the ten emails.',
+    'mail.template.unknownKey': 'That is not one of the fourteen emails.',
     'mail.language.unknown': 'That language does not exist.',
     'mail.subject.required': 'The subject cannot be empty.',
     'mail.body.required': 'The body cannot be empty.',

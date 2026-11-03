@@ -1,7 +1,12 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-23
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** La guarda `sesionActiva` comparaba la URL completa con
+> `/settings` y `/forbidden`; como la redirección añade `?ai=required`, volvía a redirigir en bucle y
+> dejaba la aplicación sin cargar. Ahora compara **la ruta sin query** y no repite la redirección si
+> ya está en la pantalla de destino.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** Corrige la entrada contra Active
 > Directory real: admite nombre de usuario o correo, conserva el filtro base de la instalación y
