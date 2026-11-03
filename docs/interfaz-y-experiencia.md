@@ -1,7 +1,11 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** El pie del menú lateral repetía «Administrador» tres veces
+> cuando el nombre, el papel y la capacidad coincidían. La capacidad sólo se añade cuando aporta
+> algo distinto del papel.
 >
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-22.** La sección 51 reduce a 16 px el margen horizontal de las
 > cuatro bandejas, elimina su máximo de ancho y fija Ticket y Action en los extremos con aire

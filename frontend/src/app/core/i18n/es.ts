@@ -422,6 +422,8 @@ export const ES = {
     asignado: '{quien} se lo asignó a {detalle}',
     estado: '{quien} lo pasó a «{estado}»',
     estadoSistema: 'El ticket volvió a «{estado}»',
+    estadoAlEquipo: '{quien} pasó el ticket al equipo técnico',
+    estadoAlEquipoSistema: 'El ticket pasó al equipo técnico',
     escalado: '{quien} lo escaló a Desarrollo',
     resuelto: '{quien} lo marcó como resuelto',
     cerrado: '{quien} lo cerró',
