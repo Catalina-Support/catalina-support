@@ -38,9 +38,9 @@ const RUTAS_QUE_NO_ECHAN_A_NADIE = [
   '/api/auth/password/reset',
 ];
 
-/** Un fallo de este catálogo describe al administrador local, no la salud del backend. */
-function esCatalogoLocalDeIA(url: string): boolean {
-  return /\/api\/(setup|settings)\/ai\/models(?:\?.*)?$/.test(url);
+/** Un fallo de una dependencia de IA describe esa dependencia, no la salud del backend. */
+function esDependenciaDeIA(url: string): boolean {
+  return /\/api\/(?:(?:setup|settings)\/ai\/models|mail\/language\/drafts)(?:\?.*)?$/.test(url);
 }
 
 export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
@@ -75,7 +75,7 @@ export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
         if (
           error.status === 0 ||
           error.status === 502 ||
-          (error.status === 503 && !esCatalogoLocalDeIA(peticion.url))
+          (error.status === 503 && !esDependenciaDeIA(peticion.url))
         ) {
           disponibilidad.noDisponible();
         }

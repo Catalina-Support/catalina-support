@@ -1,7 +1,12 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** El editor decía «Los diez correos» aunque había catorce y la
+> plantilla `auth.accountCreated` aparecía como clave cruda porque no tenía etiqueta. Se corrigen los
+> textos a catorce, se añade la etiqueta en español e inglés y se actualizan los mensajes de revisión
+> de idioma y la clave de error de plantilla desconocida.
 >
 > **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 19 añade el correo `auth.accountCreated`, la plantilla
 > número 14, para avisar a la persona a la que se acaba de crear cuenta desde un ticket. Entra en

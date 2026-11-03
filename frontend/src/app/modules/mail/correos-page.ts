@@ -31,7 +31,7 @@ const ESPERA_DE_VISTA_PREVIA = 700;
  * **Configuración lleva hasta aquí**, y no edita los correos ella misma: llamar a `/api/mail/**` desde
  * `settings` rompería la regla dura de modularidad (`docs/modules/mail.md`, decisión 15).
  *
- * Los diez correos a la izquierda, y el elegido a la derecha **con sus dos idiomas al lado** —en PC—
+ * Los catorce correos a la izquierda, y el elegido a la derecha **con sus dos idiomas al lado** —en PC—
  * o apilados en móvil: es la misma carta contada dos veces, y verlas juntas es lo que permite
  * comprobar que dicen lo mismo (`docs/interfaz-y-experiencia.md`, sección 3.8).
  *
@@ -73,7 +73,7 @@ export class CorreosPage {
 
   protected readonly idiomas = IDIOMAS;
 
-  /** Los trece correos, sin repetir: las plantillas vienen en dos idiomas. */
+  /** Los catorce correos, sin repetir: las plantillas vienen en dos idiomas. */
   protected readonly correos = computed(() => {
     const vistos = new Set<string>();
 

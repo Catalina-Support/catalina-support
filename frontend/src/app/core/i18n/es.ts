@@ -66,7 +66,7 @@ export const ES = {
       'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
     traduccionTitulo: 'Revisar el cambio de idioma',
     traduccionAyuda:
-      'Revisa y corrige las trece plantillas antes de aplicar el idioma a toda la instalación.',
+      'Revisa y corrige las catorce plantillas antes de aplicar el idioma a toda la instalación.',
     traduccionCosto:
       'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
     traducirConfirmando: 'Aceptar costo y traducir',
@@ -77,7 +77,7 @@ export const ES = {
     aplicarIdioma: 'Aplicar idioma',
     correos: 'Los correos',
     correosAyuda:
-      'Los diez correos que manda la aplicación, en los dos idiomas, se editan en su propia pantalla: es del módulo de correo, y aquí sólo se llega a ella.',
+      'Los catorce correos que manda la aplicación, en los dos idiomas, se editan en su propia pantalla: es del módulo de correo, y aquí sólo se llega a ella.',
     editarCorreos: 'Editar los correos',
     region: 'Región horaria',
     regionAyuda:
@@ -564,7 +564,7 @@ export const ES = {
   correos: {
     titulo: 'Los correos',
     descripcion:
-      'Los diez correos que manda la aplicación, en los dos idiomas. El texto es la voz de la institución, y lo cambia quien manda.',
+      'Los catorce correos que manda la aplicación, en los dos idiomas. El texto es la voz de la institución, y lo cambia quien manda.',
     queCorreo: 'Qué correo',
     editado: 'Este correo tiene tu texto, no el de fábrica.',
     deFabrica: 'Este correo lleva el texto de fábrica.',
@@ -600,9 +600,10 @@ export const ES = {
     cargando: 'Cargando los correos…',
   },
 
-  // Los diez correos, como se llaman en la pantalla. Es una sección propia porque el tipo de los
+  // Los catorce correos, como se llaman en la pantalla. Es una sección propia porque el tipo de los
   // textos admite un solo nivel de claves.
   plantillas: {
+    'auth.accountCreated': 'Alta de una cuenta desde un ticket',
     'ticket.created': 'Ticket nuevo, al técnico',
     'ticket.escalated': 'Ticket escalado, a Desarrollo',
     'ticket.waitingUser': 'Le pedimos algo al usuario',
@@ -1092,10 +1093,10 @@ export const ES = {
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
     'mail.translation.costConfirmationRequired':
       'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
-    'mail.translation.incomplete': 'Revisa las trece plantillas antes de aplicar el idioma.',
+    'mail.translation.incomplete': 'Revisa las catorce plantillas antes de aplicar el idioma.',
     'mail.translation.protectedChanged':
       'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
-    'settings.language.reviewRequired': 'Revisa las trece plantillas antes de aplicar el idioma.',
+    'settings.language.reviewRequired': 'Revisa las catorce plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -1274,7 +1275,7 @@ export const ES = {
     'tickets.tag.tooLong': 'La etiqueta no puede pasar de 32 caracteres.',
 
     'mail.template.notFound': 'Esa plantilla no existe.',
-    'mail.template.unknownKey': 'Ese correo no es ninguno de los diez.',
+    'mail.template.unknownKey': 'Ese correo no es ninguno de los catorce.',
     'mail.language.unknown': 'Ese idioma no existe.',
     'mail.subject.required': 'El asunto no puede estar vacío.',
     'mail.body.required': 'El cuerpo no puede estar vacío.',

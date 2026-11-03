@@ -561,7 +561,7 @@ export class SettingsPage implements OnDestroy {
         this.ajustes.guardar({
           ...configuracion,
           name: this.nombreElegido().trim(),
-          // El idioma sólo cambia mediante la aplicación atómica de las trece plantillas.
+          // El idioma sólo cambia mediante la aplicación atómica de las catorce plantillas.
           language: configuracion.language,
         }),
       this.t().configuracion.instalacionGuardada,

@@ -1246,5 +1246,9 @@ tarjeta local, ofrece **Volver a intentar** y mantiene utilizables servidor prop
 externo. Ese 503 no activa por sí solo la pantalla global de servidor caído. Los fallos al probar o
 guardar el modo elegido conservan sus mensajes toast actuales.
 
+**Corrección de QA, 2026-11-03.** El 503 de `POST /api/mail/language/drafts` —la IA no disponible
+para traducir— tampoco activa la pantalla global de servidor caído: se trata como fallo de una
+dependencia de IA, deja el aviso dentro de Configuración y mantiene accesible **Editar manualmente**.
+
 La regresión focal cubre Configuración en PC y móvil con el backend general sano y el administrador
 local ausente. No cambian endpoints, secretos, permisos, obligatoriedad de IA ni estado efectivo.
