@@ -707,6 +707,11 @@ test.describe('El recorrido de un ticket', () => {
 
     await expect(page.getByText('Cerrado').first()).toBeVisible();
 
+    // **El chip de la cabecera sigue al número que se enseña**: en el interno cerrado, el `INT-…`
+    // lleva «Cerrado» y no el «En progreso» del principal.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`INT-${numero}`);
+    await expect(page.locator('main app-estado').first()).toContainText('Cerrado');
+
     // Y el caso ha vuelto a Soporte: el principal ya no está escalado.
     await entrarComo(page, soporte.email);
     await page.goto(`/tickets/${numero}`);
