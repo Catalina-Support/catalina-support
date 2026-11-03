@@ -196,6 +196,10 @@ export async function entrar(page: Page, email: string, password: string): Promi
   // **El nombre va exacto**: el botón de la pantalla de entrada se llama «Entrar» y el de Keycloak
   // «Entrar con Keycloak», y sin `exact` el localizador encuentra los dos y el clic no sabe a cuál ir.
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  // **Se espera a que la entrada termine**. Sin esto, la llamada siguiente (`goto('/settings')`)
+  // puede adelantar a la respuesta del login y quedarse en la pantalla de entrada; así fallaban
+  // pruebas de Configuración que no tenían nada que ver con el cambio que se estaba midiendo.
+  await expect(page).not.toHaveURL(/\/login(?:\?.*)?$/, { timeout: 15_000 });
 }
 
 /** Sale por donde sale una persona: el botón del menú lateral. */
