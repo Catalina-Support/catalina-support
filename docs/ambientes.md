@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-11-04
 >
+> **Corrección del 2026-11-04: el correo de producción no va en `prod.env`.** Vive en
+> `installation_settings.smtp_*` y se configura desde el paso 4 de `/setup` o desde Configuración →
+> Correo con la cuenta de fábrica. La sección 4.5 conservaba la instrucción antigua de editar
+> `prod.env` y reiniciar el backend; ya está corregida.
+>
 > **Corrección del 2026-11-04.** El seeder configura la IA local de ejemplo cuando la instalación no
 > está sellada. Antes la dejaba sellada con `aiRequired` y `ai_settings` vacío, y los usuarios no
 > podían pasar de «Sin permiso» hasta que un administrador la configurara.
@@ -629,9 +634,12 @@ Es un despliegue normal, con tres cosas que sólo pasan una vez. **Dos están he
 | **2. La cuenta `admin` entra** con la contraseña de `config/env/prod.env` | **Hecho y comprobado**: entra con papel `administrador`, y con la contraseña equivocada contesta `auth.invalidCredentials`. La contraseña vive **sólo** en ese archivo, que no se versiona (`docs/usuarios-y-permisos.md`, sección 8) |
 | **3. Dar de alta a Soporte y a Desarrollo** desde la aplicación | **Pendiente, y depende del correo**: el alta manda un enlace por correo, y **el correo de producción está sin configurar**. Mientras siga así, **nadie puede establecer su contraseña** y la única cuenta que entra es la de fábrica |
 
-**El correo saliente es lo primero que hay que rellenar** en `config/env/prod.env`: el servidor, el
-usuario, su contraseña y la dirección de remitente; después, reiniciar el backend. En cuanto haya
-correo, el paso 3 se hace desde la aplicación en un minuto.
+**El correo saliente se configura desde la aplicación**, no en `config/env/prod.env`: en el paso 4
+de `/setup` si la instalación aún no está sellada, o en **Configuración → Correo** con la cuenta de
+fábrica si ya lo está. Se prueban los datos con «Enviar correo de prueba» y se guardan en
+`installation_settings.smtp_*`; no hace falta reiniciar el backend. `prod.env` sigue conteniendo
+`ADMIN_PASSWORD`, la clave de la IA y los datos de PostgreSQL, pero **ninguna variable `SMTP_*`**.
+En cuanto haya correo, el paso 3 se hace desde la aplicación en un minuto.
 
 **El vhost y el certificado ya están puestos** desde el 2026-09-22, y **el dominio sigue respondiendo
 503** a propósito: la 1.0.0 todavía no está cerrada y el responsable puede cambiar cosas antes de
