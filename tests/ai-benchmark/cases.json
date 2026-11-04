@@ -1,0 +1,254 @@
+{
+  "cases": [
+    {
+      "id": "es-summary-password",
+      "kind": "summary",
+      "language": "es",
+      "text": [
+        "[TARGET_NUMBER] CS-2026-0101",
+        "[TARGET_STATE] en progreso",
+        "[TARGET_REASON] Desde ayer, al intentar entrar en la aplicación, aparece «usuario o contraseña incorrectos». No he cambiado la contraseña.",
+        "[TARGET_LAST_EVENT] estado",
+        "[TARGET_LAST_ACTOR] Soporte Uno",
+        "[TARGET_LAST_STATE] en progreso",
+        "[TARGET_LAST_COMMENT] ",
+        "",
+        "Requester: Ana Pérez",
+        "Created by: Ana Pérez",
+        "Main assignee: Soporte Uno",
+        "",
+        "MAIN: CS-2026-0101 (en progreso)",
+        "Subject: No puedo entrar en la aplicación",
+        "Description: Desde ayer, al intentar entrar en la aplicación, aparece «usuario o contraseña incorrectos». No he cambiado la contraseña.",
+        "",
+        "Comments:",
+        "- Soporte Uno (comentario): ¿Puedes probar desde otro navegador?",
+        "",
+        "Category: Software",
+        "Priority: medium"
+      ],
+      "facts": [
+        ["contraseña"],
+        ["entrar", "acceder", "iniciar sesión", "login"]
+      ]
+    },
+    {
+      "id": "es-last-router",
+      "kind": "last_action",
+      "language": "es",
+      "text": [
+        "[TARGET_NUMBER] CS-2026-0102",
+        "[TARGET_STATE] resuelto",
+        "[TARGET_REASON] La conexión se corta cada pocos minutos desde esta mañana.",
+        "[TARGET_LAST_EVENT] resuelto",
+        "[TARGET_LAST_ACTOR] Juan Carlos Estevez Ayala",
+        "[TARGET_LAST_STATE] resuelto",
+        "[TARGET_LAST_COMMENT] Reiniciamos el router y, por el momento, la conexión parece funcionar correctamente.",
+        "",
+        "Requester: Ana Pérez",
+        "Created by: Ana Pérez",
+        "Main assignee: Juan Carlos Estevez Ayala",
+        "",
+        "MAIN: CS-2026-0102 (resuelto)",
+        "Subject: La conexión se corta",
+        "Description: La conexión se corta cada pocos minutos desde esta mañana.",
+        "",
+        "Comments:",
+        "- Juan Carlos Estevez Ayala (comentario): Reiniciamos el router y, por el momento, la conexión parece funcionar correctamente.",
+        "",
+        "Category: Red",
+        "Priority: high"
+      ],
+      "facts": [
+        ["juan carlos estevez ayala"],
+        ["router"],
+        ["resolvió", "resuelto", "marcó", "reinició", "reinici"]
+      ]
+    },
+    {
+      "id": "en-summary-vpn",
+      "kind": "summary",
+      "language": "en",
+      "text": [
+        "[TARGET_NUMBER] CS-2026-0103",
+        "[TARGET_STATE] en progreso",
+        "[TARGET_REASON] The VPN client shows \"certificate expired\" when connecting from home. The user needs a renewed certificate.",
+        "[TARGET_LAST_EVENT] estado",
+        "[TARGET_LAST_ACTOR] Support One",
+        "[TARGET_LAST_STATE] en progreso",
+        "[TARGET_LAST_COMMENT] ",
+        "",
+        "Requester: John Smith",
+        "Created by: John Smith",
+        "Main assignee: Support One",
+        "",
+        "MAIN: CS-2026-0103 (en progreso)",
+        "Subject: VPN certificate expired",
+        "Description: The VPN client shows \"certificate expired\" when connecting from home. The user needs a renewed certificate.",
+        "",
+        "Comments:",
+        "- Support One (comment): Please send a screenshot of the error.",
+        "",
+        "Category: Network",
+        "Priority: high"
+      ],
+      "facts": [
+        ["vpn"],
+        ["certificate", "certificado"],
+        ["expired", "expiró", "caducado", "caducó"]
+      ]
+    },
+    {
+      "id": "en-last-escalation",
+      "kind": "last_action",
+      "language": "en",
+      "text": [
+        "[TARGET_NUMBER] INT-CS-2026-0103",
+        "[TARGET_STATE] escalado",
+        "[TARGET_REASON] The session service returns 502 when signing in; Support already checked the network.",
+        "[TARGET_LAST_EVENT] escalado",
+        "[TARGET_LAST_ACTOR] Marta Ruiz",
+        "[TARGET_LAST_STATE] escalado",
+        "[TARGET_LAST_COMMENT] The session service returns 502; this needs a code change.",
+        "",
+        "Requester: John Smith",
+        "Created by: Support One",
+        "Internal created by: Marta Ruiz",
+        "",
+        "INTERNAL: INT-CS-2026-0103 (escalado)",
+        "Subject: VPN certificate expired",
+        "Escalation reason: The session service returns 502 when signing in; Support already checked the network.",
+        "",
+        "Category: Network",
+        "Priority: high"
+      ],
+      "facts": [
+        ["marta ruiz"],
+        ["escalated", "escaló", "development", "desarrollo"],
+        ["502"]
+      ]
+    },
+    {
+      "id": "es-summary-internal",
+      "kind": "summary",
+      "language": "es",
+      "text": [
+        "[TARGET_NUMBER] INT-CS-2026-0104",
+        "[TARGET_STATE] en progreso",
+        "[TARGET_REASON] El servidor de sesiones devuelve 502 al iniciar sesión; Soporte ya comprobó la red.",
+        "[TARGET_LAST_EVENT] estado",
+        "[TARGET_LAST_ACTOR] Desarrollo Uno",
+        "[TARGET_LAST_STATE] en progreso",
+        "[TARGET_LAST_COMMENT] ",
+        "",
+        "Requester: Luis Mora",
+        "Created by: Soporte Dos",
+        "Internal created by: Soporte Dos",
+        "Internal assignee: Desarrollo Uno",
+        "",
+        "INTERNAL: INT-CS-2026-0104 (en progreso)",
+        "Subject: No puedo iniciar sesión",
+        "Escalation reason: El servidor de sesiones devuelve 502 al iniciar sesión; Soporte ya comprobó la red.",
+        "",
+        "Category: Software",
+        "Priority: critical"
+      ],
+      "facts": [
+        ["sesiones", "session"],
+        ["502"],
+        ["iniciar sesión", "entrar", "login", "acceder"]
+      ]
+    },
+    {
+      "id": "en-last-internal-resolved",
+      "kind": "last_action",
+      "language": "en",
+      "text": [
+        "[TARGET_NUMBER] INT-CS-2026-0105",
+        "[TARGET_STATE] resuelto",
+        "[TARGET_REASON] The report service returns duplicated rows after the last deployment.",
+        "[TARGET_LAST_EVENT] resuelto",
+        "[TARGET_LAST_ACTOR] Dev One",
+        "[TARGET_LAST_STATE] resuelto",
+        "[TARGET_LAST_COMMENT] Updated the session configuration and restarted the service.",
+        "",
+        "Requester: Laura Díaz",
+        "Created by: Support Two",
+        "Internal created by: Support Two",
+        "Internal assignee: Dev One",
+        "",
+        "INTERNAL: INT-CS-2026-0105 (resuelto)",
+        "Subject: Duplicated rows in the report",
+        "Escalation reason: The report service returns duplicated rows after the last deployment.",
+        "",
+        "Category: Software",
+        "Priority: high"
+      ],
+      "facts": [
+        ["dev one"],
+        ["resolved", "fixed", "resolvió", "corrigió"],
+        ["configuration", "configuración", "service", "servicio"]
+      ]
+    },
+    {
+      "id": "es-summary-printer",
+      "kind": "summary",
+      "language": "es",
+      "text": [
+        "[TARGET_NUMBER] CS-2026-0106",
+        "[TARGET_STATE] nuevo",
+        "[TARGET_REASON] La impresora de la segunda planta no imprime desde esta mañana; enciende pero los trabajos quedan en cola.",
+        "[TARGET_LAST_EVENT] creado",
+        "[TARGET_LAST_ACTOR] Carlos Núñez",
+        "[TARGET_LAST_STATE] nuevo",
+        "[TARGET_LAST_COMMENT] ",
+        "",
+        "Requester: Carlos Núñez",
+        "Created by: Carlos Núñez",
+        "",
+        "MAIN: CS-2026-0106 (nuevo)",
+        "Subject: La impresora no imprime",
+        "Description: La impresora de la segunda planta no imprime desde esta mañana; enciende pero los trabajos quedan en cola.",
+        "",
+        "Category: Impresoras",
+        "Priority: medium"
+      ],
+      "facts": [
+        ["impresora"],
+        ["imprime", "imprimir", "cola"]
+      ]
+    },
+    {
+      "id": "en-last-user-reply",
+      "kind": "last_action",
+      "language": "en",
+      "text": [
+        "[TARGET_NUMBER] CS-2026-0107",
+        "[TARGET_STATE] en espera",
+        "[TARGET_REASON] The application closes unexpectedly when opening the reports section.",
+        "[TARGET_LAST_EVENT] comentario",
+        "[TARGET_LAST_ACTOR] Ana Pérez",
+        "[TARGET_LAST_STATE] en espera",
+        "[TARGET_LAST_COMMENT] I tried from another browser and the error persists.",
+        "",
+        "Requester: Ana Pérez",
+        "Created by: Ana Pérez",
+        "Main assignee: Support One",
+        "",
+        "MAIN: CS-2026-0107 (en espera)",
+        "Subject: The application closes in Reports",
+        "Description: The application closes unexpectedly when opening the reports section.",
+        "",
+        "Comments:",
+        "- Ana Pérez (comment): I tried from another browser and the error persists.",
+        "",
+        "Category: Software",
+        "Priority: high"
+      ],
+      "facts": [
+        ["ana pérez", "ana perez"],
+        ["tried", "probó", "respondió", "comentó", "persists", "persiste"]
+      ]
+    }
+  ]
+}

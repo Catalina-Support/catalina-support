@@ -8,6 +8,7 @@ dist/
 tests/e2e/informe/
 tests/e2e/test-results/
 tests/e2e/resultados/
+tests/ai-benchmark/results/
 
 # Artefactos de Go
 backend/server
