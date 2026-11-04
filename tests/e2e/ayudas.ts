@@ -173,7 +173,12 @@ export async function crearCuentaLista(
 }
 
 /** Entra con esa cuenta por la pantalla de entrada. */
-export async function entrar(page: Page, email: string, password: string): Promise<void> {
+export async function entrar(
+  page: Page,
+  email: string,
+  password: string,
+  esperarExito = true,
+): Promise<void> {
   await page.goto('/login');
 
   // **Con el método en Keycloak no hay formulario**, y la cuenta de fábrica tiene su puerta discreta:
@@ -199,7 +204,10 @@ export async function entrar(page: Page, email: string, password: string): Promi
   // **Se espera a que la entrada termine**. Sin esto, la llamada siguiente (`goto('/settings')`)
   // puede adelantar a la respuesta del login y quedarse en la pantalla de entrada; así fallaban
   // pruebas de Configuración que no tenían nada que ver con el cambio que se estaba midiendo.
-  await expect(page).not.toHaveURL(/\/login(?:\?.*)?$/, { timeout: 15_000 });
+  // Las pruebas que esperan un rechazo pasan `esperarExito = false`.
+  if (esperarExito) {
+    await expect(page).not.toHaveURL(/\/login(?:\?.*)?$/, { timeout: 15_000 });
+  }
 }
 
 /** Sale por donde sale una persona: el botón del menú lateral. */

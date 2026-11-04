@@ -178,7 +178,7 @@ test.describe('La lista de usuarios', () => {
 
     // Y de verdad está fuera: la cuenta existe y la contraseña es la buena, y aun así no entra.
     await salir(page);
-    await entrar(page, ana.email, ana.password);
+    await entrar(page, ana.email, ana.password, false);
     await expect(page.getByText('Tu cuenta está desactivada')).toBeVisible();
 
     // Reactivarla la devuelve: se hace por la API, porque la pantalla ya se ha probado.
