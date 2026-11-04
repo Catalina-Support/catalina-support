@@ -1,7 +1,11 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-03
+> **Última actualización:** 2026-11-04
+>
+> **Corrección del 2026-11-04.** El seeder configura la IA local de ejemplo cuando la instalación no
+> está sellada. Antes la dejaba sellada con `aiRequired` y `ai_settings` vacío, y los usuarios no
+> podían pasar de «Sin permiso» hasta que un administrador la configurara.
 >
 > **Corrección de QA, 2026-11-03.** El seeder de desarrollo borra todas las cuentas antes de crear
 > las once de ejemplo. Antes dejaba vivas las cuentas de solicitante creadas por pruebas anteriores
@@ -455,6 +459,13 @@ se escribe con una mano es lo que hace que probar no dé pereza.
 **Borra para dejar un estado conocido**: los tickets que hubiera —también los creados a mano
 probando—, **todas las cuentas** salvo las once de ejemplo y los adjuntos que no sean la marca. Es un
 seeder de desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
+
+**La demo nace con la IA local configurada** (`mode=local`, URL del motor de `ai.yml` y modelo
+`qwen2.5-1.5b-instruct`) cuando la instalación aún no está sellada. Sin eso, el seed dejaba
+`aiRequired` activo con `ai_settings` vacío y los usuarios sólo veían «Sin permiso» hasta que un
+administrador configurara la IA. El motor puede no estar levantado: en ese caso los resúmenes dicen
+«Sin motor», pero el resto de la aplicación se usa con normalidad. Una instalación ya sellada
+conserva su configuración.
 
 **Sólo cuando la instalación no está sellada**, deja configurados los dos caminos de directorio
 y activa el método `local` (enmienda aprobada del 2026-10-03): escribe la configuración del directorio apuntando al `ldap` que levanta
