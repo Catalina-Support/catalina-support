@@ -254,7 +254,7 @@ export const EN: Textos = {
   instalacion: {
     titulo: 'First start',
     intro:
-      'Five steps to get this installation running. Each step is saved as you move on, so you can close it and pick up where you left off.',
+      'Five steps to get this installation running. Each step is saved as you move on, so what you already entered is still there when you return.',
     paso1: 'The installation',
     paso2: 'How people sign in',
     paso3: 'Where it is',

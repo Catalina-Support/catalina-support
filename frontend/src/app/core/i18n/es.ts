@@ -255,7 +255,7 @@ export const ES = {
   instalacion: {
     titulo: 'Primer arranque',
     intro:
-      'Cinco pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
+      'Cinco pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que lo que ya escribiste sigue ahí al volver.',
     paso1: 'La instalación',
     paso2: 'Cómo se entra',
     paso3: 'Dónde está',
