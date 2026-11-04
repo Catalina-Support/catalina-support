@@ -1,7 +1,11 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-23
+> **Última actualización:** 2026-11-04
+>
+> **Corrección del 2026-11-04.** El texto del asistente ya no promete recordar el paso al recargar:
+> los datos de cada paso se conservan, pero `/setup` vuelve al paso 1. Se ajustó la frase para que
+> diga lo que de verdad hace.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20.** La sección 19 incorpora el icono
 > opcional del sitio al paso 1. Las decisiones 1A–14A están cerradas; pasaron 253 pruebas frontend,
