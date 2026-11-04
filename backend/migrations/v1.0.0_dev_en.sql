@@ -854,7 +854,7 @@ UPDATE installation_settings
        entry_method = 'local',
        -- **El correo saliente de desarrollo vive aquí**, no en el entorno (decisión del responsable,
        -- 2026-09-30): es el buzón de pruebas, y sin él no saldría ningún correo en el entorno.
-       ai_url          = 'http://catalina_support_ai:8080',
+       ai_url          = 'http://ai:8080',
        ai_model        = 'qwen2.5-1.5b-instruct',
        smtp_host       = 'mail',
        smtp_port       = '1025',
@@ -875,10 +875,11 @@ UPDATE installation_settings
 -- nace sellada con `aiRequired` y los usuarios no pueden pasar de la pantalla de sin permiso hasta
 -- que un administrador configure la IA. El motor puede no estar levantado; entonces los resúmenes
 -- dirán «Sin motor», pero los tickets y el resto de la aplicación siguen usables.
+-- La URL usa el nombre del servicio `ai` de `ai.yml`, que es el que resuelve la red de Compose.
 UPDATE ai_settings SET
     mode = 'local',
     provider = '',
-    base_url = 'http://catalina_support_ai:8080',
+    base_url = 'http://ai:8080',
     model = 'qwen2.5-1.5b-instruct',
     auth_type = 'none',
     auth_header = '',
