@@ -411,6 +411,8 @@ export const EN: Textos = {
     asignado: '{quien} assigned it to {detalle}',
     estado: '{quien} moved it to “{estado}”',
     estadoSistema: 'The ticket went back to “{estado}”',
+    estadoAlEquipo: '{quien} moved the ticket to the technical team',
+    estadoAlEquipoSistema: 'The ticket moved to the technical team',
     escalado: '{quien} escalated it to Development',
     resuelto: '{quien} marked it as resolved',
     cerrado: '{quien} closed it',

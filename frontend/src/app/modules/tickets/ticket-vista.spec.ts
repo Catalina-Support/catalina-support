@@ -513,6 +513,64 @@ describe('TicketVista', () => {
     }
   });
 
+  it('si el motor no contesta tras las relecturas, deja de decir «Generando…»', async () => {
+    vi.useFakeTimers();
+    try {
+      const conPendiente: DetalleDeTicket = {
+        ...DETALLE,
+        ticket: {
+          ...DETALLE.ticket,
+          insights: {
+            summary: { state: 'pendiente' },
+            ultimaAccion: { state: 'pendiente' },
+          },
+        },
+      };
+
+      const fixture = montar('soporte', conPendiente);
+      for (let intento = 0; intento < 8; intento += 1) {
+        vi.advanceTimersByTime(8000);
+        http.expectOne('/api/tickets/CS-2026-0001').flush(conPendiente);
+        await Promise.resolve();
+        fixture.detectChanges();
+      }
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Sin motor de IA');
+      vi.advanceTimersByTime(80000);
+      http.expectNone('/api/tickets/CS-2026-0001');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('al usuario el paso a escalado se le cuenta como equipo técnico, no como otro «En curso»', () => {
+    const conHistorial: DetalleDeTicket = {
+      ...DETALLE,
+      history: [
+        {
+          id: 1,
+          event: 'estado',
+          toState: 'en progreso',
+          actor: SOPORTE,
+          createdAt: '2026-09-28T09:00:00Z',
+        },
+        {
+          id: 2,
+          event: 'estado',
+          toState: 'escalado',
+          actor: SOPORTE,
+          createdAt: '2026-09-28T09:30:00Z',
+        },
+      ],
+    };
+
+    const fixture = montar('usuario', conHistorial);
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain('pasó el ticket al equipo técnico');
+    expect(texto).toContain('En curso');
+  });
+
   it('añadir un observador llama al servicio con su cuenta y lo guarda al momento', async () => {
     const fixture = montar('soporte');
     const host = fixture.nativeElement as HTMLElement;

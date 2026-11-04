@@ -25,11 +25,23 @@ async function partirDelNombreDeFabrica(page: Page): Promise<void> {
   await page.getByLabel('Nombre', { exact: true }).fill('');
 
   const guardar = page.getByRole('button', { name: 'Guardar la instalación' });
+  // La pantalla puede tardar un instante en tener la configuración; hasta entonces el botón está
+  // apagado. Se le da margen para no confundir «cargando» con «no hay nada que guardar».
+  for (let intento = 0; intento < 10 && !(await guardar.isEnabled()); intento += 1) {
+    await page.waitForTimeout(200);
+  }
   if (!(await guardar.isEnabled())) {
     return;
   }
 
+  // **Se espera la respuesta, no sólo el toast**: el toast de un guardado anterior puede seguir
+  // visible y hacer creer que éste ya terminó. Así la prueba no sigue con el nombre viejo.
+  const guardado = page.waitForResponse(
+    (respuesta) =>
+      respuesta.url().includes('/api/settings') && respuesta.request().method() === 'PUT',
+  );
   await guardar.click();
+  await guardado;
   await expect(page.getByText('La instalación se ha guardado.')).toBeVisible();
 }
 
