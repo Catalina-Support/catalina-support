@@ -110,7 +110,7 @@ test.describe('Entrar y salir', () => {
   });
 
   test('con la contraseña equivocada no se entra y se dice por qué', async ({ page }) => {
-    await entrar(page, FABRICA.email, 'esta-no-es-la-contraseña');
+    await entrar(page, FABRICA.email, 'esta-no-es-la-contraseña', false);
 
     // El mensaje es el traducido, no la clave del backend.
     await expect(page.getByText('El correo o la contraseña no son correctos.')).toBeVisible();
@@ -135,7 +135,7 @@ test.describe('Entrar y salir', () => {
     // Una cuenta cualquiera no entra si no existe: aquí lo que se comprueba es que el error es el
     // mismo que con una contraseña mal puesta, sin decir si la cuenta existe.
     const cuenta = cuentaDePrueba();
-    await entrar(page, cuenta.email, 'una-contraseña-larga');
+    await entrar(page, cuenta.email, 'una-contraseña-larga', false);
 
     await expect(page.getByText('El correo o la contraseña no son correctos.')).toBeVisible();
   });

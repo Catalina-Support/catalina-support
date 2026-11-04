@@ -47,18 +47,16 @@ DELETE FROM ticket_tag_names;
 DELETE FROM ticket_categories;
 DELETE FROM ticket_number_counters;
 
--- Las cuentas de ejemplo, con sus enlaces de contraseña. Las de las pruebas (`e2e-…`) no se tocan.
---
--- La comparación va **en minúsculas**: el correo se guarda tal y como lo escribe quien lo escribe, y
--- «Ana.Perez@Demo.com» es la misma persona que «ana.perez@demo.com». Sin esto, una cuenta de
--- ejemplo con mayúsculas sobrevivía a la limpieza y el entorno dejaba de estar en un estado conocido.
-DELETE FROM password_tokens WHERE user_id IN (SELECT id FROM users WHERE lower(email) LIKE '%@demo.com');
--- **Las cuentas de las pruebas de interfaz también se borran** (decisión del responsable, 2026-09-28):
--- cada pasada de la capa de Playwright crea las suyas —con la marca del momento—, así que aquí no se
--- pierde nada, y dejarlas convertía el buscador de a quién etiquetar en una lista de **miles** de
--- personas que se llaman todas igual (2 521 cuentas y 636 técnicos activos, medido el 2026-09-28). El
--- entorno de ejemplo queda con las **once** cuentas de siempre.
-DELETE FROM users WHERE lower(email) LIKE '%@demo.com';
+-- Las cuentas de ejemplo, con sus enlaces de contraseña. **Se borran todas**: el seeder deja el
+-- entorno con las once cuentas de siempre y ninguna cuenta de pasadas anteriores —`e2e-…`,
+-- `solicitante-…`, `ad-alta-…`— que ensuciaba la lista de Usuarios.
+DELETE FROM password_tokens;
+-- Los rastros de administración y de directorio cuelgan de la cuenta y no se borran en cascada.
+DELETE FROM user_directory_events;
+DELETE FROM user_admin_events;
+-- El aviso de qué se borra está en `scripts/dev-seed-runner.sh`; este archivo es sólo el juego de
+-- datos y no debe dejar cuentas fuera de él.
+DELETE FROM users;
 
 -- ============================================================================
 -- 2. Las cuentas: cinco que piden, tres de Soporte y tres de Desarrollo

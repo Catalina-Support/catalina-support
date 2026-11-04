@@ -133,8 +133,12 @@ describe('apiInterceptor', () => {
     expect(disponibilidad.sinServidor()).toBe(false);
   });
 
-  it('no confunde el catálogo local ausente con una caída del backend', async () => {
-    for (const url of ['/api/setup/ai/models', '/api/settings/ai/models']) {
+  it('no confunde una dependencia de IA caída con una caída del backend', async () => {
+    for (const url of [
+      '/api/setup/ai/models',
+      '/api/settings/ai/models',
+      '/api/mail/language/drafts',
+    ]) {
       const llamada = firstValueFrom(http.get(url));
       control
         .expectOne(url)
