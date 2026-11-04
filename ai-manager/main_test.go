@@ -298,3 +298,27 @@ func TestAutoFallsBackOnceToCPUWhenNVIDIAStartFails(t *testing.T) {
 	}
 	m.stopProcess()
 }
+
+func TestCommandLetsLlamaChooseTheHostThreads(t *testing.T) {
+	m := newManager(t.TempDir(), "token")
+	spec := modelSpec{ID: "test", Alias: "test", Files: []fileSpec{{Name: "test.gguf"}}}
+	args := m.command(spec).Args
+
+	for _, arg := range args {
+		if arg == "--threads" {
+			t.Fatal("el administrador no debe fijar --threads: llama.cpp elige los del host")
+		}
+	}
+	for _, obligatorio := range []string{"--ctx-size", "4096", "--parallel", "1", "--n-predict", "512"} {
+		encontrado := false
+		for _, arg := range args {
+			if arg == obligatorio {
+				encontrado = true
+				break
+			}
+		}
+		if !encontrado {
+			t.Fatalf("falta %q en los argumentos: %v", obligatorio, args)
+		}
+	}
+}

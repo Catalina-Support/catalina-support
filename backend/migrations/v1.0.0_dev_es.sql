@@ -871,6 +871,24 @@ UPDATE installation_settings
        updated_at     = now()
  WHERE id = 1;
 
+-- **La IA local de ejemplo queda configurada**, no sólo la URL heredada: sin esto la instalación
+-- nace sellada con `aiRequired` y los usuarios no pueden pasar de la pantalla de sin permiso hasta
+-- que un administrador configure la IA. El motor puede no estar levantado; entonces los resúmenes
+-- dirán «Sin motor», pero los tickets y el resto de la aplicación siguen usables.
+UPDATE ai_settings SET
+    mode = 'local',
+    provider = '',
+    base_url = 'http://catalina_support_ai:8080',
+    model = 'qwen2.5-1.5b-instruct',
+    auth_type = 'none',
+    auth_header = '',
+    credential_version = NULL,
+    credential_nonce = NULL,
+    credential_ciphertext = NULL,
+    tested_at = now(),
+    updated_at = now()
+WHERE id = 1;
+
 END IF;
 END $$;
 

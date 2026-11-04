@@ -86,7 +86,7 @@ else
 fi
 
 echo "AVISO: se recrean todos los tickets, categorías, todas las cuentas y adjuntos de desarrollo (salvo la marca)."
-echo "La configuración se conserva si la instalación está sellada; si no, se completa y sella una demo local."
+echo "La configuración se conserva si la instalación está sellada; si no, se completa y sella una demo local con IA local de ejemplo."
 echo "1/3  Esquema versionado verificado."
 
 echo "2/3  Aplicando los datos de ejemplo…"
