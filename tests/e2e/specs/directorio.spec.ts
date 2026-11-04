@@ -152,7 +152,7 @@ test.describe('El camino de AD', () => {
 
   /** Con la contraseña equivocada, lo dice el directorio y no se entra. */
   test('la contraseña equivocada la rechaza el directorio', async ({ page, request }) => {
-    await entrar(page, ANA.email, 'la-que-no-es');
+    await entrar(page, ANA.email, 'la-que-no-es', false);
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByText('El directorio ha rechazado esas credenciales.')).toBeVisible();
@@ -210,7 +210,7 @@ test.describe('El camino de AD', () => {
 
     // Y su contraseña local ya no sirve: la cuenta es del directorio y allí manda su contraseña.
     await salir(page);
-    await entrar(page, MARTA.email, CONTRASENA_DE_PRUEBA);
+    await entrar(page, MARTA.email, CONTRASENA_DE_PRUEBA, false);
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByText('El directorio ha rechazado esas credenciales.')).toBeVisible();
   });

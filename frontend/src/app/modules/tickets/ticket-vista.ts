@@ -357,6 +357,7 @@ export class TicketVista implements OnDestroy {
       const pendientes = this.resumenesPendientes();
 
       if (!pendientes) {
+        this.motorAgotado.set(false);
         this.pararLaEsperaDelMotor();
         return;
       }
@@ -364,6 +365,7 @@ export class TicketVista implements OnDestroy {
       // Otro cálculo —el ticket se ha movido— abre una espera nueva y devuelve el margen entero.
       if (this.relecturaDe !== detalle.ticket.updatedAt) {
         this.relecturaDe = detalle.ticket.updatedAt;
+        this.motorAgotado.set(false);
         this.intentosDelMotor = 0;
       }
 
@@ -468,7 +470,11 @@ export class TicketVista implements OnDestroy {
 
   protected estadoDelResumen(resumen: Resumen | undefined): string {
     if (resumen?.state === 'pendiente') {
-      return this.t().tickets.resumenPendiente;
+      // **No se queda en «Generando…» para siempre**: si se agotaron las relecturas, el motor no
+      // está contestando y se dice, igual que el backend cuando marca `sin_motor`.
+      return this.motorAgotado()
+        ? this.t().tickets.resumenSinMotor
+        : this.t().tickets.resumenPendiente;
     }
     if (resumen?.state === 'error' || resumen?.state === 'sin_motor') {
       return resumen.state === 'sin_motor'
@@ -597,6 +603,9 @@ export class TicketVista implements OnDestroy {
   /** La fecha de la última actualización con la que se empezó a esperar: si cambia, es otro cálculo. */
   private relecturaDe: string | null = null;
 
+  /** Si se agotaron las relecturas sin que el motor contestara. */
+  private readonly motorAgotado = signal(false);
+
   /** Las relecturas que lleva esta espera. Cada cálculo nuevo —otra `updatedAt`— reinicia la cuenta. */
   private intentosDelMotor = 0;
 
@@ -611,6 +620,9 @@ export class TicketVista implements OnDestroy {
   /** Programa la siguiente relectura de la ficha, si toca y queda margen. */
   private programarLaRelecturaDelMotor(): void {
     if (this.temporizadorDelMotor !== null || this.intentosDelMotor >= INTENTOS_DEL_MOTOR) {
+      if (this.intentosDelMotor >= INTENTOS_DEL_MOTOR) {
+        this.motorAgotado.set(true);
+      }
       return;
     }
 
@@ -799,6 +811,18 @@ export class TicketVista implements OnDestroy {
   /** La frase de una entrada del historial: el texto entero vive en el diccionario. */
   protected frase(entrada: EntradaDeHistorial): string {
     const textos = this.t();
+
+    // **El usuario no ve «escalado»**: para él, el paso a Desarrollo es «pasó al equipo técnico».
+    // Sin esto, `en progreso` y `escalado` se leen los dos como «En curso» y parecen duplicados.
+    const pasoAlEquipo =
+      this.esUsuario() && (entrada.event === 'escalado' || entrada.toState === 'escalado');
+    if (pasoAlEquipo) {
+      return entrada.actor
+        ? interpolar(textos.historial.estadoAlEquipo, {
+            quien: this.nombreDe(entrada.actor),
+          })
+        : textos.historial.estadoAlEquipoSistema;
+    }
 
     if (!entrada.actor) {
       if (entrada.event === 'estado') {

@@ -1,7 +1,11 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** Cuando el motor no contesta y la ficha agota sus relecturas, los
+> resúmenes dejan de decir «Generando…» y muestran «Sin motor de IA». Antes el estado pendiente se
+> quedaba visible para siempre.
 >
 > **Corrección aprobada, implementada y verificada el 2026-10-22.** La sección 25 registra que el contrato vigente aceptaba
 > todavía una segunda propuesta insuficiente. El responsable eligió 1A–4A: prompt estructurado,

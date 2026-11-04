@@ -14,9 +14,10 @@
 #      sus escalados, sus comentarios y sus adjuntos.
 #   3. Copia los archivos de los adjuntos (`config/seed/en/` o `config/seed/es/`) a `_files/`, en la carpeta de su ticket.
 #
-# **Es de desarrollo y borra**: los tickets que hubiera —también los que hayas creado probando—, las
-# cuentas `@demo.com` y los adjuntos que no sean la marca. Deja el entorno exactamente como dice el
-# seeder, que es lo que hace que se pueda volver a él después de trastear o de correr las pruebas.
+# **Es de desarrollo y borra**: los tickets que hubiera —también los que hayas creado probando—, **todas
+# las cuentas** salvo las once de ejemplo y los adjuntos que no sean la marca. Deja el entorno exactamente
+# como dice el seeder, que es lo que hace que se pueda volver a él después de trastear o de correr las
+# pruebas; así no sobreviven cuentas `solicitante-…` o `ad-alta-…` de pasadas anteriores.
 #
 # **Las once cuentas entran con `123123123`** (decisión del responsable, 2026-09-25): en desarrollo se
 # entra y se sale muchas veces al día, y una contraseña que se escribe con una mano es lo que hace que
@@ -84,7 +85,7 @@ else
     }
 fi
 
-echo "AVISO: se recrean todos los tickets, categorías, cuentas @demo.com y adjuntos de desarrollo (salvo la marca)."
+echo "AVISO: se recrean todos los tickets, categorías, todas las cuentas y adjuntos de desarrollo (salvo la marca)."
 echo "La configuración se conserva si la instalación está sellada; si no, se completa y sella una demo local."
 echo "1/3  Esquema versionado verificado."
 

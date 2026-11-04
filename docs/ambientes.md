@@ -1,7 +1,11 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-22
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** El seeder de desarrollo borra todas las cuentas antes de crear
+> las once de ejemplo. Antes dejaba vivas las cuentas de solicitante creadas por pruebas anteriores
+> (`solicitante-*`, `ad-alta-*`) y la lista de Usuarios quedaba sucia.
 >
 > **Enmienda propuesta el 2026-10-21:** la sección 28 ofrece seeders explícitos por idioma y fija
 > el inglés para el reinicio de la demo pública.
@@ -449,8 +453,8 @@ se escribe con una mano es lo que hace que probar no dé pereza.
   `tests/e2e/ayudas.ts`. Cambiar la de las once no toca ninguna prueba.
 
 **Borra para dejar un estado conocido**: los tickets que hubiera —también los creados a mano
-probando—, las cuentas `@demo.com` y los adjuntos que no sean la marca. Es un seeder de
-desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
+probando—, **todas las cuentas** salvo las once de ejemplo y los adjuntos que no sean la marca. Es un
+seeder de desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
 
 **Sólo cuando la instalación no está sellada**, deja configurados los dos caminos de directorio
 y activa el método `local` (enmienda aprobada del 2026-10-03): escribe la configuración del directorio apuntando al `ldap` que levanta
@@ -460,9 +464,9 @@ Configuración**, que es justo lo que hay que poder probar a mano. Los dos servi
 cada uno en su archivo (`active-directory.yml` y `keycloak.yml`): con ellos levantados, «Probar la
 conexión» contesta que sí; sin ellos, contesta que no, que es la verdad.
 
-- **La limpieza de las cuentas va en minúsculas** (`lower(email) LIKE '%@demo.com'`): el correo se
-  guarda como lo escribe quien lo escribe, y sin eso una cuenta de ejemplo con mayúsculas sobrevivía
-  a la limpieza y el entorno dejaba de estar en el estado conocido que promete este guion.
+- **La limpieza borra todas las cuentas** antes de crear las once de ejemplo: así no sobreviven las
+  `solicitante-…` o `ad-alta-…` de pruebas anteriores, que ensuciaban la lista y el buscador. La
+  instalación sellada conserva su configuración; las cuentas son sólo datos de desarrollo.
 
 ### 3.4 El motor local de IA: su propio compose y recursos por entorno
 

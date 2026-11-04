@@ -1,7 +1,11 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-03
+>
+> **Corrección de QA, 2026-11-03.** El historial del usuario distinguía mal el paso a `escalado`: se
+> traducía como «En curso», igual que `en progreso`, y parecía un movimiento duplicado. Ahora el
+> usuario lee «pasó el ticket al equipo técnico», sin jerga interna.
 >
 > **Propuesta del 2026-10-30, aprobada, implementada y verificada.** La sección 35 permite que Soporte cree un ticket a nombre de una
 > persona sin cuenta, creando la cuenta en el mismo alta. La cuenta local nace sin acceso; con AD
