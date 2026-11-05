@@ -32,6 +32,8 @@ El mismo ticket mantiene la ayuda de IA visible y revisable: **Resumen**, **Últ
 - Tickets principales e internos con conversaciones independientes y vista simultánea.
 - **Resumen** y **Última acción** redactados por IA, más mejora profesional de borradores.
 - Motor local de IA, servidor compatible propio o proveedor externo.
+- CPU por defecto; aceleración NVIDIA opcional en Linux o Docker Desktop WSL2.
+- Fechas en formato ISO (`AAAA-MM-DD hh:mm`) en los dos idiomas.
 - Categorías, etiquetas, prioridad, adjuntos, menciones, observadores y cronología auditable.
 - Cuentas locales, Active Directory o Keycloak, un método de entrada a la vez.
 - Plantillas de correo editables, marca de la instalación, zona horaria y dirección pública.
@@ -91,7 +93,7 @@ son opcionales y se cargan después.
 
 No necesitas instalar Go, Node.js, PostgreSQL ni nginx en la máquina. Asignar al menos 4 GB de RAM
 a Docker es un punto de partida práctico. El modelo local predeterminado descarga alrededor de
-1,1 GB y no requiere GPU.
+1,1 GB y funciona en CPU; la GPU NVIDIA es opcional.
 
 ### 1. Clonar y levantar
 
@@ -102,6 +104,10 @@ docker compose -f dev.yml up -d --build
 docker compose -f ai.yml up -d --build
 docker compose -f dev.yml ps
 ```
+
+Para aceleración NVIDIA, usa `docker compose -f ai.yml -f ai-nvidia.yml up -d --build` en lugar del
+comando de `ai.yml`. Docker debe ver la GPU; en Linux hace falta NVIDIA Container Toolkit y en
+Windows, Docker Desktop con backend WSL2.
 
 El entorno espera a PostgreSQL, aplica el esquema y después inicia el backend. No carga datos de
 ejemplo. Si la aplicación todavía no está lista, sigue la compilación:
@@ -125,9 +131,9 @@ pantalla de entrada.
 | Correo saliente | Servidor `mail`, puerto `1025`, sin TLS ni credenciales; los demás valores editables ya aparecen completos |
 | Inteligencia artificial | **Local**; abre el catálogo, acepta la licencia del modelo 1.5B, descárgalo, actívalo y ejecuta la prueba obligatoria |
 
-La prueba de correo comprueba conexión y autenticación sin enviar un mensaje. La IA es obligatoria:
-el asistente sólo termina después de una generación válida. Después entra con la cuenta de fábrica
-de desarrollo **`admin` / `admin`**, crea usuarios y abre sus invitaciones en
+La prueba de correo envía un mensaje real a la dirección que escribas; compruébalo en Mailpit. La IA
+es obligatoria: el asistente sólo termina después de una generación válida. Después entra con la
+cuenta de fábrica de desarrollo **`admin` / `admin`**, crea usuarios y abre sus invitaciones en
 **[Mailpit](http://127.0.0.1:11004)**.
 
 La contraseña de desarrollo vive en `config/env/dev.env`. Producción usa su propio
@@ -149,7 +155,7 @@ docker compose -f dev.yml run --rm seed-es
 ```
 
 Esto crea 11 cuentas, 25 tickets y 5 adjuntos. También **elimina los tickets, categorías,
-etiquetas, cuentas `@demo.com` y adjuntos de desarrollo existentes, excepto la marca**.
+etiquetas, todas las cuentas locales y adjuntos de desarrollo existentes, excepto la marca**.
 Usa `seed-en` si prefieres los ejemplos en inglés. Ejecuta cualquiera de los dos sólo cuando quieras restaurarlos de forma consciente.
 
 El seeder conserva la marca, idioma, dirección pública, correo, método de entrada, directorios, IA,
