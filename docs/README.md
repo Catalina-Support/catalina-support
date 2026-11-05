@@ -1,8 +1,10 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-24
+> **Última actualización:** 2026-11-05
 >
+> **Informe de QA añadido el 2026-11-05.** El informe integral de la versión 1.0.1 queda en
+> `informe_qa_20261105.md`, con los once hallazgos cerrados y la verificación completa en WSL2.
 > **Cambio coordinado aprobado, implementado y verificado el 2026-10-24:** `prueba-local.md` limpia
 > la suite Playwright para que describa exclusivamente el producto actual, cree todos sus datos sin
 > seeders y use un motor de IA falso determinista para resúmenes y redacción. El responsable eligió
@@ -561,6 +563,7 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | **as-built** | Coordinación de la limpieza integral de Playwright |
+| `informe_qa_20261105.md` | **as-built** | QA integral de la 1.0.1: hallazgos cerrados, WSL2, fechas ISO y pruebas |
 | `proyecto-abierto.md` | **propuesta** | Demo inglesa y capturas bilingües del sitio oficial |
 | `prueba-local.md` | **as-built** | Suite vigente, aislada y sin contratos históricos |
 | `arquitectura.md` | **propuesta** | Datos de demostración separados por idioma |
