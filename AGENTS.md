@@ -88,7 +88,7 @@ completo.
 | `docs/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |
 | `docs/modules/tickets.md` | **as-built**: prioridad transaccional desde el ticket interno |
 | `docs/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
-| `docs/ambientes.md` | **as-built**: variante opcional NVIDIA en Linux |
+| `docs/ambientes.md` | **as-built**: variante opcional NVIDIA en Linux y Windows WSL2 |
 | `docs/interfaz-y-experiencia.md` | **as-built**: navegación y gráficos visibles del Dashboard sin detalle de tickets |
 | `docs/modules/settings.md` | **as-built**: selección y estado efectivo de aceleración local |
 | `docs/primer-arranque.md` | **as-built**: aceleración local en el paso 5 |

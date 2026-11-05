@@ -1,7 +1,12 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-05
+>
+> **Soporte WSL2 verificado, 2026-11-05.** La frontera CPU/NVIDIA de la sección 28 también funciona
+> en Windows con Docker Desktop WSL2: GPU visible con `--gpus all`, administrador en modo `nvidia`,
+> modelo activo y resúmenes reales. Linux con NVIDIA Container Toolkit sigue siendo el otro camino;
+> los contenedores Windows nativos quedan fuera.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-22: ejemplos bilingües explícitos.** La sección 32 separa los
 > datos de demostración en inglés y español. El hallazgo de partida es que el único seeder actual
@@ -1529,6 +1534,12 @@ argumentos de `llama-server`, gobierna el proceso y reporta ejecución efectiva.
 inspecciona dispositivos del host ni ejecuta Docker. `ai.yml` conserva la imagen CPU y
 `ai-nvidia.yml` sustituye sólo la construcción y exposición necesarias para CUDA, compartiendo red,
 token y volumen de modelos.
+
+La variante NVIDIA se soporta en **Linux con NVIDIA Container Toolkit** y en **Windows con Docker
+Desktop WSL2**; en ambos casos Docker debe ver la GPU (`docker run --gpus all ... nvidia-smi`). El
+motor sigue siendo Linux en los dos caminos: no se usan contenedores Windows nativos. La
+verificación del 2026-11-05 usó una RTX A2000 12 GB, dejó el modelo activo y saludable y generó los
+dos resúmenes de un ticket real.
 
 El cambio de modo es una operación serializada del administrador. Conserva la especificación y el
 proceso anterior hasta que el nuevo supere salud y generación; si falla, reactiva el anterior antes
