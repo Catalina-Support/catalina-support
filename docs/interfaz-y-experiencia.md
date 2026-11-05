@@ -1,7 +1,12 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-03
+> **Última actualización:** 2026-11-05
+>
+> **Decisión del responsable, 2026-11-05.** Las fechas se leen en **ISO `AAAA-MM-DD hh:mm`**, en 24
+> horas y con el mismo orden en español y en inglés. En móvil y tableta vertical el conmutador de la
+> vista doble conserva **Principal** e **Interno**; «Los dos» no se ofrece porque no caben dos
+> columnas. `/setup` sigue volviendo al paso 1 al recargar y no promete recordar la posición.
 >
 > **Corrección de QA, 2026-11-03.** El pie del menú lateral repetía «Administrador» tres veces
 > cuando el nombre, el papel y la capacidad coincidían. La capacidad sólo se añade cuando aporta
@@ -1022,13 +1027,14 @@ Soporte y Desarrollo**, porque el usuario no ve el interno.
 
 - **Cuándo aparece**: cuando el ticket tiene interno y el papel puede verlo. Si no hay interno, no
   hay nada que comparar y no aparece nada.
-- **Cómo se controla**: un conmutador con tres posiciones —**Principal**, **Los dos**, **Interno**—
-  en la cabecera del detalle. «Los dos» es el valor por defecto cuando existe el interno, porque
-  quien está ahí quiere las dos cosas.
+- **Cómo se controla**: un conmutador —**Principal**, **Los dos**, **Interno**— en la cabecera del
+  detalle. En PC tiene tres posiciones; «Los dos» es el valor por defecto cuando existe el interno,
+  porque quien está ahí quiere las dos cosas.
 - **En PC**: dos columnas, la conversación de cada ticket y su ficha. Es comparar, y comparar es leer
   en paralelo.
-- **En móvil y tablet vertical**: no caben dos columnas, así que el mismo conmutador cambia entre
-  uno y otro. **Nunca dos columnas estrechas**: es peor que verlas por separado.
+- **En móvil y tablet vertical**: no caben dos columnas, así que el mismo conmutador conserva
+  **Principal** e **Interno** y cambia entre uno y otro; **«Los dos» no se ofrece**. **Nunca dos
+  columnas estrechas**: es peor que verlas por separado.
 - **Cómo no confundirlos**: el interno lleva fondo distinto y su número `INT-…` bien visible. Si los
   dos se ven iguales, alguien va a escribir en el ticket equivocado.
 - **Las acciones son del ticket que se está tocando**: en «Los dos» cada columna tiene su ficha y sus
@@ -1373,6 +1379,8 @@ Casi nadie diseña esto y es lo que más se sufre:
 
 - **El número del ticket, siempre visible y copiable.**
 - **La fecha de última actualización** en la lista y en el detalle: lo que lleva días parado se ve.
+- **Las fechas** se leen `AAAA-MM-DD hh:mm`, en 24 horas y con el mismo orden en los dos idiomas;
+  nunca se enseña la `T` ni la `Z` del ISO del backend.
 - **Sin refrescos automáticos ni contadores en vivo** (no hay tiempo real, `docs/modules/tickets.md`): la
   lista se actualiza al entrar y con un botón de refrescar. Un contador que no se actualiza solo es
   peor que no tenerlo.

@@ -46,14 +46,15 @@ describe('las etiquetas del módulo users', () => {
 });
 
 describe('fechaCorta', () => {
-  it('escribe la fecha como se lee, no como la manda el backend', () => {
+  it('escribe la fecha en ISO legible, no como la manda el backend', () => {
     const escrita = fechaCorta('2026-09-24T16:30:00Z', 'es');
 
-    // El backend manda ISO; la pantalla no enseña ISO. Y el año va entero: «24/9/26» se confunde.
-    expect(escrita).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    // El backend manda ISO con T y Z; la pantalla enseña `AAAA-MM-DD hh:mm`.
+    expect(escrita).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     expect(escrita).toContain('2026');
     expect(escrita).not.toContain('T');
     expect(escrita).not.toContain('Z');
+    expect(fechaCorta('2026-09-24T16:30:00Z', 'en')).toBe(escrita);
   });
 
   it('quien no ha entrado nunca no tiene fecha, y la pantalla pone su texto', () => {
@@ -68,32 +69,25 @@ describe('fechaCorta', () => {
   it('una marca en UTC se lee con el día que es en la zona de la instalación', () => {
     // `2026-09-30T02:00:00Z` es **el 29 a las 21:00** en Guayaquil: el día cambia, que es justo el
     // fallo que esto arregla.
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'en', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('2026-09-29 21:00');
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'en', 'America/Guayaquil')).toBe('2026-09-29 21:00');
   });
 
   it('la zona de la instalación manda sobre la del navegador de quien mira', () => {
     // La misma marca leída en dos zonas de la instalación: el navegador sólo puede estar en una, así
     // que al menos una de las dos lecturas demuestra que se usa la zona que se le pasa y no la suya.
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe(
-      '30/09/2026, 16:00',
-    );
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('2026-09-29 21:00');
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe('2026-09-30 16:00');
   });
 
   // La marca es pública: si la zona no llega —o llega un nombre que `Intl` no conoce— se lee con la
   // del navegador, que es lo que se hacía antes, en vez de dejar la lista sin pintar.
   it('sin zona se cae a la del navegador, y no revienta', () => {
     const iso = '2026-09-30T02:00:00Z';
-    const enElNavegador = new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso));
+    const enElNavegador = fechaCorta(iso, 'es');
 
-    expect(fechaCorta(iso, 'es')).toBe(enElNavegador);
+    expect(enElNavegador).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    expect(fechaCorta(iso, 'en')).toBe(enElNavegador);
     expect(fechaCorta(iso, 'es', '')).toBe(enElNavegador);
     expect(fechaCorta(iso, 'es', '   ')).toBe(enElNavegador);
     expect(fechaCorta(iso, 'es', 'Zona/Que-No-Existe')).toBe(enElNavegador);
