@@ -89,11 +89,12 @@ describe('las frases y las fechas', () => {
     expect(interpolar('{quien} lo cerró', {})).toBe(' lo cerró');
   });
 
-  it('la fecha va con su hora, el año entero y en el idioma de quien mira', () => {
+  it('la fecha va con su hora y en formato ISO, igual en los dos idiomas', () => {
     const escrita = fechaHora('2026-09-24T16:30:00Z', 'es');
 
-    expect(escrita).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    expect(escrita).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     expect(escrita).not.toContain('T');
+    expect(fechaHora('2026-09-24T16:30:00Z', 'en')).toBe(escrita);
   });
 
   // **La zona de la instalación manda**: la instalación tiene una zona configurable —un nombre IANA—
@@ -102,30 +103,25 @@ describe('las frases y las fechas', () => {
   it('una marca en UTC se lee con el día que es en la zona de la instalación', () => {
     // `2026-09-30T02:00:00Z` es **el 29 a las 21:00** en Guayaquil: el día cambia, que es justo el
     // fallo que esto arregla.
-    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaHora('2026-09-30T02:00:00Z', 'en', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
+    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('2026-09-29 21:00');
+    expect(fechaHora('2026-09-30T02:00:00Z', 'en', 'America/Guayaquil')).toBe('2026-09-29 21:00');
   });
 
   it('la zona de la instalación manda sobre la del navegador de quien mira', () => {
     // La misma marca leída en dos zonas de la instalación: el navegador sólo puede estar en una, así
     // que al menos una de las dos lecturas demuestra que se usa la zona que se le pasa y no la suya.
-    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe('30/09/2026, 16:00');
+    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('2026-09-29 21:00');
+    expect(fechaHora('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe('2026-09-30 16:00');
   });
 
   // La marca es pública: si la zona no llega —o llega un nombre que `Intl` no conoce— se lee con la
   // del navegador, que es lo que se hacía antes, en vez de dejar la lista sin pintar.
   it('sin zona se cae a la del navegador, y no revienta', () => {
     const iso = '2026-09-30T02:00:00Z';
-    const enElNavegador = new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso));
+    const enElNavegador = fechaHora(iso, 'es');
 
-    expect(fechaHora(iso, 'es')).toBe(enElNavegador);
+    expect(enElNavegador).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    expect(fechaHora(iso, 'en')).toBe(enElNavegador);
     expect(fechaHora(iso, 'es', '')).toBe(enElNavegador);
     expect(fechaHora(iso, 'es', '   ')).toBe(enElNavegador);
     expect(fechaHora(iso, 'es', 'Zona/Que-No-Existe')).toBe(enElNavegador);

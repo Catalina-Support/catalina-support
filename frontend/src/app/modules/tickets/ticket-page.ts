@@ -21,8 +21,9 @@ type FormaDeVer = 'principal' | 'losdos' | 'interno';
  * El detalle de un ticket: **la pieza central**, y una sola pantalla para los cuatro papeles.
  *
  * Aquí vive **la vista doble** (`docs/interfaz-y-experiencia.md`, sección 5): cuando el ticket tiene
- * interno y quien mira puede verlo, aparece el conmutador de tres posiciones —Principal · Los dos ·
- * Interno— y por defecto se ven los dos, porque quien está ahí quiere las dos cosas. **Si no hay
+ * interno y quien mira puede verlo, aparece el conmutador —Principal · Los dos · Interno— y por
+ * defecto se ven los dos, porque quien está ahí quiere las dos cosas. **En móvil y tableta vertical
+ * «Los dos» no se ofrece**: no caben dos columnas y se cambia entre Principal e Interno. **Si no hay
  * interno no aparece nada**: no hay nada que comparar.
  *
  * El usuario **nunca ve el interno** —ni el conmutador, ni la columna—: lo que ve es su principal con

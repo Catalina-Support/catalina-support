@@ -1,6 +1,6 @@
 import type { Textos } from '../../core/i18n/es';
 import type { Idioma } from '../../core/i18n/translation.service';
-import { opcionesConZona } from '../../shared/fechas';
+import { fechaIso } from '../../shared/fechas';
 import type { OpcionSelector } from '../../shared/components/selector';
 import type { Cuenta } from './users.service';
 
@@ -80,38 +80,16 @@ export function seReactivaSola(cuenta: Cuenta): boolean {
 }
 
 /**
- * Una fecha en algo que se lee: «24/09/2026, 16:30».
+ * Una fecha en formato ISO legible: «2026-09-24 16:30».
  *
- * Se escribe en el idioma de quien mira, que es lo que hace que el orden de los números sea el que
- * espera. **El año va entero y los números con dos cifras**: el formato corto del navegador deja
- * «24/9/26», que en una lista de cuentas se lee peor y se confunde con un día de otro mes. Si no hay
- * fecha —nunca ha entrado— se responde vacío, y la pantalla pone su texto.
+ * **El formato es el mismo en español y en inglés** (decisión del responsable, 2026-11-05): una
+ * fecha no cambia de orden al cambiar de idioma. Si no hay fecha —nunca ha entrado— se responde
+ * vacío, y la pantalla pone su texto.
  *
  * **La hora es la de la instalación**, que llega en `zona` (la marca pública): la última entrada se
  * lee a la hora que es donde está la mesa de ayuda, y no a la de quien mira. Si `zona` no llega o
  * `Intl` no la conoce, se cae a la del navegador sin lanzar (`shared/fechas.ts`).
  */
-export function fechaCorta(iso: string | undefined, idioma: Idioma, zona?: string): string {
-  if (!iso) {
-    return '';
-  }
-
-  const momento = new Date(iso);
-  if (Number.isNaN(momento.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat(
-    idioma === 'en' ? 'en-GB' : 'es-ES',
-    opcionesConZona(
-      {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-      zona,
-    ),
-  ).format(momento);
+export function fechaCorta(iso: string | undefined, _idioma: Idioma, zona?: string): string {
+  return fechaIso(iso, zona);
 }
