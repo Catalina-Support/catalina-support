@@ -84,6 +84,7 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
+| `docs/informe_qa_20261105.md` | **as-built**: verificación integral de la versión 1.0.1 |
 | `docs/propósito-y-alcance.md` | **as-built**: Dashboard exclusivamente estadístico sin evaluación ni SLA |
 | `docs/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |
 | `docs/modules/tickets.md` | **as-built**: prioridad transaccional desde el ticket interno |
