@@ -1,7 +1,12 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-03
+> **Última actualización:** 2026-11-05
+>
+> **Soporte WSL2 verificado, 2026-11-05.** La variante NVIDIA de la sección 23 funciona también en
+> Windows con Docker Desktop WSL2. Se probó con una RTX A2000 12 GB, driver 596.51, el modelo
+> `qwen2.5-1.5b-instruct` activo y resúmenes reales generados. Linux con NVIDIA Container Toolkit
+> sigue siendo el otro camino soportado; Windows nativo con contenedores Windows no.
 >
 > **Corrección de QA, 2026-11-03.** Cuando el motor no contesta y la ficha agota sus relecturas, los
 > resúmenes dejan de decir «Generando…» y muestran «Sin motor de IA». Antes el estado pendiente se
@@ -187,7 +192,7 @@ siendo el ticket, y ninguna decisión del sistema se toma a partir de estos camp
 | | |
 | --- | --- |
 | **Dónde** | Un contenedor **`catalina_support_ai`**, aparte del backend, con **llama.cpp** sirviendo un modelo por HTTP |
-| **Modelo** | **Qwen2.5-1.5B-Instruct**, cuantizado **Q4_K_M** (unos 1,1 GB), elegido porque **cabe en la memoria de esta máquina**: no hay GPU y quedaban unos 1,8 GB libres |
+| **Modelo** | **Qwen2.5-1.5B-Instruct**, cuantizado **Q4_K_M** (unos 1,1 GB), elegido porque **cabe en la memoria del host original**: no tenía GPU y quedaban unos 1,8 GB libres. El host actual de desarrollo sí tiene una RTX A2000 y la variante NVIDIA está verificada |
 | **Imagen** | `ghcr.io/ggml-org/llama.cpp:server-b11206`, **con la compilación fijada** (y no la etiqueta móvil `:server`): un `pull` no puede cambiar el motor por debajo sin que nadie lo haya decidido. El tope de memoria son **1500m** (`mem_limit: 1500m` en `ai.yml`) —**`ai.yml` no limita las CPU**— y es lo que impide que se coma la máquina. Lo que gasta, medido en marcha: **~1,44 GiB** —`docker stats` da 1.441-1.448 GiB, el **98% del tope**, y el `VmRSS` del proceso 1,51 GB—, justo por debajo de él |
 | **Arranque** | `ai.yml` con un guion (`config/ai/01-descargar-modelo.sh`) que **descarga el modelo sólo si falta** —a un archivo temporal, y comprobando la cabecera `GGUF` antes de renombrarlo— y después hace `exec` al servidor. El `.gguf` vive en un volumen con nombre, así que sobrevive a `down`/`up` y **no se vuelve a descargar** |
 | **Red** | Una red propia, **`catalina-support-ai`**, a la que entran los backends de desarrollo y de producción. **Un solo contenedor sirve a los dos**: no caben dos (decisión 1) |
@@ -395,7 +400,7 @@ aiService.SetConfiguracion(instalacionesDeLaConfiguracion{settings: settingsServ
 
 | # | Decisión | Quedó así |
 | --- | --- | --- |
-| 1 | **Dónde corre el motor** | **Contenedor local**, un **modelo pequeño** (Qwen2.5-1.5B-Instruct Q4_K_M) **compartido por desarrollo y producción** por la red `catalina-support-ai`. **Decisión del responsable, 2026-09-27**, y la recomendada: **nada del ticket sale del servidor**, al precio de un resumen más humilde. **No caben dos contenedores** —quedaban 1,8 GB libres y el modelo ocupa ~1,1 GB— y **no hay GPU**. La alternativa que descartó era una API externa, mejor y más cara en privacidad |
+| 1 | **Dónde corre el motor** | **Contenedor local**, un **modelo pequeño** (Qwen2.5-1.5B-Instruct Q4_K_M) **compartido por desarrollo y producción** por la red `catalina-support-ai`. **Decisión del responsable, 2026-09-27**, y la recomendada: **nada del ticket sale del servidor**, al precio de un resumen más humilde. **No caben dos contenedores** —el host original tenía 1,8 GB libres y el modelo ocupa ~1,1 GB— y **entonces no había GPU**. La alternativa que descartó era una API externa, mejor y más cara en privacidad. El host actual sí tiene GPU y la variante NVIDIA se verificó en WSL2 |
 | 2 | **Cuándo se genera** | **En segundo plano y con reintento**: el alta no espera al motor. Esta decisión originalmente decía que la aplicación funcionaba sin configurarlo; la sección 9 la corrigió al hacer obligatoria la configuración inicial. Una caída posterior del motor no impide guardar tickets: el campo queda pendiente y se recupera cuando vuelve |
 | 3 | **Los dos idiomas** | **Una sola llamada** que pide `{"es": …, "en": …}`: más rápido que dos y sin traducción de por medio. Si el JSON no llega, se reintenta una vez |
 | 4 | **Cuándo se recalcula la última acción** | **Con cada movimiento**: comentario, estado, escalado, reapertura, cierre, asignación y edición. Es lo que la hace útil: un texto que no se actualiza deja de ser «la última acción» en cuanto alguien escribe |
@@ -1225,22 +1230,24 @@ nombre comercial; no exponen memoria, UUID, bus PCI ni otros identificadores.
 ### 23.4 Distribución y alcance
 
 La imagen CPU actual permanece. Una imagen NVIDIA separada se usa mediante `ai-nvidia.yml`, archivo
-Compose opcional que requiere Linux, GPU NVIDIA y NVIDIA Container Toolkit. La selección física se
-limita con lo que Docker exponga, incluido `NVIDIA_VISIBLE_DEVICES`. La API detecta si esa variante
-no está habilitada y explica el comando requerido sin guardar NVIDIA.
+Compose opcional que requiere **Linux con GPU NVIDIA y NVIDIA Container Toolkit**, o **Windows con
+Docker Desktop WSL2 y una GPU NVIDIA visible**. La selección física se limita con lo que Docker
+exponga, incluido `NVIDIA_VISIBLE_DEVICES`. La API detecta si esa variante no está habilitada y
+explica el comando requerido sin guardar NVIDIA.
 
-Quedan fuera AMD/ROCm, Apple Metal, GPU NVIDIA en Windows/WSL2 como plataforma comprometida,
-selección de dispositivo desde la UI y reparto multi-GPU. CPU continúa soportada mediante Docker en
-Linux, macOS y Windows.
+Quedan fuera AMD/ROCm, Apple Metal, **contenedores Windows nativos**, selección de dispositivo desde
+la UI y reparto multi-GPU. CPU continúa soportada mediante Docker en Linux, macOS y Windows.
 
 ### 23.5 Pruebas
 
 Las pruebas unitarias cubren rechazo explícito de NVIDIA ausente y respaldo de Auto a CPU. La suite
 de settings, las 241 pruebas del frontend, su compilación, la migración repetible y la construcción
-CPU pasaron. Compose resolvió el overlay NVIDIA y confirmó la imagen CUDA fijada; la descarga de sus
-capas, de unos 2 GB, se interrumpió tras validar el manifiesto porque este equipo no tiene GPU ni
-Toolkit. La pasada real NVIDIA queda condicionada a ese host. No se tocó producción, el dominio ni
-la etiqueta `v1.0.0`.
+CPU pasaron. Compose resolvió el overlay NVIDIA y confirmó la imagen CUDA fijada.
+
+La pasada real se completó el 2026-11-05 en Docker Desktop WSL2: la GPU se expuso con `--gpus all`,
+el administrador detectó `NVIDIA RTX A2000 12GB`, activó `qwen2.5-1.5b-instruct`, `/llama-server`
+usó ~1,3 GiB y generó los dos resúmenes de un ticket real. La suite E2E completa pasó con 200 casos
+aprobados y 30 omitidos. No se tocó producción, el dominio ni la etiqueta de versión.
 
 ## 24. Resúmenes por audiencia
 

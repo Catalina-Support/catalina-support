@@ -1,7 +1,12 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-30
+> **Última actualización:** 2026-11-05
+>
+> **Hardware NVIDIA verificado, 2026-11-05.** La selección Auto/CPU/NVIDIA se probó con una RTX
+> A2000 12 GB en Docker Desktop WSL2: el administrador reportó modo efectivo `nvidia`, el modelo
+> quedó activo y la ficha mostró los resúmenes generados. Linux con NVIDIA Container Toolkit sigue
+> siendo el otro camino soportado; Windows nativo con contenedores Windows no.
 >
 > **Enmienda aprobada, implementada y verificada el 2026-10-20: icono del sitio configurable.** La sección 25 incorpora un
 > favicon propio e independiente de los dos logos, con administración en `/setup` y Configuración,
@@ -1138,8 +1143,8 @@ conserva el anterior después de su restauración saludable.
 
 La API no devuelve UUID, bus PCI, memoria ni trazas. La compilación y las 241 pruebas del frontend
 verifican ambos idiomas y el contrato; las pruebas del administrador cubren NVIDIA ausente y el
-respaldo de Auto. La pasada visual específica en PC/móvil y el hardware NVIDIA real quedan para el
-entorno que disponga de Toolkit.
+respaldo de Auto. La pasada visual y el hardware NVIDIA real se completaron el 2026-11-05 con Docker
+Desktop WSL2 y una RTX A2000: modo efectivo `nvidia`, modelo activo y resúmenes reales.
 
 ## 22. Configuración de los tres modos SMTP
 

@@ -1,7 +1,12 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-24
+> **Última actualización:** 2026-11-05
+>
+> **Ampliación verificada el 2026-11-05.** La sección 24 ya no deja la GPU pendiente: la variante
+> NVIDIA se probó en Docker Desktop WSL2 con una RTX A2000 12 GB, modo efectivo `nvidia`, modelo
+> activo y resúmenes reales. Linux con NVIDIA Container Toolkit sigue siendo el otro camino; no se
+> usan contenedores Windows nativos.
 >
 > **Limpieza integral de Playwright aprobada, implementada y verificada el 2026-10-24.** La sección
 > 30 elimina contratos y fallos históricos: cada caso comprueba exclusivamente el producto actual,
@@ -685,9 +690,9 @@ Una instrucción ausente, incorrecta o que exija conocimiento no publicado es un
 equipo sepa cómo continuar. Se puede investigar después de registrar el punto exacto, pero no se
 cuenta el recorrido como aprobado mediante ese atajo.
 
-La ejecución real se hace en Linux con Docker y Docker Compose. Windows y macOS no se simulan y no
-se presentan como verificados. La dirección principal es `http://127.0.0.1:11001`; nginx, TLS y el
-dominio local no forman parte del camino de primera prueba.
+La ejecución real se hace en Linux o en Windows con Docker Desktop WSL2, con Docker y Docker Compose.
+macOS no se simula y no se presenta como verificado. La dirección principal es
+`http://127.0.0.1:11001`; nginx, TLS y el dominio local no forman parte del camino de primera prueba.
 
 ### 16.2 Preparación limpia y datos desechables
 
@@ -955,9 +960,10 @@ fronteras y compilación. No se tocó producción ni el dominio.
 La instalación desechable verifica migración y valor inicial Auto, ejecución CPU con el Compose
 normal, atribución de dispositivo, saludo, reinicio y persistencia. Simula capacidad NVIDIA para
 probar argumentos, ausencia, respaldo de Auto, rechazo explícito, bloqueo concurrente y rollback.
-La suite portable pasó en CPU. El manifiesto CUDA y el overlay se resolvieron correctamente, pero
-la descarga de la imagen NVIDIA se detuvo tras validar el manifiesto (sus capas rondan 2 GB) porque
-este host no tiene Toolkit ni GPU; la pasada real queda para un servidor Linux compatible.
+La suite portable pasó en CPU. El manifiesto CUDA y el overlay se resolvieron correctamente. La
+pasada real se completó el 2026-11-05 en Docker Desktop WSL2: la GPU se expuso con `--gpus all`, el
+administrador detectó `NVIDIA RTX A2000 12GB`, el modelo quedó activo y saludable y generó los dos
+resúmenes de un ticket real. La suite E2E completa terminó con 200 aprobadas, 30 omitidas y 0 fallos.
 
 PC y móvil recorren `/setup` y `/settings` en ambos idiomas. Se inspecciona que API, toast y logs no
 expongan UUID, bus, memoria ni trazas. Al terminar se restaura Auto, se baja la variante opcional y

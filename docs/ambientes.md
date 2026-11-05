@@ -1,7 +1,12 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-04
+> **Última actualización:** 2026-11-05
+>
+> **Soporte WSL2 verificado, 2026-11-05.** La variante NVIDIA se probó en Windows 11 con Docker Desktop
+> usando el backend WSL2, una RTX A2000 12 GB y el driver 596.51. Docker ve la GPU con `--gpus all`,
+> el administrador la detecta, activa el modelo y los resúmenes reales se generan. Requiere Docker
+> Desktop con WSL2 y la GPU visible; no se soportan contenedores Windows nativos.
 >
 > **Corrección del 2026-11-04: el correo de producción no va en `prod.env`.** Vive en
 > `installation_settings.smtp_*` y se configura desde el paso 4 de `/setup` o desde Configuración →
@@ -26,7 +31,8 @@
 > producción; no se desplegó producción.
 >
 > **Aprobado, implementado y verificado el 2026-10-18.** Se añadió `ai-nvidia.yml` para Linux con
-> NVIDIA Container Toolkit sin alterar el despliegue CPU portable.
+> NVIDIA Container Toolkit sin alterar el despliegue CPU portable. **Ampliado y verificado el
+> 2026-11-05** para Windows con Docker Desktop WSL2.
 >
 > **Enmienda implementada y verificada el 2026-10-17: guía pública y demo alojada.** La sección 25
 > delimita cómo el README resume desarrollo y producción y presenta `demo.catalina-support.com`.
@@ -1180,10 +1186,10 @@ los cuatro compose, se eliminan volúmenes, imágenes propias y la carpeta tempo
 no quede ningún recurso creado por el recorrido. No se restaura el desarrollo anterior: sus datos
 fueron declarados desechables por el responsable.
 
-El entorno sólo valida Linux, Docker Compose, el acceso por `127.0.0.1:11001`, Mailpit y el motor
-local. Producción, nginx, certificados, dominio, proveedores externos, Windows y macOS permanecen
-fuera. Un hallazgo que requiera cambiar comportamiento se documenta y se detiene antes de escribir
-código.
+La pasada original validó Linux, Docker Compose, el acceso por `127.0.0.1:11001`, Mailpit y el motor
+local. Producción, nginx, certificados, dominio y proveedores externos permanecen fuera. La
+verificación del 2026-11-05 amplió la cobertura a **Windows con Docker Desktop WSL2**, incluida la GPU
+NVIDIA; macOS sigue fuera.
 
 ## 19. Propuesta de entorno para repetir el bloque 8
 
@@ -1310,14 +1316,27 @@ No se usó ni alteró producción para obtenerlas.
 ## 26. Variante NVIDIA del motor local
 
 `ai.yml` continúa siendo el despliegue CPU y funciona mediante Docker en Linux, macOS y Windows.
-`ai-nvidia.yml` es una superposición opcional para Linux: usa la imagen CUDA del motor, reserva una
-GPU visible y mantiene el mismo volumen GGUF, red y token. Requiere controlador NVIDIA compatible,
-NVIDIA Container Toolkit y la comprobación previa documentada del runtime.
+`ai-nvidia.yml` es una superposición opcional para **Linux y Windows con Docker Desktop WSL2**: usa
+la imagen CUDA del motor, reserva una GPU visible y mantiene el mismo volumen GGUF, red y token.
+
+Requisitos:
+
+- **Linux:** controlador NVIDIA compatible, NVIDIA Container Toolkit y el runtime NVIDIA comprobado
+  con `docker run --gpus all ... nvidia-smi`.
+- **Windows:** Docker Desktop con **backend WSL2**, controlador NVIDIA con soporte WSL2 y la GPU
+  visible dentro de Docker. No se usan contenedores Windows nativos; el motor sigue siendo Linux.
+- En ambos casos se levanta con `docker compose -f ai.yml -f ai-nvidia.yml up -d`. El compose CPU
+  sigue siendo el portable para Linux, macOS y Windows.
 
 La UI no instala controladores ni reinicia Compose. Si se solicita NVIDIA sin esa variante, el
 administrador responde capacidad ausente y la interfaz muestra el comando de despliegue. Auto usa
 CPU en el Compose normal y NVIDIA cuando la variante está disponible. Producción sólo cambia cuando
 su operador decide usar esa variante; este trabajo no la despliega.
+
+**Verificación real del 2026-11-05:** Docker Desktop WSL2, RTX A2000 12 GB, `effectiveAcceleration:
+nvidia`, modelo `qwen2.5-1.5b-instruct` activo y saludable, `/llama-server` usando ~1,3 GiB y unos
+140 tok/s en caliente. La suite completa en ese entorno terminó con 200 E2E aprobadas, 30 omitidas y
+0 fallos; AD/Keycloak, 17 aprobadas y 7 omitidas.
 
 ## 27. Actualización autosuficiente y migraciones por versión
 
