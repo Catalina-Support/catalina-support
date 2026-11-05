@@ -31,6 +31,8 @@ The same ticket keeps AI assistance visible and reviewable: **Summary**, **Last 
 - Main and internal tickets with independent conversations and a side-by-side view.
 - AI-generated **Summary** and **Last action**, plus professional draft improvement.
 - A local AI engine, your own compatible server, or an external provider.
+- CPU-only by default; optional NVIDIA acceleration on Linux or Docker Desktop WSL2.
+- Dates in ISO format (`YYYY-MM-DD hh:mm`) in both languages.
 - Categories, tags, priority, attachments, mentions, watchers and an auditable timeline.
 - Local accounts, Active Directory or Keycloak—one sign-in method at a time.
 - Editable email templates, installation branding, time zone and public URL.
@@ -90,7 +92,7 @@ optional and comes afterwards.
 
 You do **not** need Go, Node.js, PostgreSQL or nginx installed on the host. Assigning at least 4 GB
 of RAM to Docker is a practical starting point. The default local model downloads about 1.1 GB and
-does not require a GPU.
+runs on CPU; an NVIDIA GPU is optional.
 
 ### 1. Clone and start
 
@@ -101,6 +103,10 @@ docker compose -f dev.yml up -d --build
 docker compose -f ai.yml up -d --build
 docker compose -f dev.yml ps
 ```
+
+For NVIDIA acceleration, use `docker compose -f ai.yml -f ai-nvidia.yml up -d --build` instead of
+the `ai.yml` command. The GPU must be visible to Docker; Linux needs the NVIDIA Container Toolkit,
+and Windows needs Docker Desktop with the WSL2 backend.
 
 The development stack waits for PostgreSQL, applies the schema and then starts the backend. It does
 not load sample data. Follow compilation if the application is not ready yet:
@@ -124,8 +130,8 @@ sign-in page.
 | Outgoing email | Host `mail`, port `1025`, no TLS or credentials; the remaining editable defaults are already filled in |
 | Artificial intelligence | **Local**; open the catalog, accept the 1.5B model license, download it, activate it and run the required test |
 
-The email test checks connection and authentication without sending a message. AI is required: setup
-can finish only after a valid generation. Then sign in with the development factory account
+The email test sends a real message to the address you enter; check it in Mailpit. AI is required:
+setup can finish only after a valid generation. Then sign in with the development factory account
 **`admin` / `admin`**, create users and open their invitation links in
 **[Mailpit](http://127.0.0.1:11004)**.
 
@@ -148,7 +154,7 @@ docker compose -f dev.yml run --rm seed-en
 ```
 
 This creates 11 accounts, 25 tickets and 5 attachments. It also **deletes existing development
-tickets, categories, tags, `@demo.com` accounts and development attachments except branding**.
+tickets, categories, tags, all local accounts and development attachments except branding**.
 Use `seed-es` instead for Spanish examples. Run either command only when you intentionally want to restore the
 examples.
 
