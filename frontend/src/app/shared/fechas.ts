@@ -48,3 +48,44 @@ export function opcionesConZona(
   const valida = zonaSegura(zona);
   return valida ? { ...opciones, timeZone: valida } : opciones;
 }
+
+/**
+ * Una fecha en formato ISO legible: `AAAA-MM-DD hh:mm`, siempre en 24 horas.
+ *
+ * **El formato es el mismo en español y en inglés** (decisión del responsable, 2026-11-05): una
+ * fecha no cambia de orden al cambiar de idioma, y `2026-09-29 21:00` no se confunde con el 9 de
+ * septiembre. La hora sigue siendo la de la instalación; las fechas guardadas siguen en UTC.
+ *
+ * Se arma con las partes de `Intl` en vez de confiar en el orden de un locale: así el resultado no
+ * depende de la versión del navegador ni de que el locale use 12 o 24 horas.
+ */
+export function fechaIso(iso: string | undefined, zona?: string): string {
+  if (!iso) {
+    return '';
+  }
+
+  const momento = new Date(iso);
+  if (Number.isNaN(momento.getTime())) {
+    return '';
+  }
+
+  const partes = new Intl.DateTimeFormat(
+    'en-GB',
+    opcionesConZona(
+      {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      },
+      zona,
+    ),
+  ).formatToParts(momento);
+
+  const valor = (tipo: Intl.DateTimeFormatPartTypes): string =>
+    partes.find((parte) => parte.type === tipo)?.value ?? '';
+
+  return `${valor('year')}-${valor('month')}-${valor('day')} ${valor('hour')}:${valor('minute')}`;
+}

@@ -1,7 +1,7 @@
 export { interpolar } from '../../shared/textos';
 
 import type { Textos } from '../../core/i18n/es';
-import { opcionesConZona } from '../../shared/fechas';
+import { fechaIso } from '../../shared/fechas';
 import type { Categoria, Resumen } from './tickets.service';
 import type { Idioma } from '../../core/i18n/translation.service';
 import type { OpcionConmutador } from '../../shared/components/conmutador';
@@ -101,38 +101,16 @@ export function peso(bytes: number): string {
 }
 
 /**
- * Una fecha con su hora: «24/09/2026, 16:30».
+ * Una fecha con su hora en formato ISO legible: «2026-09-24 16:30».
  *
- * Se escribe en el idioma de quien mira, con el año entero: el formato corto del navegador deja
- * «24/9/26», que en una lista de tickets se confunde con un día de otro mes.
- *
- * **La hora es la de la instalación**, que llega en `zona` (la marca pública): un ticket guardado en
- * UTC se lee a la hora que es donde está la mesa de ayuda, y no a la de quien mira. Si `zona` no
- * llega o `Intl` no la conoce, se cae a la del navegador sin lanzar (`shared/fechas.ts`).
+ * El formato es el mismo en español y en inglés (decisión del responsable, 2026-11-05): una fecha
+ * no cambia de orden al cambiar de idioma. La hora sigue siendo la de la instalación, que llega en
+ * `zona` (la marca pública): un ticket guardado en UTC se lee a la hora que es donde está la mesa de
+ * ayuda, y no a la de quien mira. Si `zona` no llega o `Intl` no la conoce, se cae a la del navegador
+ * sin lanzar (`shared/fechas.ts`).
  */
-export function fechaHora(iso: string | undefined, idioma: Idioma, zona?: string): string {
-  if (!iso) {
-    return '';
-  }
-
-  const momento = new Date(iso);
-  if (Number.isNaN(momento.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat(
-    idioma === 'en' ? 'en-GB' : 'es-ES',
-    opcionesConZona(
-      {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-      zona,
-    ),
-  ).format(momento);
+export function fechaHora(iso: string | undefined, _idioma: Idioma, zona?: string): string {
+  return fechaIso(iso, zona);
 }
 
 /** El nombre completo de una persona, que es como se la conoce. */
