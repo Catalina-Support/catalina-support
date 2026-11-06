@@ -117,9 +117,15 @@ stack. Commands and coverage are in the **[local testing guide](docs/prueba-loca
 | Users | [docs/en/modules/users.md](docs/en/modules/users.md) |
 | Settings | [docs/en/modules/settings.md](docs/en/modules/settings.md) |
 | Dashboard | [docs/en/modules/dashboard.md](docs/en/modules/dashboard.md) |
-| Architecture | [docs/arquitectura.md](docs/arquitectura.md) |
+| Architecture | [docs/en/arquitectura.md](docs/en/arquitectura.md) |
+| Interface and experience | [docs/en/interfaz-y-experiencia.md](docs/en/interfaz-y-experiencia.md) |
+| Purpose and scope | [docs/en/propósito-y-alcance.md](docs/en/propósito-y-alcance.md) |
+| Users and permissions | [docs/en/usuarios-y-permisos.md](docs/en/usuarios-y-permisos.md) |
+| Flows | [docs/en/flujos.md](docs/en/flujos.md) |
+| Local testing | [docs/en/prueba-local.md](docs/en/prueba-local.md) |
 | Environments and deployment | [docs/en/ambientes.md](docs/en/ambientes.md) |
-| Shared environments | [docs/entornos-compartidos.md](docs/entornos-compartidos.md) |
+| Shared environments | [docs/en/entornos-compartidos.md](docs/en/entornos-compartidos.md) |
+| Open project | [docs/en/proyecto-abierto.md](docs/en/proyecto-abierto.md) |
 | QA report 1.0.1 | [docs/informe_qa_20261105.md](docs/informe_qa_20261105.md) |
 | Documentación en español | [docs/es/README.md](docs/es/README.md) |
 

@@ -119,9 +119,15 @@ entorno aislado y desechable. Los comandos y la cobertura están en la
 | Usuarios | [docs/es/modules/users.md](docs/es/modules/users.md) |
 | Configuración | [docs/es/modules/settings.md](docs/es/modules/settings.md) |
 | Dashboard | [docs/es/modules/dashboard.md](docs/es/modules/dashboard.md) |
-| Arquitectura | [docs/arquitectura.md](docs/arquitectura.md) |
+| Arquitectura | [docs/es/arquitectura.md](docs/es/arquitectura.md) |
+| Interfaz y experiencia | [docs/es/interfaz-y-experiencia.md](docs/es/interfaz-y-experiencia.md) |
+| Propósito y alcance | [docs/es/propósito-y-alcance.md](docs/es/propósito-y-alcance.md) |
+| Usuarios y permisos | [docs/es/usuarios-y-permisos.md](docs/es/usuarios-y-permisos.md) |
+| Flujos | [docs/es/flujos.md](docs/es/flujos.md) |
+| Pruebas locales | [docs/es/prueba-local.md](docs/es/prueba-local.md) |
 | Ambientes y despliegue | [docs/es/ambientes.md](docs/es/ambientes.md) |
-| Entornos compartidos | [docs/entornos-compartidos.md](docs/entornos-compartidos.md) |
+| Entornos compartidos | [docs/es/entornos-compartidos.md](docs/es/entornos-compartidos.md) |
+| Proyecto abierto | [docs/es/proyecto-abierto.md](docs/es/proyecto-abierto.md) |
 | Informe de QA 1.0.1 | [docs/informe_qa_20261105.md](docs/informe_qa_20261105.md) |
 | English documentation | [docs/en/README.md](docs/en/README.md) |
 
