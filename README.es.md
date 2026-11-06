@@ -42,6 +42,12 @@ cambios no son permanentes.
 Las cuentas de demo usan la contraseña **`123123123`**. Empieza con `user1@demo.com`,
 `support1@demo.com` o `dev1@demo.com`; la cuenta de administrador no se publica.
 
+## Apoyar el proyecto
+
+Si Catalina Support te ahorra tiempo, puedes apoyar su desarrollo en
+**[Ko-fi](https://ko-fi.com/juanky1990)**. Las donaciones son opcionales y no modifican las funciones,
+las condiciones de soporte ni la licencia.
+
 ## Ejecutarlo en local
 
 Necesitas **Git**, **Docker con Compose**, un navegador e internet en la primera ejecución. No hace
@@ -140,12 +146,6 @@ Catalina Support sigue **documentación antes que código**. Lee [AGENTS.md](AGE
 
 Usa Issues para defectos y propuestas, Discussions para preguntas abiertas y el reporte privado de
 GitHub para vulnerabilidades. Consulta [SECURITY.md](SECURITY.md) y [SUPPORT.md](SUPPORT.md).
-
-## Apoyar el proyecto
-
-Si Catalina Support te ahorra tiempo, puedes apoyar su desarrollo en
-**[Ko-fi](https://ko-fi.com/juanky1990)**. Las donaciones son opcionales y no modifican las funciones,
-las condiciones de soporte ni la licencia.
 
 ## Licencia
 

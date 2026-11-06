@@ -42,6 +42,12 @@ permanent.
 Demo accounts use the password **`123123123`**. Start with `user1@demo.com`, `support1@demo.com` or
 `dev1@demo.com`; the administrator account is not published.
 
+## Support the project
+
+If Catalina Support saves you time, you can support its development on
+**[Ko-fi](https://ko-fi.com/juanky1990)**. Donations are optional and do not change features,
+support terms or the license.
+
 ## Run it locally
 
 You need **Git**, **Docker with Compose**, a browser and internet access on the first run. You do not
@@ -138,12 +144,6 @@ Catalina Support follows **documentation before code**. Read [AGENTS.md](AGENTS.
 
 Use Issues for defects and proposals, Discussions for open questions, and GitHub's private security
 reporting for vulnerabilities. See [SECURITY.md](SECURITY.md) and [SUPPORT.md](SUPPORT.md).
-
-## Support the project
-
-If Catalina Support saves you time, you can support its development on
-**[Ko-fi](https://ko-fi.com/juanky1990)**. Donations are optional and do not change features,
-support terms or the license.
 
 ## License
 
