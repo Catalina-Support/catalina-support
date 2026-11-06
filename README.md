@@ -20,16 +20,26 @@ response.
 
 ![A main ticket and its internal ticket, side by side](docs/assets/catalina-support-side-by-side.png)
 
-## Why Catalina Support
+## AI that helps, not decides
+
+- **Summary and Last action** are written in the background for every ticket and refreshed as it
+  moves, so anyone opening it understands the situation in seconds.
+- **Improve drafts** turns a rough reply into a professional one inline. Support and Development can
+  use the proposal or keep their original text.
+- **Local-first by default:** the small model runs inside the stack. Your own compatible server or an
+  external provider are optional, and an external provider requires explicit privacy acceptance.
+- **People stay in control:** AI never publishes, closes or decides anything. If the engine is down,
+  tickets keep working and summaries catch up when it returns.
+
+## Everything a help desk needs
 
 - **Two levels, one clear flow:** User → Support → Development.
 - **Main and internal tickets** with separate conversations and a side-by-side view.
-- **AI that helps, not decides:** summaries, last action and draft improvement, always reviewed.
 - **Your sign-in:** local accounts, Active Directory or Keycloak—one method at a time.
-- **Useful details:** categories, tags, priority, attachments, mentions and watchers.
+- **Operational details:** categories, tags, priority, attachments, mentions and watchers.
 - **Yours to shape:** editable emails, branding, time zone and public URL.
 - **Bilingual and accessible:** Spanish/English, eight themes, ISO dates and responsive screens.
-- **Free software:** self-hosted, AGPL-3.0-only, with no lock-in.
+- **Self-hosted and free:** AGPL-3.0-only, no lock-in and no required cloud service.
 
 ## Try it
 
@@ -109,31 +119,6 @@ server assumptions, ports, nginx/TLS and recovery details.
 
 Unit tests run inside the development containers; the browser suite uses an isolated, disposable
 stack. Commands and coverage are in the **[local testing guide](docs/prueba-local.md)**.
-
-## Documentation
-
-| Topic | Document |
-| --- | --- |
-| Documentation index | [docs/en/README.md](docs/en/README.md) |
-| First start | [docs/en/primer-arranque.md](docs/en/primer-arranque.md) |
-| AI engine | [docs/en/modules/ai.md](docs/en/modules/ai.md) |
-| Email | [docs/en/modules/mail.md](docs/en/modules/mail.md) |
-| Authentication | [docs/en/modules/auth.md](docs/en/modules/auth.md) |
-| Tickets | [docs/en/modules/tickets.md](docs/en/modules/tickets.md) |
-| Users | [docs/en/modules/users.md](docs/en/modules/users.md) |
-| Settings | [docs/en/modules/settings.md](docs/en/modules/settings.md) |
-| Dashboard | [docs/en/modules/dashboard.md](docs/en/modules/dashboard.md) |
-| Architecture | [docs/en/arquitectura.md](docs/en/arquitectura.md) |
-| Interface and experience | [docs/en/interfaz-y-experiencia.md](docs/en/interfaz-y-experiencia.md) |
-| Purpose and scope | [docs/en/propósito-y-alcance.md](docs/en/propósito-y-alcance.md) |
-| Users and permissions | [docs/en/usuarios-y-permisos.md](docs/en/usuarios-y-permisos.md) |
-| Flows | [docs/en/flujos.md](docs/en/flujos.md) |
-| Local testing | [docs/en/prueba-local.md](docs/en/prueba-local.md) |
-| Environments and deployment | [docs/en/ambientes.md](docs/en/ambientes.md) |
-| Shared environments | [docs/en/entornos-compartidos.md](docs/en/entornos-compartidos.md) |
-| Open project | [docs/en/proyecto-abierto.md](docs/en/proyecto-abierto.md) |
-| QA report 1.0.1 | [docs/informe_qa_20261105.md](docs/informe_qa_20261105.md) |
-| Documentación en español | [docs/es/README.md](docs/es/README.md) |
 
 ## Contributing and security
 

@@ -20,16 +20,26 @@ publicando cada respuesta.
 
 ![Un ticket principal y su ticket interno, uno junto al otro](docs/assets/catalina-support-side-by-side.png)
 
-## Por qué Catalina Support
+## IA que ayuda, no decide
+
+- **Resumen y Última acción** se redactan en segundo plano para cada ticket y se actualizan con
+  cada movimiento, para que cualquiera entienda la situación en segundos.
+- **Mejorar borradores** convierte una respuesta improvisada en una profesional, en el mismo editor.
+  Soporte y Desarrollo pueden usar la propuesta o conservar su texto.
+- **Local por defecto:** el modelo pequeño vive dentro del entorno. Un servidor compatible propio o
+  un proveedor externo son opcionales, y el proveedor externo exige aceptar la privacidad.
+- **Las personas deciden:** la IA nunca publica, cierra ni resuelve nada. Si el motor falla, los
+  tickets siguen funcionando y los resúmenes se recuperan cuando vuelve.
+
+## Todo lo que necesita una mesa de ayuda
 
 - **Dos niveles, un flujo claro:** Usuario → Soporte → Desarrollo.
 - **Tickets principales e internos** con conversaciones separadas y vista simultánea.
-- **IA que ayuda, no decide:** resumen, última acción y mejora de borradores, siempre revisados.
 - **Tu forma de entrar:** cuentas locales, Active Directory o Keycloak, un método a la vez.
-- **Detalles útiles:** categorías, etiquetas, prioridad, adjuntos, menciones y observadores.
+- **Detalles operativos:** categorías, etiquetas, prioridad, adjuntos, menciones y observadores.
 - **A tu manera:** correos editables, marca, zona horaria y dirección pública.
 - **Bilingüe y accesible:** español/inglés, ocho temas, fechas ISO y pantallas adaptables.
-- **Software libre:** autoalojado, AGPL-3.0-only y sin dependencia de un proveedor.
+- **Autoalojado y libre:** AGPL-3.0-only, sin dependencia de un proveedor ni de la nube.
 
 ## Probar la demo
 
@@ -111,31 +121,6 @@ recoge los supuestos del servidor, puertos, nginx/TLS y recuperación.
 Las pruebas unitarias se ejecutan en los contenedores de desarrollo; la suite de navegador usa un
 entorno aislado y desechable. Los comandos y la cobertura están en la
 **[guía de pruebas locales](docs/prueba-local.md)**.
-
-## Documentación
-
-| Tema | Documento |
-| --- | --- |
-| Índice de documentación | [docs/es/README.md](docs/es/README.md) |
-| Primer arranque | [docs/es/primer-arranque.md](docs/es/primer-arranque.md) |
-| Motor de IA | [docs/es/modules/ai.md](docs/es/modules/ai.md) |
-| Correo | [docs/es/modules/mail.md](docs/es/modules/mail.md) |
-| Autenticación | [docs/es/modules/auth.md](docs/es/modules/auth.md) |
-| Tickets | [docs/es/modules/tickets.md](docs/es/modules/tickets.md) |
-| Usuarios | [docs/es/modules/users.md](docs/es/modules/users.md) |
-| Configuración | [docs/es/modules/settings.md](docs/es/modules/settings.md) |
-| Dashboard | [docs/es/modules/dashboard.md](docs/es/modules/dashboard.md) |
-| Arquitectura | [docs/es/arquitectura.md](docs/es/arquitectura.md) |
-| Interfaz y experiencia | [docs/es/interfaz-y-experiencia.md](docs/es/interfaz-y-experiencia.md) |
-| Propósito y alcance | [docs/es/propósito-y-alcance.md](docs/es/propósito-y-alcance.md) |
-| Usuarios y permisos | [docs/es/usuarios-y-permisos.md](docs/es/usuarios-y-permisos.md) |
-| Flujos | [docs/es/flujos.md](docs/es/flujos.md) |
-| Pruebas locales | [docs/es/prueba-local.md](docs/es/prueba-local.md) |
-| Ambientes y despliegue | [docs/es/ambientes.md](docs/es/ambientes.md) |
-| Entornos compartidos | [docs/es/entornos-compartidos.md](docs/es/entornos-compartidos.md) |
-| Proyecto abierto | [docs/es/proyecto-abierto.md](docs/es/proyecto-abierto.md) |
-| Informe de QA 1.0.1 | [docs/informe_qa_20261105.md](docs/informe_qa_20261105.md) |
-| English documentation | [docs/en/README.md](docs/en/README.md) |
 
 ## Contribuir y seguridad
 
