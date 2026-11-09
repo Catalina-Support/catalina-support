@@ -84,28 +84,35 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
+| `docs/en/demo-accounts.md` | **as-built**: cuentas de demo creadas por los seeders |
 | `docs/informe_qa_20261105.md` | **as-built**: verificación integral de la versión 1.0.1 |
-| `docs/propósito-y-alcance.md` | **as-built**: Dashboard exclusivamente estadístico sin evaluación ni SLA |
-| `docs/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |
-| `docs/modules/tickets.md` | **as-built**: prioridad transaccional desde el ticket interno |
-| `docs/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
-| `docs/ambientes.md` | **as-built**: variante opcional NVIDIA en Linux y Windows WSL2 |
-| `docs/interfaz-y-experiencia.md` | **as-built**: navegación y gráficos visibles del Dashboard sin detalle de tickets |
-| `docs/modules/settings.md` | **as-built**: selección y estado efectivo de aceleración local |
-| `docs/primer-arranque.md` | **as-built**: aceleración local en el paso 5 |
-| `docs/modules/ai.md` | **as-built**: aceleración Auto/CPU/NVIDIA del motor local |
-| `docs/modules/mail.md` | **as-built**: decimocuarta plantilla para cuentas creadas desde un ticket |
-| `docs/modules/auth.md` | **as-built**: identidad con papel operativo y capacidad administrativa |
-| `docs/modules/users.md` | **as-built**: persistencia, auditoría y avisos de administración |
-| `docs/arquitectura.md` | **as-built**: frontera CPU/NVIDIA y reinicio transaccional |
-| `docs/prueba-local.md` | **as-built**: verificación de aceleración, respaldo y rollback |
-| `docs/proyecto-abierto.md` | **as-built**: portada bilingüe, sitio oficial, demo y Ko-fi |
-| `docs/modules/dashboard.md` | **as-built**: Dashboard agregado, reportería y exportación XLSX |
-| `docs/entornos-compartidos.md` | **as-built**: aviso, cuotas, cuentas protegidas y antivirus configurables |
+| `docs/en/propósito-y-alcance.md` | **as-built**: Dashboard exclusivamente estadístico sin evaluación ni SLA |
+| `docs/en/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |
+| `docs/en/modules/tickets.md` | **as-built**: prioridad transaccional desde el ticket interno |
+| `docs/en/flujos.md` | **as-built**: aviso único de primera prioridad crítica |
+| `docs/en/ambientes.md` | **as-built**: variante opcional NVIDIA en Linux y Windows WSL2 |
+| `docs/en/interfaz-y-experiencia.md` | **as-built**: navegación y gráficos visibles del Dashboard sin detalle de tickets |
+| `docs/en/modules/settings.md` | **as-built**: selección y estado efectivo de aceleración local |
+| `docs/en/primer-arranque.md` | **as-built**: aceleración local en el paso 5 |
+| `docs/en/modules/ai.md` | **as-built**: aceleración Auto/CPU/NVIDIA del motor local |
+| `docs/en/modules/mail.md` | **as-built**: decimocuarta plantilla para cuentas creadas desde un ticket |
+| `docs/en/modules/auth.md` | **as-built**: identidad con papel operativo y capacidad administrativa |
+| `docs/en/modules/users.md` | **as-built**: persistencia, auditoría y avisos de administración |
+| `docs/en/arquitectura.md` | **as-built**: frontera CPU/NVIDIA y reinicio transaccional |
+| `docs/en/prueba-local.md` | **as-built**: verificación de aceleración, respaldo y rollback |
+| `docs/en/proyecto-abierto.md` | **as-built**: portada bilingüe, sitio oficial, demo y Ko-fi |
+| `docs/en/modules/dashboard.md` | **as-built**: Dashboard agregado, reportería y exportación XLSX |
+| `docs/en/entornos-compartidos.md` | **as-built**: aviso, cuotas, cuentas protegidas y antivirus configurables |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
 `docs/README.md`. Los nombres de documento se escriben en español y en minúsculas.
+
+**Idioma (decisión del responsable, 2026-11-05):** la documentación vigente se publica primero en
+**inglés** y tiene su espejo en **español**. Los documentos traducidos viven en `docs/en/` y
+`docs/es/`; mientras se completa la migración, los que aún no tienen espejo permanecen en `docs/` en
+español. Los registros históricos y el informe de QA pueden quedarse en español. La comunicación con
+el responsable sigue siendo en español.
 
 ## Proyecto
 
@@ -604,7 +611,9 @@ parecería una web rota.
 - **Regla 0 primero**: documento aprobado antes de escribir código. Sin aprobación no hay código.
 - No inventar decisiones de producto, stack ni estructura. Si falta un dato, se pregunta o se
   deja explícitamente como pendiente en el documento.
-- La documentación y la comunicación con el responsable del proyecto se escriben en **español**.
+- La documentación vigente se escribe en **inglés** por defecto y se acompaña de su versión en
+  español; la comunicación con el responsable del proyecto sigue en **español**. Los documentos
+  históricos pueden quedar sólo en español.
 - Un documento por área, con su cabecera de estado: **de producto en `docs/`, de módulo en
   `docs/modules/`** (y con el nombre del módulo: `modules/auth.md`). Nada de documentos de diseño
   sueltos en la raíz.
