@@ -50,7 +50,8 @@ permanent.
 > **Do not enter personal, confidential or production information, or upload sensitive files.**
 
 Demo accounts use the password **`123123123`**. Start with `user1@demo.com`, `support1@demo.com` or
-`dev1@demo.com`; the administrator account is not published.
+`dev1@demo.com`; the administrator account is not published. See the full
+**[demo account list](docs/en/demo-accounts.md)** used by the seeders.
 
 ## Support the project
 
@@ -79,6 +80,10 @@ Open **[http://127.0.0.1:11001](http://127.0.0.1:11001)**. A new database opens 
 
 The email test sends a real message; read it in **[Mailpit](http://127.0.0.1:11004)**. Finish setup,
 then sign in with **`admin` / `admin`**.
+
+**`admin/admin` is development only.** In production, the factory administrator password is read
+from the **`ADMIN_PASSWORD`** environment variable in `config/env/prod.env`. That file is not
+versioned, and there is no default password.
 
 To load the 11 demo accounts and 25 sample tickets:
 

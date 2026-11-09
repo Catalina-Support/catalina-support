@@ -84,6 +84,7 @@ completo.
 | --- | --- |
 | `AGENTS.md`, `README.md` | Todo el repositorio |
 | `docs/README.md` | Índice y convenciones de `docs/`; no cubre código |
+| `docs/en/demo-accounts.md` | **as-built**: cuentas de demo creadas por los seeders |
 | `docs/informe_qa_20261105.md` | **as-built**: verificación integral de la versión 1.0.1 |
 | `docs/en/propósito-y-alcance.md` | **as-built**: Dashboard exclusivamente estadístico sin evaluación ni SLA |
 | `docs/en/usuarios-y-permisos.md` | **as-built**: alcance de reportería por papel y Admin acumulativo |

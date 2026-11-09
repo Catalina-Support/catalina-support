@@ -566,6 +566,7 @@ written without an approved document first.
 | Document | State | Covers |
 | --- | --- | --- |
 | `README.md` (this file) | **as-built** | Coordination of the comprehensive Playwright cleanup |
+| `demo-accounts.md` | **as-built** | The 11 development demo accounts created by the seeders |
 | `informe_qa_20261105.md` | **as-built** | Comprehensive QA for 1.0.1: closed findings, WSL2, ISO dates and tests |
 | `proyecto-abierto.md` | **propuesta** | English demo and bilingual screenshots of the official site |
 | `prueba-local.md` | **as-built** | Current, isolated suite with no historical contracts |

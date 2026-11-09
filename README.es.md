@@ -50,7 +50,8 @@ cambios no son permanentes.
 > **No introduzcas información personal, confidencial o de producción ni subas archivos sensibles.**
 
 Las cuentas de demo usan la contraseña **`123123123`**. Empieza con `user1@demo.com`,
-`support1@demo.com` o `dev1@demo.com`; la cuenta de administrador no se publica.
+`support1@demo.com` o `dev1@demo.com`; la cuenta de administrador no se publica. Consulta la
+**[lista completa de cuentas de demo](docs/es/demo-accounts.md)** que crean los seeders.
 
 ## Apoyar el proyecto
 
@@ -80,6 +81,10 @@ Abre **[http://127.0.0.1:11001](http://127.0.0.1:11001)**. Una base nueva abre `
 
 La prueba de correo envía un mensaje real; léelo en **[Mailpit](http://127.0.0.1:11004)**. Termina el
 asistente y entra con **`admin` / `admin`**.
+
+**`admin/admin` es sólo para desarrollo.** En producción, la contraseña de la cuenta de fábrica se
+lee de la variable de entorno **`ADMIN_PASSWORD`** en `config/env/prod.env`. Ese archivo no se
+versiona y no tiene contraseña por defecto.
 
 Para cargar las 11 cuentas y los 25 tickets de ejemplo:
 

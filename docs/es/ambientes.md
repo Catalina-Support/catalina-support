@@ -195,8 +195,8 @@
 > servicio levantado, no un perfil).
 >
 > **Enmendado el 2026-10-01 (segunda vez)**: la sección 3.3 **deja de enumerar las once cuentas de
-> ejemplo** —y de repetir su contraseña— y **apunta a la tabla del `README.md`**, que es donde se
-> detallan con su **nombre, su correo, su rol y su contraseña** («Probar en local: instalación vacía»):
+> ejemplo** —y de repetir su contraseña— y **apunta a `demo-accounts.md`**, que es donde se
+> detallan con su **nombre, su correo, su rol y su contraseña**:
 > el mismo dato en dos documentos se separa solo con el tiempo, así que vive en uno y el otro lo
 > referencia en vez de copiarlo.
 >
@@ -447,8 +447,8 @@ aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y el **paso 3** **copia los arc
 `_files/`, en la carpeta de su ticket: un seeder SQL no puede crear archivos, y un adjunto sin su
 archivo no se puede abrir.
 
-Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en el
-`README.md`**, en «Probar en local: instalación vacía», y **aquí no se repite**— y **25 tickets**
+Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en
+`demo-accounts.md`**, y **aquí no se repite**— y **25 tickets**
 repartidos por todos los estados, con asignaciones, reasignaciones, comentarios de los tres papeles,
 **siete con ticket interno** (uno esperando a Desarrollo, otro devuelto a Soporte, otros resueltos o
 cerrados), adjuntos de verdad y **las fechas repartidas en los últimos tres meses**, para que la
@@ -458,7 +458,7 @@ bandeja no salga toda del mismo día.
 personas del directorio de pruebas y del reino: en desarrollo todo es de mentira, y un dominio solo
 —el mismo en los tres sitios— es lo que hace que no haya que pensar cuál toca.
 
-**Las once entran con la misma contraseña**, la que dice la tabla del `README.md` (decisión del
+**Las once entran con la misma contraseña**, la que dice la tabla de `demo-accounts.md` (decisión del
 responsable, 2026-09-25): en desarrollo se entra y se sale muchas veces al día, y una contraseña que
 se escribe con una mano es lo que hace que probar no dé pereza.
 

@@ -565,6 +565,7 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | **as-built** | Coordinación de la limpieza integral de Playwright |
+| `demo-accounts.md` | **as-built** | Las 11 cuentas de demo que crean los seeders |
 | `informe_qa_20261105.md` | **as-built** | QA integral de la 1.0.1: hallazgos cerrados, WSL2, fechas ISO y pruebas |
 | `proyecto-abierto.md` | **propuesta** | Demo inglesa y capturas bilingües del sitio oficial |
 | `prueba-local.md` | **as-built** | Suite vigente, aislada y sin contratos históricos |

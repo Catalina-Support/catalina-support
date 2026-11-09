@@ -199,8 +199,8 @@
 > service up, not a profile).
 >
 > **Amended on 2026-10-01 (second time)**: section 3.3 **stops listing the eleven example accounts**
-> —and repeating their password— and **points to the table in the `README.md`**, which is where they
-> are detailed with their **name, email, role and password** («Try it locally: empty installation»):
+> —and repeating their password— and **points to `demo-accounts.md`**, which is where they are
+> detailed with their **name, email, role and password**:
 > the same data in two documents drifts apart with time, so it lives in one and the other references
 > it instead of copying it.
 >
@@ -450,8 +450,8 @@ applies `v1.0.0_dev_en.sql` or `v1.0.0_dev_es.sql` and **step 3** **copies the a
 `_files/`, in the folder of its ticket: an SQL seeder cannot create files, and an attachment without its
 file cannot be opened.
 
-It leaves **eleven accounts** —**the table with their name, email, role and password is in the
-`README.md`**, in «Try it locally: empty installation», and **it is not repeated here**— and **25 tickets**
+It leaves **eleven accounts** —**the table with their name, email, role and password is in
+`demo-accounts.md`**, and **it is not repeated here**— and **25 tickets**
 spread across all states, with assignments, reassignments, comments from the three roles,
 **seven with an internal ticket** (one waiting for Development, another returned to Support, others resolved or
 closed), real attachments and **the dates spread over the last three months**, so that the
@@ -461,7 +461,7 @@ inbox does not come out all from the same day.
 people in the test directory and the realm: in development everything is fake, and a single domain
 —the same in all three places— is what means you do not have to think about which one applies.
 
-**The eleven log in with the same password**, the one in the `README.md` table (owner's decision,
+**The eleven log in with the same password**, the one in the `demo-accounts.md` table (owner's decision,
 2026-09-25): in development you log in and out many times a day, and a password that
 is typed with one hand is what keeps testing from becoming a chore.
 
