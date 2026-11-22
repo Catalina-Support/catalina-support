@@ -11,7 +11,7 @@
 #
 #   1. Exige que el ejecutor versionado haya completado el esquema.
 #   2. Aplica `backend/migrations/v1.0.0_dev_${IDIOMA}.sql`: **once cuentas y 25 tickets** con su historia,
-#      sus escalados, sus comentarios y sus adjuntos.
+#      sus escalados, sus comentarios, sus adjuntos y **sus resúmenes de demostración**.
 #   3. Copia los archivos de los adjuntos (`config/seed/en/` o `config/seed/es/`) a `_files/`, en la carpeta de su ticket.
 #
 # **Es de desarrollo y borra**: los tickets que hubiera —también los que hayas creado probando—, **todas
@@ -119,6 +119,17 @@ echo
 # Se cuentan **las cuentas de ejemplo**, no todas: el entorno puede tener además las de las pruebas de
 # interfaz (`e2e-…`), que no son parte del juego de datos.
 echo "Listo: $(psql -At -c "SELECT count(*) FROM users WHERE lower(email) LIKE '%@demo.com' AND lower(email) NOT LIKE 'e2e-%'") cuentas, $(psql -At -c 'SELECT count(*) FROM tickets') tickets y $copiados adjuntos."
+# **Los resúmenes de demostración son parte del juego**: sin ellos la bandeja nace con guiones y
+# dependería de que alguien descargue un modelo y espere horas. El número es fijo porque el juego de
+# datos también lo es: 25 principales y 7 internos, dos campos por cada uno y la variante interna de
+# cada principal (docs/ambientes.md, sección 3.3).
+RESUMENES_ESPERADOS=114
+RESUMENES_LISTOS="$(psql -At -c "SELECT count(*) FROM ai_insights WHERE state = 'listo'")"
+if [ "$RESUMENES_LISTOS" -ne "$RESUMENES_ESPERADOS" ]; then
+    echo "Faltan resúmenes de demostración: hay $RESUMENES_LISTOS y se esperaban $RESUMENES_ESPERADOS." >&2
+    exit 1
+fi
+echo "Resúmenes de demostración: $RESUMENES_LISTOS campos listos."
 # **No se repiten las cuentas aquí**: la tabla con el nombre, el correo, el rol y la contraseña de las
 # once está en el `README.md`, en «Probarlo en local (desarrollo)».
 echo "Listo. Las once cuentas de ejemplo —con su rol y su contraseña— están en la tabla del README."

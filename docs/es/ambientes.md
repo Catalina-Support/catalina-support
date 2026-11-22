@@ -3,7 +3,14 @@
 [English](../en/ambientes.md) · **Español**
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-05
+> **Última actualización:** 2026-11-22
+>
+> **Corrección del 2026-11-22: los seeders incluyen los resúmenes de demostración.** Los tickets de
+> ejemplo traen sus dos campos (`summary` y `ultima_accion`) ya escritos en el idioma del seeder,
+> marcados con `provider='demo'` y `model='demo-seed'`. Así una instalación recién sembrada enseña la
+> bandeja con contenido sin depender de descargar un modelo ni de esperar horas de CPU. Los tickets
+> nuevos siguen usando el motor de IA real. El ejecutor comprueba que quedan los 114 campos listos
+> (25 principales, 7 internos y la variante interna de cada principal, por dos campos).
 >
 > **Soporte WSL2 verificado, 2026-11-05.** La variante NVIDIA se probó en Windows 11 con Docker Desktop
 > usando el backend WSL2, una RTX A2000 12 GB y el driver 596.51. Docker ve la GPU con `--gpus all`,
@@ -682,11 +689,14 @@ despliegue y llena `migrations/` de retales.
 | Archivo | Qué lleva | Dónde se aplica |
 | --- | --- | --- |
 | `v1.0.0.sql` | Las tablas, los índices y sus restricciones **y lo que la aplicación necesita para funcionar**: las dos filas de configuración —la de la instalación y la de los tickets— y las veinte plantillas de correo. Sin la fila de configuración no se puede leer ni el idioma ni el nombre; sin plantilla no sale ningún correo | **Desarrollo y producción** |
-| `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` en Linux y macOS) |
+| `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos—, el contador de la numeración y **los resúmenes de demostración** de todos ellos | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` en Linux y macOS) |
 
-**El guion borra también los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva **por número
-de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una fila vieja se
-pegaría a un ticket nuevo y enseñaría el motivo de otro (`docs/modules/ai.md`, sección 4).
+**El guion borra y vuelve a crear los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva
+**por número de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una
+fila vieja se pegaría a un ticket nuevo y enseñaría el motivo de otro (`docs/modules/ai.md`, sección
+4). Por eso se borran al principio y se insertan al final del archivo de ejemplos, ya escritos y en el
+idioma del seeder. **No son una generación real**: van marcados como `demo` y el motor sigue siendo el
+que redacta los tickets nuevos.
 
 **La separación no es de forma**: lo que hay en el `_dev` **borra y vuelve a crear** el contenido de
 trabajo —tickets incluidos—, así que no puede ser algo que se aplique solo por desplegar. En

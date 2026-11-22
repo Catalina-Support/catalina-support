@@ -34,7 +34,7 @@ BEGIN;
 -- mismos números** (CS-2026-0001 y siguientes), así que una fila vieja se pegaría al ticket nuevo y
 -- enseñaría el motivo de otro. No hay clave ajena que lo impida —los tickets viven en su módulo y los
 -- resúmenes en el suyo—, así que se limpia a mano, aquí y en el mismo sitio donde se borran los
--- tickets.
+-- tickets. **Al final de este archivo se vuelven a crear, ya escritos, para los datos de ejemplo.**
 DELETE FROM ai_insights;
 -- Las etiquetas cuelgan del ticket y se van con él (ON DELETE CASCADE), pero se borran antes para
 -- dejar dicho que este archivo las vuelve a crear. **El catálogo de etiquetas se borra también**:
@@ -903,5 +903,119 @@ SET priority = CASE
     ELSE 'medium'
 END,
 critical_notified_at = CASE WHEN number_seq IN (4, 17) THEN created_at ELSE NULL END;
+
+-- ============================================================================
+-- 7. Los resúmenes de demostración
+-- ============================================================================
+
+-- **Los tickets de ejemplo traen sus dos campos ya escritos**, en el idioma del seeder. El motor
+-- de IA sigue siendo el que redacta los tickets nuevos; esto sólo evita que una instalación recién
+-- sembrada dependa de descargar un modelo y de horas de CPU para enseñar la bandeja con contenido
+-- (decisión del responsable, 2026-11-22).
+--
+-- Se marcan como `demo` para que se distingan de una generación real. La versión del contexto es la
+-- vigente de `ai_insights`: si cambia el contrato de los resúmenes, hay que actualizarla aquí.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT numero, tipo, 'listo', texto, 'en', 'demo', 'demo-seed',
+       now(), now(), 2, 1, 0, 0
+FROM (VALUES
+    ('CS-2026-0001', 'summary', 'The user has been unable to sign in since yesterday because the application rejects the password, although it has not changed.'),
+    ('CS-2026-0001', 'ultima_accion', 'The ticket has just been created and is waiting for Support to review it.'),
+    ('CS-2026-0002', 'summary', 'The August monthly report shows dates in a different format than expected; the user attached a screenshot.'),
+    ('CS-2026-0002', 'ultima_accion', 'The ticket has just been created and is waiting for Support to review it.'),
+    ('CS-2026-0003', 'summary', 'A new colleague needs access to the application.'),
+    ('CS-2026-0003', 'ultima_accion', 'Waiting for Support to process the account creation.'),
+    ('CS-2026-0004', 'summary', 'The printer on the second floor receives the job but does not print, even after a restart.'),
+    ('CS-2026-0004', 'ultima_accion', 'Support escalated the ticket to Development to check the print queue server.'),
+    ('CS-2026-0005', 'summary', 'Attachments larger than 10 MB cannot be uploaded; a 12 MB PDF keeps loading.'),
+    ('CS-2026-0005', 'ultima_accion', 'The user confirmed the file is now attached and the ticket remains in progress.'),
+    ('CS-2026-0006', 'summary', 'The user changed corporate email and needs to keep signing in with the new address.'),
+    ('CS-2026-0006', 'ultima_accion', 'Support is reviewing the email change and the ticket remains in progress.'),
+    ('CS-2026-0007', 'summary', 'The application is very slow to open the inbox between 9 and 10 in the morning.'),
+    ('CS-2026-0007', 'ultima_accion', 'Escalated to Development because the slowness points to the database.'),
+    ('CS-2026-0008', 'summary', 'The user does not receive email notifications when a ticket is assigned.'),
+    ('CS-2026-0008', 'ultima_accion', 'Support is checking the notification configuration.'),
+    ('CS-2026-0009', 'summary', 'The client card is missing the contact phone number needed to call the requester.'),
+    ('CS-2026-0009', 'ultima_accion', 'Escalated to Development to confirm the field will not break the import.'),
+    ('CS-2026-0010', 'summary', 'A comment written yesterday on a ticket has disappeared.'),
+    ('CS-2026-0010', 'ultima_accion', 'Support asked the user for the ticket number so it can be located.'),
+    ('CS-2026-0011', 'summary', 'The user wants to change the installation name shown in the header.'),
+    ('CS-2026-0011', 'ultima_accion', 'Waiting for the new name to be confirmed and applied.'),
+    ('CS-2026-0012', 'summary', 'The search box does not find tickets when the number is pasted, although text search works.'),
+    ('CS-2026-0012', 'ultima_accion', 'Development resolved the internal ticket and returned it to Support.'),
+    ('CS-2026-0013', 'summary', 'The user requests write access to the team shared folder.'),
+    ('CS-2026-0013', 'ultima_accion', 'Support resolved the request and granted access.'),
+    ('CS-2026-0014', 'summary', 'The account creation email arrived in the spam folder; the user reports it in case it affects others.'),
+    ('CS-2026-0014', 'ultima_accion', 'Support reviewed the report and resolved the ticket.'),
+    ('CS-2026-0015', 'summary', 'Duplicate ticket: another one about the second-floor printer already existed.'),
+    ('CS-2026-0015', 'ultima_accion', 'Closed as a duplicate and work continued on the original ticket.'),
+    ('CS-2026-0016', 'summary', 'The password expired without prior notice; the user only found out when trying to sign in.'),
+    ('CS-2026-0016', 'ultima_accion', 'Development returned the ticket to Support after reviewing the expiry notice.'),
+    ('CS-2026-0017', 'summary', 'The user prefers the inbox sorted by newest date instead of oldest.'),
+    ('CS-2026-0017', 'ultima_accion', 'Support resolved the sort order change.'),
+    ('CS-2026-0018', 'summary', 'The ticket closed automatically due to inactivity while the problem was still unresolved.'),
+    ('CS-2026-0018', 'ultima_accion', 'The user confirmed the reopening and Support continued the review.'),
+    ('CS-2026-0019', 'summary', 'The user cannot upload a ZIP file with the logs because the system rejects it.'),
+    ('CS-2026-0019', 'ultima_accion', 'Support reviewed the file extension and closed the ticket after allowing the upload.'),
+    ('CS-2026-0020', 'summary', 'The user wants to receive notification emails in English instead of Spanish.'),
+    ('CS-2026-0020', 'ultima_accion', 'Support applied the language change and closed the ticket.'),
+    ('CS-2026-0021', 'summary', 'The user needs the August ticket list for a team meeting.'),
+    ('CS-2026-0021', 'ultima_accion', 'Support generated the report and closed the request.'),
+    ('CS-2026-0022', 'summary', 'The logo on the sign-in screen looks too small on mobile.'),
+    ('CS-2026-0022', 'ultima_accion', 'Support adjusted the size and closed the ticket.'),
+    ('CS-2026-0023', 'summary', 'Development does not receive any notice when Support escalates a ticket.'),
+    ('CS-2026-0023', 'ultima_accion', 'The escalation notice configuration was fixed and the ticket was closed.'),
+    ('CS-2026-0024', 'summary', 'The user saw two consecutive tickets with the same number.'),
+    ('CS-2026-0024', 'ultima_accion', 'Support reviewed the numbering, confirmed it was a duplicate and closed the ticket.'),
+    ('CS-2026-0025', 'summary', 'The user asks to deactivate the account of a person who no longer works at the company.'),
+    ('CS-2026-0025', 'ultima_accion', 'Development returned the ticket to Support; the account must be deactivated manually.'),
+    ('INT-CS-2026-0004', 'summary', 'Development must check the print queue server for the second-floor printer.'),
+    ('INT-CS-2026-0004', 'ultima_accion', 'Support escalated the ticket and is waiting for Development to review it.'),
+    ('INT-CS-2026-0007', 'summary', 'The morning slowness points to the database and needs Development review.'),
+    ('INT-CS-2026-0007', 'ultima_accion', 'Development is investigating the database performance.'),
+    ('INT-CS-2026-0009', 'summary', 'Development must confirm whether the phone field can be added without affecting the import.'),
+    ('INT-CS-2026-0009', 'ultima_accion', 'Development is assessing the change; Support is waiting for an answer.'),
+    ('INT-CS-2026-0012', 'summary', 'Number search needs a change in the query.'),
+    ('INT-CS-2026-0012', 'ultima_accion', 'Development resolved the change and returned the ticket to Support.'),
+    ('INT-CS-2026-0016', 'summary', 'The password expiry notice does not exist and must be added to the sign-in module.'),
+    ('INT-CS-2026-0016', 'ultima_accion', 'Development closed the ticket after implementing the notice; Support returned it to the user.'),
+    ('INT-CS-2026-0023', 'summary', 'The escalation notice was not sent because of a routing configuration error.'),
+    ('INT-CS-2026-0023', 'ultima_accion', 'The configuration was fixed and the internal ticket was closed.'),
+    ('INT-CS-2026-0025', 'summary', 'Account deactivation is not supported by the application and must be done manually.'),
+    ('INT-CS-2026-0025', 'ultima_accion', 'Development closed the internal ticket; Support handled the deactivation manually.')
+) AS demo(numero, tipo, texto)
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
+
+-- La vista interna de un principal («CS-…::internal») usa la misma redacción de demostración: no
+-- hay notas privadas en los datos de ejemplo que justifiquen dos textos distintos.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT ticket_number || '::internal', kind, state, text, language, provider, model,
+       requested_at, generated_at, context_version, generation, attempts, recovery_count
+FROM ai_insights
+WHERE ticket_number LIKE 'CS-%'
+  AND ticket_number NOT LIKE '%::internal'
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
 
 COMMIT;

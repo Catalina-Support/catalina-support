@@ -3,7 +3,13 @@
 [Español](../es/modules/ai.md) · **English**
 
 > **State:** as-built
-> **Last updated:** 2026-11-05
+> **Last updated:** 2026-11-22
+>
+> **Correction of 2026-11-22: demo summaries in the seeders.** The example tickets already carry both
+> fields, in the seeder language and with `provider='demo'` and `model='demo-seed'`. They do not depend
+> on the engine or a download: any seeded installation shows a populated inbox from the first start.
+> New tickets still go through the real queue and engine; this decision does not change the
+> `ai_insights` contract.
 >
 > **WSL2 support verified, 2026-11-05.** The NVIDIA variant in section 23 also works on Windows with
 > Docker Desktop WSL2. It was tested with an RTX A2000 12 GB, driver 596.51, the
@@ -299,6 +305,13 @@ for this):
 - **The table has real `CHECK`s**: `kind` only admits the two fields, `state` the four states and
   `attempts` cannot be negative. What the application must not write, the database does not accept
   either.
+
+**The development seeders insert `listo` rows for their example data** (`v1.0.0_dev_es.sql` and
+`v1.0.0_dev_en.sql`), with the text in the file language and `provider='demo'`. They are demonstration
+data, not an engine generation: `model` is `demo-seed` so they are not confused with a real response.
+They are deleted and recreated with the tickets, and the seeder runner checks that all 114 fields are
+present. A freshly seeded installation therefore does not depend on a downloaded model or hours of CPU
+to show an inbox; new tickets still use the real queue.
 
 ## 5. The contract between modules
 

@@ -34,7 +34,7 @@ BEGIN;
 -- mismos números** (CS-2026-0001 y siguientes), así que una fila vieja se pegaría al ticket nuevo y
 -- enseñaría el motivo de otro. No hay clave ajena que lo impida —los tickets viven en su módulo y los
 -- resúmenes en el suyo—, así que se limpia a mano, aquí y en el mismo sitio donde se borran los
--- tickets.
+-- tickets. **Al final de este archivo se vuelven a crear, ya escritos, para los datos de ejemplo.**
 DELETE FROM ai_insights;
 -- Las etiquetas cuelgan del ticket y se van con él (ON DELETE CASCADE), pero se borran antes para
 -- dejar dicho que este archivo las vuelve a crear. **El catálogo de etiquetas se borra también**:
@@ -903,5 +903,119 @@ SET priority = CASE
     ELSE 'medium'
 END,
 critical_notified_at = CASE WHEN number_seq IN (4, 17) THEN created_at ELSE NULL END;
+
+-- ============================================================================
+-- 7. Los resúmenes de demostración
+-- ============================================================================
+
+-- **Los tickets de ejemplo traen sus dos campos ya escritos**, en el idioma del seeder. El motor
+-- de IA sigue siendo el que redacta los tickets nuevos; esto sólo evita que una instalación recién
+-- sembrada dependa de descargar un modelo y de horas de CPU para enseñar la bandeja con contenido
+-- (decisión del responsable, 2026-11-22).
+--
+-- Se marcan como `demo` para que se distingan de una generación real. La versión del contexto es la
+-- vigente de `ai_insights`: si cambia el contrato de los resúmenes, hay que actualizarla aquí.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT numero, tipo, 'listo', texto, 'es', 'demo', 'demo-seed',
+       now(), now(), 2, 1, 0, 0
+FROM (VALUES
+    ('CS-2026-0001', 'summary', 'El usuario no puede entrar desde ayer: la aplicación rechaza su contraseña sin que la haya cambiado.'),
+    ('CS-2026-0001', 'ultima_accion', 'El ticket acaba de crearse y sigue sin asignar; Soporte aún no lo ha revisado.'),
+    ('CS-2026-0002', 'summary', 'El informe mensual de agosto muestra las fechas en un formato distinto al esperado; el usuario adjuntó una captura.'),
+    ('CS-2026-0002', 'ultima_accion', 'El ticket acaba de crearse y espera la revisión de Soporte.'),
+    ('CS-2026-0003', 'summary', 'Una nueva compañera necesita acceso a la aplicación.'),
+    ('CS-2026-0003', 'ultima_accion', 'Pendiente de que Soporte tramite el alta de la cuenta.'),
+    ('CS-2026-0004', 'summary', 'La impresora de la segunda planta recibe el trabajo pero no imprime, incluso después de reiniciarla.'),
+    ('CS-2026-0004', 'ultima_accion', 'Soporte escaló el ticket a Desarrollo para revisar el servidor de colas.'),
+    ('CS-2026-0005', 'summary', 'No se pueden subir adjuntos de más de 10 MB; un PDF de 12 MB se queda cargando.'),
+    ('CS-2026-0005', 'ultima_accion', 'El usuario confirmó que el archivo ya está adjunto y el ticket sigue en progreso.'),
+    ('CS-2026-0006', 'summary', 'El usuario cambió de correo corporativo y necesita seguir entrando con la nueva dirección.'),
+    ('CS-2026-0006', 'ultima_accion', 'Soporte está revisando el cambio de correo y el ticket sigue en progreso.'),
+    ('CS-2026-0007', 'summary', 'La aplicación tarda mucho en abrir la bandeja entre las 9 y las 10 de la mañana.'),
+    ('CS-2026-0007', 'ultima_accion', 'Escalado a Desarrollo porque la lentitud apunta a la base de datos.'),
+    ('CS-2026-0008', 'summary', 'El usuario no recibe los avisos por correo cuando le asignan un ticket.'),
+    ('CS-2026-0008', 'ultima_accion', 'Soporte está comprobando la configuración de las notificaciones.'),
+    ('CS-2026-0009', 'summary', 'Falta el teléfono de contacto en la ficha del cliente para poder llamar al solicitante.'),
+    ('CS-2026-0009', 'ultima_accion', 'Escalado a Desarrollo para confirmar que el campo no rompe la importación.'),
+    ('CS-2026-0010', 'summary', 'Un comentario escrito ayer en un ticket ha desaparecido.'),
+    ('CS-2026-0010', 'ultima_accion', 'Soporte pidió al usuario el número del ticket para localizarlo.'),
+    ('CS-2026-0011', 'summary', 'El usuario quiere cambiar el nombre de la instalación que aparece en la cabecera.'),
+    ('CS-2026-0011', 'ultima_accion', 'En espera de que se confirme el nuevo nombre y se aplique el cambio.'),
+    ('CS-2026-0012', 'summary', 'El buscador no encuentra tickets al pegar su número, aunque la búsqueda por texto sí funciona.'),
+    ('CS-2026-0012', 'ultima_accion', 'Desarrollo resolvió el ticket interno y lo devolvió a Soporte.'),
+    ('CS-2026-0013', 'summary', 'El usuario pide permiso de escritura en la carpeta compartida del equipo.'),
+    ('CS-2026-0013', 'ultima_accion', 'Soporte resolvió la solicitud y concedió el acceso.'),
+    ('CS-2026-0014', 'summary', 'El correo de alta llegó a la carpeta de spam; el usuario avisa por si afecta a más personas.'),
+    ('CS-2026-0014', 'ultima_accion', 'Soporte revisó el aviso y resolvió el ticket.'),
+    ('CS-2026-0015', 'summary', 'Ticket duplicado: ya existía otro sobre la impresora de la segunda planta.'),
+    ('CS-2026-0015', 'ultima_accion', 'Se cerró como duplicado y se continuó en el ticket original.'),
+    ('CS-2026-0016', 'summary', 'La contraseña caducó sin aviso previo; el usuario solo lo descubrió al intentar entrar.'),
+    ('CS-2026-0016', 'ultima_accion', 'Desarrollo devolvió el ticket a Soporte tras revisar el aviso de caducidad.'),
+    ('CS-2026-0017', 'summary', 'El usuario prefiere que la bandeja se ordene por la fecha más reciente en lugar de la más antigua.'),
+    ('CS-2026-0017', 'ultima_accion', 'Soporte resolvió el cambio de orden de la bandeja.'),
+    ('CS-2026-0018', 'summary', 'El ticket se cerró automáticamente por inactividad mientras el problema seguía sin resolverse.'),
+    ('CS-2026-0018', 'ultima_accion', 'El usuario confirmó la reapertura y Soporte continuó la revisión.'),
+    ('CS-2026-0019', 'summary', 'El usuario no puede subir un archivo ZIP con los registros porque el sistema lo rechaza.'),
+    ('CS-2026-0019', 'ultima_accion', 'Soporte revisó la extensión y cerró el ticket después de permitir la subida.'),
+    ('CS-2026-0020', 'summary', 'El usuario quiere recibir los correos de aviso en inglés en lugar de español.'),
+    ('CS-2026-0020', 'ultima_accion', 'Soporte aplicó el cambio de idioma y cerró el ticket.'),
+    ('CS-2026-0021', 'summary', 'El usuario necesita el listado de tickets de agosto para una reunión de equipo.'),
+    ('CS-2026-0021', 'ultima_accion', 'Soporte generó el informe y cerró la solicitud.'),
+    ('CS-2026-0022', 'summary', 'El logo de la pantalla de entrada se ve demasiado pequeño en el móvil.'),
+    ('CS-2026-0022', 'ultima_accion', 'Soporte ajustó el tamaño y cerró el ticket.'),
+    ('CS-2026-0023', 'summary', 'Desarrollo no recibe ningún aviso cuando Soporte le escala un ticket.'),
+    ('CS-2026-0023', 'ultima_accion', 'Se corrigió la configuración del aviso de escalado y se cerró el ticket.'),
+    ('CS-2026-0024', 'summary', 'El usuario vio dos tickets consecutivos con el mismo número.'),
+    ('CS-2026-0024', 'ultima_accion', 'Soporte revisó la numeración, confirmó que era un duplicado y cerró el ticket.'),
+    ('CS-2026-0025', 'summary', 'El usuario pide dar de baja la cuenta de una persona que ya no trabaja en la empresa.'),
+    ('CS-2026-0025', 'ultima_accion', 'Desarrollo devolvió el ticket a Soporte; la baja debe hacerse manualmente.'),
+    ('INT-CS-2026-0004', 'summary', 'Desarrollo debe revisar el servidor de colas de la impresora de la segunda planta.'),
+    ('INT-CS-2026-0004', 'ultima_accion', 'Soporte escaló el ticket y espera la revisión de Desarrollo.'),
+    ('INT-CS-2026-0007', 'summary', 'La lentitud de la mañana apunta a la base de datos y necesita revisión de Desarrollo.'),
+    ('INT-CS-2026-0007', 'ultima_accion', 'Desarrollo está investigando el rendimiento de la base de datos.'),
+    ('INT-CS-2026-0009', 'summary', 'Hay que confirmar si el teléfono se puede añadir a la ficha sin afectar a la importación.'),
+    ('INT-CS-2026-0009', 'ultima_accion', 'Desarrollo está evaluando el cambio; Soporte espera respuesta.'),
+    ('INT-CS-2026-0012', 'summary', 'La búsqueda por número necesita un cambio en la consulta.'),
+    ('INT-CS-2026-0012', 'ultima_accion', 'Desarrollo resolvió el cambio y devolvió el ticket a Soporte.'),
+    ('INT-CS-2026-0016', 'summary', 'El aviso de caducidad de contraseña no existe y hay que añadirlo al módulo de acceso.'),
+    ('INT-CS-2026-0016', 'ultima_accion', 'Desarrollo cerró el ticket tras implementar el aviso; Soporte lo devolvió al usuario.'),
+    ('INT-CS-2026-0023', 'summary', 'El aviso de escalado no salía por un error de configuración del reparto.'),
+    ('INT-CS-2026-0023', 'ultima_accion', 'Se corrigió la configuración y se cerró el ticket interno.'),
+    ('INT-CS-2026-0025', 'summary', 'La baja de cuentas no está prevista en la aplicación y debe hacerse manualmente.'),
+    ('INT-CS-2026-0025', 'ultima_accion', 'Desarrollo cerró el ticket interno; Soporte gestionó la baja a mano.')
+) AS demo(numero, tipo, texto)
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
+
+-- La vista interna de un principal («CS-…::internal») usa la misma redacción de demostración: no
+-- hay notas privadas en los datos de ejemplo que justifiquen dos textos distintos.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT ticket_number || '::internal', kind, state, text, language, provider, model,
+       requested_at, generated_at, context_version, generation, attempts, recovery_count
+FROM ai_insights
+WHERE ticket_number LIKE 'CS-%'
+  AND ticket_number NOT LIKE '%::internal'
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
 
 COMMIT;
