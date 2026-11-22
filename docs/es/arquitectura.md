@@ -694,7 +694,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | Entorno | Dominio | Vhost | Contenedores detrás |
 | --- | --- | --- | --- |
-| Desarrollo | `dev.catalina-support.example.com` | `catalina-support-dev.conf` | frontend `11001`, backend `11002` |
+| Desarrollo | `dev.catalina-support.com` | `catalina-support-dev.conf` | frontend `11001`, backend `11002` |
 | Producción | `support.example.com` | `catalina-support-prod.conf` | frontend `21001`, backend `21002` |
 
 - El frontend llama a `/api/**` **en relativo** y nunca a un host: el mismo código sirve en
@@ -720,7 +720,7 @@ sudo nginx -t && sudo systemctl reload nginx
   `ws:`) porque el servidor de desarrollo inyecta un script y abre un websocket para el recambio
   en caliente; la de producción es estricta (`script-src 'self'`).
 - El servidor de desarrollo de Angular **rechaza con 403** cualquier `Host` que no conozca: por
-  eso `dev.catalina-support.example.com` está declarado en `serve.options.allowedHosts` de
+  eso `dev.catalina-support.com` está declarado en `serve.options.allowedHosts` de
   `angular.json`. Sin esa línea, la página responde 403 aunque nginx esté bien.
 - **El servidor de desarrollo reenvía `/api` al backend** (`frontend/proxy.conf.json`, declarado en
   `serve.options.proxyConfig` de `frontend/angular.json`), con destino **`http://backend:11002`** —el
@@ -788,7 +788,7 @@ docker compose -f keycloak.yml up -d            # Keycloak (opcional; tras el en
 docker compose -f ai.yml up -d                  # motor requerido si se eligió IA local
 ```
 
-En desarrollo se entra por **https://dev.catalina-support.example.com** (nginx → contenedores).
+En desarrollo se entra por **https://dev.catalina-support.com** (nginx → contenedores).
 Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx, y **la 11001 ya reenvía
 `/api` al backend** con el proxy de `serve` (`frontend/proxy.conf.json`), así que **también se entra
 en `http://127.0.0.1:11001` sin nginx**; la 11002 es el backend directo.
@@ -824,7 +824,7 @@ máquina tenga instalado.
 - **Todo en contenedores**: uno para el frontend, otro para el backend y otro para la base de
   datos, con la estructura de Calibyou (`dev.yml` / `prod.yml`, `config/{dockerfiles,env,nginx}`).
 - **Node 24 LTS** y **sin Go ni Node instalados en la máquina**.
-- **Dominios**: `dev.catalina-support.example.com` en desarrollo y
+- **Dominios**: `dev.catalina-support.com` en desarrollo y
   `support.example.com` en producción, los dos con TLS de Let's Encrypt y servidos
   por nginx en la máquina (decidido por el responsable el 2026-09-22).
 - **El despliegue a producción se aplaza hasta cerrar la versión 1.0.0** (decidido por el
@@ -878,7 +878,7 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | Tailwind v4 y los temas | Instalado y compilando: el CSS servido lleva **las utilidades generadas** y las variables del tema, y **ningún componente escribe un color a mano**. Las fuentes se declaran a mano en `styles.css` (`@source './app'`), y hay un caso de Playwright que **falla si la hoja llega sin utilidades** |
 | El tema | **Ocho temas** (dos de fábrica con `light-dark()` y el color institucional, y seis fijos con su paleta y su acento), elegidos con un atributo en `html` y el tema elegido con un atributo en `html`. **De fábrica sigue al sistema** —que es no haber elegido, y por eso **«automático» no se muestra ni se elige**—, el sistema manda en vivo mientras nadie haya elegido, la elección se recuerda en el navegador y se aplica **antes de arrancar** desde `main.ts` (no con un script incrustado: la CSP de producción no lo admite). Probado en un navegador **midiendo el color de fondo**, en claro, en oscuro y con la elección ganando al sistema |
 | Build de producción del frontend | `npm run build` → `dist/catalina-support/browser`, que es la ruta que espera `prod.yml` |
-| Vhost de desarrollo | `https://dev.catalina-support.example.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
+| Vhost de desarrollo | `https://dev.catalina-support.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
 | TLS de los dos dominios | Certificados de Let's Encrypt emitidos el 2026-09-22 (caducan el 2026-12-21), con renovación automática configurada por `webroot` |
 | Cabeceras de seguridad y CSP | Presentes en la respuesta de desarrollo (`nosniff`, `SAMEORIGIN`, `Referrer-Policy` y CSP de desarrollo) |
 | Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea **21 tablas** —plantillas, cuentas y tokens; las **cinco tablas de configuración de una fila** (`installation_settings`, `ai_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`); dos auxiliares de IA; las diez de tickets; y `ai_insights`— con sus índices y restricciones. Incluye su puesta al día idempotente y la conversión histórica de texto plano a HTML sin tocar un cuerpo que ya contiene adjuntos. |

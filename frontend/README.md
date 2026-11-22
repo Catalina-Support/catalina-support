@@ -15,7 +15,7 @@ docker compose -f dev.yml exec frontend npm run build
 ```
 
 El servidor de desarrollo escucha en `http://127.0.0.1:11001` y recarga al guardar. En
-desarrollo se entra por **https://dev.catalina-support.example.com** (nginx delante del
+desarrollo se entra por **https://dev.catalina-support.com** (nginx delante del
 contenedor).
 
 El servidor de desarrollo **rechaza con 403** cualquier `Host` que no conozca: por eso el dominio

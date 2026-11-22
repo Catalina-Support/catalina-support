@@ -335,7 +335,7 @@ collects what I proposed.
 
 | | Development | Production |
 | --- | --- | --- |
-| **Domain** | `dev.catalina-support.example.com` | `support.example.com` |
+| **Domain** | `dev.catalina-support.com` | `support.example.com` |
 | **Ports** | frontend 11001, backend 11002, database 11003 | frontend 21001, backend 21002, database 21003 |
 | **Code** | Mounted as a volume: it is edited and the container reloads | **Built artifacts** in `/srv/catalina-support` |
 | **Reload** | Angular and `air` reload on save | It has to be deployed |
@@ -356,7 +356,7 @@ docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
-Login is at `https://dev.catalina-support.example.com`. **And also, without nginx, at
+Login is at `https://dev.catalina-support.com`. **And also, without nginx, at
 `http://127.0.0.1:11001`**: the development server forwards `/api` to the backend
 (`frontend/proxy.conf.json` → `http://backend:11002`), so with the environment up **port 11001 opens**. `migrate` waits for PostgreSQL, applies the schema and `backend` waits for it to finish correctly.
 On a new database `/setup` appears; after completing the

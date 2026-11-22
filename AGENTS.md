@@ -136,7 +136,7 @@ grande lo tiene.
 Esqueleto en pie y verificado (2026-09-22), y **cuatro módulos en marcha** (2026-09-24): los cuatro
 contenedores de desarrollo levantan (incluido el buzón de pruebas), y **el directorio de pruebas y
 Keycloak** viven cada uno en su archivo (`active-directory.yml`, `keycloak.yml`) y se levantan aparte
-con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `https://dev.catalina-support.example.com` con
+con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `https://dev.catalina-support.com` con
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
@@ -582,7 +582,7 @@ docker compose -f dev.yml run --rm seed-es
 ./scripts/backup-db.sh prod       # producción
 ```
 
-En desarrollo se entra por **https://dev.catalina-support.example.com**, que es nginx (en la
+En desarrollo se entra por **https://dev.catalina-support.com**, que es nginx (en la
 máquina) delante de los contenedores, **y también por `http://127.0.0.1:11001` sin nginx**: el
 servidor de desarrollo reenvía `/api` al backend con su proxy (`frontend/proxy.conf.json`, declarado
 en `serve.options.proxyConfig` de `frontend/angular.json`), así que con el entorno levantado y el

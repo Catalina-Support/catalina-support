@@ -331,7 +331,7 @@ recoge lo que he propuesto yo.
 
 | | Desarrollo | Producción |
 | --- | --- | --- |
-| **Dominio** | `dev.catalina-support.example.com` | `support.example.com` |
+| **Dominio** | `dev.catalina-support.com` | `support.example.com` |
 | **Puertos** | frontend 11001, backend 11002, base 11003 | frontend 21001, backend 21002, base 21003 |
 | **Código** | Montado como volumen: se edita y el contenedor recarga | **Artefactos construidos** en `/srv/catalina-support` |
 | **Recarga** | Angular y `air` recargan al guardar | Hay que desplegar |
@@ -352,7 +352,7 @@ docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
-Se entra por `https://dev.catalina-support.example.com`. **Y también, sin nginx, por
+Se entra por `https://dev.catalina-support.com`. **Y también, sin nginx, por
 `http://127.0.0.1:11001`**: el servidor de desarrollo reenvía `/api` al backend
 (`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado **se abre la
 11001**. `migrate` espera a PostgreSQL, aplica el esquema y `backend` espera su terminación correcta.
