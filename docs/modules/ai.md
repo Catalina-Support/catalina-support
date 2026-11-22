@@ -1,7 +1,12 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-05
+> **Última actualización:** 2026-11-22
+>
+> **Corrección del 2026-11-22: resúmenes de demostración en los seeders.** Los tickets de ejemplo traen
+> sus dos campos ya escritos, en el idioma del seeder y con `provider='demo'`/`model='demo-seed'`. Una
+> instalación sembrada no depende del motor ni de una descarga; los tickets nuevos siguen usando la cola
+> real. No cambia el contrato de `ai_insights`.
 >
 > **Soporte WSL2 verificado, 2026-11-05.** La variante NVIDIA de la sección 23 funciona también en
 > Windows con Docker Desktop WSL2. Se probó con una RTX A2000 12 GB, driver 596.51, el modelo
@@ -291,6 +296,11 @@ versión nueva por esto):
   filas por ticket no va a crecer por esto.
 - **La tabla lleva `CHECK` de verdad**: `kind` sólo admite los dos campos, `state` los cuatro estados y
   `attempts` no puede ser negativo. Lo que la aplicación no debe escribir, la base tampoco lo acepta.
+
+**Los seeders de desarrollo insertan filas `listo` para sus datos de ejemplo**, con el texto en el
+idioma del archivo y `provider='demo'`. Se borran y se vuelven a crear con los tickets, y el ejecutor
+comprueba que están los 114 campos. No son una generación del motor; los tickets nuevos siguen usando
+la cola real.
 
 ## 5. El contrato entre módulos
 

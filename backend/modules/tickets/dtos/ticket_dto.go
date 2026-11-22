@@ -18,8 +18,10 @@ type CreateTicketRequest struct {
 	Priority    string `json:"priority"`
 	// **Todo ticket nace con una categoría** (docs/modules/tickets.md, decisión 65): `categoryId` es
 	// obligatoria. `tags` es la lista de etiquetas tal y como se escriben: el backend las normaliza.
-	CategoryID int64    `json:"categoryId"`
-	Tags       []string `json:"tags"`
+	CategoryID int64 `json:"categoryId"`
+	// SubcategoryID es opcional: obligatoria sólo cuando la categoría tiene subcategorías activas.
+	SubcategoryID *int64   `json:"subcategoryId"`
+	Tags          []string `json:"tags"`
 	// RequesterID y RequesterEmail son de Soporte: crear un ticket en nombre de otra persona. El
 	// correo es lo que tiene a mano cuando alguien llama.
 	RequesterID    *int64 `json:"requesterId"`
@@ -33,10 +35,12 @@ type CreateTicketRequest struct {
 // UpdateTicketRequest cambia el asunto, la descripción, la categoría o las etiquetas. Los cuatro van
 // con puntero para distinguir «no lo toques» de «déjalo así»: es un `PATCH`.
 type UpdateTicketRequest struct {
-	Subject     *string   `json:"subject"`
-	Description *string   `json:"description"`
-	CategoryID  *int64    `json:"categoryId"`
-	Tags        *[]string `json:"tags"`
+	Subject     *string `json:"subject"`
+	Description *string `json:"description"`
+	CategoryID  *int64  `json:"categoryId"`
+	// SubcategoryID nil es «no toques la clasificación»; al cambiar de categoría se revalida.
+	SubcategoryID *int64    `json:"subcategoryId"`
+	Tags          *[]string `json:"tags"`
 }
 
 // AssignRequest pone responsable.
@@ -137,7 +141,9 @@ type TicketResponse struct {
 	// **La categoría y las etiquetas viajan en el ticket** (docs/modules/tickets.md, decisión 67): en
 	// las listas y en la ficha, y en un interno son las de su principal, que es lo que hereda.
 	Category *CategoryResponse `json:"category,omitempty"`
-	Tags     []string          `json:"tags"`
+	// Subcategory es el segundo nivel de la clasificación; nula cuando la categoría no tiene.
+	Subcategory *SubcategoryResponse `json:"subcategory,omitempty"`
+	Tags        []string             `json:"tags"`
 
 	Requester *PersonResponse `json:"requester,omitempty"`
 	CreatedBy *PersonResponse `json:"createdBy,omitempty"`
@@ -283,6 +289,38 @@ type CategoryResponse struct {
 type CategoryCatalogResponse struct {
 	CategoryResponse
 	Tickets int64 `json:"tickets"`
+	// Subcategories es el segundo nivel. Un array vacío significa que la categoría no tiene
+	// subcategorías, que es un estado válido.
+	Subcategories []SubcategoryCatalogResponse `json:"subcategories"`
+}
+
+// SubcategoryResponse es una subcategoría tal y como viaja dentro de un ticket.
+type SubcategoryResponse struct {
+	ID         int64  `json:"id"`
+	CategoryID int64  `json:"categoryId"`
+	Name       string `json:"name"`
+	Active     bool   `json:"active"`
+}
+
+// SubcategoryCatalogResponse es una subcategoría del catálogo, con cuántos tickets la usan.
+type SubcategoryCatalogResponse struct {
+	SubcategoryResponse
+	Tickets int64 `json:"tickets"`
+}
+
+// SubcategoryRequest es el cuerpo de crear y de renombrar una subcategoría.
+type SubcategoryRequest struct {
+	Name string `json:"name"`
+}
+
+// SubcategoryStateRequest retira o vuelve a poner una subcategoría.
+type SubcategoryStateRequest struct {
+	Active bool `json:"active"`
+}
+
+// SubcategoryEnvelope es la respuesta de crear, renombrar o retirar una subcategoría.
+type SubcategoryEnvelope struct {
+	Subcategory SubcategoryCatalogResponse `json:"subcategory"`
 }
 
 // CategoriesResponse es el catálogo entero.
@@ -388,6 +426,7 @@ func NewTicketResponse(ticket services.Ticket) TicketResponse {
 		Parent:              ticket.Parent,
 		Child:               ticket.Child,
 		Category:            NewCategoryResponse(ticket.Category),
+		Subcategory:         NewSubcategoryResponse(ticket.Subcategory),
 		Tags:                etiquetas(ticket.Tags),
 		Requester:           NewPersonResponse(ticket.Requester),
 		CreatedBy:           NewPersonResponse(ticket.CreatedBy),
@@ -549,13 +588,46 @@ func NewCategoryResponse(categoria *services.Category) *CategoryResponse {
 
 // NewCategoryCatalogResponse traduce una categoría del catálogo con su cuenta de tickets.
 func NewCategoryCatalogResponse(categoria services.CategoryWithCount) CategoryCatalogResponse {
+	subcategorias := make([]SubcategoryCatalogResponse, 0, len(categoria.Subcategories))
+	for _, subcategoria := range categoria.Subcategories {
+		subcategorias = append(subcategorias, NewSubcategoryCatalogResponse(subcategoria))
+	}
+
 	return CategoryCatalogResponse{
 		CategoryResponse: CategoryResponse{
 			ID:     categoria.ID,
 			Name:   categoria.Name,
 			Active: categoria.Active,
 		},
-		Tickets: categoria.Tickets,
+		Tickets:       categoria.Tickets,
+		Subcategories: subcategorias,
+	}
+}
+
+// NewSubcategoryResponse traduce una subcategoría para dentro de un ticket.
+func NewSubcategoryResponse(subcategoria *services.Subcategory) *SubcategoryResponse {
+	if subcategoria == nil {
+		return nil
+	}
+
+	return &SubcategoryResponse{
+		ID:         subcategoria.ID,
+		CategoryID: subcategoria.CategoryID,
+		Name:       subcategoria.Name,
+		Active:     subcategoria.Active,
+	}
+}
+
+// NewSubcategoryCatalogResponse traduce una subcategoría del catálogo con su cuenta de tickets.
+func NewSubcategoryCatalogResponse(subcategoria services.SubcategoryWithCount) SubcategoryCatalogResponse {
+	return SubcategoryCatalogResponse{
+		SubcategoryResponse: SubcategoryResponse{
+			ID:         subcategoria.ID,
+			CategoryID: subcategoria.CategoryID,
+			Name:       subcategoria.Name,
+			Active:     subcategoria.Active,
+		},
+		Tickets: subcategoria.Tickets,
 	}
 }
 

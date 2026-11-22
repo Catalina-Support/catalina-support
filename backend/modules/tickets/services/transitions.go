@@ -20,7 +20,9 @@ type UpdateInput struct {
 	Subject     string
 	Description string
 	CategoryID  *int64
-	Tags        *[]string
+	// SubcategoryID nil es «no lo toques»; cuando la categoría cambia, el servicio la revalida igual.
+	SubcategoryID *int64
+	Tags          *[]string
 }
 
 // Update cambia el asunto o la descripción, y deja la marca del campo que se tocó.
@@ -72,11 +74,12 @@ func (s *Service) Update(number string, entrada UpdateInput, actor auth.Identity
 		}
 	}
 
-	// **La categoría y las etiquetas se cambian con las mismas reglas que al crear** (decisión 65), y
-	// las cambia quien puede editar el ticket: el solicitante en el suyo y Soporte. Desarrollo no
-	// escribe en el principal (docs/usuarios-y-permisos.md, regla 2 de la sección 3).
+	// **La categoría y la subcategoría se cambian con las mismas reglas que al crear**, y las cambia
+	// quien puede editar el ticket: el solicitante en el suyo y Soporte. Desarrollo no escribe en el
+	// principal (docs/usuarios-y-permisos.md, regla 2 de la sección 3).
 	categoria := detalle.Ticket.Category
 	categoriaCambia := false
+	var categoriaElegida *repositories.TicketCategory
 
 	if entrada.CategoryID != nil {
 		cambiada, err := s.categoriaParaTicket(*entrada.CategoryID)
@@ -84,8 +87,34 @@ func (s *Service) Update(number string, entrada UpdateInput, actor auth.Identity
 			return Ticket{}, err
 		}
 
+		categoriaElegida = &cambiada
 		categoria = aCategoria(cambiada)
 		categoriaCambia = ticket.CategoryID != cambiada.ID
+	}
+
+	// La subcategoría se resuelve junto a la categoría efectiva. Si el `PATCH` no la trae y la
+	// categoría no cambia, se queda como estaba; si la categoría cambia, se revalida: una categoría
+	// con subcategorías activas la exige, y una sin ellas limpia la que hubiera.
+	subcategoriaID := ticket.SubcategoryID
+	subcategoriaCambia := false
+
+	if entrada.SubcategoryID != nil || categoriaCambia {
+		base := categoriaElegida
+		if base == nil {
+			actual, err := s.categoriaParaTicket(ticket.CategoryID)
+			if err != nil {
+				return Ticket{}, err
+			}
+			base = &actual
+		}
+
+		elegida, err := s.subcategoriaParaTicket(*base, entrada.SubcategoryID)
+		if err != nil {
+			return Ticket{}, err
+		}
+
+		subcategoriaID = idDeSubcategoria(elegida)
+		subcategoriaCambia = !mismoID(ticket.SubcategoryID, subcategoriaID)
 	}
 
 	etiquetas := detalle.Ticket.Tags
@@ -99,7 +128,7 @@ func (s *Service) Update(number string, entrada UpdateInput, actor auth.Identity
 	}
 
 	ahora := s.now()
-	cambio := ticket.Subject != asunto || descripcionCambia || categoriaCambia || etiquetasCambian
+	cambio := ticket.Subject != asunto || descripcionCambia || categoriaCambia || subcategoriaCambia || etiquetasCambian
 	if !cambio {
 		return detalle.Ticket, nil
 	}
@@ -114,6 +143,9 @@ func (s *Service) Update(number string, entrada UpdateInput, actor auth.Identity
 	}
 	if categoriaCambia {
 		ticket.CategoryID = categoria.ID
+	}
+	if subcategoriaCambia {
+		ticket.SubcategoryID = subcategoriaID
 	}
 
 	err = s.tickets.DB().Transaction(func(tx *gorm.DB) error {

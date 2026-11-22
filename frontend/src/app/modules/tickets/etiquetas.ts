@@ -2,7 +2,7 @@ export { interpolar } from '../../shared/textos';
 
 import type { Textos } from '../../core/i18n/es';
 import { fechaIso } from '../../shared/fechas';
-import type { Categoria, Resumen } from './tickets.service';
+import type { Categoria, Resumen, Subcategoria } from './tickets.service';
 import type { Idioma } from '../../core/i18n/translation.service';
 import type { OpcionConmutador } from '../../shared/components/conmutador';
 import type { OpcionSelector } from '../../shared/components/selector';
@@ -322,6 +322,25 @@ export function opcionesDeCategoria(
       valor: String(categoria.id),
       etiqueta: categoria.name,
       grupo: textos.tickets.categoria,
+    })),
+  ];
+}
+
+/**
+ * Las opciones del selector de subcategoría. La primera opción vacía, como en la categoría, hace que
+ * la obligación se vea; el llamador decide cuándo el selector es obligatorio.
+ */
+export function opcionesDeSubcategoria(
+  textos: Textos,
+  subcategorias: readonly Subcategoria[],
+  primera?: OpcionSelector,
+): readonly OpcionSelector[] {
+  return [
+    ...(primera ? [primera] : []),
+    ...subcategorias.map((subcategoria) => ({
+      valor: String(subcategoria.id),
+      etiqueta: subcategoria.name,
+      grupo: textos.tickets.subcategoria,
     })),
   ];
 }

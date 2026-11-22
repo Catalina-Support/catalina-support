@@ -294,6 +294,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
       state: consulta.get('state') ?? '',
       q: consulta.get('q') ?? '',
       category: consulta.get('category') ?? '',
+      subcategory: consulta.get('subcategory') ?? '',
       tag: consulta.get('tag') ?? '',
       priorities,
       order: consulta.get('order') === 'updated' ? 'updated' : 'priority',
@@ -446,6 +447,26 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     ];
   }
 
+  /**
+   * El chip de subcategoría: las de la categoría elegida en el borrador. Sin categoría no hay
+   * subcategorías que ofrecer, y al cambiarla se limpia la que hubiera.
+   */
+  protected opcionesDeSubcategoria(): readonly OpcionConmutador[] {
+    const categoria = this.categorias().find(
+      (candidata) => String(candidata.id) === this.borrador().category,
+    );
+
+    return [
+      { valor: '', etiqueta: this.t().tickets.todasLasSubcategorias },
+      ...(categoria?.subcategories ?? [])
+        .filter((subcategoria) => subcategoria.active)
+        .map((subcategoria) => ({
+          valor: String(subcategoria.id),
+          etiqueta: subcategoria.name,
+        })),
+    ];
+  }
+
   /** El estado de un ticket, como lo lee quien mira. */
   protected estado(ticket: Ticket): string {
     return etiquetaDeEstado(this.t(), ticket.state, this.esUsuario());
@@ -524,13 +545,14 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
       filtros.state ||
       filtros.q ||
       filtros.category ||
+      filtros.subcategory ||
       filtros.tag ||
       filtros.priorities?.length ||
       (this.conChipDeTipo() && filtros.type !== this.tipoInicial()),
     );
   }
 
-  protected filtrar(clave: 'type' | 'state' | 'view' | 'category', valor: string): void {
+  protected filtrar(clave: 'type' | 'state' | 'view' | 'category' | 'subcategory', valor: string): void {
     this.filtros.update((filtros) => ({
       ...filtros,
       [clave]: valor,
@@ -561,7 +583,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Lo que se escribe en el modal: **no filtra todavía**, sólo rellena el borrador. */
   protected escribirEnElBorrador(
-    clave: 'q' | 'tag' | 'state' | 'type' | 'view' | 'category',
+    clave: 'q' | 'tag' | 'state' | 'type' | 'view' | 'category' | 'subcategory',
     valor: string,
   ): void {
     // La etiqueta se normaliza **al aplicarla**, que es como está guardada: minúsculas y guiones.
@@ -570,6 +592,8 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     this.borrador.update((borrador) => ({
       ...borrador,
       [clave]: limpio,
+      // **Al cambiar de categoría, la subcategoría se limpia**: la de antes puede no existir en la nueva.
+      ...(clave === 'category' ? { subcategory: '' } : {}),
       // **Al cambiar de vista, el tipo se reajusta**: mirar lo que uno observa cruza los dos tipos, y el
       // «Mis tickets» de Desarrollo arranca en internos —que es su trabajo—, así que «Observo» tiene que
       // soltar ese filtro o no vería lo que sigue del otro lado. Es la misma regla que tenía el chip
@@ -613,6 +637,9 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
     }
     if (filtros.category) {
       puestos.push(this.t().tickets.filtroCategoria);
+    }
+    if (filtros.subcategory) {
+      puestos.push(this.t().tickets.filtroSubcategoria);
     }
     if (filtros.tag) {
       puestos.push(this.t().tickets.filtroEtiqueta);
@@ -718,6 +745,7 @@ export class BandejaPage implements OnInit, AfterViewInit, OnDestroy {
         state: f.state || null,
         q: f.q || null,
         category: f.category || null,
+        subcategory: f.subcategory || null,
         tag: f.tag || null,
         view: this.conChipDeVista() && f.view !== this.vistaInicial().view ? f.view || 'all' : null,
         priority: f.priorities?.length ? f.priorities : null,

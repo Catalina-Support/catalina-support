@@ -3,7 +3,17 @@
 [Español](../es/ambientes.md) · **English**
 
 > **State:** as-built
-> **Last updated:** 2026-11-05
+> **Last updated:** 2026-11-22
+>
+> **Amended on 2026-11-22 for version 1.0.2:** the schema adds `v1.0.2.sql` with the subcategories,
+> and both seeders leave six of them, with no ticket missing one when its category requires it.
+>
+> **Correction of 2026-11-22: the seeders include the demo summaries.** The example tickets already
+> carry both fields (`summary` and `ultima_accion`) written in the seeder language, marked with
+> `provider='demo'` and `model='demo-seed'`. A freshly seeded installation therefore shows a populated
+> inbox without downloading a model or waiting hours for CPU time. New tickets still use the real AI
+> engine. The runner checks that all 114 fields are ready (25 main, 7 internal and the internal variant
+> of each main ticket, two fields each).
 >
 > **WSL2 support verified, 2026-11-05.** The NVIDIA variant was tested on Windows 11 with Docker Desktop
 > using the WSL2 backend, an RTX A2000 12 GB and driver 596.51. Docker sees the GPU with `--gpus all`,
@@ -335,7 +345,7 @@ collects what I proposed.
 
 | | Development | Production |
 | --- | --- | --- |
-| **Domain** | `dev.catalina-support.example.com` | `support.example.com` |
+| **Domain** | `dev.catalina-support.com` | `support.example.com` |
 | **Ports** | frontend 11001, backend 11002, database 11003 | frontend 21001, backend 21002, database 21003 |
 | **Code** | Mounted as a volume: it is edited and the container reloads | **Built artifacts** in `/srv/catalina-support` |
 | **Reload** | Angular and `air` reload on save | It has to be deployed |
@@ -356,7 +366,7 @@ docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
-Login is at `https://dev.catalina-support.example.com`. **And also, without nginx, at
+Login is at `https://dev.catalina-support.com`. **And also, without nginx, at
 `http://127.0.0.1:11001`**: the development server forwards `/api` to the backend
 (`frontend/proxy.conf.json` → `http://backend:11002`), so with the environment up **port 11001 opens**. `migrate` waits for PostgreSQL, applies the schema and `backend` waits for it to finish correctly.
 On a new database `/setup` appears; after completing the
@@ -684,11 +694,16 @@ deployment piecemeal and fills `migrations/` with scraps.
 | File | What it carries | Where it is applied |
 | --- | --- | --- |
 | `v1.0.0.sql` | The tables, the indexes and their constraints **and what the application needs to work**: the two settings rows —the installation one and the tickets one— and the twenty mail templates. Without the settings row neither the language nor the name can be read; without a template no mail goes out | **Development and production** |
-| `v1.0.0_dev_en.sql` or `v1.0.0_dev_es.sql` | The **example data**: eleven accounts (five requesters, three Support and three Development), 25 tickets with their history —assignments, reassignments, comments, escalations with their internal ticket, attachments— and the numbering counter | **Only development**, with `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` or `scripts/dev-seed-es.sh` on Linux and macOS) |
+| `v1.0.1.sql` | The fourteenth mail template for an account created from a ticket | **Development and production** |
+| `v1.0.2.sql` | **Subcategories**: `ticket_subcategories` and `tickets.subcategory_id`, with the composite foreign key and its indexes | **Development and production** |
+| `v1.0.0_dev_en.sql` or `v1.0.0_dev_es.sql` | The **example data**: eleven accounts (five requesters, three Support and three Development), 25 tickets with their history —assignments, reassignments, comments, escalations with their internal ticket, attachments—, **six subcategories** (General and Printers have none), the numbering counter and **the demo summaries** of all of them | **Only development**, with `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` or `scripts/dev-seed-es.sh` on Linux and macOS) |
 
-**The script also deletes the AI engine summaries** (`ai_insights`): the table is kept **by ticket
-number**, and the example data **re-issues the same numbers**, so an old row would
-stick to a new ticket and show the reason of another (`docs/modules/ai.md`, section 4).
+**The script deletes and recreates the AI engine summaries** (`ai_insights`): the table is kept **by
+ticket number**, and the example data **re-issues the same numbers**, so an old row would stick to a
+new ticket and show the reason of another (`docs/modules/ai.md`, section 4). That is why they are
+deleted at the start and inserted at the end of the example file, already written and in the seeder
+language. **They are not a real generation**: they are marked as `demo`, and the engine still writes
+the summaries of new tickets.
 
 **The separation is not for form**: what is in `_dev` **deletes and recreates** the working
 content —tickets included—, so it cannot be something applied just by deploying. In

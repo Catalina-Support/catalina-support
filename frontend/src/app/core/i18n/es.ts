@@ -704,6 +704,10 @@ export const ES = {
     filtroCategoria: 'Categoría',
     filtroEtiqueta: 'Etiqueta',
     todasLasCategorias: 'Todas',
+    subcategoria: 'Subcategoría',
+    subcategorias: 'Subcategorías',
+    filtroSubcategoria: 'Subcategoría',
+    todasLasSubcategorias: 'Todas',
     buscarPorEtiqueta: 'Buscar por etiqueta',
     sinEtiquetas: 'Sin etiquetas',
 
@@ -758,6 +762,10 @@ export const ES = {
     // clasificar— y las etiquetas son opcionales y se escriben normalizándose solas (decisiones 65 y 68).
     elegirCategoria: 'Elige una categoría',
     categoriaAyuda: 'Todo ticket va clasificado: Soporte y Desarrollo agrupan por aquí.',
+    elegirSubcategoria: 'Elige una subcategoría',
+    subcategoriaAyuda:
+      'Esta categoría agrupa por subcategoría: elige la que mejor describa el caso.',
+    subcategoriaObligatoria: 'Esta categoría tiene subcategorías: elige una.',
     sinCategoriasActivas:
       'No hay ninguna categoría activa, así que ahora mismo no se puede crear un ticket. Pídele a Soporte o al Administrador que cree una.',
     etiquetasCampo: 'Etiquetas',
@@ -869,6 +877,8 @@ export const ES = {
     // --- lo que contestan las acciones ---
     ticketActualizado: 'Ticket actualizado.',
     categoriaCambiada: 'Categoría cambiada.',
+    clasificacionCambiada: 'Clasificación cambiada.',
+    subcategoriaCambiada: 'Subcategoría cambiada.',
     etiquetasCambiadas: 'Etiquetas guardadas.',
     observadorAnadido: 'Observador añadido.',
     descripcionActualizada: 'Descripción actualizada.',
@@ -948,6 +958,22 @@ export const ES = {
     categoriaRenombrada: 'Categoría renombrada.',
     categoriaRetiradaAviso: 'Categoría retirada. Los tickets que la tienen la conservan.',
     categoriaReactivadaAviso: 'Categoría puesta otra vez.',
+    subcategoriasDescripcion:
+      'Cada categoría puede tener subcategorías, o ninguna. Si tiene alguna activa, el alta del ticket pide elegir una; retirarla deja de ofrecerla sin tocar los tickets que ya la tienen.',
+    nuevaSubcategoria: 'Nueva subcategoría',
+    nombreDeSubcategoria: 'Nombre de la subcategoría',
+    crearSubcategoria: 'Crear subcategoría',
+    creandoSubcategoria: 'Creando…',
+    renombrarSubcategoria: 'Renombrar',
+    retirarSubcategoria: 'Retirar',
+    reactivarSubcategoria: 'Volver a poner',
+    subcategoriaActiva: 'Activa',
+    subcategoriaRetirada: 'Retirada',
+    sinSubcategorias: 'Sin subcategorías.',
+    subcategoriaCreada: 'Subcategoría creada.',
+    subcategoriaRenombrada: 'Subcategoría renombrada.',
+    subcategoriaRetiradaAviso: 'Subcategoría retirada. Los tickets que la tienen la conservan.',
+    subcategoriaReactivadaAviso: 'Subcategoría puesta otra vez.',
   },
 
   // Los botones del editor con formato, que es el cuadro de escribir de un ticket y de un comentario
@@ -1272,6 +1298,18 @@ export const ES = {
     'tickets.tag.notFound': 'Esa etiqueta no existe.',
     'tickets.category.forbidden':
       'Sólo el Administrador puede retirar o volver a poner una categoría.',
+    'tickets.subcategory.required':
+      'Esta categoría tiene subcategorías: elige una para clasificar el ticket.',
+    'tickets.subcategory.notFound': 'Esa subcategoría no existe.',
+    'tickets.subcategory.inactive':
+      'Esa subcategoría está retirada: elige otra para clasificar el ticket.',
+    'tickets.subcategory.mismatch': 'Esa subcategoría no pertenece a la categoría elegida.',
+    'tickets.subcategory.notAvailable':
+      'Esa categoría no tiene subcategorías: no hay ninguna que elegir.',
+    'tickets.subcategory.name.required': 'Escribe un nombre para la subcategoría.',
+    'tickets.subcategory.duplicate': 'Ya hay una subcategoría con ese nombre en la categoría.',
+    'tickets.subcategory.forbidden':
+      'Sólo el Administrador puede crear, renombrar o retirar subcategorías.',
     'tickets.tag.required': 'Escribe algo para la etiqueta: no puede quedar vacía.',
     // El tope lo impide el propio campo, pero si algo llega de otra puerta se dice igual.
     'tickets.tag.tooLong': 'La etiqueta no puede pasar de 32 caracteres.',

@@ -525,6 +525,11 @@ func run() error {
 	mux.Handle("POST /api/tickets/categories", admin(http.HandlerFunc(ticketsController.CreateCategory)))
 	mux.Handle("PATCH /api/tickets/categories/{id}", admin(http.HandlerFunc(ticketsController.RenameCategory)))
 	mux.Handle("POST /api/tickets/categories/{id}/state", admin(http.HandlerFunc(ticketsController.CategoryState)))
+	// Las subcategorías: el segundo nivel del catálogo. Se crean dentro de su categoría y se
+	// renombran/retiran por su propio identificador. Todo el mantenimiento es del Administrador.
+	mux.Handle("POST /api/tickets/categories/{id}/subcategories", admin(http.HandlerFunc(ticketsController.CreateSubcategory)))
+	mux.Handle("PATCH /api/tickets/subcategories/{id}", admin(http.HandlerFunc(ticketsController.RenameSubcategory)))
+	mux.Handle("POST /api/tickets/subcategories/{id}/state", admin(http.HandlerFunc(ticketsController.SubcategoryState)))
 	mux.Handle("GET /api/tickets/tags", authenticated(http.HandlerFunc(ticketsController.Tags)))
 	// El mantenimiento de las etiquetas: el catálogo se crea, se renombra —y el cambio vale para todos
 	// los tickets que la llevan— y se retira —y se quita de ellos— (docs/modules/tickets.md, decisión

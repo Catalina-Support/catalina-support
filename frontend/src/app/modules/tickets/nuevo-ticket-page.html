@@ -69,8 +69,23 @@
           [ayuda]="t().tickets.categoriaAyuda"
           [opciones]="opcionesDeCategoria()"
           [valor]="categoriaElegida()"
-          (valorChange)="categoriaElegida.set($event)"
+          (valorChange)="elegirCategoria($event)"
         />
+
+        <!--
+          **La subcategoría sólo aparece si la categoría tiene alguna activa** (la regla la decide el
+          backend, aquí se enseña). Si la tiene, es obligatoria; si no, no hay nada que elegir.
+        -->
+        @if (subcategoriaObligatoria()) {
+          <app-selector
+            identificador="ticket-subcategoria"
+            [etiqueta]="t().tickets.subcategoria"
+            [ayuda]="t().tickets.subcategoriaAyuda"
+            [opciones]="opcionesDeSubcategoria()"
+            [valor]="subcategoriaElegida()"
+            (valorChange)="subcategoriaElegida.set($event)"
+          />
+        }
       } @else if (!cargandoCategorias()) {
         <!-- Sin ninguna categoría activa no se puede crear: se dice, en vez de dejar rellenar y fallar. -->
         <app-aviso forma="atencion" [texto]="t().tickets.sinCategoriasActivas" />
@@ -143,7 +158,11 @@
           [texto]="t().tickets.crear"
           [textoTrabajando]="t().tickets.creando"
           [trabajando]="trabajando()"
-          [deshabilitado]="!puedeCrearTicket() || cargandoCategorias()"
+          [deshabilitado]="
+            !puedeCrearTicket() ||
+            cargandoCategorias() ||
+            (subcategoriaObligatoria() && !subcategoriaElegida())
+          "
         />
       </div>
     </form>

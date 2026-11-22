@@ -20,7 +20,10 @@ type CreateInput struct {
 	// el alta la exige antes de nada. Las etiquetas son opcionales y vienen como se escriben: el
 	// servicio las normaliza al guardarlas.
 	CategoryID int64
-	Tags       []string
+	// SubcategoryID es opcional: nula cuando la categoría no tiene subcategorías. Cuando las tiene,
+	// es obligatoria.
+	SubcategoryID *int64
+	Tags          []string
 	// RequesterID y RequesterEmail sólo los usa Soporte, para crear un ticket en nombre de otra
 	// persona. El correo es lo que tiene a mano cuando alguien llama, y es el identificador de las
 	// personas en este producto.
@@ -90,6 +93,14 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (CreateResult
 		return CreateResult{}, err
 	}
 
+	// **La subcategoría se comprueba con la categoría ya validada**: si la categoría tiene
+	// subcategorías activas, es obligatoria; si no tiene, no se admite ninguna. Se hace antes de la
+	// transacción y antes de repartir, como la categoría.
+	subcategoria, err := s.subcategoriaParaTicket(categoria, entrada.SubcategoryID)
+	if err != nil {
+		return CreateResult{}, err
+	}
+
 	etiquetas, err := NormalizarEtiquetas(entrada.Tags)
 	if err != nil {
 		return CreateResult{}, err
@@ -134,17 +145,18 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (CreateResult
 		numero = compuesto
 
 		ticket, err = s.tickets.CreateTicket(tx, repositories.CreateTicketInput{
-			Number:      compuesto,
-			NumberYear:  year,
-			NumberSeq:   secuencia,
-			Subject:     asunto,
-			Description: descripcion,
-			State:       repositories.StateNuevo,
-			Priority:    prioridad,
-			CategoryID:  categoria.ID,
-			RequesterID: solicitante.ID,
-			CreatedByID: actor.ID,
-			AssigneeID:  idDe(responsable),
+			Number:        compuesto,
+			NumberYear:    year,
+			NumberSeq:     secuencia,
+			Subject:       asunto,
+			Description:   descripcion,
+			State:         repositories.StateNuevo,
+			Priority:      prioridad,
+			CategoryID:    categoria.ID,
+			SubcategoryID: idDeSubcategoria(subcategoria),
+			RequesterID:   solicitante.ID,
+			CreatedByID:   actor.ID,
+			AssigneeID:    idDe(responsable),
 		})
 		if err != nil {
 			return err
@@ -235,6 +247,7 @@ func (s *Service) Create(entrada CreateInput, actor auth.Identity) (CreateResult
 			State:       ticket.State,
 			Priority:    ticket.Priority,
 			Category:    aCategoria(categoria),
+			Subcategory: aSubcategoriaDe(subcategoria),
 			Tags:        etiquetas,
 			Requester:   &solicitante,
 			CreatedBy:   cuentaDe(actor),

@@ -3,7 +3,11 @@
 [English](../en/arquitectura.md) · **Español**
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-05
+> **Última actualización:** 2026-11-22
+>
+> **Enmienda de subcategorías implementada en la 1.0.2 el 2026-11-22.** El esquema añade
+> `ticket_subcategories` y `tickets.subcategory_id`; la base pasa a **22 tablas** y la versión de la
+> aplicación es la 1.0.2.
 >
 > **Soporte WSL2 verificado, 2026-11-05.** La frontera CPU/NVIDIA de la sección 28 también funciona
 > en Windows con Docker Desktop WSL2: GPU visible con `--gpus all`, administrador en modo `nvidia`,
@@ -318,7 +322,9 @@ backend
 ├── main.go                  # arranque: configuración, GORM, rutas, servidor
 ├── .air.toml                # recarga en caliente (sólo desarrollo)
 ├── migrations
-│   └── v1.0.0.sql
+│   ├── v1.0.0.sql
+│   ├── v1.0.1.sql
+│   └── v1.0.2.sql
 ├── modules
 │   └── <módulo>
 │       ├── controllers      # HTTP: leer petición, validar forma, responder
@@ -464,8 +470,8 @@ reparto —el Administrador a los usuarios, los demás a su bandeja—.
 
 - Una base de datos y un esquema; el aislamiento por cliente, si llega a existir, se decide en
   el documento de usuarios y permisos.
-- **Una única vía para el esquema**: los archivos de `backend/migrations/` (hoy sólo
-  `v1.0.0.sql`), transaccionales (`BEGIN` … `COMMIT`) e idempotentes (`CREATE ... IF NOT EXISTS`,
+- **Una única vía para el esquema**: los archivos de `backend/migrations/` (`v1.0.0.sql`, `v1.0.1.sql` y
+  `v1.0.2.sql`), transaccionales (`BEGIN` … `COMMIT`) e idempotentes (`CREATE ... IF NOT EXISTS`,
   `INSERT ... WHERE NOT EXISTS`). Se aplican con `psql -v ON_ERROR_STOP=1` dentro del contenedor de
   base de datos. Nada de `ALTER` sueltos ni pasos manuales al desplegar.
 - Mientras el proyecto no tenga datos reales, se actualiza ese mismo archivo en vez de añadir
@@ -622,7 +628,7 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 | `ldap` (**en `active-directory.yml`**, no en `dev.yml`) | `osixia/openldap:1.5.0` | El directorio, con las personas de `config/ldap/01-personas.ldif` sembradas al arrancar | `11005` (LDAP en claro: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f active-directory.yml up -d` |
 | `keycloak` (**en `keycloak.yml`**, no en `dev.yml`) | `quay.io/keycloak/keycloak:26.0` | `start-dev --import-realm`, con el reino de `config/keycloak/realm-catalina-support.json` | `11006` (HTTP: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f keycloak.yml up -d` |
 | `ai` (**en `ai.yml`**, no en `dev.yml`) | llama.cpp con servidor HTTP | Sirve el modelo **Qwen2.5-1.5B-Instruct Q4_K_M**, que se descarga una vez al volumen la primera vez | **Ninguno**: el motor no se publica en la máquina, sólo se habla por la red `catalina-support-ai`. Lo comparten **desarrollo y producción** (`docs/modules/ai.md`, decisión 1) |
-| `migrate` | `postgres:18-alpine` | Aplica sólo `v1.0.0.sql`, con `ON_ERROR_STOP=1`; `backend` espera su finalización correcta | Ninguno; se ejecuta automáticamente con `up` y también admite `run --rm migrate` |
+| `migrate` | `postgres:18-alpine` | Aplica todas las migraciones versionadas (`v1.0.0` a `v1.0.2`), con `ON_ERROR_STOP=1`; `backend` espera su finalización correcta | Ninguno; se ejecuta automáticamente con `up` y también admite `run --rm migrate` |
 | `seed-en`, `seed-es` | `postgres:18-alpine` | Ejecutan el acceso explícito y el runner compartido | Ninguno; ejemplos opcionales por idioma |
 
 **El motor de IA no está en la tabla de arriba a propósito**: vive en `ai.yml`, **compartido por los dos
@@ -694,7 +700,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | Entorno | Dominio | Vhost | Contenedores detrás |
 | --- | --- | --- | --- |
-| Desarrollo | `dev.catalina-support.example.com` | `catalina-support-dev.conf` | frontend `11001`, backend `11002` |
+| Desarrollo | `dev.catalina-support.com` | `catalina-support-dev.conf` | frontend `11001`, backend `11002` |
 | Producción | `support.example.com` | `catalina-support-prod.conf` | frontend `21001`, backend `21002` |
 
 - El frontend llama a `/api/**` **en relativo** y nunca a un host: el mismo código sirve en
@@ -720,7 +726,7 @@ sudo nginx -t && sudo systemctl reload nginx
   `ws:`) porque el servidor de desarrollo inyecta un script y abre un websocket para el recambio
   en caliente; la de producción es estricta (`script-src 'self'`).
 - El servidor de desarrollo de Angular **rechaza con 403** cualquier `Host` que no conozca: por
-  eso `dev.catalina-support.example.com` está declarado en `serve.options.allowedHosts` de
+  eso `dev.catalina-support.com` está declarado en `serve.options.allowedHosts` de
   `angular.json`. Sin esa línea, la página responde 403 aunque nginx esté bien.
 - **El servidor de desarrollo reenvía `/api` al backend** (`frontend/proxy.conf.json`, declarado en
   `serve.options.proxyConfig` de `frontend/angular.json`), con destino **`http://backend:11002`** —el
@@ -788,7 +794,7 @@ docker compose -f keycloak.yml up -d            # Keycloak (opcional; tras el en
 docker compose -f ai.yml up -d                  # motor requerido si se eligió IA local
 ```
 
-En desarrollo se entra por **https://dev.catalina-support.example.com** (nginx → contenedores).
+En desarrollo se entra por **https://dev.catalina-support.com** (nginx → contenedores).
 Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx, y **la 11001 ya reenvía
 `/api` al backend** con el proxy de `serve` (`frontend/proxy.conf.json`), así que **también se entra
 en `http://127.0.0.1:11001` sin nginx**; la 11002 es el backend directo.
@@ -824,7 +830,7 @@ máquina tenga instalado.
 - **Todo en contenedores**: uno para el frontend, otro para el backend y otro para la base de
   datos, con la estructura de Calibyou (`dev.yml` / `prod.yml`, `config/{dockerfiles,env,nginx}`).
 - **Node 24 LTS** y **sin Go ni Node instalados en la máquina**.
-- **Dominios**: `dev.catalina-support.example.com` en desarrollo y
+- **Dominios**: `dev.catalina-support.com` en desarrollo y
   `support.example.com` en producción, los dos con TLS de Let's Encrypt y servidos
   por nginx en la máquina (decidido por el responsable el 2026-09-22).
 - **El despliegue a producción se aplaza hasta cerrar la versión 1.0.0** (decidido por el
@@ -878,11 +884,12 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | Tailwind v4 y los temas | Instalado y compilando: el CSS servido lleva **las utilidades generadas** y las variables del tema, y **ningún componente escribe un color a mano**. Las fuentes se declaran a mano en `styles.css` (`@source './app'`), y hay un caso de Playwright que **falla si la hoja llega sin utilidades** |
 | El tema | **Ocho temas** (dos de fábrica con `light-dark()` y el color institucional, y seis fijos con su paleta y su acento), elegidos con un atributo en `html` y el tema elegido con un atributo en `html`. **De fábrica sigue al sistema** —que es no haber elegido, y por eso **«automático» no se muestra ni se elige**—, el sistema manda en vivo mientras nadie haya elegido, la elección se recuerda en el navegador y se aplica **antes de arrancar** desde `main.ts` (no con un script incrustado: la CSP de producción no lo admite). Probado en un navegador **midiendo el color de fondo**, en claro, en oscuro y con la elección ganando al sistema |
 | Build de producción del frontend | `npm run build` → `dist/catalina-support/browser`, que es la ruta que espera `prod.yml` |
-| Vhost de desarrollo | `https://dev.catalina-support.example.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
+| Vhost de desarrollo | `https://dev.catalina-support.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
 | TLS de los dos dominios | Certificados de Let's Encrypt emitidos el 2026-09-22 (caducan el 2026-12-21), con renovación automática configurada por `webroot` |
 | Cabeceras de seguridad y CSP | Presentes en la respuesta de desarrollo (`nosniff`, `SAMEORIGIN`, `Referrer-Policy` y CSP de desarrollo) |
 | Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea **21 tablas** —plantillas, cuentas y tokens; las **cinco tablas de configuración de una fila** (`installation_settings`, `ai_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`); dos auxiliares de IA; las diez de tickets; y `ai_insights`— con sus índices y restricciones. Incluye su puesta al día idempotente y la conversión histórica de texto plano a HTML sin tocar un cuerpo que ya contiene adjuntos. |
-| Los datos de ejemplo, con su guion | `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` aplica el esquema, aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia: **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
+| Migración `v1.0.2.sql` | Añade `ticket_subcategories` y `tickets.subcategory_id` con su clave ajena compuesta e índices. Aplicada dos veces seguidas sin error; los tickets existentes conservan la subcategoría nula y la base pasa a **22 tablas**. |
+| Los datos de ejemplo, con su guion | `./scripts/dev-seed-en.sh` o `./scripts/dev-seed-es.sh` aplica el esquema, aplica `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia y **seis subcategorías** (General e Impresoras no tienen): **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
 | `shared/auth` | Firma y valida el token de sesión (HS256, 10 horas, `sub`), saca el `Bearer` de la cabecera y compara secretos en tiempo constante. **20 pruebas en verde**, incluidas la caducidad, otro secreto, el algoritmo `none`, los dos secretos vacíos y las cinco del `state` de OIDC |
 | `shared/authz` | Comprueba el papel y responde 403 con `auth.forbidden`. **5 pruebas en verde**, incluido el caso de una ruta montada sin autenticación |
 | Middleware de autenticación | Lee la cuenta **en cada petición**, deja la identidad en el contexto y responde 401 (`auth.session.invalid`/`auth.session.expired`) o 503 si la base no responde. **8 pruebas en verde** |
@@ -899,7 +906,7 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | Los dos logos de fábrica | Que la aplicación enseñe **el que toca al tema que se está viendo**: con un tema claro carga `logo-catalina-support-light.png` y con uno oscuro el `dark`, comprobando que **la imagen carga de verdad** (`naturalWidth`) y que son dos archivos distintos. Los dos salen del repositorio (`frontend/public/`), con fondo transparente, y el caso quita primero cualquier logo propio y deja la instalación como estaba |
 | La política de contraseñas y el enlace | **Mínimo 8 caracteres** (bajado de 12 el 2026-09-25), comprobado en el navegador: una contraseña corta se rechaza con su clave **y no gasta el enlace** —se vuelve a intentar en la misma pantalla y entra—, y ocho caracteres valen. El caso destapó que el enlace se gastaba antes de comprobar la contraseña, y está corregido |
 | El despliegue a producción | **`scripts/prod-build.sh`** construye y publica los dos artefactos en `/srv/catalina-support` (rota el anterior **por copia**, verifica que el artefacto existe y corta si no, y escribe `BUILD_INFO` con el commit, la rama, si el árbol estaba sucio y la fecha) y levanta los contenedores con `prod.yml` reiniciando **sólo el backend**. Los tres contenedores de producción están levantados y sanos, y el `admin` entra con la contraseña de `config/env/prod.env`. **El dominio sigue respondiendo 503**: la 1.0.0 no está cerrada. **Este despliegue queda aparcado** hasta que el producto esté terminado (decisión del responsable, 2026-09-30) |
-| La versión del sistema | Publicada en la marca pública (`GET /api/settings/brand` → `"version": "1.0.0"`) y leída en los dos sitios: **en la fila de salir del menú lateral, alineada a la derecha**, y **en el pie de la pantalla de entrada**. Comprobado en el navegador en PC y en móvil, contra lo que dice la API —no contra un número escrito en la prueba—, que es texto y no un enlace, que se lee sobre el fondo del menú, y que **plegado no se enseña**. Y que sin marca no se enseña ningún número: la pestaña no se queda sin nombre y el pie sin versión, en vez de inventarse uno |
+| La versión del sistema | Publicada en la marca pública (`GET /api/settings/brand` → `"version": "1.0.2"`) y leída en los dos sitios: **en la fila de salir del menú lateral, alineada a la derecha**, y **en el pie de la pantalla de entrada**. Comprobado en el navegador en PC y en móvil, contra lo que dice la API —no contra un número escrito en la prueba—, que es texto y no un enlace, que se lee sobre el fondo del menú, y que **plegado no se enseña**. Y que sin marca no se enseña ningún número: la pestaña no se queda sin nombre y el pie sin versión, en vez de inventarse uno |
 | El nombre de la instalación, por curl y en el navegador | Cambiado por la API y **leído antes de entrar** (`GET /api/settings/brand`): un nombre de 61 caracteres → **422 `settings.name.tooLong`**, y uno en blanco → vuelve `Catalina Support`. Y en el navegador: el menú lateral, la pestaña y la pantalla de entrada lo enseñan, y al vaciar el campo vuelve el de fábrica |
 | Las copias de la base | `scripts/backup-db.sh dev`, ejecutado de verdad: deja el volcado en `/srv/catalina-support/backups/`, **comprueba que se puede leer** (`pg_restore --list`) y **se restauró en una base nueva**: 11 tablas y los mismos registros que la de verdad (tickets, cuentas, plantillas y adjuntos, contados uno a uno). Y la retención, probada con una copia de hace veinte días: se borra, y no se toca la de tres días ni la de hoy |
 | Los adjuntos, en su carpeta, por curl | Un ticket creado de verdad y **su adjunto subido por la API**: el archivo aparece en `_files/2026/CS-2026-0001/<nombre generado>.png` y en la base queda esa **ruta relativa**; el adjunto que se sube **al interno** va a la suya, `_files/2026/INT-CS-2026-0001/`; y **los dos se descargan idénticos** al que se subió, comparados byte a byte (`cmp`) |
@@ -930,7 +937,7 @@ operación de producción continúa aparcada y no forma parte de esta evidencia.
 | El menú llega hasta abajo | El cajón **mide la zona visible y se desplaza por dentro**: en un móvil con barra del navegador (839 px visibles de 890) el botón de salir quedaba fuera de la pantalla y no se podía pulsar. Lo encontró Playwright, y con él se corrigió además que en PC la barra se estirara a todo el contenido |
 | Un solo `h1` por pantalla | Las tarjetas de las pantallas de producto titulan con `h2`: la de usuarios tenía tres `h1` y el perfil otros tantos. Lo dijo la prueba al encontrar dos encabezados con el mismo nombre donde esperaba uno |
 
-| Las diez tablas de `tickets` | Creadas en `v1.0.0.sql` y aplicadas **dos veces seguidas** sin error: los dos tipos de ticket, la conversación, los adjuntos, el historial y el contador de la numeración, con sus restricciones (el interno no puede estar `escalado`, exactamente un destino en lo que cuelga de un ticket, el motivo del escalado no puede estar vacío) |
+| Las once tablas de `tickets` | Creadas en `v1.0.0.sql` y ampliadas en `v1.0.2.sql` con `ticket_subcategories` y aplicadas **dos veces seguidas** sin error: los dos tipos de ticket, la conversación, los adjuntos, el historial y el contador de la numeración, con sus restricciones (el interno no puede estar `escalado`, exactamente un destino en lo que cuelga de un ticket, el motivo del escalado no puede estar vacío) |
 | Las extensiones del texto y el código | Comprobado de punta a punta por la pantalla: un `.sql` **se coge** —sin el aviso de rechazo—, **se guarda** su referencia en el comentario, **queda entre los adjuntos del ticket** y **al pulsarlo se descarga** con su nombre; y un `.svg` **se sigue rechazando** antes de subirlo. Las **cuarenta y dos** extensiones nuevas son las mismas en los dos sitios —el editor y el backend—, y el editor lo comprueba por su lado con sus pruebas de unidad |
 | El módulo `ai`, con el motor de verdad | **Comprobado de punta a punta contra el contenedor**: al crear un ticket, `Pedir` vuelve sin esperar la generación y los resúmenes pasan de `pendiente` a `listo`. En la pantalla, la lista y la ficha muestran motivo y última acción; el interno conserva como motivo el escalado. La IA es obligatoria para completar una instalación. Si el motor configurado cae después, los trabajos quedan `sin_motor` o pendientes y la mesa de ayuda sigue operando mientras el monitor intenta recuperarlo |
 | El motor de IA, medido | El contenedor `catalina_support_ai` (llama.cpp `server-b11206` + Qwen2.5-1.5B-Instruct Q4_K_M) tiene un **tope de 1500 MiB** (`mem_limit: 1500m` en `ai.yml`) y **sin tope de CPU** —el compose no limita CPU—, **sin publicar ningún puerto**. Medido en marcha: **~1,44 GiB**, el **98% del tope** (`docker stats` da 1.441-1.448 GiB; el `VmRSS` del proceso, 1,51 GB). **Tarda entre 12 y 24 segundos por campo** y unos 95 s en un ticket de 6 000 caracteres; la segunda llamada del mismo ticket es ~7 veces más rápida (caché de prefijo). Su comprobación de salud contesta en 325 ms mientras está generando |

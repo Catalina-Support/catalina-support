@@ -581,7 +581,7 @@ escribe código sin un documento aprobado antes.
 | `primer-arranque.md` | **as-built** (8 enmiendas previas) | Catálogo local ausente sin falso servidor caído |
 | `ambientes.md` | **propuesta** | Servicios y comandos explícitos `seed-en` y `seed-es` |
 | `modules/ai.md` | **as-built** | Redacción profesional verificable y rechazo de propuestas deficientes |
-| `modules/tickets.md` | **as-built** | Coherencia al alternar Principales e Internos |
+| `modules/tickets.md` | **as-built** | Coherencia al alternar principales e internos, y subcategorías opcionales con elección obligatoria cuando existen |
 | `modules/dashboard.md` | **as-built** | Dashboard agregado, métricas, gráficos y XLSX localizado |
 | `entornos-compartidos.md` | **as-built** | Capacidades genéricas para instalaciones públicas compartidas |
 

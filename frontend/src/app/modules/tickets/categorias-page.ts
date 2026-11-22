@@ -14,7 +14,12 @@ import {
   normalizarAlEscribir,
   normalizarEtiqueta,
 } from './etiquetas';
-import { TicketsService, type Categoria, type Etiqueta } from './tickets.service';
+import {
+  TicketsService,
+  type Categoria,
+  type Etiqueta,
+  type Subcategoria,
+} from './tickets.service';
 
 /**
  * **Categorías y etiquetas**: el catálogo con el que se clasifica cada ticket.
@@ -61,6 +66,15 @@ export class CategoriasPage implements OnInit {
   /** El alta de una etiqueta es el mismo diálogo, con un solo campo: su nombre. */
   protected readonly mostrandoAltaDeEtiqueta = signal(false);
   protected readonly etiquetaNueva = signal('');
+
+  /** El alta de una subcategoría cuelga de una categoría; el diálogo lleva su nombre. */
+  protected readonly mostrandoAltaDeSubcategoria = signal(false);
+  protected readonly categoriaDeLaNuevaSubcategoria = signal<Categoria | null>(null);
+  protected readonly nombreNuevaSubcategoria = signal('');
+
+  /** El renombrado de una subcategoría se hace en su fila, como el de la categoría. */
+  protected readonly renombrandoSubcategoria = signal<number | null>(null);
+  protected readonly nombreEditadoDeSubcategoria = signal('');
 
   /** El renombrado se hace en la fila, donde está la categoría. */
   protected readonly renombrando = signal<number | null>(null);
@@ -114,6 +128,89 @@ export class CategoriasPage implements OnInit {
       this.mostrandoAlta.set(false);
       await this.cargar();
       return { forma: 'exito', texto: this.t().tickets.categoriaCreada };
+    });
+  }
+
+  // ------------------------------------------------------------------ el alta de una subcategoría
+
+  protected abrirAltaDeSubcategoria(categoria: Categoria): void {
+    this.mensaje.set(null);
+    this.categoriaDeLaNuevaSubcategoria.set(categoria);
+    this.nombreNuevaSubcategoria.set('');
+    this.mostrandoAltaDeSubcategoria.set(true);
+  }
+
+  protected cerrarAltaDeSubcategoria(): void {
+    this.mostrandoAltaDeSubcategoria.set(false);
+  }
+
+  protected async crearLaSubcategoria(): Promise<void> {
+    const categoria = this.categoriaDeLaNuevaSubcategoria();
+    const nombre = this.nombreNuevaSubcategoria().trim();
+    if (!categoria) {
+      return;
+    }
+    if (!nombre) {
+      this.mensaje.set({
+        forma: 'error',
+        texto: this.textos.error('tickets.subcategory.name.required'),
+      });
+      return;
+    }
+
+    await this.actuar(async () => {
+      await this.tickets.crearSubcategoria(categoria.id, nombre);
+      this.mostrandoAltaDeSubcategoria.set(false);
+      await this.cargar();
+      return { forma: 'exito', texto: this.t().tickets.subcategoriaCreada };
+    });
+  }
+
+  // ------------------------------------------------------------------ el renombrado de una subcategoría
+
+  protected empezarRenombradoDeSubcategoria(subcategoria: Subcategoria): void {
+    this.mensaje.set(null);
+    this.renombrandoSubcategoria.set(subcategoria.id);
+    this.nombreEditadoDeSubcategoria.set(subcategoria.name);
+  }
+
+  protected cancelarRenombradoDeSubcategoria(): void {
+    this.renombrandoSubcategoria.set(null);
+  }
+
+  protected async guardarNombreDeSubcategoria(subcategoria: Subcategoria): Promise<void> {
+    const nombre = this.nombreEditadoDeSubcategoria().trim();
+    if (!nombre) {
+      this.mensaje.set({
+        forma: 'error',
+        texto: this.textos.error('tickets.subcategory.name.required'),
+      });
+      return;
+    }
+
+    await this.actuar(async () => {
+      await this.tickets.renombrarSubcategoria(subcategoria.id, nombre);
+      this.renombrandoSubcategoria.set(null);
+      await this.cargar();
+      return { forma: 'exito', texto: this.t().tickets.subcategoriaRenombrada };
+    });
+  }
+
+  // ------------------------------------------------------------------ retirar y volver a poner subcategorías
+
+  protected async retirarSubcategoria(subcategoria: Subcategoria): Promise<void> {
+    await this.actuar(async () => {
+      await this.tickets.cambiarEstadoDeSubcategoria(subcategoria.id, false);
+      await this.cargar();
+      return { forma: 'exito', texto: this.t().tickets.subcategoriaRetiradaAviso };
+    });
+  }
+
+  protected async reactivarSubcategoria(subcategoria: Subcategoria): Promise<void> {
+    await this.actuar(async () => {
+      await this.tickets.cambiarEstadoDeSubcategoria(subcategoria.id, true);
+      await this.cargar();
+      return { forma: 'exito', texto: this.t().tickets.subcategoriaReactivadaAviso };
     });
   }
 

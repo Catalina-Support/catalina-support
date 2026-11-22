@@ -54,7 +54,7 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "allowedHosts": [
-              "dev.catalina-support.example.com",
+              "dev.catalina-support.com",
               "frontend",
               "frontend.localhost"
             ],

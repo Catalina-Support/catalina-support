@@ -3,7 +3,7 @@
 [English](../en/interfaz-y-experiencia.md) · **Español**
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-05
+> **Última actualización:** 2026-11-22
 >
 > **Decisión del responsable, 2026-11-05.** Las fechas se leen en **ISO `AAAA-MM-DD hh:mm`**, en 24
 > horas y con el mismo orden en español y en inglés. En móvil y tableta vertical el conmutador de la
@@ -431,6 +431,14 @@
 > con **chip de categoría y de etiqueta para filtrar**; la **ficha** deja cambiarlas a quien puede
 > editar el ticket; y el menú del Administrador y de Soporte estrena la pantalla **«Categorías y
 > etiquetas»**, que es donde se mantiene el catálogo.
+>
+> **Enmendado el 2026-11-22 (versión 1.0.2)**, al entrar **las subcategorías**: el **alta** enseña un
+> segundo desplegable **sólo si la categoría tiene subcategorías activas**, y entonces es obligatorio;
+> la **lista** las enseña como un chip más de la clasificación y añade **filtro por subcategoría**,
+> dependiente de la categoría; la **ficha** permite cambiarla a quien puede editar el ticket, y al
+> cambiar a una categoría con subcategorías espera a elegirla para guardar la clasificación entera; la
+> pantalla **«Clasificación»** enseña las subcategorías **dentro de su categoría**, con su cuenta, y es
+> el Administrador quien las crea, renombra, retira y vuelve a poner.
 >
 > **Enmendado el 2026-09-27**, al entrar **las menciones y los observadores** (`docs/modules/tickets.md`,
 > decisiones 58 a 63): el editor estrena un botón **«Etiquetar»** —y basta escribir `@`— que mete el

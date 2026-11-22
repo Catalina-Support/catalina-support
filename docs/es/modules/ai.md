@@ -3,7 +3,13 @@
 [English](../en/modules/ai.md) · **Español**
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-05
+> **Última actualización:** 2026-11-22
+>
+> **Corrección del 2026-11-22: resúmenes de demostración en los seeders.** Los datos de ejemplo traen
+> los dos campos de sus 25 tickets principales y 7 internos ya escritos, en el idioma del seeder y con
+> `provider='demo'` y `model='demo-seed'`. No dependen del motor ni de una descarga: cualquier
+> instalación sembrada muestra la bandeja con contenido desde el primer arranque. Los tickets nuevos
+> siguen pasando por la cola y el motor reales; esta decisión no cambia el contrato de `ai_insights`.
 >
 > **Soporte WSL2 verificado, 2026-11-05.** La variante NVIDIA de la sección 23 funciona también en
 > Windows con Docker Desktop WSL2. Se probó con una RTX A2000 12 GB, driver 596.51, el modelo
@@ -293,6 +299,13 @@ versión nueva por esto):
   filas por ticket no va a crecer por esto.
 - **La tabla lleva `CHECK` de verdad**: `kind` sólo admite los dos campos, `state` los cuatro estados y
   `attempts` no puede ser negativo. Lo que la aplicación no debe escribir, la base tampoco lo acepta.
+
+**Los seeders de desarrollo insertan filas `listo` para sus datos de ejemplo** (`v1.0.0_dev_es.sql` y
+`v1.0.0_dev_en.sql`), con el texto en el idioma del archivo y `provider='demo'`. Son datos de
+demostración, no una generación del motor: el `model` queda como `demo-seed` para no confundirlos con
+una respuesta real. Se borran y se vuelven a crear con los tickets, y el ejecutor del seeder comprueba
+que están los 114 campos. Así una instalación recién sembrada no depende de que haya un modelo
+descargado ni de horas de CPU para enseñar la bandeja; los tickets nuevos siguen usando la cola real.
 
 ## 5. El contrato entre módulos
 

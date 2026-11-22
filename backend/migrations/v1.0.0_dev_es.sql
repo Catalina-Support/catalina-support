@@ -34,7 +34,7 @@ BEGIN;
 -- mismos números** (CS-2026-0001 y siguientes), así que una fila vieja se pegaría al ticket nuevo y
 -- enseñaría el motivo de otro. No hay clave ajena que lo impida —los tickets viven en su módulo y los
 -- resúmenes en el suyo—, así que se limpia a mano, aquí y en el mismo sitio donde se borran los
--- tickets.
+-- tickets. **Al final de este archivo se vuelven a crear, ya escritos, para los datos de ejemplo.**
 DELETE FROM ai_insights;
 -- Las etiquetas cuelgan del ticket y se van con él (ON DELETE CASCADE), pero se borran antes para
 -- dejar dicho que este archivo las vuelve a crear. **El catálogo de etiquetas se borra también**:
@@ -44,6 +44,7 @@ DELETE FROM ai_insights;
 DELETE FROM ticket_tags;
 DELETE FROM tickets;
 DELETE FROM ticket_tag_names;
+DELETE FROM ticket_subcategories;
 DELETE FROM ticket_categories;
 DELETE FROM ticket_number_counters;
 
@@ -95,6 +96,22 @@ INSERT INTO ticket_categories (name, normalized, active, created_by_id) VALUES
 ON CONFLICT (normalized) DO NOTHING;
 
 -- ============================================================================
+-- 3 bis. Las subcategorías
+-- ============================================================================
+--
+-- Red, Software y Licencias tienen dos cada una; General e Impresoras no tienen ninguna, y
+-- eso también es un estado válido: sus tickets se crean sin subcategoría. Los nombres van
+-- normalizados igual que los de las categorías (minúsculas y sin acentos).
+INSERT INTO ticket_subcategories (category_id, name, normalized, active, created_by_id) VALUES
+    ((SELECT id FROM ticket_categories WHERE normalized = 'red'), 'Wi-Fi', 'wifi', true, (SELECT id FROM users WHERE email = 'support1@demo.com')),
+    ((SELECT id FROM ticket_categories WHERE normalized = 'red'), 'VPN', 'vpn', true, (SELECT id FROM users WHERE email = 'support1@demo.com')),
+    ((SELECT id FROM ticket_categories WHERE normalized = 'software'), 'Aplicación web', 'web', true, (SELECT id FROM users WHERE email = 'support1@demo.com')),
+    ((SELECT id FROM ticket_categories WHERE normalized = 'software'), 'Cliente de escritorio', 'desktop', true, (SELECT id FROM users WHERE email = 'support1@demo.com')),
+    ((SELECT id FROM ticket_categories WHERE normalized = 'licencias'), 'Altas y bajas', 'accounts', true, (SELECT id FROM users WHERE email = 'support1@demo.com')),
+    ((SELECT id FROM ticket_categories WHERE normalized = 'licencias'), 'Renovaciones', 'renewals', true, (SELECT id FROM users WHERE email = 'support1@demo.com'))
+ON CONFLICT (category_id, normalized) DO NOTHING;
+
+-- ============================================================================
 -- 4. Los 25 tickets, con su asignación, sus comentarios y su historia
 -- ============================================================================
 
@@ -105,21 +122,25 @@ ON CONFLICT (normalized) DO NOTHING;
 -- poder probar.
 
 -- CS-2026-0001 · No puedo entrar en la aplicación
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0001', 2026, 1, 'No puedo entrar en la aplicación', '<p>Desde ayer me dice que la contraseña no es correcta y no he cambiado nada.</p>', 'nuevo',
         (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'user1@demo.com'), NULL,
         NULL, NULL,
-        (date_trunc('day', now()) - interval '1 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '1 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '1 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '1 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0001'), (SELECT id FROM users WHERE email = 'user1@demo.com'), 'creado', NULL, 'nuevo', NULL, (date_trunc('day', now()) - interval '1 days' + interval '9 hours 0 minutes'));
 
 -- CS-2026-0002 · El informe mensual sale con las fechas cambiadas
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0002', 2026, 2, 'El informe mensual sale con las fechas cambiadas', '<p>Descargo el informe de agosto y las columnas de fecha salen en otro formato. Adjunto una captura.</p>', 'nuevo',
         (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'user2@demo.com'), NULL,
         NULL, NULL,
-        (date_trunc('day', now()) - interval '2 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '1 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '2 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '1 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0002'), (SELECT id FROM users WHERE email = 'user2@demo.com'), 'creado', NULL, 'nuevo', NULL, (date_trunc('day', now()) - interval '2 days' + interval '9 hours 0 minutes'));
@@ -129,21 +150,23 @@ INSERT INTO ticket_attachments (ticket_id, uploaded_by_id, filename, stored_name
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0002'), (SELECT id FROM users WHERE email = 'user2@demo.com'), 'captura.png', '2026/CS-2026-0002/eee4d316b5ebefd9b17df4eed40097a7.png', 'image/png', 1024, (date_trunc('day', now()) - interval '2 days' + interval '9 hours 30 minutes'));
 
 -- CS-2026-0003 · Pido un usuario para la persona nueva
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0003', 2026, 3, 'Pido un usuario para la persona nueva', '<p>Ha entrado una compañera al equipo y necesita acceso a la aplicación.</p>', 'nuevo',
         (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'user3@demo.com'), NULL,
         NULL, NULL,
-        (date_trunc('day', now()) - interval '3 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '2 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'));
+        (date_trunc('day', now()) - interval '3 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '2 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'licencias')
+           AND normalized = 'accounts'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0003'), (SELECT id FROM users WHERE email = 'user3@demo.com'), 'creado', NULL, 'nuevo', NULL, (date_trunc('day', now()) - interval '3 days' + interval '9 hours 0 minutes'));
 
 -- CS-2026-0004 · La impresora de la segunda planta no imprime
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0004', 2026, 4, 'La impresora de la segunda planta no imprime', '<p>Manda el trabajo pero no sale nada. Ya la hemos apagado y encendido.</p>', 'escalado',
         (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '6 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '5 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'impresoras'));
+        (date_trunc('day', now()) - interval '6 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '5 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'impresoras'), NULL);
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0004'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'escalado', 'en progreso', 'escalado', 'La impresora necesita que alguien mire el servidor de colas, no es cosa del equipo.', (date_trunc('day', now()) - interval '4 days' + interval '11 hours 0 minutes'));
@@ -171,11 +194,13 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0004'), (SELECT id FROM users WHERE email = 'support1@demo.com'), '<p>Te lo paso con todo lo que he probado hasta ahora.</p>', (date_trunc('day', now()) - interval '4 days' + interval '12 hours 20 minutes'));
 
 -- CS-2026-0005 · Los adjuntos de más de 10 MB no se suben
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0005', 2026, 5, 'Los adjuntos de más de 10 MB no se suben', '<p>Intento adjuntar un PDF de 12 MB y se queda pensando y no termina.</p>', 'en progreso',
         (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '9 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '8 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '9 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '8 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0005'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'estado', 'nuevo', 'en progreso', NULL, (date_trunc('day', now()) - interval '8 days' + interval '10 hours 0 minutes'));
@@ -190,11 +215,13 @@ INSERT INTO ticket_comments (ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0005'), (SELECT id FROM users WHERE email = 'user5@demo.com'), '<p>Hecho, ahí está.</p>', (date_trunc('day', now()) - interval '7 days' + interval '12 hours 15 minutes'));
 
 -- CS-2026-0006 · Cambio de correo en mi cuenta
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0006', 2026, 6, 'Cambio de correo en mi cuenta', '<p>Me han cambiado el correo de la empresa y quiero seguir entrando con él.</p>', 'en progreso',
         (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '12 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '11 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'));
+        (date_trunc('day', now()) - interval '12 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '11 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'licencias')
+           AND normalized = 'accounts'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0006'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'estado', 'nuevo', 'en progreso', NULL, (date_trunc('day', now()) - interval '11 days' + interval '10 hours 0 minutes'));
@@ -204,11 +231,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0006'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'asignado', NULL, NULL, 'Soporte Tres', (date_trunc('day', now()) - interval '12 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0007 · La aplicación va lenta por la mañana
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0007', 2026, 7, 'La aplicación va lenta por la mañana', '<p>Entre las nueve y las diez tarda mucho en abrir la bandeja.</p>', 'escalado',
         (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '14 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '13 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'red'));
+        (date_trunc('day', now()) - interval '14 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '13 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'red'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'red')
+           AND normalized = 'wifi'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0007'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'escalado', 'en progreso', 'escalado', 'La lentitud es de la base de datos: hace falta Desarrollo.', (date_trunc('day', now()) - interval '12 days' + interval '11 hours 0 minutes'));
@@ -244,11 +273,13 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0007'), (SELECT id FROM users WHERE email = 'dev1@demo.com'), '<p>Lo miro hoy y te digo algo.</p>', (date_trunc('day', now()) - interval '11 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0008 · No me llegan los avisos de ticket nuevo
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0008', 2026, 8, 'No me llegan los avisos de ticket nuevo', '<p>Me asignan tickets y no recibo el correo de aviso.</p>', 'en progreso',
         (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '17 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '16 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '17 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '16 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0008'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'estado', 'nuevo', 'en progreso', NULL, (date_trunc('day', now()) - interval '16 days' + interval '10 hours 0 minutes'));
@@ -258,11 +289,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0008'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'asignado', NULL, NULL, 'Soporte Dos', (date_trunc('day', now()) - interval '17 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0009 · Falta el teléfono de contacto en la ficha
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0009', 2026, 9, 'Falta el teléfono de contacto en la ficha', '<p>Necesitamos el teléfono en la ficha del cliente para llamarle.</p>', 'escalado',
         (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '20 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '19 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '20 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '19 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0009'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'escalado', 'en progreso', 'escalado', 'Desarrollo tiene que decir si el campo se puede añadir sin tocar la importación.', (date_trunc('day', now()) - interval '18 days' + interval '11 hours 0 minutes'));
@@ -292,11 +325,11 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0009'), (SELECT id FROM users WHERE email = 'dev2@demo.com'), '<p>Lo miro hoy y te digo algo.</p>', (date_trunc('day', now()) - interval '17 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0010 · Se ha borrado un comentario
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0010', 2026, 10, 'Se ha borrado un comentario', '<p>Ayer escribí un comentario en un ticket y hoy ya no está.</p>', 'en espera',
         (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '22 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '21 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'));
+        (date_trunc('day', now()) - interval '22 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '21 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'), NULL);
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0010'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'estado', 'en progreso', 'en espera', NULL, (date_trunc('day', now()) - interval '20 days' + interval '12 hours 0 minutes'));
@@ -311,11 +344,13 @@ INSERT INTO ticket_comments (ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0010'), (SELECT id FROM users WHERE email = 'support3@demo.com'), '<p>¿Recuerdas en qué ticket era? Vamos a mirarlo.</p>', (date_trunc('day', now()) - interval '21 days' + interval '11 hours 15 minutes'));
 
 -- CS-2026-0011 · Quiero cambiar el nombre de la instalación
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0011', 2026, 11, 'Quiero cambiar el nombre de la instalación', '<p>En la cabecera pone el nombre de la aplicación y debería poner el nuestro.</p>', 'en espera',
         (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '25 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '24 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '25 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '24 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0011'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'estado', 'en progreso', 'en espera', NULL, (date_trunc('day', now()) - interval '23 days' + interval '12 hours 0 minutes'));
@@ -327,11 +362,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0011'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'asignado', NULL, NULL, 'Soporte Dos', (date_trunc('day', now()) - interval '25 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0012 · El buscador no encuentra por número
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0012', 2026, 12, 'El buscador no encuentra por número', '<p>Si pego el número del ticket no sale nada; buscando por texto sí aparece.</p>', 'en progreso',
         (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '28 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '27 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '28 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '27 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0012'), NULL, 'estado', 'escalado', 'en progreso', 'Desarrollo ha resuelto el interno: el ticket vuelve a Soporte.', (date_trunc('day', now()) - interval '24 days' + interval '12 hours 0 minutes'));
@@ -365,11 +402,13 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0012'), (SELECT id FROM users WHERE email = 'dev1@demo.com'), '<p>Lo miro hoy y te digo algo.</p>', (date_trunc('day', now()) - interval '25 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0013 · Pedir acceso a la carpeta compartida
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0013', 2026, 13, 'Pedir acceso a la carpeta compartida', '<p>Necesito permiso de escritura en la carpeta de trabajo del equipo.</p>', 'resuelto',
         (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         (date_trunc('day', now()) - interval '29 days' + interval '13 hours 0 minutes'), NULL,
-        (date_trunc('day', now()) - interval '32 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '31 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'red'));
+        (date_trunc('day', now()) - interval '32 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '31 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'red'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'red')
+           AND normalized = 'vpn'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0013'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'resuelto', 'en progreso', 'resuelto', NULL, (date_trunc('day', now()) - interval '29 days' + interval '13 hours 0 minutes'));
@@ -384,11 +423,11 @@ INSERT INTO ticket_comments (ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0013'), (SELECT id FROM users WHERE email = 'support3@demo.com'), '<p>Ya puedo escribir, muchas gracias.</p>', (date_trunc('day', now()) - interval '31 days' + interval '11 hours 15 minutes'));
 
 -- CS-2026-0014 · El correo de alta llegó a spam
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0014', 2026, 14, 'El correo de alta llegó a spam', '<p>Aviso por si le pasa a más gente: el correo de alta me llegó a spam.</p>', 'resuelto',
         (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         (date_trunc('day', now()) - interval '32 days' + interval '13 hours 0 minutes'), NULL,
-        (date_trunc('day', now()) - interval '35 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '34 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'));
+        (date_trunc('day', now()) - interval '35 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '34 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'), NULL);
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0014'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'resuelto', 'en progreso', 'resuelto', NULL, (date_trunc('day', now()) - interval '32 days' + interval '13 hours 0 minutes'));
@@ -400,11 +439,11 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0014'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'asignado', NULL, NULL, 'Soporte Dos', (date_trunc('day', now()) - interval '35 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0015 · Duplicado: la impresora de la segunda planta
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0015', 2026, 15, 'Duplicado: la impresora de la segunda planta', '<p>Abro esto por error, ya había un ticket de la impresora.</p>', 'resuelto',
         (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         (date_trunc('day', now()) - interval '35 days' + interval '13 hours 0 minutes'), NULL,
-        (date_trunc('day', now()) - interval '38 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '37 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'impresoras'));
+        (date_trunc('day', now()) - interval '38 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '37 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'impresoras'), NULL);
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0015'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'resuelto', 'en progreso', 'resuelto', NULL, (date_trunc('day', now()) - interval '35 days' + interval '13 hours 0 minutes'));
@@ -419,11 +458,13 @@ INSERT INTO ticket_comments (ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0015'), (SELECT id FROM users WHERE email = 'support3@demo.com'), '<p>Es el mismo, sí: seguimos en el otro.</p>', (date_trunc('day', now()) - interval '37 days' + interval '11 hours 15 minutes'));
 
 -- CS-2026-0016 · La contraseña caducaba y no lo sabía
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0016', 2026, 16, 'La contraseña caducaba y no lo sabía', '<p>Debería avisar antes de que caduque, no al intentar entrar.</p>', 'resuelto',
         (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         (date_trunc('day', now()) - interval '38 days' + interval '13 hours 0 minutes'), NULL,
-        (date_trunc('day', now()) - interval '41 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '40 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '41 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '40 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0016'), NULL, 'estado', 'escalado', 'en progreso', 'Desarrollo ha devuelto el ticket a Soporte.', (date_trunc('day', now()) - interval '37 days' + interval '12 hours 0 minutes'));
@@ -462,11 +503,13 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0016'), (SELECT id FROM users WHERE email = 'dev3@demo.com'), '<p>Lo miro hoy y te digo algo.</p>', (date_trunc('day', now()) - interval '38 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0017 · Quiero ordenar la bandeja por fecha
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0017', 2026, 17, 'Quiero ordenar la bandeja por fecha', '<p>Por defecto sale por lo más antiguo y prefiero lo más nuevo.</p>', 'resuelto',
         (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         (date_trunc('day', now()) - interval '42 days' + interval '13 hours 0 minutes'), NULL,
-        (date_trunc('day', now()) - interval '45 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '44 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '45 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '44 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0017'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'resuelto', 'en progreso', 'resuelto', NULL, (date_trunc('day', now()) - interval '42 days' + interval '13 hours 0 minutes'));
@@ -478,11 +521,11 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0017'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'asignado', NULL, NULL, 'Soporte Tres', (date_trunc('day', now()) - interval '45 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0018 · El ticket se cerró sin querer
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0018', 2026, 18, 'El ticket se cerró sin querer', '<p>Se cerró solo al quedarse sin actividad y el problema sigue.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         (date_trunc('day', now()) - interval '47 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '45 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '50 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '49 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'));
+        (date_trunc('day', now()) - interval '50 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '49 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'general'), NULL);
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0018'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '45 days' + interval '16 hours 0 minutes'));
@@ -505,11 +548,13 @@ INSERT INTO ticket_comments (ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0018'), (SELECT id FROM users WHERE email = 'support1@demo.com'), '<p>Reabierto, perdona.</p>', (date_trunc('day', now()) - interval '48 days' + interval '12 hours 15 minutes'));
 
 -- CS-2026-0019 · No puedo subir un adjunto en ZIP
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0019', 2026, 19, 'No puedo subir un adjunto en ZIP', '<p>Adjunto un zip con los registros y me lo rechaza.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         (date_trunc('day', now()) - interval '51 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '49 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '54 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '53 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '54 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '53 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0019'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '49 days' + interval '16 hours 0 minutes'));
@@ -527,11 +572,13 @@ INSERT INTO ticket_attachments (ticket_id, uploaded_by_id, filename, stored_name
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0019'), (SELECT id FROM users WHERE email = 'user4@demo.com'), 'notas.txt', '2026/CS-2026-0019/fb3af71bf3908eb8dbc6105c1edff4e2.txt', 'text/plain', 1024, (date_trunc('day', now()) - interval '54 days' + interval '9 hours 30 minutes'));
 
 -- CS-2026-0020 · Cambiar el idioma de los correos
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0020', 2026, 20, 'Cambiar el idioma de los correos', '<p>Los avisos me llegan en español y los quiero en inglés.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         (date_trunc('day', now()) - interval '55 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '53 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '58 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '57 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '58 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '57 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0020'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '53 days' + interval '16 hours 0 minutes'));
@@ -545,11 +592,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0020'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'asignado', NULL, NULL, 'Soporte Tres', (date_trunc('day', now()) - interval '58 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0021 · Informe de tickets de agosto
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0021', 2026, 21, 'Informe de tickets de agosto', '<p>Necesito el listado de agosto para la reunión de equipo.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'user1@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         (date_trunc('day', now()) - interval '59 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '57 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '62 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '61 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '62 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '61 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0021'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '57 days' + interval '16 hours 0 minutes'));
@@ -563,11 +612,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0021'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'asignado', NULL, NULL, 'Soporte Uno', (date_trunc('day', now()) - interval '62 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0022 · El logo se ve pequeño en móvil
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0022', 2026, 22, 'El logo se ve pequeño en móvil', '<p>En la pantalla de entrada el logo se ve muy pequeño en el móvil.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'user2@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         (date_trunc('day', now()) - interval '63 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '61 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '66 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '65 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '66 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '65 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0022'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '61 days' + interval '16 hours 0 minutes'));
@@ -581,11 +632,13 @@ INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, de
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0022'), (SELECT id FROM users WHERE email = 'support2@demo.com'), 'asignado', NULL, NULL, 'Soporte Dos', (date_trunc('day', now()) - interval '66 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0023 · Falta el aviso cuando alguien escala
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0023', 2026, 23, 'Falta el aviso cuando alguien escala', '<p>Desarrollo no se entera de que le toca un ticket.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'user3@demo.com'), (SELECT id FROM users WHERE email = 'support3@demo.com'),
         (date_trunc('day', now()) - interval '67 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '65 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '70 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '69 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '70 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '69 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0023'), (SELECT id FROM users WHERE email = 'support3@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '65 days' + interval '16 hours 0 minutes'));
@@ -625,11 +678,13 @@ INSERT INTO ticket_comments (internal_ticket_id, author_id, body, created_at)
 VALUES ((SELECT id FROM internal_tickets WHERE number = 'INT-CS-2026-0023'), (SELECT id FROM users WHERE email = 'dev2@demo.com'), '<p>Lo miro hoy y te digo algo.</p>', (date_trunc('day', now()) - interval '67 days' + interval '10 hours 0 minutes'));
 
 -- CS-2026-0024 · Dos tickets con el mismo número
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0024', 2026, 24, 'Dos tickets con el mismo número', '<p>He visto dos tickets seguidos con el mismo número.</p>', 'cerrado',
         (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'user4@demo.com'), (SELECT id FROM users WHERE email = 'support1@demo.com'),
         (date_trunc('day', now()) - interval '71 days' + interval '13 hours 0 minutes'), (date_trunc('day', now()) - interval '69 days' + interval '16 hours 0 minutes'),
-        (date_trunc('day', now()) - interval '74 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '73 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'));
+        (date_trunc('day', now()) - interval '74 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '73 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'software'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'software')
+           AND normalized = 'web'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0024'), (SELECT id FROM users WHERE email = 'support1@demo.com'), 'cerrado', 'resuelto', 'cerrado', NULL, (date_trunc('day', now()) - interval '69 days' + interval '16 hours 0 minutes'));
@@ -647,11 +702,13 @@ INSERT INTO ticket_attachments (ticket_id, uploaded_by_id, filename, stored_name
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0024'), (SELECT id FROM users WHERE email = 'user4@demo.com'), 'captura.png', '2026/CS-2026-0024/04cd1e6b4d81a038f95ec51a6438abba.png', 'image/png', 1024, (date_trunc('day', now()) - interval '74 days' + interval '9 hours 30 minutes'));
 
 -- CS-2026-0025 · Pedir la baja de una cuenta antigua
-INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id)
+INSERT INTO tickets (number, number_year, number_seq, subject, description, state, requester_id, created_by_id, assignee_id, resolved_at, closed_at, created_at, updated_at, category_id, subcategory_id)
 VALUES ('CS-2026-0025', 2026, 25, 'Pedir la baja de una cuenta antigua', '<p>Se ha ido una persona y su cuenta sigue activa.</p>', 'escalado',
         (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'user5@demo.com'), (SELECT id FROM users WHERE email = 'support2@demo.com'),
         NULL, NULL,
-        (date_trunc('day', now()) - interval '80 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '79 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'));
+        (date_trunc('day', now()) - interval '80 days' + interval '9 hours 0 minutes'), (date_trunc('day', now()) - interval '79 days' + interval '17 hours 0 minutes'), (SELECT id FROM ticket_categories WHERE normalized = 'licencias'), (SELECT id FROM ticket_subcategories
+         WHERE category_id = (SELECT id FROM ticket_categories WHERE normalized = 'licencias')
+           AND normalized = 'accounts'));
 
 INSERT INTO ticket_history (ticket_id, actor_id, event, from_state, to_state, detail, created_at)
 VALUES ((SELECT id FROM tickets WHERE number = 'CS-2026-0025'), NULL, 'estado', 'escalado', 'en progreso', 'Desarrollo ha devuelto el ticket a Soporte.', (date_trunc('day', now()) - interval '76 days' + interval '12 hours 0 minutes'));
@@ -903,5 +960,119 @@ SET priority = CASE
     ELSE 'medium'
 END,
 critical_notified_at = CASE WHEN number_seq IN (4, 17) THEN created_at ELSE NULL END;
+
+-- ============================================================================
+-- 7. Los resúmenes de demostración
+-- ============================================================================
+
+-- **Los tickets de ejemplo traen sus dos campos ya escritos**, en el idioma del seeder. El motor
+-- de IA sigue siendo el que redacta los tickets nuevos; esto sólo evita que una instalación recién
+-- sembrada dependa de descargar un modelo y de horas de CPU para enseñar la bandeja con contenido
+-- (decisión del responsable, 2026-11-22).
+--
+-- Se marcan como `demo` para que se distingan de una generación real. La versión del contexto es la
+-- vigente de `ai_insights`: si cambia el contrato de los resúmenes, hay que actualizarla aquí.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT numero, tipo, 'listo', texto, 'es', 'demo', 'demo-seed',
+       now(), now(), 2, 1, 0, 0
+FROM (VALUES
+    ('CS-2026-0001', 'summary', 'El usuario no puede entrar desde ayer: la aplicación rechaza su contraseña sin que la haya cambiado.'),
+    ('CS-2026-0001', 'ultima_accion', 'El ticket acaba de crearse y sigue sin asignar; Soporte aún no lo ha revisado.'),
+    ('CS-2026-0002', 'summary', 'El informe mensual de agosto muestra las fechas en un formato distinto al esperado; el usuario adjuntó una captura.'),
+    ('CS-2026-0002', 'ultima_accion', 'El ticket acaba de crearse y espera la revisión de Soporte.'),
+    ('CS-2026-0003', 'summary', 'Una nueva compañera necesita acceso a la aplicación.'),
+    ('CS-2026-0003', 'ultima_accion', 'Pendiente de que Soporte tramite el alta de la cuenta.'),
+    ('CS-2026-0004', 'summary', 'La impresora de la segunda planta recibe el trabajo pero no imprime, incluso después de reiniciarla.'),
+    ('CS-2026-0004', 'ultima_accion', 'Soporte escaló el ticket a Desarrollo para revisar el servidor de colas.'),
+    ('CS-2026-0005', 'summary', 'No se pueden subir adjuntos de más de 10 MB; un PDF de 12 MB se queda cargando.'),
+    ('CS-2026-0005', 'ultima_accion', 'El usuario confirmó que el archivo ya está adjunto y el ticket sigue en progreso.'),
+    ('CS-2026-0006', 'summary', 'El usuario cambió de correo corporativo y necesita seguir entrando con la nueva dirección.'),
+    ('CS-2026-0006', 'ultima_accion', 'Soporte está revisando el cambio de correo y el ticket sigue en progreso.'),
+    ('CS-2026-0007', 'summary', 'La aplicación tarda mucho en abrir la bandeja entre las 9 y las 10 de la mañana.'),
+    ('CS-2026-0007', 'ultima_accion', 'Escalado a Desarrollo porque la lentitud apunta a la base de datos.'),
+    ('CS-2026-0008', 'summary', 'El usuario no recibe los avisos por correo cuando le asignan un ticket.'),
+    ('CS-2026-0008', 'ultima_accion', 'Soporte está comprobando la configuración de las notificaciones.'),
+    ('CS-2026-0009', 'summary', 'Falta el teléfono de contacto en la ficha del cliente para poder llamar al solicitante.'),
+    ('CS-2026-0009', 'ultima_accion', 'Escalado a Desarrollo para confirmar que el campo no rompe la importación.'),
+    ('CS-2026-0010', 'summary', 'Un comentario escrito ayer en un ticket ha desaparecido.'),
+    ('CS-2026-0010', 'ultima_accion', 'Soporte pidió al usuario el número del ticket para localizarlo.'),
+    ('CS-2026-0011', 'summary', 'El usuario quiere cambiar el nombre de la instalación que aparece en la cabecera.'),
+    ('CS-2026-0011', 'ultima_accion', 'En espera de que se confirme el nuevo nombre y se aplique el cambio.'),
+    ('CS-2026-0012', 'summary', 'El buscador no encuentra tickets al pegar su número, aunque la búsqueda por texto sí funciona.'),
+    ('CS-2026-0012', 'ultima_accion', 'Desarrollo resolvió el ticket interno y lo devolvió a Soporte.'),
+    ('CS-2026-0013', 'summary', 'El usuario pide permiso de escritura en la carpeta compartida del equipo.'),
+    ('CS-2026-0013', 'ultima_accion', 'Soporte resolvió la solicitud y concedió el acceso.'),
+    ('CS-2026-0014', 'summary', 'El correo de alta llegó a la carpeta de spam; el usuario avisa por si afecta a más personas.'),
+    ('CS-2026-0014', 'ultima_accion', 'Soporte revisó el aviso y resolvió el ticket.'),
+    ('CS-2026-0015', 'summary', 'Ticket duplicado: ya existía otro sobre la impresora de la segunda planta.'),
+    ('CS-2026-0015', 'ultima_accion', 'Se cerró como duplicado y se continuó en el ticket original.'),
+    ('CS-2026-0016', 'summary', 'La contraseña caducó sin aviso previo; el usuario solo lo descubrió al intentar entrar.'),
+    ('CS-2026-0016', 'ultima_accion', 'Desarrollo devolvió el ticket a Soporte tras revisar el aviso de caducidad.'),
+    ('CS-2026-0017', 'summary', 'El usuario prefiere que la bandeja se ordene por la fecha más reciente en lugar de la más antigua.'),
+    ('CS-2026-0017', 'ultima_accion', 'Soporte resolvió el cambio de orden de la bandeja.'),
+    ('CS-2026-0018', 'summary', 'El ticket se cerró automáticamente por inactividad mientras el problema seguía sin resolverse.'),
+    ('CS-2026-0018', 'ultima_accion', 'El usuario confirmó la reapertura y Soporte continuó la revisión.'),
+    ('CS-2026-0019', 'summary', 'El usuario no puede subir un archivo ZIP con los registros porque el sistema lo rechaza.'),
+    ('CS-2026-0019', 'ultima_accion', 'Soporte revisó la extensión y cerró el ticket después de permitir la subida.'),
+    ('CS-2026-0020', 'summary', 'El usuario quiere recibir los correos de aviso en inglés en lugar de español.'),
+    ('CS-2026-0020', 'ultima_accion', 'Soporte aplicó el cambio de idioma y cerró el ticket.'),
+    ('CS-2026-0021', 'summary', 'El usuario necesita el listado de tickets de agosto para una reunión de equipo.'),
+    ('CS-2026-0021', 'ultima_accion', 'Soporte generó el informe y cerró la solicitud.'),
+    ('CS-2026-0022', 'summary', 'El logo de la pantalla de entrada se ve demasiado pequeño en el móvil.'),
+    ('CS-2026-0022', 'ultima_accion', 'Soporte ajustó el tamaño y cerró el ticket.'),
+    ('CS-2026-0023', 'summary', 'Desarrollo no recibe ningún aviso cuando Soporte le escala un ticket.'),
+    ('CS-2026-0023', 'ultima_accion', 'Se corrigió la configuración del aviso de escalado y se cerró el ticket.'),
+    ('CS-2026-0024', 'summary', 'El usuario vio dos tickets consecutivos con el mismo número.'),
+    ('CS-2026-0024', 'ultima_accion', 'Soporte revisó la numeración, confirmó que era un duplicado y cerró el ticket.'),
+    ('CS-2026-0025', 'summary', 'El usuario pide dar de baja la cuenta de una persona que ya no trabaja en la empresa.'),
+    ('CS-2026-0025', 'ultima_accion', 'Desarrollo devolvió el ticket a Soporte; la baja debe hacerse manualmente.'),
+    ('INT-CS-2026-0004', 'summary', 'Desarrollo debe revisar el servidor de colas de la impresora de la segunda planta.'),
+    ('INT-CS-2026-0004', 'ultima_accion', 'Soporte escaló el ticket y espera la revisión de Desarrollo.'),
+    ('INT-CS-2026-0007', 'summary', 'La lentitud de la mañana apunta a la base de datos y necesita revisión de Desarrollo.'),
+    ('INT-CS-2026-0007', 'ultima_accion', 'Desarrollo está investigando el rendimiento de la base de datos.'),
+    ('INT-CS-2026-0009', 'summary', 'Hay que confirmar si el teléfono se puede añadir a la ficha sin afectar a la importación.'),
+    ('INT-CS-2026-0009', 'ultima_accion', 'Desarrollo está evaluando el cambio; Soporte espera respuesta.'),
+    ('INT-CS-2026-0012', 'summary', 'La búsqueda por número necesita un cambio en la consulta.'),
+    ('INT-CS-2026-0012', 'ultima_accion', 'Desarrollo resolvió el cambio y devolvió el ticket a Soporte.'),
+    ('INT-CS-2026-0016', 'summary', 'El aviso de caducidad de contraseña no existe y hay que añadirlo al módulo de acceso.'),
+    ('INT-CS-2026-0016', 'ultima_accion', 'Desarrollo cerró el ticket tras implementar el aviso; Soporte lo devolvió al usuario.'),
+    ('INT-CS-2026-0023', 'summary', 'El aviso de escalado no salía por un error de configuración del reparto.'),
+    ('INT-CS-2026-0023', 'ultima_accion', 'Se corrigió la configuración y se cerró el ticket interno.'),
+    ('INT-CS-2026-0025', 'summary', 'La baja de cuentas no está prevista en la aplicación y debe hacerse manualmente.'),
+    ('INT-CS-2026-0025', 'ultima_accion', 'Desarrollo cerró el ticket interno; Soporte gestionó la baja a mano.')
+) AS demo(numero, tipo, texto)
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
+
+-- La vista interna de un principal («CS-…::internal») usa la misma redacción de demostración: no
+-- hay notas privadas en los datos de ejemplo que justifiquen dos textos distintos.
+INSERT INTO ai_insights
+    (ticket_number, kind, state, text, language, provider, model,
+     requested_at, generated_at, context_version, generation, attempts, recovery_count)
+SELECT ticket_number || '::internal', kind, state, text, language, provider, model,
+       requested_at, generated_at, context_version, generation, attempts, recovery_count
+FROM ai_insights
+WHERE ticket_number LIKE 'CS-%'
+  AND ticket_number NOT LIKE '%::internal'
+ON CONFLICT (ticket_number, kind) DO UPDATE SET
+    state = EXCLUDED.state,
+    text = EXCLUDED.text,
+    language = EXCLUDED.language,
+    provider = EXCLUDED.provider,
+    model = EXCLUDED.model,
+    error_key = NULL,
+    generated_at = EXCLUDED.generated_at,
+    context_version = EXCLUDED.context_version,
+    retry_at = NULL;
 
 COMMIT;

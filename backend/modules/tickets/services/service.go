@@ -79,6 +79,17 @@ var (
 	ErrCategoryDuplicate    = errors.New("tickets.category.duplicate")
 	ErrCategoryLastActive   = errors.New("tickets.category.lastActive")
 	ErrCategoryForbidden    = errors.New("tickets.category.forbidden")
+	// Las subcategorías (docs/modules/tickets.md, sección 2.3.2): `required` es un ticket cuya
+	// categoría tiene subcategorías activas y no trae ninguna; `notAvailable`, una subcategoría que se
+	// manda cuando la categoría no tiene ninguna activa; `mismatch`, una que es de otra categoría.
+	ErrSubcategoryRequired     = errors.New("tickets.subcategory.required")
+	ErrSubcategoryNotFound     = errors.New("tickets.subcategory.notFound")
+	ErrSubcategoryInactive     = errors.New("tickets.subcategory.inactive")
+	ErrSubcategoryMismatch     = errors.New("tickets.subcategory.mismatch")
+	ErrSubcategoryNotAvailable = errors.New("tickets.subcategory.notAvailable")
+	ErrSubcategoryNameRequired = errors.New("tickets.subcategory.name.required")
+	ErrSubcategoryDuplicate    = errors.New("tickets.subcategory.duplicate")
+	ErrSubcategoryForbidden    = errors.New("tickets.subcategory.forbidden")
 	// ErrTagRequired: una etiqueta que se queda vacía al normalizarla —sólo signos, o espacios— no es
 	// una etiqueta. Se rechaza en vez de guardar la cadena vacía, que no diría nada.
 	ErrTagRequired = errors.New("tickets.tag.required")
@@ -233,7 +244,10 @@ type Ticket struct {
 	// **La categoría y las etiquetas son del caso** (docs/modules/tickets.md, decisión 67): se guardan
 	// en el principal y **el interno las hereda al leerse**, como hereda el asunto.
 	Category *Category
-	Tags     []string
+	// Subcategory es el segundo nivel de la clasificación. Nula cuando la categoría no tiene
+	// subcategorías; el interno hereda la del principal.
+	Subcategory *Subcategory
+	Tags        []string
 
 	// EscalationReason es el motivo del escalado. Sólo en los internos.
 	EscalationReason string

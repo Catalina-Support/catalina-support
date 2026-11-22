@@ -88,7 +88,7 @@ func (r *reino) oidc() *OIDC {
 		Issuer:       r.servidor.URL,
 		ClientID:     "catalina-support",
 		ClientSecret: "el-secreto-del-cliente",
-		RedirectURI:  "https://dev.catalina-support.example.com/api/auth/keycloak/callback",
+		RedirectURI:  "https://dev.catalina-support.com/api/auth/keycloak/callback",
 	})
 }
 
@@ -113,7 +113,7 @@ func TestAuthURL(t *testing.T) {
 	esperados := map[string]string{
 		"response_type": "code",
 		"client_id":     "catalina-support",
-		"redirect_uri":  "https://dev.catalina-support.example.com/api/auth/keycloak/callback",
+		"redirect_uri":  "https://dev.catalina-support.com/api/auth/keycloak/callback",
 		"scope":         "openid email profile",
 		"state":         "el-state-firmado",
 	}
@@ -242,7 +242,7 @@ func servicioConKeycloak(t *testing.T, cuentas *cuentasDeMentira, keycloak Keycl
 
 	servicio := NewService(cuentas, nil, nil, firmante, Config{
 		AdminPassword: "la-de-fabrica-larga",
-		PublicAppURL:  "https://dev.catalina-support.example.com",
+		PublicAppURL:  "https://dev.catalina-support.com",
 		TokenSecret:   "un-secreto-de-prueba-largo",
 	})
 	servicio.SetAccess(accesoDeMentira{
@@ -306,10 +306,10 @@ func TestKeycloakCallbackDejaLaSesion(t *testing.T) {
 
 	vuelta := servicio.KeycloakCallback(state, "el-codigo")
 
-	if !strings.HasPrefix(vuelta, "https://dev.catalina-support.example.com/login#token=") {
+	if !strings.HasPrefix(vuelta, "https://dev.catalina-support.com/login#token=") {
 		t.Fatalf("la vuelta no lleva el token al fragmento: %q", vuelta)
 	}
-	token := strings.TrimPrefix(vuelta, "https://dev.catalina-support.example.com/login#token=")
+	token := strings.TrimPrefix(vuelta, "https://dev.catalina-support.com/login#token=")
 	if _, err := servicio.session.Verify(token, servicio.now()); err != nil {
 		t.Fatalf("el token de la vuelta debería valer: %v", err)
 	}
@@ -374,7 +374,7 @@ func TestKeycloakCallbackConFallos(t *testing.T) {
 	// por otro sitio, esa vuelta no se atiende.
 	firmante, _ := auth.NewTokenManager("un-secreto-de-prueba-largo")
 	sinCamino := NewService(&cuentasDeMentira{}, nil, nil, firmante, Config{
-		PublicAppURL: "https://dev.catalina-support.example.com",
+		PublicAppURL: "https://dev.catalina-support.com",
 		TokenSecret:  "un-secreto-de-prueba-largo",
 	})
 	sinCamino.SetAccess(accesoDeMentira{metodo: auth.MethodLocal})

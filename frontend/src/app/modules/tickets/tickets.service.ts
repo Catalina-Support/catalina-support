@@ -25,6 +25,35 @@ export interface Categoria {
   /** Si se sigue ofreciendo al crear un ticket. **Retirar es desactivar** (decisión 66). */
   readonly active: boolean;
   readonly tickets: number;
+  /**
+   * Las subcategorías que cuelgan de ella. **Un array vacío es un estado válido**: la categoría no
+   * tiene subcategorías y el ticket no está obligado a elegir ninguna.
+   */
+  readonly subcategories: readonly Subcategoria[];
+}
+
+/**
+ * Una subcategoría del catálogo: el segundo nivel del «qué es» del ticket.
+ *
+ * `tickets` es cuántos tickets principales la usan. Sólo se ofrece si está activa; los tickets que ya
+ * la tenían la conservan aunque se retire.
+ */
+export interface Subcategoria {
+  readonly id: number;
+  readonly categoryId: number;
+  readonly name: string;
+  readonly active: boolean;
+  readonly tickets: number;
+}
+
+/**
+ * La subcategoría **como viaja dentro de un ticket**: su identificador, su categoría y su nombre.
+ */
+export interface SubcategoriaDelTicket {
+  readonly id: number;
+  readonly categoryId: number;
+  readonly name: string;
+  readonly active?: boolean;
 }
 
 /**
@@ -78,6 +107,11 @@ export interface Ticket {
    * declara opcional por si una respuesta vieja no la trae (`docs/modules/tickets.md`, decisión 67).
    */
   readonly category?: CategoriaDelTicket;
+  /**
+   * La **subcategoría** del caso. Nula cuando la categoría no tiene subcategorías. La hereda el
+   * interno al leerse, igual que la categoría.
+   */
+  readonly subcategory?: SubcategoriaDelTicket;
   /** Las **etiquetas** del caso, ya normalizadas: minúsculas y con guiones (`red-wifi`). */
   readonly tags?: readonly string[];
   /** El motivo del escalado. Sólo en los internos. */
@@ -209,6 +243,11 @@ export interface FiltrosDeBandeja {
    * cadenas). Vacío es «todas» (`docs/interfaz-y-experiencia.md`, sección 3.3).
    */
   readonly category?: string;
+  /**
+   * **La subcategoría** por la que se filtra, con su identificador en texto. Se combina con la
+   * categoría; el alta de la lista la limpia cuando cambia la categoría.
+   */
+  readonly subcategory?: string;
   /** **La etiqueta** por la que se filtra, tal y como se escribe. Vacío es «todas». */
   readonly tag?: string;
   /**
@@ -245,6 +284,11 @@ export interface AltaDeTicket {
    * 65). Se manda su identificador, no su nombre, para que renombrar la categoría no toque los tickets.
    */
   readonly categoryId: number;
+  /**
+   * **La subcategoría**, obligatoria sólo cuando la categoría elegida tiene subcategorías activas.
+   * Se manda su identificador, no su nombre.
+   */
+  readonly subcategoryId?: number;
   /** Las etiquetas del ticket, ya normalizadas por la pantalla. Opcionales. */
   readonly tags?: readonly string[];
   /** Sólo Soporte: el ticket es de otra persona, y se identifica por su correo. */
@@ -302,6 +346,9 @@ export class TicketsService {
     // (`docs/interfaz-y-experiencia.md`, sección 3.3).
     if (filtros.category) {
       parametros = parametros.set('category', filtros.category);
+    }
+    if (filtros.subcategory) {
+      parametros = parametros.set('subcategory', filtros.subcategory);
     }
     if (filtros.tag?.trim()) {
       parametros = parametros.set('tag', filtros.tag.trim());
@@ -483,6 +530,37 @@ export class TicketsService {
     );
   }
 
+  /** Crea una subcategoría dentro de una categoría. La mantiene sólo el Administrador. */
+  crearSubcategoria(categoryId: number, name: string): Promise<{ subcategory: Subcategoria }> {
+    return firstValueFrom(
+      this.http.post<{ subcategory: Subcategoria }>(
+        `/api/tickets/categories/${categoryId}/subcategories`,
+        { name },
+      ),
+    );
+  }
+
+  /** Renombra una subcategoría. La mantiene sólo el Administrador. */
+  renombrarSubcategoria(id: number, name: string): Promise<{ subcategory: Subcategoria }> {
+    return firstValueFrom(
+      this.http.patch<{ subcategory: Subcategoria }>(`/api/tickets/subcategories/${id}`, { name }),
+    );
+  }
+
+  /**
+   * Retira una subcategoría o la vuelve a poner.
+   *
+   * **Retirar es desactivarla**: deja de ofrecerse al crear un ticket, y los tickets que la tienen la
+   * conservan. Como las categorías, es sólo del Administrador.
+   */
+  cambiarEstadoDeSubcategoria(id: number, active: boolean): Promise<{ subcategory: Subcategoria }> {
+    return firstValueFrom(
+      this.http.post<{ subcategory: Subcategoria }>(`/api/tickets/subcategories/${id}/state`, {
+        active,
+      }),
+    );
+  }
+
   /**
    * Las etiquetas que ya existen.
    *
@@ -555,6 +633,7 @@ export class TicketsService {
       subject?: string;
       description?: string;
       categoryId?: number;
+      subcategoryId?: number;
       tags?: readonly string[];
     },
   ): Promise<{ ticket: Ticket }> {

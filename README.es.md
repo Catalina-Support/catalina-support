@@ -36,7 +36,7 @@ publicando cada respuesta.
 - **Dos niveles, un flujo claro:** Usuario → Soporte → Desarrollo.
 - **Tickets principales e internos** con conversaciones separadas y vista simultánea.
 - **Tu forma de entrar:** cuentas locales, Active Directory o Keycloak, un método a la vez.
-- **Detalles operativos:** categorías, etiquetas, prioridad, adjuntos, menciones y observadores.
+- **Detalles operativos:** categorías y subcategorías, etiquetas, prioridad, adjuntos, menciones y observadores.
 - **A tu manera:** correos editables, marca, zona horaria y dirección pública.
 - **Bilingüe y accesible:** español/inglés, ocho temas, fechas ISO y pantallas adaptables.
 - **Autoalojado y libre:** AGPL-3.0-only, sin dependencia de un proveedor ni de la nube.

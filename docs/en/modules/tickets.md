@@ -3,7 +3,10 @@
 [Español](../es/modules/tickets.md) · **English**
 
 > **Status:** as-built
-> **Last updated:** 2026-11-03
+> **Last updated:** 2026-11-22
+>
+> **Subcategory amendment, implemented in 1.0.2 on 2026-11-22.** Sections 2.3.3, 2.4, 2.5, 5, and the
+> decision table include the optional second level and its eight error keys.
 >
 > **QA correction, 2026-11-03.** The user history misrepresented the move to `escalado`: it was
 > translated as "En curso", the same as `en progreso`, and looked like a duplicate movement. Now the
@@ -813,6 +816,41 @@ that carry it, because the name is in a single place— and **retired** —which
 tags with theirs, and **both enter the search box**: searching for "network" finds the
 tickets of the "Network" category and those carrying the `red` tag.
 
+### 2.3.3 Subcategories
+
+**The second level is optional in the catalog and mandatory on the ticket when it exists** (2026-11-22,
+version 1.0.2). A category may have no subcategories; if it has **at least one active one**, a ticket
+**cannot be created or reclassified without choosing one**. The service enforces the rule and the
+database prevents a subcategory from belonging to another category.
+
+- **Where it lives**: in its own `ticket_subcategories` table, with a mandatory `category_id`. It is
+  not a category with a parent: the schema therefore prevents more than one level.
+- **The name** is normalized like a category name (lowercase, no accents, no outer spaces) and is
+  unique **within its category**: two categories may each have their own "Web".
+- **The composite foreign key** `tickets (subcategory_id, category_id)` guarantees that the
+  subcategory belongs to the ticket's category. A null `subcategory_id` checks nothing, which is what
+  a category without subcategories needs.
+- **Who maintains it**: only the Administrator, like the rest of the catalog (decision 83). Support and
+  Development use and filter it; they do not create or change it.
+- **Retiring is deactivating**: it stops being offered, and the tickets that have it keep it and keep
+  showing it. Retiring the last active one is allowed: the category goes back to having no
+  subcategories and ticket creation stops asking for one.
+- **Existing tickets are not backfilled**: they keep `subcategory_id` null and remain valid and
+  editable. The obligation applies **when creating** and **when changing the classification**; editing
+  only the subject or description of an old ticket does not force it.
+- **It belongs to the main ticket and the internal one inherits it**, like the category and tags
+  (decision 67).
+- **It filters and searches**: there is a subcategory filter and search matches its name. The
+  Dashboard and XLSX still group by category; extending them is out of scope for this change.
+- **The API**: catalog categories carry `subcategories`; a ticket carries `subcategory`; create and
+  edit accept `subcategoryId`. The maintenance routes are
+  `POST /api/tickets/categories/{id}/subcategories`, `PATCH /api/tickets/subcategories/{id}`, and
+  `POST /api/tickets/subcategories/{id}/state`, all Administrator-only.
+
+The new keys are `tickets.subcategory.required` (422), `notFound` (404), `inactive` (422),
+`mismatch` (422), `notAvailable` (422), `name.required` (422), `duplicate` (409), and `forbidden`
+(403), with their Spanish and English text.
+
 ### 2.4 Constraints
 
 - `tickets.state` only admits the six states of the main ticket; `internal_tickets.state`, the five
@@ -843,6 +881,9 @@ tickets of the "Network" category and those carrying the `red` tag.
 | **`ticket_tag_names(normalized)`** unique | So the catalog does not end up with `red-wifi` and `Red-Wifi` |
 | **`ticket_categories(normalized)`** unique | So the catalog does not end up with "Network" and "network" |
 | **`tickets(category_id)`** | Group and count the tickets of a category |
+| **`ticket_subcategories(category_id, normalized)`** unique | So a category cannot repeat a subcategory name |
+| **`ticket_subcategories(category_id)`** | List and count the subcategories of a category |
+| **`tickets(subcategory_id)`** | Filter by subcategory and count its tickets |
 
 Text search uses `ILIKE` on subject and description, **and since 2026-09-27 also on the
 name of the category and the tags** of the ticket (decision 68). It is enough for the volume of an
@@ -1042,6 +1083,9 @@ saying different things.
 | `POST /api/tickets/categories` | Creates a category | Support and Administrator |
 | `PATCH /api/tickets/categories/{id}` | Renames it | Support and Administrator |
 | `POST /api/tickets/categories/{id}/state` | Retires it or puts it back | **Only the Administrator** |
+| `POST /api/tickets/categories/{id}/subcategories` | Creates a subcategory under the category | **Only the Administrator** |
+| `PATCH /api/tickets/subcategories/{id}` | Renames it | **Only the Administrator** |
+| `POST /api/tickets/subcategories/{id}/state` | Retires it or puts it back | **Only the Administrator** |
 | `POST /api/tickets/tags` | Creates a tag | Support and Administrator |
 | `PATCH /api/tickets/tags/{tag}` | **Renames it on all tickets that carry it** | Support and Administrator |
 | `DELETE /api/tickets/tags/{tag}` | **Retires it and removes it from tickets** | **Only the Administrator** |
@@ -1113,6 +1157,7 @@ idempotent file commanded by `docs/arquitectura.md`. New tables:
 | `ticket_number_counters` | The sequence of each year |
 | `ticket_settings` | One row: the numbering prefix **and dispatch and notices per ticket type** |
 | **`ticket_categories`** | **The category catalog** of the installation, with its name, its normalized name (unique), and whether it is active (section 2.3.2) |
+| **`ticket_subcategories`** | **The subcategory catalog** of the installation, hanging from a category, with its normalized name unique within it and whether it is active (section 2.3.3) |
 | **`ticket_tag_names`** | **The tag catalog**: the normalized and unique name of each one |
 | **`ticket_tags`** | **Which ticket carries which tag**: the bridge table with the catalog, unique per ticket and tag, with who put it |
 
@@ -1254,6 +1299,10 @@ The gaps of the second review (11 to 15) are applied in the vhosts, in `dev.yml`
 | 66 | **Retiring a category is deactivating it** | **Owner decision, 2026-09-27**, over mine of forbidding deleting the one in use: **retiring is deactivating** —it stops being offered when creating a ticket and **tickets that have it keep it**—, as an account is deactivated. **No row is deleted**, and it is what makes "there is no ticket without a category" always fulfillable |
 | 67 | **The category belongs to the main ticket; the internal ticket inherits it** | **Owner decision, 2026-09-27**: the category and tags are **of the case**, they are stored in the main ticket and **the internal ticket inherits them when read**, as it inherits the subject. Classifying the same case twice —one per half— would be asking for extra work |
 | 68-quater | **The catalog count counts main tickets, and the filter respects the list** | **Clarified on 2026-09-27**, because it looked like a mismatch: the number shown by the catalog next to each category is **the main tickets** that have it, and **filtering by that category in the internal list returns the internal tickets** —which inherit it from their main ticket—. That is, **it is not the same question**: "how many tickets have this category" (the main ones: the category is theirs) and "which tickets appear when filtering by it in this list" (those of that list, and the internal ticket inherits it so it can be found). It is left this way, and **it is said here** so that no one reads it as a failure |
+| 91 | **The subcategory is optional in the catalog and mandatory on the ticket when it exists** | **Owner decision, 2026-11-22**, for version 1.0.2: a category may have no subcategories; if it has **at least one active one**, a new ticket and a change of classification **require choosing one**. It is stored in `ticket_subcategories` and the composite foreign key prevents it from belonging to another category. Existing tickets are not backfilled and remain editable |
+| 92 | **Only the Administrator maintains the subcategory catalog** | **Owner decision, 2026-11-22**: creating, renaming, retiring, and reactivating subcategories belongs to the Administrator, like the rest of the catalog (decision 83). Retiring is deactivating; tickets keep theirs. Retiring the last active one is allowed, and the category stops requiring a subcategory |
+| 93 | **The subcategory belongs to the main ticket, the internal one inherits it, and both filter and search** | **Owner decision, 2026-11-22**: the subcategory follows the same rule as the category and tags (decision 67). A `subcategory` filter is added and search matches its name; the Dashboard and XLSX do not change in this version |
+| 94 | **The classification is saved whole or not at all** | **Implementation decision, 2026-11-22**: when changing to a category with subcategories, the ticket view does not save half of it: it waits for the subcategory and sends both in the same `PATCH`. If the category has no subcategories, the category is saved and the backend clears the previous subcategory |
 | 68-ter | **The keys of the catalog and of tags** | `tickets.category.required` (422), `tickets.category.notFound` (404), `tickets.category.inactive` (422), `tickets.category.name.required` (422), `tickets.category.duplicate` (409), `tickets.category.lastActive` (409), `tickets.category.forbidden` (403), `tickets.tag.required` (422), and `tickets.tag.tooLong` (422) —**there is no `tag.invalid`**: normalization turns what is invalid into empty, and that is `tag.required`, so a key that cannot come out is not included—. All with their text in Spanish and English (`docs/interfaz-y-experiencia.md`, section 8) |
 | 69 | **A single search button, with a modal** | **Owner correction, 2026-09-27**, upon using it: "I already have three rows for four criteria, and I can have more". The criteria —text, view, type, state, category, and tag— live in **a modal** opened by the "Search" button, and **at the top of the list there remains a summary** of what is filtered with its remove button: a clean list and, at the same time, it is understood why few tickets appear. The overflow that caused it —the category row overflowing the screen— **is also fixed** (section 5) |
 | 70 | **The ticket view, by role** | **Owner correction, 2026-09-27**: when opening a ticket, **Support sees the main ticket** and **Development the internal ticket**, and both can switch to Main · Both · Internal whenever they want. **If you open an internal number, the internal ticket is seen** even if you are Support: it is what whoever clicks that link expects. And **"Both" shows only the conversations** —the two left columns—, without the cards: with the four columns "it looks very saturated" |
@@ -2119,3 +2168,20 @@ and is consumed only once; it is not passed through the URL.
 - The 260 frontend tests, the boundaries, the build, the ticket, user, and mail service tests,
   and the interface journey on PC and mobile passed. The `v1.0.1` migration
   left the 28 template rows in the isolated database.
+
+### 35.5 Subcategory verification (1.0.2)
+
+- The migration `v1.0.2.sql` was applied twice in a row without error; existing tickets kept a null
+  subcategory, the composite foreign key rejected a subcategory from another category, and the
+  database reached 22 tables.
+- Service: a category without active subcategories accepts a ticket without one and rejects one
+  sent; a category with active subcategories requires it and distinguishes not found, inactive, and
+  mismatch.
+- API: creating a ticket in Software without `subcategoryId` returns `422 tickets.subcategory.required`;
+  the same call with the subcategory returns it in the ticket. Changing category and subcategory in the
+  same `PATCH` saves both; changing to a category without subcategories clears it.
+- Catalog: the Administrator creates, renames, retires, and restores subcategories; Support gets 403 on
+  those routes. The category listing nests `subcategories` and counts their tickets.
+- Both seeders leave six subcategories and no ticket missing one when its category requires it; the demo
+  verification checks the same counts.
+- Backend tests, `go vet`, frontend tests, the production build, and the PC/mobile interface journey pass.

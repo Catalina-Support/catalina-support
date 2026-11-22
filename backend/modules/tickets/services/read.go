@@ -102,6 +102,11 @@ func (s *Service) listaDePrincipales(filtros repositories.Filtros, resumenIntern
 		return Page{}, err
 	}
 
+	subcategorias, err := s.subcategoriasDe(idsDeSubcategorias(tickets))
+	if err != nil {
+		return Page{}, err
+	}
+
 	etiquetas, err := s.categories.TagsByTickets(idsDe(tickets))
 	if err != nil {
 		return Page{}, err
@@ -120,7 +125,7 @@ func (s *Service) listaDePrincipales(filtros repositories.Filtros, resumenIntern
 	}
 
 	for _, ticket := range tickets {
-		convertido := s.aTicket(ticket, porID, categorias[ticket.CategoryID], etiquetas[ticket.ID])
+		convertido := s.aTicket(ticket, porID, categorias[ticket.CategoryID], subcategoriaDe(subcategorias, ticket.SubcategoryID), etiquetas[ticket.ID])
 		if interno, hay := internos[ticket.ID]; hay {
 			convertido.Child = interno.Number
 		}
@@ -153,6 +158,11 @@ func (s *Service) listaDeInternos(filtros repositories.Filtros) (Page, error) {
 		return Page{}, err
 	}
 
+	subcategorias, err := s.subcategoriasDe(idsDeSubcategoriasDePrincipales(internos, principales))
+	if err != nil {
+		return Page{}, err
+	}
+
 	etiquetas, err := s.categories.TagsByTickets(idsDePrincipales(internos))
 	if err != nil {
 		return Page{}, err
@@ -179,6 +189,7 @@ func (s *Service) listaDeInternos(filtros repositories.Filtros) (Page, error) {
 			principal,
 			porID,
 			categorias[principal.CategoryID],
+			subcategoriaDe(subcategorias, principal.SubcategoryID),
 			etiquetas[principal.ID],
 		))
 	}
@@ -329,12 +340,20 @@ func (s *Service) detalleDePrincipal(ticket repositories.Ticket, actor auth.Iden
 		return Detail{}, err
 	}
 
+	var subcategorias map[int64]*Subcategory
+	if ticket.SubcategoryID != nil {
+		subcategorias, err = s.subcategoriasDe([]int64{*ticket.SubcategoryID})
+		if err != nil {
+			return Detail{}, err
+		}
+	}
+
 	etiquetas, err := s.categories.TagsByTicket(ticket.ID)
 	if err != nil {
 		return Detail{}, err
 	}
 
-	convertido := s.aTicket(ticket, porID, categorias[ticket.CategoryID], etiquetas)
+	convertido := s.aTicket(ticket, porID, categorias[ticket.CategoryID], subcategoriaDe(subcategorias, ticket.SubcategoryID), etiquetas)
 
 	// Sólo se enseña lo que esa persona puede ver: para un usuario, el principal es todo lo que hay.
 	if !puedeVer(actor, convertido) {
@@ -434,12 +453,20 @@ func (s *Service) detalleDeInterno(interno repositories.InternalTicket, principa
 		return Detail{}, err
 	}
 
+	var subcategorias map[int64]*Subcategory
+	if principal.SubcategoryID != nil {
+		subcategorias, err = s.subcategoriasDe([]int64{*principal.SubcategoryID})
+		if err != nil {
+			return Detail{}, err
+		}
+	}
+
 	etiquetas, err := s.categories.TagsByTicket(principal.ID)
 	if err != nil {
 		return Detail{}, err
 	}
 
-	convertido := s.aTicketInterno(interno, principal, porID, categorias[principal.CategoryID], etiquetas)
+	convertido := s.aTicketInterno(interno, principal, porID, categorias[principal.CategoryID], subcategoriaDe(subcategorias, principal.SubcategoryID), etiquetas)
 
 	// Y la ficha del interno, lo mismo: la última acción va con él (decisión 5).
 	temporal := []Ticket{convertido}
@@ -500,7 +527,7 @@ func (s *Service) principalesDe(internos []repositories.InternalTicket) (map[int
 }
 
 // aTicket traduce una fila a lo que ve el resto del sistema.
-func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Account, categoria *Category, etiquetas []string) Ticket {
+func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Account, categoria *Category, subcategoria *Subcategory, etiquetas []string) Ticket {
 	convertido := Ticket{
 		ID:                  ticket.ID,
 		Number:              ticket.Number,
@@ -509,6 +536,7 @@ func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Accou
 		State:               ticket.State,
 		Priority:            ticket.Priority,
 		Category:            categoria,
+		Subcategory:         subcategoria,
 		Tags:                etiquetas,
 		Parent:              "",
 		Requester:           cuentaDeID(porID, ticket.RequesterID),
@@ -527,7 +555,7 @@ func (s *Service) aTicket(ticket repositories.Ticket, porID map[int64]auth.Accou
 
 // aTicketInterno traduce un interno, que **hereda del principal** el asunto, la descripción, la
 // categoría y las etiquetas (decisión 67).
-func (s *Service) aTicketInterno(interno repositories.InternalTicket, principal repositories.Ticket, porID map[int64]auth.Account, categoria *Category, etiquetas []string) Ticket {
+func (s *Service) aTicketInterno(interno repositories.InternalTicket, principal repositories.Ticket, porID map[int64]auth.Account, categoria *Category, subcategoria *Subcategory, etiquetas []string) Ticket {
 	return Ticket{
 		ID:               interno.ID,
 		Number:           interno.Number,
@@ -539,6 +567,7 @@ func (s *Service) aTicketInterno(interno repositories.InternalTicket, principal 
 		EscalationReason: interno.EscalationReason,
 		Parent:           principal.Number,
 		Category:         categoria,
+		Subcategory:      subcategoria,
 		Tags:             etiquetas,
 		Requester:        cuentaDeID(porID, principal.RequesterID),
 		CreatedBy:        cuentaDeID(porID, interno.CreatedByID),
@@ -660,6 +689,32 @@ func idsDeCategorias(tickets []repositories.Ticket) []int64 {
 	return ids
 }
 
+// idsDeSubcategorias junta las subcategorías de una lista de tickets, **sin repetir y sin ceros**.
+func idsDeSubcategorias(tickets []repositories.Ticket) []int64 {
+	ids := make([]int64, 0, len(tickets))
+	vistas := map[int64]bool{}
+
+	for _, ticket := range tickets {
+		if ticket.SubcategoryID == nil || *ticket.SubcategoryID == 0 || vistas[*ticket.SubcategoryID] {
+			continue
+		}
+
+		vistas[*ticket.SubcategoryID] = true
+		ids = append(ids, *ticket.SubcategoryID)
+	}
+
+	return ids
+}
+
+// subcategoriaDe saca la subcategoría del mapa por su clave ajena, o nil si el ticket no tiene.
+func subcategoriaDe(porID map[int64]*Subcategory, id *int64) *Subcategory {
+	if id == nil {
+		return nil
+	}
+
+	return porID[*id]
+}
+
 // idsDePrincipales junta los identificadores de los principales de una lista de internos, que es de
 // donde el interno hereda su categoría y sus etiquetas.
 func idsDePrincipales(internos []repositories.InternalTicket) []int64 {
@@ -692,6 +747,25 @@ func idsDeCategoriasDePrincipales(internos []repositories.InternalTicket, princi
 
 		vistas[principal.CategoryID] = true
 		ids = append(ids, principal.CategoryID)
+	}
+
+	return ids
+}
+
+// idsDeSubcategoriasDePrincipales junta las subcategorías de los principales que se han leído para
+// una lista de internos.
+func idsDeSubcategoriasDePrincipales(internos []repositories.InternalTicket, principales map[int64]repositories.Ticket) []int64 {
+	ids := make([]int64, 0, len(internos))
+	vistas := map[int64]bool{}
+
+	for _, interno := range internos {
+		principal, hay := principales[interno.TicketID]
+		if !hay || principal.SubcategoryID == nil || *principal.SubcategoryID == 0 || vistas[*principal.SubcategoryID] {
+			continue
+		}
+
+		vistas[*principal.SubcategoryID] = true
+		ids = append(ids, *principal.SubcategoryID)
 	}
 
 	return ids
