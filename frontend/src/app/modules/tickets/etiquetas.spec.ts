@@ -216,8 +216,8 @@ describe('la normalización de una etiqueta', () => {
 describe('las opciones del selector de categoría', () => {
   it('llevan la categoría delante y su nombre como etiqueta', () => {
     const opciones = opcionesDeCategoria(ES, [
-      { id: 1, name: 'General', active: true, tickets: 3 },
-      { id: 2, name: 'Red', active: true, tickets: 0 },
+      { id: 1, name: 'General', active: true, tickets: 3, subcategories: [] },
+      { id: 2, name: 'Red', active: true, tickets: 0, subcategories: [] },
     ]);
 
     expect(opciones).toEqual([

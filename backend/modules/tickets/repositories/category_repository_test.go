@@ -140,6 +140,100 @@ func TestCatalogoDeCategorias(t *testing.T) {
 	}
 }
 
+func TestSubcategoriasDelCatalogo(t *testing.T) {
+	categorias, tickets, tx := repositorioDePrueba(t)
+	usuario := primerUsuario(t, tx)
+
+	sufijo := strconv.FormatInt(time.Now().UnixNano(), 36)
+	una, err := categorias.CreateCategory(TicketCategory{
+		Name: "Subcategorías A " + sufijo, Normalized: "subcategorias-a-" + sufijo, Active: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateCategory A falló: %v", err)
+	}
+	otra, err := categorias.CreateCategory(TicketCategory{
+		Name: "Subcategorías B " + sufijo, Normalized: "subcategorias-b-" + sufijo, Active: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateCategory B falló: %v", err)
+	}
+
+	web, err := categorias.CreateSubcategory(TicketSubcategory{
+		CategoryID: una.ID, Name: "Web", Normalized: "web", Active: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateSubcategory falló: %v", err)
+	}
+
+	// El nombre es único dentro de su categoría, no en todo el catálogo.
+	if _, err := categorias.CreateSubcategory(TicketSubcategory{
+		CategoryID: una.ID, Name: "WEB", Normalized: "web", Active: true,
+	}); !errors.Is(err, ErrSubcategoryDuplicate) {
+		t.Fatalf("repetir en la misma categoría debería salir %v y salió %v", ErrSubcategoryDuplicate, err)
+	}
+	if _, err := categorias.CreateSubcategory(TicketSubcategory{
+		CategoryID: otra.ID, Name: "Web", Normalized: "web", Active: true,
+	}); err != nil {
+		t.Fatalf("el mismo nombre en otra categoría debería valer, y salió %v", err)
+	}
+
+	// El recuento de activas es lo que decide si el ticket está obligado a elegir una.
+	if total, err := categorias.CountActiveSubcategories(una.ID); err != nil || total != 1 {
+		t.Fatalf("la categoría A debería tener 1 activa, y salió %d (%v)", total, err)
+	}
+
+	// La clave ajena compuesta impide guardar una subcategoría de otra categoría.
+	numero := "SUB-" + sufijo
+	if err := tx.SavePoint("antes_de_la_subcategoria").Error; err != nil {
+		t.Fatalf("no se pudo crear el punto de guardado: %v", err)
+	}
+	if _, err := tickets.CreateTicket(tx, CreateTicketInput{
+		Number: numero, NumberYear: 2999, NumberSeq: 1, Subject: "Prueba de subcategoría",
+		Description: "<p>Prueba</p>", State: StateNuevo, Priority: PriorityMedium,
+		CategoryID: otra.ID, SubcategoryID: &web.ID, RequesterID: usuario, CreatedByID: usuario,
+	}); err == nil {
+		t.Fatal("la base tenía que rechazar una subcategoría de otra categoría")
+	}
+	// La clave ajena aborta la transacción: se vuelve al punto anterior para seguir probando.
+	if err := tx.RollbackTo("antes_de_la_subcategoria").Error; err != nil {
+		t.Fatalf("no se pudo volver al punto de guardado: %v", err)
+	}
+
+	// La pareja correcta se guarda y se puede filtrar y buscar por ella.
+	if _, err := tickets.CreateTicket(tx, CreateTicketInput{
+		Number: numero + "-ok", NumberYear: 2999, NumberSeq: 2, Subject: "Prueba de subcategoría",
+		Description: "<p>Prueba</p>", State: StateNuevo, Priority: PriorityMedium,
+		CategoryID: una.ID, SubcategoryID: &web.ID, RequesterID: usuario, CreatedByID: usuario,
+	}); err != nil {
+		t.Fatalf("la pareja correcta debería guardarse, y salió %v", err)
+	}
+
+	filtrados, _, err := tickets.List(Filtros{SubcategoryID: &web.ID, Page: 1, PerPage: 100})
+	if err != nil {
+		t.Fatalf("el filtro por subcategoría falló: %v", err)
+	}
+	if len(filtrados) != 1 || filtrados[0].SubcategoryID == nil || *filtrados[0].SubcategoryID != web.ID {
+		t.Fatalf("el filtro por subcategoría devolvió %v", idsDeTickets(filtrados))
+	}
+
+	encontrados, _, err := tickets.List(Filtros{Query: "Web", Page: 1, PerPage: 100})
+	if err != nil {
+		t.Fatalf("la búsqueda por subcategoría falló: %v", err)
+	}
+	if !contieneTicket(encontrados, filtrados[0].ID) {
+		t.Fatalf("la búsqueda no encontró el ticket por el nombre de su subcategoría: %v", idsDeTickets(encontrados))
+	}
+
+	// Retirarla la saca de las activas pero no de los tickets que la tienen.
+	web.Active = false
+	if err := categorias.UpdateSubcategory(web); err != nil {
+		t.Fatalf("UpdateSubcategory falló: %v", err)
+	}
+	if total, err := categorias.CountActiveSubcategories(una.ID); err != nil || total != 0 {
+		t.Fatalf("tras retirarla debería quedar 0 activa, y salió %d (%v)", total, err)
+	}
+}
+
 func TestAusenciaEsperadaNoSeRegistraComoError(t *testing.T) {
 	_, _, tx := repositorioDePrueba(t)
 	registro := &loggerDeErrores{}
@@ -351,7 +445,7 @@ func TestFiltrosDeCategoriaYEtiqueta(t *testing.T) {
 		t.Fatalf("CreateCategory falló: %v", err)
 	}
 
-	if err := tx.Model(&Ticket{}).Where("id = ?", ticket).Update("category_id", creada.ID).Error; err != nil {
+	if err := tx.Model(&Ticket{}).Where("id = ?", ticket).Updates(map[string]any{"category_id": creada.ID, "subcategory_id": nil}).Error; err != nil {
 		t.Fatalf("no se pudo poner la categoría al ticket: %v", err)
 	}
 	if err := categorias.ReplaceTags(tx, ticket, []string{"prueba-filtro"}, usuario); err != nil {
@@ -467,10 +561,10 @@ func repositorioDePrueba(t *testing.T) (*CategoryRepository, *TicketRepository, 
 		t.Skip("no se pudo abrir la transacción: " + tx.Error.Error())
 	}
 
-	if !tx.Migrator().HasTable(&TicketCategory{}) || !tx.Migrator().HasTable(&TicketTag{}) ||
-		!tx.Migrator().HasTable(&TicketTagName{}) {
+	if !tx.Migrator().HasTable(&TicketCategory{}) || !tx.Migrator().HasTable(&TicketSubcategory{}) ||
+		!tx.Migrator().HasTable(&TicketTag{}) || !tx.Migrator().HasTable(&TicketTagName{}) {
 		_ = tx.Rollback()
-		t.Skip("faltan ticket_categories, ticket_tags o ticket_tag_names: aplica backend/migrations/v1.0.0.sql")
+		t.Skip("faltan ticket_categories, ticket_subcategories, ticket_tags o ticket_tag_names: aplica las migraciones")
 	}
 
 	t.Cleanup(func() {

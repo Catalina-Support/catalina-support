@@ -68,12 +68,14 @@ describe('TicketsService', () => {
       state: '',
       q: '',
       category: '4',
+      subcategory: '9',
       tag: '  red-wifi ',
       page: 1,
     });
 
     const pidiendo = http.expectOne((peticion) => peticion.url === '/api/tickets');
     expect(pidiendo.request.params.get('category')).toBe('4');
+    expect(pidiendo.request.params.get('subcategory')).toBe('9');
     // La etiqueta va sin los espacios de fuera: es lo que se escribe al filtrar.
     expect(pidiendo.request.params.get('tag')).toBe('red-wifi');
 
@@ -246,6 +248,7 @@ describe('TicketsService', () => {
       subject: 'Llamada',
       description: 'Lo pide Ana por teléfono.',
       categoryId: 4,
+      subcategoryId: 7,
       tags: ['red-wifi', 'licencia-office'],
       requesterEmail: 'ana@ejemplo.com',
     });
@@ -255,6 +258,7 @@ describe('TicketsService', () => {
       subject: 'Llamada',
       description: 'Lo pide Ana por teléfono.',
       categoryId: 4,
+      subcategoryId: 7,
       tags: ['red-wifi', 'licencia-office'],
       requesterEmail: 'ana@ejemplo.com',
     });
@@ -266,10 +270,10 @@ describe('TicketsService', () => {
   it('editar manda la categoría y las etiquetas por el mismo `PATCH` de la edición', async () => {
     // Es lo que usa la ficha para cambiar la clasificación: el mismo `PATCH` del asunto y la
     // descripción, con `categoryId` y `tags` (docs/modules/tickets.md, sección 5).
-    void tickets.editar('CS-2026-0001', { categoryId: 2, tags: ['vpn'] });
+    void tickets.editar('CS-2026-0001', { categoryId: 2, subcategoryId: 5, tags: ['vpn'] });
 
     const peticion = http.expectOne({ url: '/api/tickets/CS-2026-0001', method: 'PATCH' });
-    expect(peticion.request.body).toEqual({ categoryId: 2, tags: ['vpn'] });
+    expect(peticion.request.body).toEqual({ categoryId: 2, subcategoryId: 5, tags: ['vpn'] });
 
     peticion.flush({ ticket: TICKET });
   });
@@ -279,26 +283,58 @@ describe('TicketsService', () => {
     // mezclarlo con el nombre dejaría que Soporte lo hiciera de rebote (decisión 64).
     const catalogo = tickets.categorias();
     http.expectOne({ url: '/api/tickets/categories', method: 'GET' }).flush({
-      categories: [{ id: 1, name: 'General', active: true, tickets: 3 }],
+      categories: [{ id: 1, name: 'General', active: true, tickets: 3, subcategories: [] }],
     });
     await expect(catalogo).resolves.toEqual({
-      categories: [{ id: 1, name: 'General', active: true, tickets: 3 }],
+      categories: [{ id: 1, name: 'General', active: true, tickets: 3, subcategories: [] }],
     });
 
     void tickets.crearCategoria('Red');
     const crear = http.expectOne({ url: '/api/tickets/categories', method: 'POST' });
     expect(crear.request.body).toEqual({ name: 'Red' });
-    crear.flush({ category: { id: 2, name: 'Red', active: true, tickets: 0 } });
+    crear.flush({ category: { id: 2, name: 'Red', active: true, tickets: 0, subcategories: [] } });
 
     void tickets.renombrarCategoria(2, 'Redes');
     const renombrar = http.expectOne({ url: '/api/tickets/categories/2', method: 'PATCH' });
     expect(renombrar.request.body).toEqual({ name: 'Redes' });
-    renombrar.flush({ category: { id: 2, name: 'Redes', active: true, tickets: 0 } });
+    renombrar.flush({ category: { id: 2, name: 'Redes', active: true, tickets: 0, subcategories: [] } });
 
     void tickets.cambiarEstadoDeCategoria(2, false);
     const estado = http.expectOne({ url: '/api/tickets/categories/2/state', method: 'POST' });
     expect(estado.request.body).toEqual({ active: false });
-    estado.flush({ category: { id: 2, name: 'Redes', active: false, tickets: 0 } });
+    estado.flush({ category: { id: 2, name: 'Redes', active: false, tickets: 0, subcategories: [] } });
+  });
+
+  it('las subcategorías van a sus rutas y cuelgan de su categoría al crearse', async () => {
+    void tickets.crearSubcategoria(2, 'Web');
+    const crear = http.expectOne({
+      url: '/api/tickets/categories/2/subcategories',
+      method: 'POST',
+    });
+    expect(crear.request.body).toEqual({ name: 'Web' });
+    crear.flush({
+      subcategory: { id: 7, categoryId: 2, name: 'Web', active: true, tickets: 0 },
+    });
+
+    void tickets.renombrarSubcategoria(7, 'Aplicación web');
+    const renombrar = http.expectOne({
+      url: '/api/tickets/subcategories/7',
+      method: 'PATCH',
+    });
+    expect(renombrar.request.body).toEqual({ name: 'Aplicación web' });
+    renombrar.flush({
+      subcategory: { id: 7, categoryId: 2, name: 'Aplicación web', active: true, tickets: 0 },
+    });
+
+    void tickets.cambiarEstadoDeSubcategoria(7, false);
+    const estado = http.expectOne({
+      url: '/api/tickets/subcategories/7/state',
+      method: 'POST',
+    });
+    expect(estado.request.body).toEqual({ active: false });
+    estado.flush({
+      subcategory: { id: 7, categoryId: 2, name: 'Aplicación web', active: false, tickets: 0 },
+    });
   });
 
   it('las etiquetas se piden con su búsqueda, y sin ella vienen las más usadas', async () => {

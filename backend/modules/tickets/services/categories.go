@@ -36,6 +36,16 @@ type Catalogo interface {
 	CreateCategory(categoria repositories.TicketCategory) (repositories.TicketCategory, error)
 	UpdateCategory(categoria repositories.TicketCategory) error
 	CountActiveCategories() (int64, error)
+	// Las subcategorías: el segundo nivel del catálogo, opcional en la categoría y obligatorio en el
+	// ticket cuando la categoría tiene alguna activa.
+	ListSubcategories(soloActivas bool) ([]repositories.SubcategoryConCuenta, error)
+	SubcategoryWithCount(id int64) (repositories.SubcategoryConCuenta, error)
+	SubcategoryByID(id int64) (repositories.TicketSubcategory, error)
+	SubcategoryByNormalized(categoryID int64, normalized string) (repositories.TicketSubcategory, error)
+	SubcategoriesByIDs(ids []int64) (map[int64]repositories.TicketSubcategory, error)
+	CreateSubcategory(subcategoria repositories.TicketSubcategory) (repositories.TicketSubcategory, error)
+	UpdateSubcategory(subcategoria repositories.TicketSubcategory) error
+	CountActiveSubcategories(categoryID int64) (int64, error)
 	ListTags(prefijo string, limite int) ([]repositories.TagConCuenta, error)
 	// ListAllTags es el catálogo entero, sin tope y por nombre: es el listado de mantenimiento, no el
 	// de sugerencias (docs/modules/tickets.md, decisión 72).
@@ -62,6 +72,23 @@ type Category struct {
 // CategoryWithCount es una categoría del catálogo con cuántos tickets la usan.
 type CategoryWithCount struct {
 	Category
+	Tickets int64
+	// Subcategories son las subcategorías que cuelgan de ella. Un array vacío significa que la
+	// categoría no tiene subcategorías, que es un estado válido.
+	Subcategories []SubcategoryWithCount
+}
+
+// Subcategory es la subcategoría tal y como viaja dentro de un ticket.
+type Subcategory struct {
+	ID         int64
+	CategoryID int64
+	Name       string
+	Active     bool
+}
+
+// SubcategoryWithCount es una subcategoría del catálogo con cuántos tickets la usan.
+type SubcategoryWithCount struct {
+	Subcategory
 	Tickets int64
 }
 
@@ -192,9 +219,26 @@ func (s *Service) Categories(actor auth.Identity) ([]CategoryWithCount, error) {
 		return nil, err
 	}
 
+	subfilas, err := s.categories.ListSubcategories(soloActivas)
+	if err != nil {
+		return nil, err
+	}
+
+	// Las subcategorías se agrupan por categoría en memoria: son pocas y así el catálogo entero se
+	// lee con dos consultas en vez de una por categoría.
+	porCategoria := make(map[int64][]SubcategoryWithCount, len(filas))
+	for _, fila := range subfilas {
+		porCategoria[fila.CategoryID] = append(porCategoria[fila.CategoryID], aSubcategoryWithCount(fila))
+	}
+
 	categorias := make([]CategoryWithCount, 0, len(filas))
 	for _, fila := range filas {
-		categorias = append(categorias, aCategoryWithCount(fila))
+		categoria := aCategoryWithCount(fila)
+		categoria.Subcategories = porCategoria[fila.ID]
+		if categoria.Subcategories == nil {
+			categoria.Subcategories = []SubcategoryWithCount{}
+		}
+		categorias = append(categorias, categoria)
 	}
 
 	return categorias, nil
@@ -317,6 +361,154 @@ func (s *Service) CategoryState(id int64, active bool, actor auth.Identity) (Cat
 	}
 
 	return s.categoriaConCuenta(id)
+}
+
+// CreateSubcategory da de alta una subcategoría dentro de una categoría. Es **sólo del
+// Administrador**, como el resto del catálogo (decisión 83).
+func (s *Service) CreateSubcategory(categoryID int64, nombre string, actor auth.Identity) (SubcategoryWithCount, error) {
+	if !puedeMantenerElCatalogo(actor) {
+		return SubcategoryWithCount{}, ErrSubcategoryForbidden
+	}
+
+	categoria, err := s.categories.CategoryByID(categoryID)
+	if err != nil {
+		return SubcategoryWithCount{}, traducirCategoria(err)
+	}
+
+	limpio := strings.TrimSpace(nombre)
+	if limpio == "" {
+		return SubcategoryWithCount{}, ErrSubcategoryNameRequired
+	}
+	normalizado := NormalizarCategoria(limpio)
+
+	// El nombre es único **dentro de su categoría**: dos categorías pueden tener cada una su «Web».
+	_, err = s.categories.SubcategoryByNormalized(categoria.ID, normalizado)
+	if err == nil {
+		return SubcategoryWithCount{}, ErrSubcategoryDuplicate
+	}
+	if !errors.Is(err, repositories.ErrSubcategoryNotFound) {
+		return SubcategoryWithCount{}, err
+	}
+
+	creada, err := s.categories.CreateSubcategory(repositories.TicketSubcategory{
+		CategoryID:  categoria.ID,
+		Name:        limpio,
+		Normalized:  normalizado,
+		Active:      true,
+		CreatedByID: creadorDelCatalogo(actor),
+	})
+	if errors.Is(err, repositories.ErrSubcategoryDuplicate) {
+		return SubcategoryWithCount{}, ErrSubcategoryDuplicate
+	}
+	if err != nil {
+		return SubcategoryWithCount{}, err
+	}
+
+	return SubcategoryWithCount{Subcategory: Subcategory{
+		ID: creada.ID, CategoryID: creada.CategoryID, Name: creada.Name, Active: creada.Active,
+	}}, nil
+}
+
+// RenameSubcategory cambia el nombre de una subcategoría. La comparación para el choque es por el
+// nombre normalizado y dentro de su categoría.
+func (s *Service) RenameSubcategory(id int64, nombre string, actor auth.Identity) (SubcategoryWithCount, error) {
+	if !puedeMantenerElCatalogo(actor) {
+		return SubcategoryWithCount{}, ErrSubcategoryForbidden
+	}
+
+	limpio := strings.TrimSpace(nombre)
+	if limpio == "" {
+		return SubcategoryWithCount{}, ErrSubcategoryNameRequired
+	}
+	normalizado := NormalizarCategoria(limpio)
+
+	actual, err := s.categories.SubcategoryByID(id)
+	if err != nil {
+		return SubcategoryWithCount{}, traducirSubcategoria(err)
+	}
+
+	existente, err := s.categories.SubcategoryByNormalized(actual.CategoryID, normalizado)
+	if err == nil && existente.ID != id {
+		return SubcategoryWithCount{}, ErrSubcategoryDuplicate
+	}
+	if err != nil && !errors.Is(err, repositories.ErrSubcategoryNotFound) {
+		return SubcategoryWithCount{}, err
+	}
+
+	actual.Name = limpio
+	actual.Normalized = normalizado
+	if err := s.categories.UpdateSubcategory(actual); err != nil {
+		return SubcategoryWithCount{}, err
+	}
+
+	return s.subcategoriaConCuenta(id)
+}
+
+// SubcategoryState retira o vuelve a poner una subcategoría. **Retirar es desactivarla**: deja de
+// ofrecerse al crear un ticket y los tickets que la tienen la conservan.
+//
+// No se impide retirar la última activa: una categoría puede volver a quedarse sin subcategorías, y
+// entonces el alta deja de pedir una. Es distinto de la categoría, que no puede quedarse sin ninguna
+// porque el ticket no puede existir sin ella.
+func (s *Service) SubcategoryState(id int64, active bool, actor auth.Identity) (SubcategoryWithCount, error) {
+	if !puedeMantenerElCatalogo(actor) {
+		return SubcategoryWithCount{}, ErrSubcategoryForbidden
+	}
+
+	subcategoria, err := s.categories.SubcategoryByID(id)
+	if err != nil {
+		return SubcategoryWithCount{}, traducirSubcategoria(err)
+	}
+
+	if subcategoria.Active != active {
+		if active {
+			subcategoria.DeactivatedAt = nil
+		} else {
+			ahora := s.now()
+			subcategoria.DeactivatedAt = &ahora
+		}
+
+		subcategoria.Active = active
+		if err := s.categories.UpdateSubcategory(subcategoria); err != nil {
+			return SubcategoryWithCount{}, err
+		}
+	}
+
+	return s.subcategoriaConCuenta(id)
+}
+
+// Subcategoría obligatoria cuando la categoría tiene alguna activa. Se comprueba **al crear y al
+// cambiar la clasificación**, no en cada edición: los tickets que ya existían no se rellenan hacia
+// atrás y tienen que seguir siendo editables.
+func (s *Service) subcategoriaParaTicket(categoria repositories.TicketCategory, id *int64) (*repositories.TicketSubcategory, error) {
+	total, err := s.categories.CountActiveSubcategories(categoria.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if total == 0 {
+		if id != nil {
+			return nil, ErrSubcategoryNotAvailable
+		}
+		return nil, nil
+	}
+
+	if id == nil {
+		return nil, ErrSubcategoryRequired
+	}
+
+	subcategoria, err := s.categories.SubcategoryByID(*id)
+	if err != nil {
+		return nil, traducirSubcategoria(err)
+	}
+	if subcategoria.CategoryID != categoria.ID {
+		return nil, ErrSubcategoryMismatch
+	}
+	if !subcategoria.Active {
+		return nil, ErrSubcategoryInactive
+	}
+
+	return &subcategoria, nil
 }
 
 // Tags devuelve las etiquetas del catálogo. Hay dos preguntas distintas y por eso dos caminos:
@@ -531,6 +723,68 @@ func aCategoryWithCount(fila repositories.CategoryConCuenta) CategoryWithCount {
 	}
 }
 
+// aSubcategoryWithCount traduce la fila del repositorio a lo que viaja por la API.
+func aSubcategoryWithCount(fila repositories.SubcategoryConCuenta) SubcategoryWithCount {
+	return SubcategoryWithCount{
+		Subcategory: Subcategory{
+			ID: fila.ID, CategoryID: fila.CategoryID, Name: fila.Name, Active: fila.Active,
+		},
+		Tickets: fila.Tickets,
+	}
+}
+
+// subcategoriaConCuenta lee una subcategoría con su cuenta de tickets después de cambiarla.
+func (s *Service) subcategoriaConCuenta(id int64) (SubcategoryWithCount, error) {
+	fila, err := s.categories.SubcategoryWithCount(id)
+	if err != nil {
+		return SubcategoryWithCount{}, traducirSubcategoria(err)
+	}
+
+	return aSubcategoryWithCount(fila), nil
+}
+
+// aSubcategoria traduce una subcategoría del repositorio a la que viaja dentro de un ticket.
+func aSubcategoria(subcategoria repositories.TicketSubcategory) *Subcategory {
+	return &Subcategory{
+		ID: subcategoria.ID, CategoryID: subcategoria.CategoryID, Name: subcategoria.Name,
+		Active: subcategoria.Active,
+	}
+}
+
+// aSubcategoriaDe hace lo mismo con una que puede no existir: sin subcategoría no se inventa nada.
+func aSubcategoriaDe(subcategoria *repositories.TicketSubcategory) *Subcategory {
+	if subcategoria == nil {
+		return nil
+	}
+
+	return aSubcategoria(*subcategoria)
+}
+
+// idDeSubcategoria devuelve la clave ajena del ticket, o nil cuando no hay subcategoría.
+func idDeSubcategoria(subcategoria *repositories.TicketSubcategory) *int64 {
+	if subcategoria == nil {
+		return nil
+	}
+
+	return &subcategoria.ID
+}
+
+// subcategoriasDe lee varias subcategorías de una vez y las deja listas para pegar en una lista de
+// tickets. Es lo que evita preguntar una a una al pintar una página.
+func (s *Service) subcategoriasDe(ids []int64) (map[int64]*Subcategory, error) {
+	filas, err := s.categories.SubcategoriesByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	porID := make(map[int64]*Subcategory, len(filas))
+	for id, fila := range filas {
+		porID[id] = aSubcategoria(fila)
+	}
+
+	return porID, nil
+}
+
 // aCategoria traduce una categoría del repositorio a la que viaja dentro de un ticket.
 func aCategoria(categoria repositories.TicketCategory) *Category {
 	return &Category{ID: categoria.ID, Name: categoria.Name, Active: categoria.Active}
@@ -559,4 +813,22 @@ func traducirCategoria(err error) error {
 	}
 
 	return err
+}
+
+// traducirSubcategoria hace lo mismo con las subcategorías.
+func traducirSubcategoria(err error) error {
+	if errors.Is(err, repositories.ErrSubcategoryNotFound) {
+		return ErrSubcategoryNotFound
+	}
+
+	return err
+}
+
+// mismoID compara dos claves ajenas opcionales: nil sólo es igual a nil.
+func mismoID(a, b *int64) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+
+	return *a == *b
 }

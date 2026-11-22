@@ -33,89 +33,187 @@
       } @else {
         <ul class="flex flex-col divide-y divide-borde">
           @for (categoria of categorias(); track categoria.id) {
-            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
-              @if (renombrando() === categoria.id) {
-                <div class="flex min-w-56 flex-1 flex-wrap items-end gap-2">
-                  <app-campo
-                    [identificador]="'categoria-' + categoria.id"
-                    [etiqueta]="t().tickets.nombreDeCategoria"
-                    [valor]="nombreEditado()"
-                    (valorChange)="nombreEditado.set($event)"
-                  />
+            <li class="py-3">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                @if (renombrando() === categoria.id) {
+                  <div class="flex min-w-56 flex-1 flex-wrap items-end gap-2">
+                    <app-campo
+                      [identificador]="'categoria-' + categoria.id"
+                      [etiqueta]="t().tickets.nombreDeCategoria"
+                      [valor]="nombreEditado()"
+                      (valorChange)="nombreEditado.set($event)"
+                    />
 
-                  <app-boton
-                    [texto]="t().tickets.guardar"
-                    [deshabilitado]="trabajando()"
-                    (pulsado)="guardarNombre(categoria)"
-                  />
+                    <app-boton
+                      [texto]="t().tickets.guardar"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="guardarNombre(categoria)"
+                    />
 
-                  <app-boton
-                    forma="secundario"
-                    [texto]="t().tickets.cancelar"
-                    [deshabilitado]="trabajando()"
-                    (pulsado)="cancelarRenombrado()"
-                  />
-                </div>
-              } @else {
-                <div class="flex flex-col gap-1">
-                  <span class="font-medium text-texto">{{ categoria.name }}</span>
-
-                  <span class="flex flex-wrap items-center gap-2 text-xs">
-                    <span class="text-apagado">
-                      {{ categoria.tickets }} {{ t().tickets.total }}
-                    </span>
-
-                    <!-- Una retirada se sigue enseñando: clasifica tickets, y hay que poder verlo. -->
-                    @if (categoria.active) {
-                      <span
-                        class="inline-flex items-center rounded border border-exito px-1.5 py-0.5 text-exito"
-                      >
-                        {{ t().tickets.categoriaActiva }}
-                      </span>
-                    } @else {
-                      <span
-                        class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-apagado"
-                      >
-                        {{ t().tickets.categoriaRetirada }}
-                      </span>
-                    }
-                  </span>
-                </div>
-
-                <div class="flex flex-wrap gap-2">
-                  @if (esAdministrador()) {
                     <app-boton
                       forma="secundario"
-                      [texto]="t().tickets.renombrarCategoria"
+                      [texto]="t().tickets.cancelar"
                       [deshabilitado]="trabajando()"
-                      (pulsado)="empezarRenombrado(categoria)"
+                      (pulsado)="cancelarRenombrado()"
                     />
-                  }
+                  </div>
+                } @else {
+                  <div class="flex flex-col gap-1">
+                    <span class="font-medium text-texto">{{ categoria.name }}</span>
 
-                  <!--
-                    **El catálogo lo mantiene sólo el Administrador** (decisión 83, que corrige la 64 y la
-                    73): crear, renombrar y retirar. A Soporte no se le enseñan —sí ve el catálogo, para
-                    usarlo—: la interfaz no ofrece lo que el backend rechazaría.
-                  -->
-                  @if (esAdministrador()) {
-                    @if (categoria.active) {
+                    <span class="flex flex-wrap items-center gap-2 text-xs">
+                      <span class="text-apagado">
+                        {{ categoria.tickets }} {{ t().tickets.total }}
+                      </span>
+
+                      <!-- Una retirada se sigue enseñando: clasifica tickets, y hay que poder verlo. -->
+                      @if (categoria.active) {
+                        <span
+                          class="inline-flex items-center rounded border border-exito px-1.5 py-0.5 text-exito"
+                        >
+                          {{ t().tickets.categoriaActiva }}
+                        </span>
+                      } @else {
+                        <span
+                          class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-apagado"
+                        >
+                          {{ t().tickets.categoriaRetirada }}
+                        </span>
+                      }
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap gap-2">
+                    @if (esAdministrador()) {
                       <app-boton
                         forma="secundario"
-                        [texto]="t().tickets.retirarCategoria"
+                        [texto]="t().tickets.renombrarCategoria"
                         [deshabilitado]="trabajando()"
-                        (pulsado)="retirar(categoria)"
-                      />
-                    } @else {
-                      <app-boton
-                        forma="secundario"
-                        [texto]="t().tickets.reactivarCategoria"
-                        [deshabilitado]="trabajando()"
-                        (pulsado)="reactivar(categoria)"
+                        (pulsado)="empezarRenombrado(categoria)"
                       />
                     }
-                  }
-                </div>
-              }
+
+                    <!--
+                      **El catálogo lo mantiene sólo el Administrador** (decisión 83, que corrige la 64 y la
+                      73): crear, renombrar y retirar. A Soporte no se le enseñan —sí ve el catálogo, para
+                      usarlo—: la interfaz no ofrece lo que el backend rechazaría.
+                    -->
+                    @if (esAdministrador()) {
+                      @if (categoria.active) {
+                        <app-boton
+                          forma="secundario"
+                          [texto]="t().tickets.retirarCategoria"
+                          [deshabilitado]="trabajando()"
+                          (pulsado)="retirar(categoria)"
+                        />
+                      } @else {
+                        <app-boton
+                          forma="secundario"
+                          [texto]="t().tickets.reactivarCategoria"
+                          [deshabilitado]="trabajando()"
+                          (pulsado)="reactivar(categoria)"
+                        />
+                      }
+                    }
+                  </div>
+                }
+              </div>
+
+              <!--
+                **Las subcategorías, dentro de su categoría**: se leen como lo que son, el segundo nivel
+                de la clasificación. Un array vacío es válido y se dice; el alta del ticket no pedirá
+                ninguna.
+              -->
+              <div class="mt-2 border-l border-borde pl-4">
+                @if (!categoria.subcategories.length) {
+                  <p class="py-1 text-xs text-apagado">{{ t().tickets.sinSubcategorias }}</p>
+                } @else {
+                  <ul class="flex flex-col divide-y divide-borde">
+                    @for (subcategoria of categoria.subcategories; track subcategoria.id) {
+                      <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                        @if (renombrandoSubcategoria() === subcategoria.id) {
+                          <div class="flex min-w-56 flex-1 flex-wrap items-end gap-2">
+                            <app-campo
+                              [identificador]="'subcategoria-' + subcategoria.id"
+                              [etiqueta]="t().tickets.nombreDeSubcategoria"
+                              [valor]="nombreEditadoDeSubcategoria()"
+                              (valorChange)="nombreEditadoDeSubcategoria.set($event)"
+                            />
+
+                            <app-boton
+                              [texto]="t().tickets.guardar"
+                              [deshabilitado]="trabajando()"
+                              (pulsado)="guardarNombreDeSubcategoria(subcategoria)"
+                            />
+
+                            <app-boton
+                              forma="secundario"
+                              [texto]="t().tickets.cancelar"
+                              [deshabilitado]="trabajando()"
+                              (pulsado)="cancelarRenombradoDeSubcategoria()"
+                            />
+                          </div>
+                        } @else {
+                          <div class="flex flex-col gap-1">
+                            <span class="text-sm text-texto">{{ subcategoria.name }}</span>
+                            <span class="flex flex-wrap items-center gap-2 text-xs">
+                              <span class="text-apagado">
+                                {{ subcategoria.tickets }} {{ t().tickets.total }}
+                              </span>
+                              @if (subcategoria.active) {
+                                <span class="inline-flex items-center rounded border border-exito px-1.5 py-0.5 text-exito">
+                                  {{ t().tickets.subcategoriaActiva }}
+                                </span>
+                              } @else {
+                                <span class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-apagado">
+                                  {{ t().tickets.subcategoriaRetirada }}
+                                </span>
+                              }
+                            </span>
+                          </div>
+
+                          <div class="flex flex-wrap gap-2">
+                            @if (esAdministrador()) {
+                              <app-boton
+                                forma="secundario"
+                                [texto]="t().tickets.renombrarSubcategoria"
+                                [deshabilitado]="trabajando()"
+                                (pulsado)="empezarRenombradoDeSubcategoria(subcategoria)"
+                              />
+                              @if (subcategoria.active) {
+                                <app-boton
+                                  forma="secundario"
+                                  [texto]="t().tickets.retirarSubcategoria"
+                                  [deshabilitado]="trabajando()"
+                                  (pulsado)="retirarSubcategoria(subcategoria)"
+                                />
+                              } @else {
+                                <app-boton
+                                  forma="secundario"
+                                  [texto]="t().tickets.reactivarSubcategoria"
+                                  [deshabilitado]="trabajando()"
+                                  (pulsado)="reactivarSubcategoria(subcategoria)"
+                                />
+                              }
+                            }
+                          </div>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+
+                @if (esAdministrador()) {
+                  <div class="mt-2">
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.nuevaSubcategoria"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="abrirAltaDeSubcategoria(categoria)"
+                    />
+                  </div>
+                }
+              </div>
             </li>
           }
         </ul>
@@ -242,6 +340,40 @@
           [texto]="t().tickets.cancelar"
           [deshabilitado]="trabajando()"
           (pulsado)="cerrarAlta()"
+        />
+      </div>
+    </form>
+  </app-dialogo>
+
+  <!-- El alta de una subcategoría: cuelga de la categoría que se estaba mirando. -->
+  <app-dialogo
+    [titulo]="t().tickets.nuevaSubcategoria"
+    [abierto]="mostrandoAltaDeSubcategoria()"
+    (cerrado)="cerrarAltaDeSubcategoria()"
+  >
+    <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); crearLaSubcategoria()">
+      <p class="text-sm text-apagado">
+        {{ categoriaDeLaNuevaSubcategoria()?.name }}
+      </p>
+      <app-campo
+        identificador="nueva-subcategoria"
+        [etiqueta]="t().tickets.nombreDeSubcategoria"
+        [valor]="nombreNuevaSubcategoria()"
+        (valorChange)="nombreNuevaSubcategoria.set($event)"
+      />
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          tipo="submit"
+          [texto]="t().tickets.crearSubcategoria"
+          [textoTrabajando]="t().tickets.creandoSubcategoria"
+          [trabajando]="trabajando()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarAltaDeSubcategoria()"
         />
       </div>
     </form>

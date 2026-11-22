@@ -15,8 +15,8 @@ import { Icono } from '../../shared/components/icono';
 import { Tarjeta } from '../../shared/components/tarjeta';
 import { Toast } from '../../shared/components/toast';
 import { claveDelError } from '../../shared/errores';
-import { interpolar, opcionesDeCategoria } from './etiquetas';
-import { TicketsService, type Categoria, type Prioridad } from './tickets.service';
+import { interpolar, opcionesDeCategoria, opcionesDeSubcategoria } from './etiquetas';
+import { TicketsService, type Categoria, type Prioridad, type Subcategoria } from './tickets.service';
 
 /**
  * El alta de un ticket: **asunto, categoría y descripción, con los adjuntos dentro**.
@@ -60,9 +60,10 @@ export class NuevoTicketPage implements OnInit {
   protected readonly solicitanteApellidos = signal('');
   protected readonly prioridad = signal<Prioridad>('medium');
 
-  /** El catálogo y la categoría elegida. La categoría es obligatoria. */
+  /** El catálogo, la categoría elegida y la subcategoría cuando la categoría la pide. */
   protected readonly categorias = signal<readonly Categoria[]>([]);
   protected readonly categoriaElegida = signal('');
+  protected readonly subcategoriaElegida = signal('');
   protected readonly cargandoCategorias = signal(true);
 
   /** El editor de la descripción, que es quien tiene el texto y sus archivos. */
@@ -83,6 +84,22 @@ export class NuevoTicketPage implements OnInit {
   /** Las categorías que se ofrecen: **sólo las activas** —las retiradas no se ofrecen al crear—. */
   protected readonly categoriasActivas = computed(() =>
     this.categorias().filter((categoria) => categoria.active),
+  );
+
+  /** La categoría elegida, si sigue en el catálogo. */
+  private readonly categoriaSeleccionada = computed(() =>
+    this.categoriasActivas().find((categoria) => String(categoria.id) === this.categoriaElegida()),
+  );
+
+  /** Las subcategorías activas de la categoría elegida: si hay alguna, elegir una es obligatorio. */
+  protected readonly subcategoriasDisponibles = computed<readonly Subcategoria[]>(() =>
+    (this.categoriaSeleccionada()?.subcategories ?? []).filter(
+      (subcategoria) => subcategoria.active,
+    ),
+  );
+
+  protected readonly subcategoriaObligatoria = computed(
+    () => this.subcategoriasDisponibles().length > 0,
   );
 
   /** Si se puede crear un ticket: **sin ninguna categoría activa, no** (decisión 65). */
@@ -139,6 +156,24 @@ export class NuevoTicketPage implements OnInit {
     });
   }
 
+  /** Las opciones de la subcategoría: la primera no se puede elegir y arranca vacía. */
+  protected opcionesDeSubcategoria(): readonly OpcionSelector[] {
+    const textos = this.t();
+
+    return opcionesDeSubcategoria(textos, this.subcategoriasDisponibles(), {
+      valor: '',
+      etiqueta: textos.tickets.elegirSubcategoria,
+      grupo: textos.tickets.subcategoria,
+      deshabilitado: true,
+    });
+  }
+
+  /** Al cambiar de categoría se limpia la subcategoría: la de antes puede no existir en la nueva. */
+  protected elegirCategoria(valor: string): void {
+    this.categoriaElegida.set(valor);
+    this.subcategoriaElegida.set('');
+  }
+
   protected opcionesDePrioridad(): readonly OpcionSelector[] {
     const p = this.t().tickets;
     return [
@@ -161,6 +196,7 @@ export class NuevoTicketPage implements OnInit {
   protected async crear(): Promise<void> {
     const asunto = this.asunto().trim();
     const categoria = Number(this.categoriaElegida());
+    const subcategoria = Number(this.subcategoriaElegida());
     const editor = this.elDeLaDescripcion();
     const descripcion = editor?.html() ?? '';
     const archivos = editor?.archivos() ?? [];
@@ -182,6 +218,11 @@ export class NuevoTicketPage implements OnInit {
       return;
     }
 
+    if (this.subcategoriaObligatoria() && !subcategoria) {
+      this.mensaje.set({ forma: 'error', texto: this.textos.error('tickets.subcategory.required') });
+      return;
+    }
+
     this.trabajando.set(true);
     this.mensaje.set(null);
 
@@ -191,6 +232,7 @@ export class NuevoTicketPage implements OnInit {
         description: descripcion,
         priority: this.prioridad(),
         categoryId: categoria,
+        ...(subcategoria ? { subcategoryId: subcategoria } : {}),
         requesterEmail: this.puedeElegirSolicitante() ? this.solicitante().trim() : undefined,
         requesterName: this.puedeElegirSolicitante() ? this.solicitanteNombre().trim() : undefined,
         requesterLastName: this.puedeElegirSolicitante()

@@ -119,6 +119,23 @@ echo
 # Se cuentan **las cuentas de ejemplo**, no todas: el entorno puede tener además las de las pruebas de
 # interfaz (`e2e-…`), que no son parte del juego de datos.
 echo "Listo: $(psql -At -c "SELECT count(*) FROM users WHERE lower(email) LIKE '%@demo.com' AND lower(email) NOT LIKE 'e2e-%'") cuentas, $(psql -At -c 'SELECT count(*) FROM tickets') tickets y $copiados adjuntos."
+
+# **Las subcategorías son parte del juego**: seis, y ningún ticket de una categoría con subcategorías
+# activas puede quedarse sin la suya. La base garantiza que la subcategoría es de la categoría; aquí se
+# comprueba además que no falte ninguna, que es la regla que decide el servicio.
+SUBCATEGORIAS_ESPERADAS=6
+SUBCATEGORIAS="$(psql -At -c 'SELECT count(*) FROM ticket_subcategories')"
+SIN_SUBCATEGORIA="$(psql -At -c "
+    SELECT count(*) FROM tickets t
+    JOIN ticket_categories c ON c.id = t.category_id
+    WHERE t.subcategory_id IS NULL
+      AND EXISTS (SELECT 1 FROM ticket_subcategories s WHERE s.category_id = c.id AND s.active)")"
+if [ "$SUBCATEGORIAS" -ne "$SUBCATEGORIAS_ESPERADAS" ] || [ "$SIN_SUBCATEGORIA" -ne 0 ]; then
+    echo "Subcategorías incoherentes: hay $SUBCATEGORIAS y $SIN_SUBCATEGORIA tickets sin la suya." >&2
+    exit 1
+fi
+echo "Subcategorías: $SUBCATEGORIAS, y ningún ticket obligado se queda sin ella."
+
 # **Los resúmenes de demostración son parte del juego**: sin ellos la bandeja nace con guiones y
 # dependería de que alguien descargue un modelo y espere horas. El número es fijo porque el juego de
 # datos también lo es: 25 principales y 7 internos, dos campos por cada uno y la variante interna de

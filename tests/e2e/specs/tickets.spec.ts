@@ -2141,6 +2141,103 @@ test.describe('Las categorías y las etiquetas', () => {
     await expect(page).toHaveURL(/\/forbidden$/);
   });
 
+  test('una categoría con subcategorías obliga a elegir una al crear el ticket', async ({
+    page,
+    request,
+  }) => {
+    const token = await tokenDeFabrica(request);
+    const marca = Date.now().toString(36);
+    const categoria = `Subcats ${marca}`;
+    const subcategoria = `Hija ${marca}`;
+
+    const creada = await request.post('/api/tickets/categories', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: categoria },
+    });
+    expect(creada.status(), await creada.text()).toBe(201);
+    const { category } = (await creada.json()) as { category: { id: number } };
+
+    const hija = await request.post(`/api/tickets/categories/${category.id}/subcategories`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: subcategoria },
+    });
+    expect(hija.status(), await hija.text()).toBe(201);
+    const { subcategory } = (await hija.json()) as { subcategory: { id: number } };
+
+    const persona = await crearCuentaLista(request);
+    await entrarComo(page, persona.email);
+
+    await page.goto('/tickets/new');
+    const asunto = `Ticket con subcategoría ${marca}`;
+    await page.getByLabel('Asunto', { exact: true }).fill(asunto);
+    await page.getByLabel('Descripción').fill('La categoría tiene subcategorías.');
+    await page.getByLabel('Categoría').selectOption({ label: categoria });
+
+    // **La subcategoría aparece y es obligatoria**: sin ella no se puede crear.
+    const selector = page.getByLabel('Subcategoría');
+    await expect(selector).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Crear el ticket' })).toBeDisabled();
+
+    await selector.selectOption({ label: subcategoria });
+    await expect(page.getByRole('button', { name: 'Crear el ticket' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Crear el ticket' }).click();
+
+    await expect(page).toHaveURL(/\/tickets\/[A-Z0-9-]+$/);
+    const numero = await numeroEnPantalla(page);
+
+    const guardado = await request.get(`/api/tickets/${numero}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(guardado.status(), await guardado.text()).toBe(200);
+    const { ticket } = (await guardado.json()) as {
+      ticket: { subcategory?: { id: number; name: string } };
+    };
+    expect(ticket.subcategory?.id).toBe(subcategory.id);
+  });
+
+  test('el catálogo crea, retira y vuelve a poner una subcategoría', async ({ page, request }) => {
+    const token = await tokenDeFabrica(request);
+    const marca = Date.now().toString(36);
+    const categoria = `Con subcategorías ${marca}`;
+    const subcategoria = `Subcategoría ${marca}`;
+
+    const creada = await request.post('/api/tickets/categories', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: categoria },
+    });
+    expect(creada.status(), await creada.text()).toBe(201);
+    const { category } = (await creada.json()) as { category: { id: number } };
+
+    await entrarComo(page, FABRICA.email, FABRICA.password);
+    await abrirMenuSiEsCajon(page);
+    await page.getByRole('link', { name: 'Clasificación' }).click();
+    await expect(page).toHaveURL(/\/tickets\/categories$/);
+
+    const fila = page.locator('li').filter({ hasText: categoria }).first();
+    await expect(fila).toBeVisible();
+    await fila.getByRole('button', { name: 'Nueva subcategoría' }).click();
+    await page.locator('#nueva-subcategoria').fill(subcategoria);
+    await page.getByRole('button', { name: 'Crear subcategoría' }).click();
+    await expect(page.getByText('Subcategoría creada.')).toBeVisible();
+
+    const hija = page.locator('li').filter({ hasText: subcategoria }).last();
+    await expect(hija).toBeVisible();
+    await hija.getByRole('button', { name: 'Retirar' }).click();
+    await expect(page.getByText('Subcategoría retirada. Los tickets que la tienen la conservan.')).toBeVisible();
+    await expect(page.locator('li').filter({ hasText: subcategoria }).last()).toContainText('Retirada');
+
+    await page
+      .locator('li')
+      .filter({ hasText: subcategoria })
+      .last()
+      .getByRole('button', { name: 'Volver a poner' })
+      .click();
+    await expect(page.getByText('Subcategoría puesta otra vez.')).toBeVisible();
+
+    // La categoría se creó por la API para esta prueba y se deja puesta: no hay borrado de catálogo.
+    expect(category.id).toBeGreaterThan(0);
+  });
+
   test('Desarrollo etiqueta desde el interno, y las etiquetas quedan en el principal', async ({
     page,
     request,
@@ -2303,9 +2400,16 @@ test.describe('Las categorías y las etiquetas', () => {
 
     const catalogo = (await request
       .get('/api/tickets/categories', { headers: { Authorization: `Bearer ${suyo}` } })
-      .then((r) => r.json())) as { categories: { id: number; name: string }[] };
-    const primera = catalogo.categories[0]!;
-    const otraCategoria = catalogo.categories.find((c) => c.id !== primera.id)!;
+      .then((r) => r.json())) as {
+      categories: { id: number; name: string; subcategories: { active: boolean }[] }[];
+    };
+    // La categoría a la que se cambia **no puede tener subcategorías activas**: con ellas, la ficha
+    // espera a elegir una y no guarda la categoría sola.
+    const sinSubcategorias = catalogo.categories.filter(
+      (c) => !c.subcategories.some((s) => s.active),
+    );
+    const otraCategoria =
+      sinSubcategorias.find((c) => c.name !== 'General') ?? sinSubcategorias[0]!;
 
     const { numero } = await ticketDePrueba(request, suyo, 'Un asunto que se cambia', '<p>Descripción original.</p>');
 
@@ -2398,12 +2502,18 @@ test.describe('Las categorías y las etiquetas', () => {
     // hay, así que el mismo `PATCH` con una etiqueta inventada le responde 422.
     const catalogo = (await request
       .get('/api/tickets/categories', { headers: { Authorization: `Bearer ${suyo}` } })
-      .then((r) => r.json())) as { categories: { id: number }[] };
+      .then((r) => r.json())) as {
+      categories: { id: number; name: string; subcategories: { active: boolean }[] }[];
+    };
+    const sinSubcategorias =
+      catalogo.categories.find((c) => c.name === 'General') ??
+      catalogo.categories.find((c) => !c.subcategories.some((s) => s.active)) ??
+      catalogo.categories[0]!;
     const { numero } = await ticketDePrueba(request, suyo, 'Con etiqueta que se renombra', '<p>Prueba.</p>');
 
     const inventada = await request.patch(`/api/tickets/${numero}`, {
       headers: { Authorization: `Bearer ${suyo}` },
-      data: { categoryId: catalogo.categories[0]!.id, tags: [nacida] },
+      data: { categoryId: sinSubcategorias.id, tags: [nacida] },
     });
     expect(
       inventada.status(),
@@ -2421,7 +2531,7 @@ test.describe('Las categorías y las etiquetas', () => {
 
     const conLaEtiqueta = await request.patch(`/api/tickets/${numero}`, {
       headers: { Authorization: `Bearer ${suyo}` },
-      data: { categoryId: catalogo.categories[0]!.id, tags: [nacida] },
+      data: { categoryId: sinSubcategorias.id, tags: [nacida] },
     });
     expect(conLaEtiqueta.status(), await conLaEtiqueta.text()).toBe(200);
 
@@ -2466,8 +2576,14 @@ test.describe('Las categorías y las etiquetas', () => {
     const ana = await crearCuentaLista(request);
     const categoria = (await request.get('/api/tickets/categories', {
       headers: { Authorization: `Bearer ${await tokenDe(request, ana.email)}` },
-    }).then((r) => r.json())) as { categories: { id: number; name: string }[] };
-    const elegida = categoria.categories[0]!;
+    }).then((r) => r.json())) as {
+      categories: { id: number; name: string; subcategories: { active: boolean }[] }[];
+    };
+    // **General no tiene subcategorías**: es la que sirve para comprobar que el alta no las pide.
+    const elegida =
+      categoria.categories.find((c) => c.name === 'General') ??
+      categoria.categories.find((c) => !c.subcategories.some((s) => s.active)) ??
+      categoria.categories[0]!;
 
     await entrarComo(page, ana.email);
     await page.goto('/tickets/new');
@@ -2509,8 +2625,16 @@ test.describe('Las categorías y las etiquetas', () => {
 
     const catalogo = (await request
       .get('/api/tickets/categories', { headers: { Authorization: `Bearer ${suyo}` } })
-      .then((r) => r.json())) as { categories: { id: number; name: string }[] };
+      .then((r) => r.json())) as {
+      categories: {
+        id: number;
+        name: string;
+        subcategories: { id: number; name: string; active: boolean }[];
+      }[];
+    };
     const categoria = catalogo.categories.find((c) => c.name === 'Red') ?? catalogo.categories[0]!;
+    // Red tiene subcategorías activas: cambiar a ella sin elegir una respondería 422.
+    const subcategoria = categoria.subcategories.find((s) => s.active);
     const marca = Date.now().toString(36);
     const etiqueta = `prueba-${marca}`;
 
@@ -2525,7 +2649,11 @@ test.describe('Las categorías y las etiquetas', () => {
     const { numero } = await ticketDePrueba(request, suyo, 'Clasificado y etiquetado', '<p>Prueba.</p>');
     const clasificado = await request.patch(`/api/tickets/${numero}`, {
       headers: { Authorization: `Bearer ${suyo}` },
-      data: { categoryId: categoria.id, tags: [etiqueta] },
+      data: {
+        categoryId: categoria.id,
+        ...(subcategoria ? { subcategoryId: subcategoria.id } : {}),
+        tags: [etiqueta],
+      },
     });
     expect(clasificado.status(), await clasificado.text()).toBe(200);
 
@@ -2536,6 +2664,9 @@ test.describe('Las categorías y las etiquetas', () => {
     // **Los chips en el renglón**, debajo del número: la categoría y la etiqueta.
     const renglon = page.locator('tr, li').filter({ hasText: numero }).last();
     await expect(renglon).toContainText(categoria.name);
+    if (subcategoria) {
+      await expect(renglon).toContainText(subcategoria.name);
+    }
     await expect(renglon).toContainText(etiqueta);
 
     // **Y se filtra por las dos**, que es para lo que se pidieron. Desde el 2026-09-27 los criterios

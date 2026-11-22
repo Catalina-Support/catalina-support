@@ -140,11 +140,13 @@ con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `http
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
-La migración **`v1.0.0.sql`** está aplicada y **`v1.0.1.sql`** añade la plantilla 14: `mail_templates`
-y sus **veintiocho** plantillas, `users`,
-`password_tokens`, **las cinco tablas de configuración de una fila** (la instalación con **el nombre
-y el método de entrada**, la IA, el directorio, Keycloak y los tickets), las dos tablas auxiliares de
-IA y **las diez tablas de los tickets**—, y en desarrollo se suma uno de los juegos opcionales
+La migración **`v1.0.0.sql`** está aplicada, **`v1.0.1.sql`** añade la plantilla 14 de `mail_templates`
+y **`v1.0.2.sql`** añade **las subcategorías**: la tabla `ticket_subcategories` y la columna
+`tickets.subcategory_id`. El esquema reúne **veintidós tablas** —`mail_templates` y sus
+**veintiocho** plantillas, `users`, `password_tokens`, **las cinco tablas de configuración de una fila**
+(la instalación con **el nombre y el método de entrada**, la IA, el directorio, Keycloak y los
+tickets), las dos tablas auxiliares de IA y **las once tablas de los tickets**—, y en desarrollo se
+suma uno de los juegos opcionales
 **`v1.0.0_dev_en.sql`** o **`v1.0.0_dev_es.sql`**, mediante `./scripts/dev-seed-en.sh`,
 `./scripts/dev-seed-es.sh`, `seed-en` o `seed-es`. Hay **cuatro módulos en marcha**:
 
@@ -167,7 +169,7 @@ siguen fuera y son opcionales.
   el fragmento de la dirección. En los dos caminos de directorio **nadie da de alta a nadie**: la
   cuenta se crea, se vincula o se pone al día en el primer acceso. **La cuenta de fábrica entra
   siempre**, sea cual sea el método: es la puerta que permite volver a cambiarlo.
-- **`tickets` entero, backend y pantallas**: las diez tablas, la numeración sin carreras, el reparto
+- **`tickets` entero, backend y pantallas**: las once tablas, la numeración sin carreras, el reparto
   por turnos —configurable por tipo—, sus endpoints, los ocho avisos por correo y los permisos de los
   cuatro papeles, **y sus pantallas**: las listas —**Mis tickets**, **Tickets principales** y **Tickets
   internos**, más la bandeja del Administrador—, el alta, el detalle con la **vista doble** y el
@@ -203,7 +205,7 @@ propio, el favicon usa el logo claro personalizado o el claro de fábrica. El **
 logo, el icono y el color se guardan en la instalación (módulo `settings`), con su endpoint público porque la
 entrada se pinta antes de entrar.
 
-**La instalación dice qué versión es**: una constante del backend (`shared/version`, hoy `1.0.1`) que viaja en **la marca pública** y se lee **en la fila de salir del menú lateral, a la derecha, y en el pie de la pantalla de entrada** —decisión del responsable, 2026-09-25, que eligió el pie de la entrada además del menú—.
+**La instalación dice qué versión es**: una constante del backend (`shared/version`, hoy `1.0.2`) que viaja en **la marca pública** y se lee **en la fila de salir del menú lateral, a la derecha, y en el pie de la pantalla de entrada** —decisión del responsable, 2026-09-25, que eligió el pie de la entrada además del menú—.
 
 **La pantalla de Configuración está entera**: **el nombre de la instalación**, **cómo se entra** —el
 método de entrada, el directorio de la organización y Keycloak, con sus dos botones de «Probar la
@@ -315,6 +317,15 @@ Administrador**, y **retirar una categoría es sólo del Administrador** y es **
 ofrecerse y los tickets que la tienen la conservan—. **La categoría y las etiquetas son del principal**
 y el interno las hereda, y **las dos filtran y buscan** (`docs/modules/tickets.md`, decisiones 64 a 68).
 
+**Cada categoría puede tener subcategorías, y el ticket las elige cuando existen** (2026-11-22,
+versión 1.0.2): una categoría **puede quedarse sin subcategorías**, pero **si tiene alguna activa, el
+alta del ticket exige elegir una**; lo garantiza el backend y la base impide con una clave ajena
+compuesta que la subcategoría sea de otra categoría. **La subcategoría es opcional en el catálogo y
+obligatoria en el ticket cuando la categoría la ofrece.** El catálogo lo mantiene **sólo el
+Administrador**, retirar es desactivar y los tickets conservan la suya; **la subcategoría es del
+principal, el interno la hereda**, y **filtra, busca y se ve como segundo chip** junto a la categoría
+(`docs/modules/tickets.md`, decisiones 91 a 94).
+
 **Dentro del ticket, todo se edita donde se muestra** (2026-09-28): la **categoría** con su desplegable en
 su propia línea, las **etiquetas** con su aspa y su campo para añadir, los **observadores** con su
 «Añadir» y su buscador —además de llegar por una mención—, y el **asunto** y la **descripción** con su
@@ -403,7 +414,7 @@ de soporte manual (decisión del responsable, 2026-09-25).
 La cuenta de fábrica entra con la contraseña de `config/env/prod.env` —que no se versiona ni aparece
 en la documentación—. La base se copia a diario y además antes de cada actualización con esquema.
 
-**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.1 no está cerrada**; y **la etiqueta `v1.0.1`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
+**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.2 no está cerrada**; y **la etiqueta `v1.0.2`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f tests.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra una instalación
@@ -600,7 +611,7 @@ sudo nginx -t && sudo systemctl reload nginx
 El vhost de producción (`https://support.example.com`) ya está instalado y con
 certificado, y **el despliegue a producción ya está hecho** (2026-09-25): los contenedores de
 `prod.yml` están levantados y verificados **por dentro** —salud, esquema aplicado y la cuenta de
-fábrica entrando—. **El dominio sigue respondiendo 503** a propósito, porque **la 1.0.1 no está
+fábrica entrando—. **El dominio sigue respondiendo 503** a propósito, porque **la 1.0.2 no está
 cerrada**: abrirlo es sustituir el bloque del aviso por el `proxy_pass` al frontend —que está
 comentado justo debajo, en `config/nginx/catalina-support-prod.conf`—, copiar el vhost y recargar
 nginx. Mientras el dominio está cerrado responde 503 con un aviso, y no un 502 de nginx, que

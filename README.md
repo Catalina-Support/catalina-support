@@ -36,7 +36,7 @@ response.
 - **Two levels, one clear flow:** User → Support → Development.
 - **Main and internal tickets** with separate conversations and a side-by-side view.
 - **Your sign-in:** local accounts, Active Directory or Keycloak—one method at a time.
-- **Operational details:** categories, tags, priority, attachments, mentions and watchers.
+- **Operational details:** categories and subcategories, tags, priority, attachments, mentions and watchers.
 - **Yours to shape:** editable emails, branding, time zone and public URL.
 - **Bilingual and accessible:** Spanish/English, eight themes, ISO dates and responsive screens.
 - **Self-hosted and free:** AGPL-3.0-only, no lock-in and no required cloud service.

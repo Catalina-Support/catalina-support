@@ -422,7 +422,7 @@ func (s *Service) destinoDe(principal repositories.Ticket, esInterno bool, actor
 
 		// La categoría y las etiquetas no hacen falta para decidir un permiso: aquí sólo se comprueba
 		// quién es y de quién es el ticket (`puedeVer` y `puedeComentar`), así que no se leen.
-		return repositories.DestinoDeInterno(interno.ID), s.aTicketInterno(interno, principal, porID, nil, nil), nil
+		return repositories.DestinoDeInterno(interno.ID), s.aTicketInterno(interno, principal, porID, nil, nil, nil), nil
 	}
 
 	porID, err := s.accounts.ByIDs([]int64{principal.RequesterID, principal.CreatedByID})
@@ -430,7 +430,7 @@ func (s *Service) destinoDe(principal repositories.Ticket, esInterno bool, actor
 		return repositories.Destino{}, Ticket{}, err
 	}
 
-	convertido := s.aTicket(principal, porID, nil, nil)
+	convertido := s.aTicket(principal, porID, nil, nil, nil)
 
 	if !puedeVer(actor, convertido) {
 		return repositories.Destino{}, Ticket{}, ErrTicketNotFound

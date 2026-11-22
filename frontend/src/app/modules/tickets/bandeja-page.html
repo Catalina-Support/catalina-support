@@ -249,6 +249,13 @@
                       {{ categoria.name }}
                     </span>
                   }
+                  @if (ticket.subcategory; as subcategoria) {
+                    <span
+                      class="inline-flex max-w-20 items-center truncate rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                    >
+                      {{ subcategoria.name }}
+                    </span>
+                  }
 
                   @for (etiqueta of etiquetasVisibles(ticket); track etiqueta) {
                     <span
@@ -378,6 +385,13 @@
                   class="inline-flex items-center rounded border border-borde-fuerte bg-superficie-suave px-1.5 py-0.5 text-xs text-texto"
                 >
                   {{ categoria.name }}
+                </span>
+              }
+              @if (ticket.subcategory; as subcategoria) {
+                <span
+                  class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                >
+                  {{ subcategoria.name }}
                 </span>
               }
 
@@ -525,6 +539,15 @@
           [valor]="borrador().category ?? ''"
           (valorChange)="escribirEnElBorrador('category', $event)"
         />
+
+        @if (opcionesDeSubcategoria().length > 1) {
+          <app-conmutador
+            [etiqueta]="t().tickets.filtroSubcategoria"
+            [opciones]="opcionesDeSubcategoria()"
+            [valor]="borrador().subcategory ?? ''"
+            (valorChange)="escribirEnElBorrador('subcategory', $event)"
+          />
+        }
       }
 
       <app-campo

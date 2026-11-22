@@ -471,6 +471,31 @@
               </dd>
             </div>
 
+            <!--
+              **La subcategoría sólo se enseña cuando existe**: si la categoría no tiene ninguna, el
+              ticket no lleva y la fila sobra. Si la tiene, es obligatoria al cambiar de categoría.
+            -->
+            @if (subcategoriaObligatoriaEnLaFicha() || ticket().subcategory) {
+              <div class="flex flex-wrap items-center gap-x-2">
+                <dt class="font-medium text-texto">{{ t().tickets.subcategoria }}:</dt>
+                <dd class="text-texto">
+                  @if (puedeEditar()) {
+                    <app-selector
+                      [identificador]="'subcategoria-' + ticket().number"
+                      [etiqueta]="t().tickets.subcategoria"
+                      [etiquetaVisible]="false"
+                      [ayuda]="subcategoriaObligatoriaEnLaFicha() ? t().tickets.subcategoriaAyuda : ''"
+                      [opciones]="opcionesDeSubcategoriaDeLaFicha()"
+                      [valor]="subcategoriaElegida()"
+                      (valorChange)="cambiarSubcategoria($event)"
+                    />
+                  } @else {
+                    {{ ticket().subcategory?.name ?? '—' }}
+                  }
+                </dd>
+              </div>
+            }
+
             <div class="flex flex-wrap items-center gap-x-2">
               <dt class="font-medium text-texto">{{ t().tickets.prioridad }}:</dt>
               <dd class="text-texto">

@@ -3,7 +3,10 @@
 [English](../en/modules/tickets.md) · **Español**
 
 > **Estado:** as-built
-> **Última actualización:** 2026-11-03
+> **Última actualización:** 2026-11-22
+>
+> **Enmienda de subcategorías, implementada en la 1.0.2 el 2026-11-22.** Las secciones 2.3.3, 2.4, 2.5,
+> 5 y la tabla de decisiones recogen el segundo nivel opcional y sus ocho claves de error.
 >
 > **Corrección de QA, 2026-11-03.** El historial del usuario distinguía mal el paso a `escalado`: se
 > traducía como «En curso», igual que `en progreso`, y parecía un movimiento duplicado. Ahora el
@@ -818,6 +821,40 @@ que la llevan, porque el nombre está en un solo sitio— y **retirar** —que l
 etiquetas con los suyos, y **las dos entran en la caja de búsqueda**: buscar «red» encuentra los
 tickets de la categoría «Red» y los que llevan la etiqueta `red`.
 
+### 2.3.3 Las subcategorías
+
+**El segundo nivel es opcional en el catálogo y obligatorio en el ticket cuando existe** (2026-11-22,
+versión 1.0.2). Una categoría puede no tener subcategorías; si tiene **al menos una activa**, el ticket
+**no se puede crear ni cambiar de clasificación sin elegir una**. La regla la comprueba el servicio y
+la base impide que una subcategoría sea de otra categoría.
+
+- **Dónde vive**: en su propia tabla, `ticket_subcategories`, con `category_id` obligatorio. No es una
+  categoría con padre: así el esquema impide más de un nivel.
+- **El nombre** se normaliza como el de una categoría (minúsculas, sin acentos y sin espacios de
+  sobra) y es único **dentro de su categoría**: dos categorías pueden tener cada una su «Web».
+- **La clave ajena compuesta** `tickets (subcategory_id, category_id)` garantiza que la subcategoría
+  pertenece a la categoría del ticket. Con `subcategory_id` nulo no se comprueba nada, que es lo que
+  hace falta cuando la categoría no tiene subcategorías.
+- **Quién la mantiene**: sólo el Administrador, como el resto del catálogo (decisión 83). Soporte y
+  Desarrollo la usan y filtran; no la crean ni la cambian.
+- **Retirar es desactivar**: deja de ofrecerse, y los tickets que la tienen la conservan y la siguen
+  enseñando. Se permite retirar la última activa: la categoría vuelve a quedarse sin subcategorías y
+  el alta deja de pedir una.
+- **No se rellenan los tickets antiguos**: los que existían quedan con `subcategory_id` nulo y siguen
+  siendo válidos y editables. La obligación se aplica **al crear** y **al cambiar la clasificación**;
+  editar sólo el asunto o la descripción de un ticket antiguo no obliga a completarla.
+- **Es del principal y el interno la hereda**, como la categoría y las etiquetas (decisión 67).
+- **Filtra y busca**: hay un filtro por subcategoría y la búsqueda encuentra su nombre. El Dashboard y
+  el XLSX siguen agrupando por categoría; ampliarlos no forma parte de este cambio.
+- **La API**: las categorías del catálogo llevan `subcategories`; el ticket lleva `subcategory`;
+  crear y editar aceptan `subcategoryId`. Las rutas de mantenimiento son
+  `POST /api/tickets/categories/{id}/subcategories`, `PATCH /api/tickets/subcategories/{id}` y
+  `POST /api/tickets/subcategories/{id}/state`, todas del Administrador.
+
+Las claves nuevas son `tickets.subcategory.required` (422), `notFound` (404), `inactive` (422),
+`mismatch` (422), `notAvailable` (422), `name.required` (422), `duplicate` (409) y `forbidden` (403),
+con su texto en español y en inglés.
+
 ### 2.4 Restricciones
 
 - `tickets.state` sólo admite los seis estados del principal; `internal_tickets.state`, los cinco
@@ -848,6 +885,9 @@ tickets de la categoría «Red» y los que llevan la etiqueta `red`.
 | **`ticket_tag_names(normalized)`** único | Que el catálogo no acabe con `red-wifi` y `Red-Wifi` |
 | **`ticket_categories(normalized)`** único | Que el catálogo no acabe con «Red» y «red» |
 | **`tickets(category_id)`** | Agrupar y contar los tickets de una categoría |
+| **`ticket_subcategories(category_id, normalized)`** único | Que una categoría no repita el nombre de una subcategoría |
+| **`ticket_subcategories(category_id)`** | Listar y contar las subcategorías de una categoría |
+| **`tickets(subcategory_id)`** | Filtrar por subcategoría y contar sus tickets |
 
 La búsqueda por texto usa `ILIKE` sobre asunto y descripción, **y desde el 2026-09-27 también sobre el
 nombre de la categoría y las etiquetas** del ticket (decisión 68). Es suficiente para el volumen de una
@@ -1050,6 +1090,9 @@ diciendo cosas distintas.
 | `POST /api/tickets/categories` | Crea una categoría | Soporte y Administrador |
 | `PATCH /api/tickets/categories/{id}` | La renombra | Soporte y Administrador |
 | `POST /api/tickets/categories/{id}/state` | La retira o la vuelve a poner | **Sólo el Administrador** |
+| `POST /api/tickets/categories/{id}/subcategories` | Crea una subcategoría dentro de la categoría | **Sólo el Administrador** |
+| `PATCH /api/tickets/subcategories/{id}` | La renombra | **Sólo el Administrador** |
+| `POST /api/tickets/subcategories/{id}/state` | La retira o la vuelve a poner | **Sólo el Administrador** |
 | `POST /api/tickets/tags` | Crea una etiqueta | Soporte y Administrador |
 | `PATCH /api/tickets/tags/{tag}` | **La renombra en todos los tickets que la llevan** | Soporte y Administrador |
 | `DELETE /api/tickets/tags/{tag}` | **La retira y la quita de los tickets** | **Sólo el Administrador** |
@@ -1122,6 +1165,7 @@ idempotente que manda `docs/arquitectura.md`. Tablas nuevas:
 | `ticket_number_counters` | El secuencial de cada año |
 | `ticket_settings` | Una fila: el prefijo de la numeración **y el reparto y los avisos por tipo de ticket** |
 | **`ticket_categories`** | **El catálogo de categorías** de la instalación, con su nombre, su nombre normalizado (único) y si está activa (sección 2.3.2) |
+| **`ticket_subcategories`** | **El catálogo de subcategorías** de la instalación, colgado de una categoría, con su nombre normalizado único dentro de ella y si está activa (sección 2.3.3) |
 | **`ticket_tag_names`** | **El catálogo de etiquetas**: el nombre normalizado y único de cada una |
 | **`ticket_tags`** | **Qué ticket lleva qué etiqueta**: la tabla puente con el catálogo, única por ticket y etiqueta, con quién la puso |
 
@@ -1263,6 +1307,10 @@ Los huecos del segundo repaso (11 al 15) están aplicados en los vhosts, en `dev
 | 66 | **Retirar una categoría es desactivarla** | **Decisión del responsable, 2026-09-27**, sobre la mía de prohibir borrar la que esté en uso: **retirar es desactivar** —deja de ofrecerse al crear un ticket y **los tickets que la tienen la conservan**—, como se desactiva una cuenta. **No se borra ninguna fila**, y es lo que hace que «no hay ticket sin categoría» se pueda cumplir siempre |
 | 67 | **De la categoría, del principal; el interno hereda** | **Decisión del responsable, 2026-09-27**: la categoría y las etiquetas son **del caso**, se guardan en el principal y **el interno las hereda al leerse**, como hereda el asunto. Clasificar el mismo caso dos veces —una por cada mitad— sería pedir trabajo de más |
 | 68-quater | **El recuento del catálogo cuenta principales, y el filtro respeta la lista** | **Aclarado el 2026-09-27**, porque parecía un desajuste: el número que enseña el catálogo al lado de cada categoría son **los tickets principales** que la tienen, y **filtrar por esa categoría en la lista de internos devuelve los internos** —que la heredan de su principal—. Es decir, **no es la misma pregunta**: «cuántos tickets tienen esta categoría» (los principales: la categoría es suya) y «qué tickets salen al filtrar por ella en esta lista» (los de esa lista, y el interno la hereda para poder buscarse). Se deja así, y **se dice aquí** para que nadie lo lea como un fallo |
+| 91 | **La subcategoría es opcional en el catálogo y obligatoria en el ticket cuando existe** | **Decisión del responsable, 2026-11-22**, para la versión 1.0.2: una categoría puede no tener subcategorías; si tiene **al menos una activa**, el ticket nuevo y el cambio de clasificación **exigen elegir una**. Se guarda en `ticket_subcategories` y la clave ajena compuesta impide que sea de otra categoría. Los tickets antiguos no se rellenan y siguen editables |
+| 92 | **El catálogo de subcategorías lo mantiene sólo el Administrador** | **Decisión del responsable, 2026-11-22**: crear, renombrar, retirar y reactivar subcategorías es del Administrador, como el resto del catálogo (decisión 83). Retirar es desactivar; los tickets conservan la suya. Se permite retirar la última activa, y la categoría vuelve a no pedir subcategoría |
+| 93 | **La subcategoría es del principal, el interno la hereda, y las dos filtran y buscan** | **Decisión del responsable, 2026-11-22**: la subcategoría sigue la misma regla que la categoría y las etiquetas (decisión 67). Se añade el filtro `subcategory` y la búsqueda mira su nombre; el Dashboard y el XLSX no cambian en esta versión |
+| 94 | **La clasificación se guarda entera o no se guarda** | **Decisión de implementación, 2026-11-22**: al cambiar a una categoría con subcategorías, la ficha no guarda a medias: espera a que se elija la subcategoría y manda las dos en el mismo `PATCH`. Si la categoría no tiene subcategorías, se guarda la categoría y el backend limpia la subcategoría anterior |
 | 68-ter | **Las claves del catálogo y de las etiquetas** | `tickets.category.required` (422), `tickets.category.notFound` (404), `tickets.category.inactive` (422), `tickets.category.name.required` (422), `tickets.category.duplicate` (409), `tickets.category.lastActive` (409), `tickets.category.forbidden` (403), `tickets.tag.required` (422) y `tickets.tag.tooLong` (422) —**no hay `tag.invalid`**: la normalización convierte en vacío lo que no vale, y eso es `tag.required`, así que una clave que no puede salir no se pone—. Todas con su texto en español y en inglés (`docs/interfaz-y-experiencia.md`, sección 8) |
 | 69 | **Un solo botón de búsqueda, con modal** | **Corrección del responsable, 2026-09-27**, al usarlo: «ya tengo tres filas para cuatro criterios, y puedo tener más». Los criterios —texto, vista, tipo, estado, categoría y etiqueta— viven en **un modal** que abre el botón «Buscar», y **en la cabecera de la lista queda un resumen** de lo que está filtrado con su botón de quitar: una lista limpia y, a la vez, se entiende por qué salen pocos tickets. El desbordamiento que lo provocó —la fila de categorías saliéndose de la pantalla— **también se arregla** (sección 5) |
 | 70 | **La vista del ticket, por papel** | **Corrección del responsable, 2026-09-27**: al abrir un ticket, **Soporte ve el principal** y **Desarrollo el interno**, y los dos pueden cambiar a Principal · Los dos · Interno cuando quieran. **Si abres el número de un interno, se ve el interno** aunque seas Soporte: es lo que espera quien pulsa ese enlace. Y **«Los dos» enseña sólo las conversaciones** —las dos columnas de la izquierda—, sin las fichas: con las cuatro columnas «se ve muy saturado» |
@@ -2131,3 +2179,20 @@ y se consume una sola vez; no se pasa por la URL.
 - Pasaron las 260 pruebas del frontend, las fronteras, la compilación, las pruebas de los servicios
   de tickets, usuarios y mail, y el recorrido de interfaz en PC y móvil. La migración `v1.0.1`
   dejó las 28 filas de plantillas en la base aislada.
+
+### 35.5 Verificación de las subcategorías (1.0.2)
+
+- La migración `v1.0.2.sql` se aplicó dos veces seguidas sin error; los tickets existentes conservaron
+  la subcategoría nula, la clave ajena compuesta rechazó una subcategoría de otra categoría y la base
+  llegó a 22 tablas.
+- Servicio: una categoría sin subcategorías activas acepta un ticket sin ella y rechaza una enviada;
+  una categoría con subcategorías activas la exige y distingue no existe, retirada y de otra categoría.
+- API: crear un ticket en Software sin `subcategoryId` responde `422 tickets.subcategory.required`; la
+  misma llamada con la subcategoría la devuelve en el ticket. Cambiar categoría y subcategoría en el
+  mismo `PATCH` guarda las dos; cambiar a una categoría sin subcategorías la limpia.
+- Catálogo: el Administrador crea, renombra, retira y vuelve a poner subcategorías; Soporte recibe 403
+  en esas rutas. El listado de categorías anida `subcategories` y cuenta sus tickets.
+- Los dos seeders dejan seis subcategorías y ningún ticket sin la suya cuando su categoría la exige;
+  la verificación de la demo comprueba los mismos recuentos.
+- Pasan las pruebas del backend, `go vet`, las del frontend, la compilación de producción y el
+  recorrido de interfaz en PC y móvil.

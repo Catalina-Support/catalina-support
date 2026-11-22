@@ -63,6 +63,7 @@ func TestEstadoSolicitado(t *testing.T) {
 func TestEsPATCHDeSoloEtiquetas(t *testing.T) {
 	texto := func(valor string) *string { return &valor }
 	categoria := func(valor int64) *int64 { return &valor }
+	subcategoria := func(valor int64) *int64 { return &valor }
 	lista := func(valor ...string) *[]string { return &valor }
 
 	casos := []struct {
@@ -75,6 +76,7 @@ func TestEsPATCHDeSoloEtiquetas(t *testing.T) {
 		{"también el asunto", dtos.UpdateTicketRequest{Subject: texto("otro"), Tags: lista("vpn")}, false},
 		{"también la descripción", dtos.UpdateTicketRequest{Description: texto("<p>x</p>"), Tags: lista("vpn")}, false},
 		{"también la categoría", dtos.UpdateTicketRequest{CategoryID: categoria(2), Tags: lista("vpn")}, false},
+		{"también la subcategoría", dtos.UpdateTicketRequest{SubcategoryID: subcategoria(3), Tags: lista("vpn")}, false},
 		{"sin etiquetas", dtos.UpdateTicketRequest{Subject: texto("otro")}, false},
 		{"cuerpo vacío", dtos.UpdateTicketRequest{}, false},
 	}
@@ -83,6 +85,47 @@ func TestEsPATCHDeSoloEtiquetas(t *testing.T) {
 		t.Run(caso.nombre, func(t *testing.T) {
 			if obtenido := esPATCHDeSoloEtiquetas(caso.entrada); obtenido != caso.esperado {
 				t.Fatalf("esPATCHDeSoloEtiquetas() = %v y se esperaba %v", obtenido, caso.esperado)
+			}
+		})
+	}
+}
+
+// TestFailDeSubcategorias: cada regla de la subcategoría tiene su clave y su código, que es el
+// contrato con la pantalla.
+func TestFailDeSubcategorias(t *testing.T) {
+	casos := []struct {
+		nombre string
+		err    error
+		codigo int
+		clave  string
+	}{
+		{"obligatoria", services.ErrSubcategoryRequired, http.StatusUnprocessableEntity, "tickets.subcategory.required"},
+		{"no existe", services.ErrSubcategoryNotFound, http.StatusNotFound, "tickets.subcategory.notFound"},
+		{"retirada", services.ErrSubcategoryInactive, http.StatusUnprocessableEntity, "tickets.subcategory.inactive"},
+		{"de otra categoría", services.ErrSubcategoryMismatch, http.StatusUnprocessableEntity, "tickets.subcategory.mismatch"},
+		{"no disponible", services.ErrSubcategoryNotAvailable, http.StatusUnprocessableEntity, "tickets.subcategory.notAvailable"},
+		{"sin nombre", services.ErrSubcategoryNameRequired, http.StatusUnprocessableEntity, "tickets.subcategory.name.required"},
+		{"repetida", services.ErrSubcategoryDuplicate, http.StatusConflict, "tickets.subcategory.duplicate"},
+		{"sin permiso", services.ErrSubcategoryForbidden, http.StatusForbidden, "tickets.subcategory.forbidden"},
+	}
+
+	for _, caso := range casos {
+		t.Run(caso.nombre, func(t *testing.T) {
+			controlador := &TicketController{}
+			respuesta := httptest.NewRecorder()
+
+			controlador.fail(respuesta, caso.err)
+
+			if respuesta.Code != caso.codigo {
+				t.Fatalf("el código es %d y se esperaba %d", respuesta.Code, caso.codigo)
+			}
+
+			var cuerpo map[string]string
+			if err := json.Unmarshal(respuesta.Body.Bytes(), &cuerpo); err != nil {
+				t.Fatalf("la respuesta no es JSON: %v", err)
+			}
+			if cuerpo["error"] != caso.clave {
+				t.Fatalf("la clave es %q y se esperaba %q", cuerpo["error"], caso.clave)
 			}
 		})
 	}

@@ -5,6 +5,9 @@
 > **State:** as-built
 > **Last updated:** 2026-11-22
 >
+> **Amended on 2026-11-22 for version 1.0.2:** the schema adds `v1.0.2.sql` with the subcategories,
+> and both seeders leave six of them, with no ticket missing one when its category requires it.
+>
 > **Correction of 2026-11-22: the seeders include the demo summaries.** The example tickets already
 > carry both fields (`summary` and `ultima_accion`) written in the seeder language, marked with
 > `provider='demo'` and `model='demo-seed'`. A freshly seeded installation therefore shows a populated
@@ -691,7 +694,9 @@ deployment piecemeal and fills `migrations/` with scraps.
 | File | What it carries | Where it is applied |
 | --- | --- | --- |
 | `v1.0.0.sql` | The tables, the indexes and their constraints **and what the application needs to work**: the two settings rows —the installation one and the tickets one— and the twenty mail templates. Without the settings row neither the language nor the name can be read; without a template no mail goes out | **Development and production** |
-| `v1.0.0_dev_en.sql` or `v1.0.0_dev_es.sql` | The **example data**: eleven accounts (five requesters, three Support and three Development), 25 tickets with their history —assignments, reassignments, comments, escalations with their internal ticket, attachments—, the numbering counter and **the demo summaries** of all of them | **Only development**, with `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` or `scripts/dev-seed-es.sh` on Linux and macOS) |
+| `v1.0.1.sql` | The fourteenth mail template for an account created from a ticket | **Development and production** |
+| `v1.0.2.sql` | **Subcategories**: `ticket_subcategories` and `tickets.subcategory_id`, with the composite foreign key and its indexes | **Development and production** |
+| `v1.0.0_dev_en.sql` or `v1.0.0_dev_es.sql` | The **example data**: eleven accounts (five requesters, three Support and three Development), 25 tickets with their history —assignments, reassignments, comments, escalations with their internal ticket, attachments—, **six subcategories** (General and Printers have none), the numbering counter and **the demo summaries** of all of them | **Only development**, with `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` or `scripts/dev-seed-es.sh` on Linux and macOS) |
 
 **The script deletes and recreates the AI engine summaries** (`ai_insights`): the table is kept **by
 ticket number**, and the example data **re-issues the same numbers**, so an old row would stick to a

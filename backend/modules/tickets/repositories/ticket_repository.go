@@ -59,6 +59,9 @@ type Filtros struct {
 	// (docs/modules/tickets.md, decisión 68). En un interno se filtra por la de su principal, que es
 	// la que hereda al leerse.
 	CategoryID *int64
+	// SubcategoryID limita a una subcategoría del catálogo, por su identificador. En un interno se
+	// filtra por la de su principal, que es la que hereda al leerse.
+	SubcategoryID *int64
 	// Tag limita a los tickets que llevan esa etiqueta, ya normalizada. También en un interno la
 	// etiqueta es la del principal (decisión 67).
 	Tag        string
@@ -85,9 +88,11 @@ type CreateTicketInput struct {
 	State       string
 	Priority    string
 	CategoryID  int64
-	RequesterID int64
-	CreatedByID int64
-	AssigneeID  *int64
+	// SubcategoryID es opcional: nulo cuando la categoría no tiene subcategorías.
+	SubcategoryID *int64
+	RequesterID   int64
+	CreatedByID   int64
+	AssigneeID    *int64
 }
 
 // CreateInternalInput es lo que hace falta para insertar un interno, ya numerado.
@@ -134,17 +139,18 @@ func NumeroDeInterno(numeroDelPrincipal string) string { return "INT-" + numeroD
 // que abre quien numera, para que un ticket sin número no pueda existir.
 func (r *TicketRepository) CreateTicket(tx *gorm.DB, entrada CreateTicketInput) (Ticket, error) {
 	ticket := Ticket{
-		Number:      entrada.Number,
-		NumberYear:  entrada.NumberYear,
-		NumberSeq:   entrada.NumberSeq,
-		Subject:     entrada.Subject,
-		Description: entrada.Description,
-		State:       entrada.State,
-		Priority:    entrada.Priority,
-		CategoryID:  entrada.CategoryID,
-		RequesterID: entrada.RequesterID,
-		CreatedByID: entrada.CreatedByID,
-		AssigneeID:  entrada.AssigneeID,
+		Number:        entrada.Number,
+		NumberYear:    entrada.NumberYear,
+		NumberSeq:     entrada.NumberSeq,
+		Subject:       entrada.Subject,
+		Description:   entrada.Description,
+		State:         entrada.State,
+		Priority:      entrada.Priority,
+		CategoryID:    entrada.CategoryID,
+		SubcategoryID: entrada.SubcategoryID,
+		RequesterID:   entrada.RequesterID,
+		CreatedByID:   entrada.CreatedByID,
+		AssigneeID:    entrada.AssigneeID,
 	}
 
 	if err := tx.Create(&ticket).Error; err != nil {
@@ -387,6 +393,11 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		consulta = consulta.Where("category_id = ?", *filtros.CategoryID)
 	}
 
+	// **La subcategoría se filtra con la suya**: es el segundo chip de la clasificación.
+	if filtros.SubcategoryID != nil {
+		consulta = consulta.Where("subcategory_id = ?", *filtros.SubcategoryID)
+	}
+
 	// Y las etiquetas con los suyos. La comparación es exacta sobre el nombre normalizado del
 	// catálogo: `red` y `red` son la misma, y `red-wifi` no es `red` (docs/modules/tickets.md,
 	// decisión 72: el nombre vive en `ticket_tag_names`).
@@ -453,10 +464,12 @@ func conFiltrosDeTicket(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 			              AND regexp_replace(tc.body, '<[^>]*>', ' ', 'g') ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_categories c
 			            WHERE c.id = tickets.category_id AND c.name ILIKE ?)
+			 OR EXISTS (SELECT 1 FROM ticket_subcategories s
+			            WHERE s.id = tickets.subcategory_id AND s.name ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_tags tt
 			            JOIN ticket_tag_names n ON n.id = tt.tag_id
 			            WHERE tt.ticket_id = tickets.id AND n.tag ILIKE ?)`,
-			como, como, como, filtros.SearchPrivate, como, como, como,
+			como, como, como, filtros.SearchPrivate, como, como, como, como,
 		)
 	}
 
@@ -516,6 +529,10 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 		consulta = consulta.Where("tickets.category_id = ?", *filtros.CategoryID)
 	}
 
+	if filtros.SubcategoryID != nil {
+		consulta = consulta.Where("tickets.subcategory_id = ?", *filtros.SubcategoryID)
+	}
+
 	if etiqueta := strings.TrimSpace(filtros.Tag); etiqueta != "" {
 		consulta = consulta.Where(
 			`EXISTS (SELECT 1 FROM ticket_tags
@@ -539,10 +556,12 @@ func conFiltrosDeInterno(consulta *gorm.DB, filtros Filtros) *gorm.DB {
 			              AND regexp_replace(tc.body, '<[^>]*>', ' ', 'g') ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_categories c
 			            WHERE c.id = tickets.category_id AND c.name ILIKE ?)
+			 OR EXISTS (SELECT 1 FROM ticket_subcategories s
+			            WHERE s.id = tickets.subcategory_id AND s.name ILIKE ?)
 			 OR EXISTS (SELECT 1 FROM ticket_tags tt
 			            JOIN ticket_tag_names n ON n.id = tt.tag_id
 			            WHERE tt.ticket_id = internal_tickets.ticket_id AND n.tag ILIKE ?)`,
-			como, como, como, como, como, como, como,
+			como, como, como, como, como, como, como, como,
 		)
 	}
 

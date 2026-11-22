@@ -582,7 +582,7 @@ written without an approved document first.
 | `primer-arranque.md` | **as-built** (8 previous amendments) | Missing local catalog without a false server-down |
 | `ambientes.md` | **propuesta** | Explicit `seed-en` and `seed-es` services and commands |
 | `modules/ai.md` | **as-built** | Verifiable professional writing and rejection of deficient proposals |
-| `modules/tickets.md` | **as-built** | Consistency when switching between Main and Internal |
+| `modules/tickets.md` | **as-built** | Main and internal consistency, and optional subcategories with mandatory selection when offered |
 | `modules/dashboard.md` | **as-built** | Aggregated Dashboard, metrics, charts and localized XLSX |
 | `entornos-compartidos.md` | **as-built** | Generic capabilities for shared public installations |
 

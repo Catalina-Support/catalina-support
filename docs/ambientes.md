@@ -3,6 +3,9 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-11-22
 >
+> **Enmendado el 2026-11-22 para la versión 1.0.2:** el esquema añade `v1.0.2.sql` con las
+> subcategorías, y los dos seeders dejan seis, sin ningún ticket sin la suya cuando la categoría la exige.
+>
 > **Corrección del 2026-11-22: los seeders incluyen los resúmenes de demostración.** Los tickets de
 > ejemplo traen sus dos campos ya escritos en el idioma del seeder, con `provider='demo'`, para que una
 > instalación sembrada enseñe la bandeja con contenido sin descargar un modelo ni esperar horas de CPU.
@@ -685,7 +688,9 @@ despliegue y llena `migrations/` de retales.
 | Archivo | Qué lleva | Dónde se aplica |
 | --- | --- | --- |
 | `v1.0.0.sql` | Las tablas, los índices y sus restricciones **y lo que la aplicación necesita para funcionar**: las dos filas de configuración —la de la instalación y la de los tickets— y las veinte plantillas de correo. Sin la fila de configuración no se puede leer ni el idioma ni el nombre; sin plantilla no sale ningún correo | **Desarrollo y producción** |
-| `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos—, el contador de la numeración y **los resúmenes de demostración** | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` en Linux y macOS) |
+| `v1.0.1.sql` | La decimocuarta plantilla de correo, la de la cuenta creada desde un ticket | **Desarrollo y producción** |
+| `v1.0.2.sql` | **Las subcategorías**: `ticket_subcategories` y `tickets.subcategory_id`, con la clave ajena compuesta y sus índices | **Desarrollo y producción** |
+| `v1.0.0_dev_en.sql` o `v1.0.0_dev_es.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos—, **seis subcategorías** (General e Impresoras no tienen), el contador de la numeración y **los resúmenes de demostración** | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed-en|seed-es` (`scripts/dev-seed-en.sh` o `scripts/dev-seed-es.sh` en Linux y macOS) |
 
 **El guion borra y vuelve a crear los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva
 **por número de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una

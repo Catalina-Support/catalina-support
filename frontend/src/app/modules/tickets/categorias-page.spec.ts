@@ -15,8 +15,16 @@ import { CategoriasPage } from './categorias-page';
  */
 const CATEGORIAS = {
   categories: [
-    { id: 1, name: 'Red', active: true, tickets: 3 },
-    { id: 2, name: 'Software', active: false, tickets: 0 },
+    {
+      id: 1,
+      name: 'Red',
+      active: true,
+      tickets: 3,
+      subcategories: [
+        { id: 5, categoryId: 1, name: 'Wi-Fi', active: true, tickets: 2 },
+      ],
+    },
+    { id: 2, name: 'Software', active: false, tickets: 0, subcategories: [] },
   ],
 };
 
@@ -147,6 +155,73 @@ describe('CategoriasPage', () => {
     expect(texto).toContain('2 tickets');
     // Una etiqueta del catálogo que no la lleva nadie lo dice, en vez de enseñar un cero mudo.
     expect(texto).toContain('Todavía no la lleva ningún ticket.');
+    // La subcategoría se lee dentro de su categoría, con su cuenta.
+    expect(texto).toContain('Wi-Fi');
+    expect(texto).toContain('2 tickets');
+  });
+
+  it('crea una subcategoría dentro de su categoría y manda el nombre', async () => {
+    esAdministrador.set(true);
+    const fixture = await montar();
+    const host = fixture.nativeElement as HTMLElement;
+
+    pulsar(host, 'Nueva subcategoría');
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Red');
+    const campo = host.querySelector<HTMLInputElement>('#nueva-subcategoria')!;
+    campo.value = 'VPN';
+    campo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    dialogoDelCampo(host, 'nueva-subcategoria')
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+
+    const peticion = http.expectOne('/api/tickets/categories/1/subcategories');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ name: 'VPN' });
+    peticion.flush({
+      subcategory: { id: 6, categoryId: 1, name: 'VPN', active: true, tickets: 0 },
+    });
+
+    await esperar();
+    http.expectOne('/api/tickets/categories').flush(CATEGORIAS);
+    http.expectOne('/api/tickets/tags?all=1').flush(ETIQUETAS);
+    await esperar();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Subcategoría creada.');
+  });
+
+  it('retira y vuelve a poner una subcategoría desde su fila', async () => {
+    esAdministrador.set(true);
+    const fixture = await montar();
+    const host = fixture.nativeElement as HTMLElement;
+
+    // La fila interior de la subcategoría, no la de la categoría que la contiene.
+    const fila = [...host.querySelectorAll('li')]
+      .filter((candidata) => candidata.textContent?.includes('Wi-Fi'))
+      .at(-1)!;
+    const retirar = [...fila.querySelectorAll('button')].find(
+      (boton) => boton.textContent?.trim() === 'Retirar',
+    ) as HTMLButtonElement;
+    retirar.click();
+
+    const peticion = http.expectOne('/api/tickets/subcategories/5/state');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ active: false });
+    peticion.flush({
+      subcategory: { id: 5, categoryId: 1, name: 'Wi-Fi', active: false, tickets: 2 },
+    });
+
+    await esperar();
+    http.expectOne('/api/tickets/categories').flush(CATEGORIAS);
+    http.expectOne('/api/tickets/tags?all=1').flush(ETIQUETAS);
+    await esperar();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Subcategoría retirada.');
   });
 
   it('a Soporte no se le enseña retirar; al Administrador sí, en las dos mitades', async () => {
@@ -159,8 +234,8 @@ describe('CategoriasPage', () => {
     esAdministrador.set(true);
     fixture.detectChanges();
 
-    // Una por la categoría activa y una por cada etiqueta: las dos etiquetas se pueden retirar.
-    expect(botonesDeLasFilas(host, 'Retirar').length).toBe(3);
+    // La categoría activa, su subcategoría y las dos etiquetas.
+    expect(botonesDeLasFilas(host, 'Retirar').length).toBe(4);
   });
 
   it('crear una etiqueta la normaliza y la manda al backend', async () => {

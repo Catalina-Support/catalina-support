@@ -11,14 +11,16 @@ import (
 
 // Los errores del acceso a datos. El servicio los traduce a claves de la API.
 var (
-	ErrTicketNotFound     = errors.New("tickets.notFound")
-	ErrCommentNotFound    = errors.New("tickets.comment.notFound")
-	ErrAttachmentNotFound = errors.New("tickets.attachment.notFound")
-	ErrObserverNotFound   = errors.New("tickets.observer.notFound")
-	ErrCategoryNotFound   = errors.New("tickets.category.notFound")
-	ErrCategoryDuplicate  = errors.New("tickets.category.duplicate")
-	ErrTagNotFound        = errors.New("tickets.tag.notFound")
-	ErrTagDuplicate       = errors.New("tickets.tag.duplicate")
+	ErrTicketNotFound       = errors.New("tickets.notFound")
+	ErrCommentNotFound      = errors.New("tickets.comment.notFound")
+	ErrAttachmentNotFound   = errors.New("tickets.attachment.notFound")
+	ErrObserverNotFound     = errors.New("tickets.observer.notFound")
+	ErrCategoryNotFound     = errors.New("tickets.category.notFound")
+	ErrCategoryDuplicate    = errors.New("tickets.category.duplicate")
+	ErrSubcategoryNotFound  = errors.New("tickets.subcategory.notFound")
+	ErrSubcategoryDuplicate = errors.New("tickets.subcategory.duplicate")
+	ErrTagNotFound          = errors.New("tickets.tag.notFound")
+	ErrTagDuplicate         = errors.New("tickets.tag.duplicate")
 )
 
 // Ticket es un ticket principal.
@@ -34,9 +36,12 @@ type Ticket struct {
 	CriticalNotifiedAt *time.Time `gorm:"column:critical_notified_at"`
 	// La categoría del ticket: obligatoria y una sola, y la garantiza la base con `NOT NULL` y clave
 	// ajena (docs/modules/tickets.md, decisión 65).
-	CategoryID  int64 `gorm:"column:category_id"`
-	RequesterID int64 `gorm:"column:requester_id"`
-	CreatedByID int64 `gorm:"column:created_by_id"`
+	CategoryID int64 `gorm:"column:category_id"`
+	// La subcategoría es opcional: nula cuando la categoría no tiene subcategorías. La clave ajena
+	// compuesta garantiza que pertenece a `CategoryID` (docs/modules/tickets.md, sección 2.3.2).
+	SubcategoryID *int64 `gorm:"column:subcategory_id"`
+	RequesterID   int64  `gorm:"column:requester_id"`
+	CreatedByID   int64  `gorm:"column:created_by_id"`
 	// Nulo sólo si no había ningún técnico activo al repartir.
 	AssigneeID *int64 `gorm:"column:assignee_id"`
 	// Una marca por campo: dice **qué** se editó, sin tener que leer el historial.
@@ -159,6 +164,27 @@ type TicketCategory struct {
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
 func (TicketCategory) TableName() string { return "ticket_categories" }
+
+// TicketSubcategory es una subcategoría del catálogo: **el segundo nivel del «qué es» de un ticket**
+// (docs/modules/tickets.md, sección 2.3.2). Cuelga de una categoría; una categoría sin subcategorías
+// es válida. Retirar una subcategoría es desactivarla, no borrarla.
+type TicketSubcategory struct {
+	ID         int64  `gorm:"primaryKey"`
+	CategoryID int64  `gorm:"column:category_id"`
+	Name       string `gorm:"column:name"`
+	// El nombre en minúsculas y sin acentos: único dentro de su categoría.
+	Normalized string `gorm:"column:normalized"`
+	// Retirada deja de ofrecerse; los tickets que la tienen la siguen enseñando.
+	Active bool `gorm:"column:active"`
+	// Nulo cuando no la creó nadie (datos de ejemplo).
+	CreatedByID *int64    `gorm:"column:created_by_id"`
+	CreatedAt   time.Time `gorm:"column:created_at"`
+	// Cuándo se retiró. Volver a activarla lo limpia.
+	DeactivatedAt *time.Time `gorm:"column:deactivated_at"`
+}
+
+// TableName fija el nombre de la tabla, que no se deduce del tipo.
+func (TicketSubcategory) TableName() string { return "ticket_subcategories" }
 
 // TicketTagName es una etiqueta **del catálogo**: el nombre vive aquí y no en los tickets, para que
 // una etiqueta pueda existir sin que ninguno la lleve y para que renombrarla valga para todos los que

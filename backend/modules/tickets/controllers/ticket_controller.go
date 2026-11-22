@@ -61,6 +61,13 @@ func (c *TicketController) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// `subcategory` es el identificador de la subcategoría, el segundo chip de la clasificación.
+	if valor := strings.TrimSpace(consulta.Get("subcategory")); valor != "" {
+		if id, err := strconv.ParseInt(valor, 10, 64); err == nil {
+			filtros.SubcategoryID = &id
+		}
+	}
+
 	pagina, _ := strconv.Atoi(consulta.Get("page"))
 	porPagina, _ := strconv.Atoi(consulta.Get("perPage"))
 	filtros.Page = pagina
@@ -116,6 +123,7 @@ func (c *TicketController) Create(w http.ResponseWriter, r *http.Request) {
 		Subject:           entrada.Subject,
 		Description:       entrada.Description,
 		CategoryID:        entrada.CategoryID,
+		SubcategoryID:     entrada.SubcategoryID,
 		Tags:              entrada.Tags,
 		RequesterID:       entrada.RequesterID,
 		RequesterEmail:    entrada.RequesterEmail,
@@ -248,6 +256,80 @@ func (c *TicketController) CategoryState(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+// CreateSubcategory da de alta una subcategoría dentro de una categoría. Es sólo del Administrador,
+// como el resto del catálogo.
+func (c *TicketController) CreateSubcategory(w http.ResponseWriter, r *http.Request) {
+	categoryID, ok := idDeLaRuta(w, r, "id")
+	if !ok {
+		return
+	}
+
+	var entrada dtos.SubcategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	subcategoria, err := c.service.CreateSubcategory(categoryID, entrada.Name, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusCreated, dtos.SubcategoryEnvelope{
+		Subcategory: dtos.NewSubcategoryCatalogResponse(subcategoria),
+	})
+}
+
+// RenameSubcategory cambia el nombre de una subcategoría. Es sólo del Administrador.
+func (c *TicketController) RenameSubcategory(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDeLaRuta(w, r, "id")
+	if !ok {
+		return
+	}
+
+	var entrada dtos.SubcategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	subcategoria, err := c.service.RenameSubcategory(id, entrada.Name, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, dtos.SubcategoryEnvelope{
+		Subcategory: dtos.NewSubcategoryCatalogResponse(subcategoria),
+	})
+}
+
+// SubcategoryState retira o vuelve a poner una subcategoría. Retirar es desactivarla; los tickets que
+// la tienen la conservan.
+func (c *TicketController) SubcategoryState(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDeLaRuta(w, r, "id")
+	if !ok {
+		return
+	}
+
+	var entrada dtos.SubcategoryStateRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	subcategoria, err := c.service.SubcategoryState(id, entrada.Active, auth.MustFromContext(r.Context()))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, dtos.SubcategoryEnvelope{
+		Subcategory: dtos.NewSubcategoryCatalogResponse(subcategoria),
+	})
+}
+
 // Tags devuelve las etiquetas del catálogo. Sin `q`, las más usadas; con `q`, las que empiezan por lo
 // que se escribe; y con **`all=1`, el catálogo entero por nombre**, que es lo que necesita la pantalla
 // de mantenimiento para ver también las que no lleva ningún ticket. **Incluye las que no lleva nadie**,
@@ -373,10 +455,11 @@ func (c *TicketController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ticket, err := c.service.Update(numero, services.UpdateInput{
-		Subject:     asunto,
-		Description: descripcion,
-		CategoryID:  entrada.CategoryID,
-		Tags:        entrada.Tags,
+		Subject:       asunto,
+		Description:   descripcion,
+		CategoryID:    entrada.CategoryID,
+		SubcategoryID: entrada.SubcategoryID,
+		Tags:          entrada.Tags,
 	}, actor)
 	if err != nil {
 		c.fail(w, err)
@@ -392,7 +475,7 @@ func (c *TicketController) Update(w http.ResponseWriter, r *http.Request) {
 // siendo del solicitante y de Soporte, y por eso va por el camino de siempre.
 func esPATCHDeSoloEtiquetas(entrada dtos.UpdateTicketRequest) bool {
 	return entrada.Tags != nil && entrada.Subject == nil && entrada.Description == nil &&
-		entrada.CategoryID == nil
+		entrada.CategoryID == nil && entrada.SubcategoryID == nil
 }
 
 // Assign pone responsable.
@@ -778,6 +861,24 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusConflict, "tickets.category.lastActive")
 	case errors.Is(err, services.ErrCategoryForbidden):
 		httpx.WriteError(w, http.StatusForbidden, "tickets.category.forbidden")
+	case errors.Is(err, services.ErrSubcategoryRequired):
+		// La categoría tiene subcategorías activas: hay que elegir una. Lo exige el servidor, no sólo
+		// la pantalla.
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subcategory.required")
+	case errors.Is(err, services.ErrSubcategoryNotFound), errors.Is(err, repositories.ErrSubcategoryNotFound):
+		httpx.WriteError(w, http.StatusNotFound, "tickets.subcategory.notFound")
+	case errors.Is(err, services.ErrSubcategoryInactive):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subcategory.inactive")
+	case errors.Is(err, services.ErrSubcategoryMismatch):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subcategory.mismatch")
+	case errors.Is(err, services.ErrSubcategoryNotAvailable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subcategory.notAvailable")
+	case errors.Is(err, services.ErrSubcategoryNameRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subcategory.name.required")
+	case errors.Is(err, services.ErrSubcategoryDuplicate), errors.Is(err, repositories.ErrSubcategoryDuplicate):
+		httpx.WriteError(w, http.StatusConflict, "tickets.subcategory.duplicate")
+	case errors.Is(err, services.ErrSubcategoryForbidden):
+		httpx.WriteError(w, http.StatusForbidden, "tickets.subcategory.forbidden")
 	case errors.Is(err, services.ErrTagForbidden):
 		// Crear y renombrar una etiqueta es de Soporte y del Administrador, y **retirarla es sólo del
 		// Administrador**, porque toca todos los tickets que la llevan (decisión 73).

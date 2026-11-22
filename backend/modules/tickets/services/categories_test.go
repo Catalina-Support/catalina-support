@@ -21,6 +21,13 @@ type catalogoStub struct {
 	creadas     []repositories.TicketCategory
 	actualizada *repositories.TicketCategory
 
+	// Las subcategorías y cuántas activas tiene cada categoría, que es lo que decide si el ticket
+	// está obligado a elegir una.
+	subcategorias        map[int64]repositories.TicketSubcategory
+	activasPorCategoria  map[int64]int64
+	subcategoriasCreadas []repositories.TicketSubcategory
+	subcategoriaEditada  *repositories.TicketSubcategory
+
 	// El catálogo de etiquetas, indexado por el nombre normalizado —que es como se busca—, la cuenta
 	// de tickets que lleva cada una y lo que las pruebas quieren mirar después.
 	etiquetas        map[string]repositories.TicketTagName
@@ -109,6 +116,65 @@ func (c *catalogoStub) CategoryByNormalized(normalized string) (repositories.Tic
 }
 
 func (c *catalogoStub) CountActiveCategories() (int64, error) { return c.activas, nil }
+
+func (c *catalogoStub) SubcategoryByID(id int64) (repositories.TicketSubcategory, error) {
+	if subcategoria, hay := c.subcategorias[id]; hay {
+		return subcategoria, nil
+	}
+
+	return repositories.TicketSubcategory{}, repositories.ErrSubcategoryNotFound
+}
+
+func (c *catalogoStub) SubcategoryByNormalized(categoryID int64, normalized string) (repositories.TicketSubcategory, error) {
+	for _, subcategoria := range c.subcategorias {
+		if subcategoria.CategoryID == categoryID && subcategoria.Normalized == normalized {
+			return subcategoria, nil
+		}
+	}
+
+	return repositories.TicketSubcategory{}, repositories.ErrSubcategoryNotFound
+}
+
+func (c *catalogoStub) CountActiveSubcategories(categoryID int64) (int64, error) {
+	return c.activasPorCategoria[categoryID], nil
+}
+
+func (c *catalogoStub) CreateSubcategory(subcategoria repositories.TicketSubcategory) (repositories.TicketSubcategory, error) {
+	if c.subcategorias == nil {
+		c.subcategorias = map[int64]repositories.TicketSubcategory{}
+	}
+	if _, hay := c.subcategorias[subcategoria.ID]; hay {
+		return repositories.TicketSubcategory{}, repositories.ErrSubcategoryDuplicate
+	}
+
+	subcategoria.ID = 88
+	c.subcategorias[subcategoria.ID] = subcategoria
+	c.subcategoriasCreadas = append(c.subcategoriasCreadas, subcategoria)
+
+	return subcategoria, nil
+}
+
+func (c *catalogoStub) UpdateSubcategory(subcategoria repositories.TicketSubcategory) error {
+	c.subcategoriaEditada = &subcategoria
+	if c.subcategorias == nil {
+		c.subcategorias = map[int64]repositories.TicketSubcategory{}
+	}
+	c.subcategorias[subcategoria.ID] = subcategoria
+
+	return nil
+}
+
+func (c *catalogoStub) SubcategoryWithCount(id int64) (repositories.SubcategoryConCuenta, error) {
+	subcategoria, err := c.SubcategoryByID(id)
+	if err != nil {
+		return repositories.SubcategoryConCuenta{}, err
+	}
+
+	return repositories.SubcategoryConCuenta{
+		ID: subcategoria.ID, CategoryID: subcategoria.CategoryID, Name: subcategoria.Name,
+		Normalized: subcategoria.Normalized, Active: subcategoria.Active,
+	}, nil
+}
 
 func (c *catalogoStub) UpdateCategory(categoria repositories.TicketCategory) error {
 	c.actualizada = &categoria
@@ -253,6 +319,128 @@ func TestCategoriaDelTicket(t *testing.T) {
 	}
 }
 
+// TestSubcategoriaDelTicket: opcional cuando la categoría no tiene subcategorías activas,
+// obligatoria cuando las tiene, y siempre de la categoría del ticket.
+func TestSubcategoriaDelTicket(t *testing.T) {
+	uno := int64(1)
+	siete := int64(7)
+	ocho := int64(8)
+	servicio := &Service{categories: &catalogoStub{
+		porID: map[int64]repositories.TicketCategory{
+			1: {ID: 1, Name: "Software", Normalized: "software", Active: true},
+			2: {ID: 2, Name: "General", Normalized: "general", Active: true},
+		},
+		activasPorCategoria: map[int64]int64{1: 2, 2: 0},
+		subcategorias: map[int64]repositories.TicketSubcategory{
+			7: {ID: 7, CategoryID: 1, Name: "Web", Normalized: "web", Active: true},
+			8: {ID: 8, CategoryID: 2, Name: "Otra", Normalized: "otra", Active: true},
+		},
+	}}
+
+	// La categoría 2 no tiene subcategorías activas: sin subcategoría vale, y mandar una se rechaza.
+	if subcategoria, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 2}, nil); err != nil || subcategoria != nil {
+		t.Fatalf("sin subcategorías debería valer y salió %v (%v)", subcategoria, err)
+	}
+	if _, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 2}, &uno); !errors.Is(err, ErrSubcategoryNotAvailable) {
+		t.Fatalf("una subcategoría en una categoría sin subcategorías debería salir %v y salió %v", ErrSubcategoryNotAvailable, err)
+	}
+
+	// La categoría 1 tiene subcategorías activas: sin elegir una, no.
+	if _, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 1}, nil); !errors.Is(err, ErrSubcategoryRequired) {
+		t.Fatalf("sin subcategoría debería salir %v y salió %v", ErrSubcategoryRequired, err)
+	}
+
+	// Una de otra categoría no vale, aunque exista.
+	if _, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 1}, &ocho); !errors.Is(err, ErrSubcategoryMismatch) {
+		t.Fatalf("una subcategoría de otra categoría debería salir %v y salió %v", ErrSubcategoryMismatch, err)
+	}
+
+	// Una que no existe y una retirada tienen sus propias claves.
+	if _, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 1}, &uno); !errors.Is(err, ErrSubcategoryNotFound) {
+		t.Fatalf("una subcategoría que no existe debería salir %v y salió %v", ErrSubcategoryNotFound, err)
+	}
+	stub := servicio.categories.(*catalogoStub)
+	stub.subcategorias[9] = repositories.TicketSubcategory{ID: 9, CategoryID: 1, Name: "Retirada", Normalized: "retirada", Active: false}
+	nueve := int64(9)
+	if _, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 1}, &nueve); !errors.Is(err, ErrSubcategoryInactive) {
+		t.Fatalf("una subcategoría retirada debería salir %v y salió %v", ErrSubcategoryInactive, err)
+	}
+
+	// La válida se devuelve entera.
+	subcategoria, err := servicio.subcategoriaParaTicket(repositories.TicketCategory{ID: 1}, &siete)
+	if err != nil || subcategoria == nil || subcategoria.ID != 7 {
+		t.Fatalf("la subcategoría válida debería volver, y salió %v (%v)", subcategoria, err)
+	}
+}
+
+// TestCrearSubcategoria: el nombre se normaliza, el choque es dentro de la categoría y sólo el
+// Administrador la crea.
+func TestCrearSubcategoria(t *testing.T) {
+	stub := &catalogoStub{
+		porID: map[int64]repositories.TicketCategory{
+			1: {ID: 1, Name: "Software", Normalized: "software", Active: true},
+		},
+		subcategorias: map[int64]repositories.TicketSubcategory{
+			7: {ID: 7, CategoryID: 1, Name: "Web", Normalized: "web", Active: true},
+		},
+	}
+	servicio := &Service{categories: stub}
+
+	creada, err := servicio.CreateSubcategory(1, "  Escritorio  ", administrador)
+	if err != nil {
+		t.Fatalf("crear una subcategoría válida falló: %v", err)
+	}
+	if creada.Name != "Escritorio" || creada.CategoryID != 1 || creada.ID != 88 {
+		t.Fatalf("la subcategoría creada salió %+v", creada)
+	}
+	if len(stub.subcategoriasCreadas) != 1 || stub.subcategoriasCreadas[0].Normalized != "escritorio" {
+		t.Fatalf("la subcategoría no se guardó normalizada: %+v", stub.subcategoriasCreadas)
+	}
+
+	// El choque se compara dentro de la categoría: «web» ya está en la 1.
+	if _, err := servicio.CreateSubcategory(1, "WEB", administrador); !errors.Is(err, ErrSubcategoryDuplicate) {
+		t.Fatalf("repetir el nombre debería salir %v y salió %v", ErrSubcategoryDuplicate, err)
+	}
+
+	if _, err := servicio.CreateSubcategory(1, "   ", administrador); !errors.Is(err, ErrSubcategoryNameRequired) {
+		t.Fatalf("un nombre vacío debería salir %v y salió %v", ErrSubcategoryNameRequired, err)
+	}
+
+	for _, quien := range []auth.Identity{soporte, desarrollo, usuario} {
+		if _, err := servicio.CreateSubcategory(1, "Otra", quien); !errors.Is(err, ErrSubcategoryForbidden) {
+			t.Fatalf("el papel %s no puede crear subcategorías, y salió %v", quien.Role, err)
+		}
+	}
+}
+
+// TestRetirarSubcategoria: retirar y reactivar es del Administrador, y retirar la última activa se
+// permite: la categoría vuelve a quedarse sin subcategorías.
+func TestRetirarSubcategoria(t *testing.T) {
+	stub := &catalogoStub{
+		porID: map[int64]repositories.TicketCategory{
+			1: {ID: 1, Name: "Software", Normalized: "software", Active: true},
+		},
+		subcategorias: map[int64]repositories.TicketSubcategory{
+			7: {ID: 7, CategoryID: 1, Name: "Web", Normalized: "web", Active: true},
+		},
+	}
+	servicio := &Service{categories: stub, now: time.Now}
+
+	retirada, err := servicio.SubcategoryState(7, false, administrador)
+	if err != nil {
+		t.Fatalf("retirar una subcategoría falló: %v", err)
+	}
+	if retirada.Active {
+		t.Fatal("la subcategoría tenía que quedar retirada")
+	}
+
+	for _, quien := range []auth.Identity{soporte, desarrollo, usuario} {
+		if _, err := servicio.SubcategoryState(7, true, quien); !errors.Is(err, ErrSubcategoryForbidden) {
+			t.Fatalf("el papel %s no puede reactivarla, y salió %v", quien.Role, err)
+		}
+	}
+}
+
 // TestRetirarLaUltimaActiva: el catálogo no se puede quedar sin ninguna categoría activa, porque el
 // alta no tendría qué ofrecer (decisión 65). Y retirar es **sólo del Administrador** (decisión 64).
 func TestRetirarLaUltimaActiva(t *testing.T) {
@@ -353,14 +541,16 @@ func TestRenombrarCategoriaRepetida(t *testing.T) {
 // TestInternoHeredaCategoriaYEtiquetas: la categoría y las etiquetas son **del caso**, y el interno las
 // hereda de su principal al leerse (docs/modules/tickets.md, decisión 67).
 func TestInternoHeredaCategoriaYEtiquetas(t *testing.T) {
-	principal := repositories.Ticket{ID: 10, Number: "CS-2026-0001", Subject: "Asunto", CategoryID: 5}
+	subcategoriaID := int64(7)
+	principal := repositories.Ticket{ID: 10, Number: "CS-2026-0001", Subject: "Asunto", CategoryID: 5, SubcategoryID: &subcategoriaID}
 	interno := repositories.InternalTicket{ID: 20, TicketID: 10, Number: "INT-CS-2026-0001", State: "nuevo"}
 
 	categoria := &Category{ID: 5, Name: "Red", Active: true}
+	subcategoria := &Subcategory{ID: 7, CategoryID: 5, Name: "Wi-Fi", Active: true}
 	etiquetas := []string{"red-wifi", "manana"}
 
 	servicio := &Service{}
-	convertido := servicio.aTicketInterno(interno, principal, map[int64]auth.Account{}, categoria, etiquetas)
+	convertido := servicio.aTicketInterno(interno, principal, map[int64]auth.Account{}, categoria, subcategoria, etiquetas)
 
 	if convertido.Number != "INT-CS-2026-0001" || !convertido.Internal {
 		t.Fatalf("el interno se convirtió mal: %+v", convertido)
@@ -370,6 +560,9 @@ func TestInternoHeredaCategoriaYEtiquetas(t *testing.T) {
 	}
 	if convertido.Category == nil || convertido.Category.ID != 5 || convertido.Category.Name != "Red" {
 		t.Fatalf("el interno tiene que heredar la categoría de su principal, y salió %+v", convertido.Category)
+	}
+	if convertido.Subcategory == nil || convertido.Subcategory.ID != 7 || convertido.Subcategory.Name != "Wi-Fi" {
+		t.Fatalf("el interno tiene que heredar la subcategoría de su principal, y salió %+v", convertido.Subcategory)
 	}
 	if len(convertido.Tags) != 2 || convertido.Tags[0] != "red-wifi" || convertido.Tags[1] != "manana" {
 		t.Fatalf("el interno tiene que heredar las etiquetas de su principal, y salieron %v", convertido.Tags)

@@ -35,8 +35,24 @@ const DESARROLLO: Persona = {
 };
 
 const CATEGORIAS: readonly Categoria[] = [
-  { id: 1, name: 'Red', active: true, tickets: 3 },
-  { id: 2, name: 'Software', active: true, tickets: 1 },
+  {
+    id: 1,
+    name: 'Red',
+    active: true,
+    tickets: 3,
+    subcategories: [
+      { id: 5, categoryId: 1, name: 'Wi-Fi', active: true, tickets: 2 },
+      { id: 6, categoryId: 1, name: 'VPN', active: true, tickets: 1 },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Software',
+    active: true,
+    tickets: 1,
+    subcategories: [{ id: 8, categoryId: 2, name: 'Web', active: true, tickets: 1 }],
+  },
+  { id: 3, name: 'General', active: true, tickets: 0, subcategories: [] },
 ];
 
 const RESPONSABLES: Responsables = { main: [SOPORTE, DESARROLLO], internal: [] };
@@ -50,6 +66,7 @@ const DETALLE: DetalleDeTicket = {
     description: '<p>Sin conexión desde esta mañana.</p>',
     state: 'en progreso',
     category: { id: 1, name: 'Red', active: true },
+    subcategory: { id: 5, categoryId: 1, name: 'Wi-Fi', active: true },
     tags: ['red-wifi', 'licencia-office'],
     requester: SOPORTE,
     createdAt: '2026-09-28T08:00:00Z',
@@ -349,26 +366,79 @@ describe('TicketVista', () => {
     expect((modal.querySelector('dialog') as HTMLDialogElement).open).toBe(false);
   });
 
-  it('cambiar la categoría en su línea la guarda al elegir', async () => {
+  it('cambiar a una categoría sin subcategorías guarda la categoría y limpia la subcategoría', async () => {
     const fixture = montar('soporte');
     const host = fixture.nativeElement as HTMLElement;
 
     const selector = host.querySelector<HTMLSelectElement>('#categoria-CS-2026-0001');
     expect(selector).toBeTruthy();
 
-    selector!.value = '2';
+    selector!.value = '3';
     selector!.dispatchEvent(new Event('change'));
 
     const peticion = http.expectOne('/api/tickets/CS-2026-0001');
     expect(peticion.request.method).toBe('PATCH');
     // Sólo la categoría: las etiquetas no se tocan al clasificar.
-    expect(peticion.request.body).toEqual({ categoryId: 2 });
+    expect(peticion.request.body).toEqual({ categoryId: 3 });
     peticion.flush({ ticket: DETALLE.ticket });
 
     await esperar();
     fixture.detectChanges();
 
     expect(host.textContent).toContain('Categoría cambiada.');
+  });
+
+  it('cambiar a una categoría con subcategorías espera a elegirla y las guarda juntas', async () => {
+    const fixture = montar('soporte');
+    const host = fixture.nativeElement as HTMLElement;
+
+    // El efecto que sincroniza la clasificación desde el ticket corre al montar; se deja terminar
+    // antes de simular el cambio de categoría.
+    await esperar();
+    fixture.detectChanges();
+
+    const categoria = host.querySelector<HTMLSelectElement>('#categoria-CS-2026-0001')!;
+    categoria.value = '2';
+    categoria.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    // La categoría nueva tiene subcategorías: no se guarda a medias.
+    expect(http.match((req) => req.url === '/api/tickets/CS-2026-0001').length).toBe(0);
+    const subcategoria = host.querySelector<HTMLSelectElement>('#subcategoria-CS-2026-0001');
+    expect(subcategoria).toBeTruthy();
+    console.log('DEBUG categoria', categoria.value, 'opciones', [...subcategoria!.options].map((o) => o.value));
+
+    subcategoria!.value = '8';
+    subcategoria!.dispatchEvent(new Event('change'));
+
+    const peticion = http.expectOne('/api/tickets/CS-2026-0001');
+    expect(peticion.request.method).toBe('PATCH');
+    expect(peticion.request.body).toEqual({ categoryId: 2, subcategoryId: 8 });
+    peticion.flush({ ticket: DETALLE.ticket });
+
+    await esperar();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Clasificación cambiada.');
+  });
+
+  it('cambiar la subcategoría la guarda sin tocar la categoría', async () => {
+    const fixture = montar('soporte');
+    const host = fixture.nativeElement as HTMLElement;
+
+    const subcategoria = host.querySelector<HTMLSelectElement>('#subcategoria-CS-2026-0001')!;
+    subcategoria.value = '6';
+    subcategoria.dispatchEvent(new Event('change'));
+
+    const peticion = http.expectOne('/api/tickets/CS-2026-0001');
+    expect(peticion.request.method).toBe('PATCH');
+    expect(peticion.request.body).toEqual({ subcategoryId: 6 });
+    peticion.flush({ ticket: DETALLE.ticket });
+
+    await esperar();
+    fixture.detectChanges();
+
+    expect(host.textContent).toContain('Subcategoría cambiada.');
   });
 
   it('el botón del responsable abre el modal y asignar llama al servicio', async () => {

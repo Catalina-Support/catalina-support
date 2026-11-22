@@ -682,6 +682,10 @@ export const EN: Textos = {
     filtroCategoria: 'Category',
     filtroEtiqueta: 'Tag',
     todasLasCategorias: 'All',
+    subcategoria: 'Subcategory',
+    subcategorias: 'Subcategories',
+    filtroSubcategoria: 'Subcategory',
+    todasLasSubcategorias: 'All',
     buscarPorEtiqueta: 'Search by tag',
     sinEtiquetas: 'No tags',
 
@@ -734,6 +738,10 @@ export const EN: Textos = {
     // ticket without one— and the tags are optional and normalise themselves as they are typed.
     elegirCategoria: 'Choose a category',
     categoriaAyuda: 'Every ticket is classified: Support and Development group by this.',
+    elegirSubcategoria: 'Choose a subcategory',
+    subcategoriaAyuda:
+      'This category groups by subcategory: choose the one that best describes the case.',
+    subcategoriaObligatoria: 'This category has subcategories: choose one.',
     sinCategoriasActivas:
       'There is no active category, so a ticket cannot be created right now. Ask Support or an Administrator to create one.',
     etiquetasCampo: 'Tags',
@@ -839,6 +847,8 @@ export const EN: Textos = {
 
     ticketActualizado: 'Ticket updated.',
     categoriaCambiada: 'Category changed.',
+    clasificacionCambiada: 'Classification changed.',
+    subcategoriaCambiada: 'Subcategory changed.',
     etiquetasCambiadas: 'Tags saved.',
     observadorAnadido: 'Watcher added.',
     descripcionActualizada: 'Description updated.',
@@ -913,6 +923,22 @@ export const EN: Textos = {
     categoriaRenombrada: 'Category renamed.',
     categoriaRetiradaAviso: 'Category retired. The tickets that have it keep it.',
     categoriaReactivadaAviso: 'Category put back.',
+    subcategoriasDescripcion:
+      'Each category can have subcategories, or none. If it has an active one, creating a ticket asks for it; retiring it stops offering it without touching the tickets that already have it.',
+    nuevaSubcategoria: 'New subcategory',
+    nombreDeSubcategoria: 'Subcategory name',
+    crearSubcategoria: 'Create subcategory',
+    creandoSubcategoria: 'Creating…',
+    renombrarSubcategoria: 'Rename',
+    retirarSubcategoria: 'Retire',
+    reactivarSubcategoria: 'Put back',
+    subcategoriaActiva: 'Active',
+    subcategoriaRetirada: 'Retired',
+    sinSubcategorias: 'No subcategories.',
+    subcategoriaCreada: 'Subcategory created.',
+    subcategoriaRenombrada: 'Subcategory renamed.',
+    subcategoriaRetiradaAviso: 'Subcategory retired. The tickets that have it keep it.',
+    subcategoriaReactivadaAviso: 'Subcategory put back.',
   },
 
   // The buttons of the rich text editor, which is the box where a ticket and a comment are written
@@ -1224,6 +1250,18 @@ export const EN: Textos = {
       'That tag is not in the catalogue. Only the Administrator can create new tags.',
     'tickets.tag.notFound': 'That tag does not exist.',
     'tickets.category.forbidden': 'Only an Administrator can retire or put back a category.',
+    'tickets.subcategory.required':
+      'This category has subcategories: choose one to classify the ticket.',
+    'tickets.subcategory.notFound': 'That subcategory does not exist.',
+    'tickets.subcategory.inactive':
+      'That subcategory is retired: choose another one to classify the ticket.',
+    'tickets.subcategory.mismatch': 'That subcategory does not belong to the chosen category.',
+    'tickets.subcategory.notAvailable':
+      'That category has no subcategories: there is nothing to choose.',
+    'tickets.subcategory.name.required': 'Write a name for the subcategory.',
+    'tickets.subcategory.duplicate': 'That category already has a subcategory with that name.',
+    'tickets.subcategory.forbidden':
+      'Only an Administrator can create, rename or retire subcategories.',
     'tickets.tag.required': 'Write something for the tag: it cannot be empty.',
     // The field itself stops it, but if something arrives from another door it is said all the same.
     'tickets.tag.tooLong': 'A tag cannot be longer than 32 characters.',

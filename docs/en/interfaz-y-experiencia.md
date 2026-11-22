@@ -3,7 +3,7 @@
 [Español](../es/interfaz-y-experiencia.md) · **English**
 
 > **State:** as-built
-> **Last updated:** 2026-11-05
+> **Last updated:** 2026-11-22
 >
 > **Owner's decision, 2026-11-05.** Dates are read in **ISO `AAAA-MM-DD hh:mm`**, in 24-hour
 > format and in the same order in Spanish and English. On mobile and in vertical tablet the double
@@ -431,6 +431,14 @@
 > with **category and tag chips to filter**; the **details panel** lets those who can edit the ticket
 > change them; and the Administrator and Support menu introduces the **“Categories and tags”**
 > screen, which is where the catalogue is maintained.
+>
+> **Amended on 2026-11-22 (version 1.0.2)**, when **subcategories** entered: **creation** shows a
+> second dropdown **only if the category has active subcategories**, and then it is mandatory; the
+> **list** shows them as another classification chip and adds a **subcategory filter**, dependent on
+> the category; the **details panel** lets those who can edit the ticket change it, and when changing to
+> a category with subcategories it waits for the subcategory to save the whole classification; the
+> **“Classification”** screen shows subcategories **inside their category**, with their count, and only
+> the Administrator creates, renames, retires, and restores them.
 >
 > **Amended on 2026-09-27**, when **mentions and watchers** entered (`docs/modules/tickets.md`,
 > decisions 58 to 63): the editor introduces a **“Tag”** button —and typing `@` is enough— that puts the

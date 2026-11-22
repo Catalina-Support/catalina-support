@@ -30,6 +30,20 @@ type TagConCuenta struct {
 	Tickets int64
 }
 
+// SubcategoryConCuenta es una subcategoría con **cuántos tickets la usan**. Cuenta los principales,
+// como el recuento de una categoría: el interno hereda la clasificación de su principal.
+type SubcategoryConCuenta struct {
+	ID            int64
+	CategoryID    int64
+	Name          string
+	Normalized    string
+	Active        bool
+	CreatedByID   *int64
+	CreatedAt     time.Time
+	DeactivatedAt *time.Time
+	Tickets       int64
+}
+
 // CategoryRepository lee y escribe el catálogo de categorías y las etiquetas de los tickets.
 //
 // Las dos cosas viven en este repositorio porque son una sola función —clasificar—: el catálogo es
@@ -175,6 +189,135 @@ func (r *CategoryRepository) UpdateCategory(categoria TicketCategory) error {
 func (r *CategoryRepository) CountActiveCategories() (int64, error) {
 	var total int64
 	if err := r.db.Model(&TicketCategory{}).Where("active = true").Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+// ListSubcategories devuelve el catálogo de subcategorías con cuántos tickets usa cada una.
+//
+// `soloActivas` es el filtro del papel: el alta necesita las activas, y las retiradas sólo las ven
+// quienes mantienen el catálogo. Se ordenan por categoría y luego como las categorías: activas
+// primero y por nombre.
+func (r *CategoryRepository) ListSubcategories(soloActivas bool) ([]SubcategoryConCuenta, error) {
+	consulta := `
+		SELECT s.id, s.category_id, s.name, s.normalized, s.active, s.created_by_id, s.created_at,
+		       s.deactivated_at, COUNT(t.id) AS tickets
+		FROM ticket_subcategories s
+		LEFT JOIN tickets t ON t.subcategory_id = s.id`
+
+	if soloActivas {
+		consulta += ` WHERE s.active = true`
+	}
+
+	consulta += ` GROUP BY s.id ORDER BY s.category_id ASC, s.active DESC, s.name ASC`
+
+	var filas []SubcategoryConCuenta
+	if err := r.db.Raw(consulta).Scan(&filas).Error; err != nil {
+		return nil, err
+	}
+
+	return filas, nil
+}
+
+// SubcategoryWithCount devuelve una subcategoría con su cuenta de tickets.
+func (r *CategoryRepository) SubcategoryWithCount(id int64) (SubcategoryConCuenta, error) {
+	var fila SubcategoryConCuenta
+
+	err := r.db.Raw(`
+		SELECT s.id, s.category_id, s.name, s.normalized, s.active, s.created_by_id, s.created_at,
+		       s.deactivated_at, COUNT(t.id) AS tickets
+		FROM ticket_subcategories s
+		LEFT JOIN tickets t ON t.subcategory_id = s.id
+		WHERE s.id = ?
+		GROUP BY s.id`, id).Scan(&fila).Error
+	if err != nil {
+		return SubcategoryConCuenta{}, err
+	}
+	if fila.ID == 0 {
+		return SubcategoryConCuenta{}, ErrSubcategoryNotFound
+	}
+
+	return fila, nil
+}
+
+// SubcategoryByID busca una subcategoría por su identificador.
+func (r *CategoryRepository) SubcategoryByID(id int64) (TicketSubcategory, error) {
+	var subcategoria TicketSubcategory
+
+	result := r.db.Where("id = ?", id).Limit(1).Find(&subcategoria)
+	if result.Error != nil {
+		return TicketSubcategory{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return TicketSubcategory{}, ErrSubcategoryNotFound
+	}
+
+	return subcategoria, nil
+}
+
+// SubcategoryByNormalized busca una subcategoría por su nombre normalizado **dentro de su categoría**:
+// es como se comprueba que dos categorías distintas pueden tener cada una su «Web».
+func (r *CategoryRepository) SubcategoryByNormalized(categoryID int64, normalized string) (TicketSubcategory, error) {
+	var subcategoria TicketSubcategory
+
+	result := r.db.Where("category_id = ? AND normalized = ?", categoryID, normalized).Limit(1).Find(&subcategoria)
+	if result.Error != nil {
+		return TicketSubcategory{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return TicketSubcategory{}, ErrSubcategoryNotFound
+	}
+
+	return subcategoria, nil
+}
+
+// SubcategoriesByIDs trae varias subcategorías de una vez para pintar una lista paginada.
+func (r *CategoryRepository) SubcategoriesByIDs(ids []int64) (map[int64]TicketSubcategory, error) {
+	porID := map[int64]TicketSubcategory{}
+	if len(ids) == 0 {
+		return porID, nil
+	}
+
+	var subcategorias []TicketSubcategory
+	if err := r.db.Where("id IN ?", ids).Find(&subcategorias).Error; err != nil {
+		return nil, err
+	}
+
+	for _, subcategoria := range subcategorias {
+		porID[subcategoria.ID] = subcategoria
+	}
+
+	return porID, nil
+}
+
+// CreateSubcategory inserta una subcategoría. Como las categorías, usa `ON CONFLICT DO NOTHING` y
+// comprueba las filas afectadas: el nombre normalizado es único dentro de su categoría.
+func (r *CategoryRepository) CreateSubcategory(subcategoria TicketSubcategory) (TicketSubcategory, error) {
+	resultado := r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&subcategoria)
+	if resultado.Error != nil {
+		return TicketSubcategory{}, resultado.Error
+	}
+	if resultado.RowsAffected == 0 {
+		return TicketSubcategory{}, ErrSubcategoryDuplicate
+	}
+
+	return subcategoria, nil
+}
+
+// UpdateSubcategory guarda el nombre, el estado o la marca de retirada de una subcategoría.
+func (r *CategoryRepository) UpdateSubcategory(subcategoria TicketSubcategory) error {
+	return r.db.Save(&subcategoria).Error
+}
+
+// CountActiveSubcategories cuenta cuántas subcategorías activas tiene una categoría: es lo que decide
+// si el ticket está obligado a elegir una. Cero significa que la categoría no tiene subcategorías.
+func (r *CategoryRepository) CountActiveSubcategories(categoryID int64) (int64, error) {
+	var total int64
+	if err := r.db.Model(&TicketSubcategory{}).
+		Where("category_id = ? AND active = true", categoryID).
+		Count(&total).Error; err != nil {
 		return 0, err
 	}
 

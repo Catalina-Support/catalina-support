@@ -49,6 +49,7 @@ import {
   interpolar,
   nombreDe,
   opcionesDeCategoria,
+  opcionesDeSubcategoria,
   puedeEditarElTicket,
   puedeEtiquetarElTicket,
   sePuedePrevisualizar,
@@ -271,6 +272,7 @@ export class TicketVista implements OnDestroy {
    * sigue siendo lo que tiene el ticket.
    */
   protected readonly categoriaElegida = signal('');
+  protected readonly subcategoriaElegida = signal('');
   protected readonly prioridadElegida = signal<Prioridad>('medium');
   protected readonly editandoPrioridad = signal(false);
 
@@ -344,6 +346,7 @@ export class TicketVista implements OnDestroy {
     effect(() => {
       const ticket = this.detalle().ticket;
       this.categoriaElegida.set(ticket.category ? String(ticket.category.id) : '');
+      this.subcategoriaElegida.set(ticket.subcategory ? String(ticket.subcategory.id) : '');
       this.prioridadElegida.set(ticket.priority ?? 'medium');
       this.resumenesLocales.set(ticket.insights);
     });
@@ -1267,18 +1270,74 @@ export class TicketVista implements OnDestroy {
     return opcionesDeCategoria(this.t(), categorias);
   });
 
+  /** La categoría que está elegida en la ficha, para saber si hay un cambio pendiente. */
+  private readonly categoriaDeLaFicha = computed(() =>
+    this.categorias().find((categoria) => String(categoria.id) === this.categoriaElegida()),
+  );
+
+  /** Si la categoría elegida tiene subcategorías activas, la ficha pide elegir una. */
+  protected readonly subcategoriaObligatoriaEnLaFicha = computed(
+    () =>
+      (this.categoriaDeLaFicha()?.subcategories ?? []).filter((subcategoria) => subcategoria.active)
+        .length > 0,
+  );
+
+  /** Las subcategorías que se ofrecen: las activas de la categoría elegida y la que ya tiene el ticket. */
+  protected readonly opcionesDeSubcategoriaDeLaFicha = computed<readonly OpcionSelector[]>(() => {
+    const categoria = this.categoriaDeLaFicha();
+    const delTicket = this.ticket().subcategory;
+    // La subcategoría del ticket sólo cuenta si es de la categoría que se está mirando: al cambiar de
+    // categoría, la de antes ya no pertenece a esta y no se ofrece.
+    const actual = delTicket && delTicket.categoryId === categoria?.id ? delTicket : undefined;
+    const disponibles = (categoria?.subcategories ?? []).filter(
+      (subcategoria) => subcategoria.active || subcategoria.id === actual?.id,
+    );
+
+    // Si el ticket tiene una subcategoría retirada y el catálogo no la trae, se añade para poder
+    // enseñarla sin inventar nada.
+    if (actual && !disponibles.some((subcategoria) => subcategoria.id === actual.id)) {
+      return [
+        {
+          valor: '',
+          etiqueta: this.t().tickets.elegirSubcategoria,
+          grupo: this.t().tickets.subcategoria,
+          deshabilitado: true,
+        },
+        ...opcionesDeSubcategoria(this.t(), [
+          {
+            id: actual.id,
+            categoryId: actual.categoryId,
+            name: actual.name,
+            active: actual.active ?? false,
+            tickets: 0,
+          },
+        ]),
+      ];
+    }
+
+    return opcionesDeSubcategoria(this.t(), disponibles, {
+      valor: '',
+      etiqueta: this.t().tickets.elegirSubcategoria,
+      grupo: this.t().tickets.subcategoria,
+      deshabilitado: true,
+    });
+  });
+
   /** Las etiquetas del ticket ahora mismo: es la lista que se enseña y la que se manda. */
   protected readonly etiquetas = computed<readonly string[]>(() => this.ticket().tags ?? []);
 
   /**
-   * **La categoría se cambia en su propia línea y se guarda al elegir** (decisión 74): el desplegable es
-   * la confirmación, así que no lleva botón de guardar.
+   * **La categoría se cambia en su propia línea y se guarda al elegir** (decisión 74), salvo cuando la
+   * categoría nueva tiene subcategorías: entonces el cambio queda pendiente hasta que se elige una, y
+   * el `PATCH` manda las dos juntas. Así no se guarda un ticket a medias en una categoría que exige
+   * subcategoría.
    *
-   * Se manda **sólo la categoría** —el backend deja las etiquetas como estaban cuando no vienen en el
-   * `PATCH`—, y así un cambio de categoría no puede pisar las etiquetas de otro.
+   * Se manda **sólo la clasificación** —el backend deja las etiquetas como estaban cuando no vienen en
+   * el `PATCH`—, y así un cambio de categoría no puede pisar las etiquetas de otro.
    */
   protected async cambiarCategoria(valor: string): Promise<void> {
     this.categoriaElegida.set(valor);
+    this.subcategoriaElegida.set('');
 
     const categoria = Number(valor);
     if (!categoria) {
@@ -1286,9 +1345,49 @@ export class TicketVista implements OnDestroy {
       return;
     }
 
+    const elegida = this.categorias().find((candidata) => candidata.id === categoria);
+    const tieneSubcategorias = (elegida?.subcategories ?? []).some(
+      (subcategoria) => subcategoria.active,
+    );
+
+    // La categoría con subcategorías espera a que se elija la subcategoría; la que no las tiene se
+    // guarda ya, y el backend limpia la que hubiera.
+    if (tieneSubcategorias) {
+      return;
+    }
+
     await this.actuar(async () => {
       await this.tickets.editar(this.ticket().number, { categoryId: categoria });
       return { forma: 'exito', texto: this.t().tickets.categoriaCambiada };
+    });
+  }
+
+  /**
+   * La subcategoría se guarda al elegir. Si la categoría también estaba pendiente, van las dos en el
+   * mismo `PATCH`; si no, sólo cambia la subcategoría.
+   */
+  protected async cambiarSubcategoria(valor: string): Promise<void> {
+    this.subcategoriaElegida.set(valor);
+
+    const subcategoria = Number(valor);
+    if (!subcategoria) {
+      return;
+    }
+
+    const categoria = Number(this.categoriaElegida());
+    const categoriaPendiente = categoria !== this.ticket().category?.id;
+
+    await this.actuar(async () => {
+      await this.tickets.editar(
+        this.ticket().number,
+        categoriaPendiente ? { categoryId: categoria, subcategoryId: subcategoria } : { subcategoryId: subcategoria },
+      );
+      return {
+        forma: 'exito',
+        texto: categoriaPendiente
+          ? this.t().tickets.clasificacionCambiada
+          : this.t().tickets.subcategoriaCambiada,
+      };
     });
   }
 
